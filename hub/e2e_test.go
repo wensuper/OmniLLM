@@ -746,3 +746,5 @@ func readFile(t *testing.T, p string) string {
 }
 
 func ptr[T any](v T) *T { return &v }
+
+func hubModelHumanOnly() hub.ModelUpdate { return hub.ModelUpdate{HumanOnly: ptr(true)} }

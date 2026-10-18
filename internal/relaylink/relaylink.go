@@ -134,6 +134,7 @@ func (l *HubLink) Run(ctx context.Context) {
 			backoff = time.Second
 		}
 		l.logf("relay link down: %v; retrying in %s", err, backoff)
+		// #nosec G404 -- reconnect jitter only; nothing secret depends on it.
 		jitter := time.Duration(rand.Int64N(int64(backoff/2) + 1))
 		select {
 		case <-time.After(backoff + jitter):

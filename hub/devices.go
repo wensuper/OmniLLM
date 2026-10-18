@@ -55,6 +55,11 @@ func (d Device) principal() principal {
 // touch records when a device was last seen, under its own key, so it can
 // never re-create a removed device or overwrite the owner's settings.
 func (h *Hub) touch(ctx context.Context, id string) {
+	h.deviceMu.Lock()
+	defer h.deviceMu.Unlock()
+	if _, err := h.getDevice(ctx, id); err != nil {
+		return // removed meanwhile: leave nothing behind
+	}
 	_ = store.PutJSON(ctx, h.opts.Store, "devicelast/"+id, h.opts.Now().UTC())
 }
 
@@ -348,7 +353,16 @@ func (h *Hub) finishPairing(ctx context.Context, p *pairing, sess *e2e.Session, 
 		SecretHash: newHash[:], Models: p.opts.Models, Budget: p.opts.Budget, Created: h.opts.Now().UTC(),
 		BackgroundOnly: p.opts.BackgroundOnly}
 	h.deviceMu.Lock()
-	err = store.PutJSON(ctx, h.opts.Store, "device/"+d.ID, d)
+	// Re-check under the lock: the same device key may not be paired twice.
+	devs, err = h.listDevices(ctx)
+	for _, other := range devs {
+		if subtle.ConstantTimeCompare(other.PublicKey, d.PublicKey) == 1 {
+			err = omnillm.ErrPairingFailed
+		}
+	}
+	if err == nil {
+		err = store.PutJSON(ctx, h.opts.Store, "device/"+d.ID, d)
+	}
 	h.deviceMu.Unlock()
 	if err == nil && link != nil {
 		err = link.Claim(ctx, p.id, newHash)
@@ -365,8 +379,16 @@ func (h *Hub) finishPairing(ctx context.Context, p *pairing, sess *e2e.Session, 
 	}
 	b, _ := proto.Marshal(proto.Envelope{T: proto.TPairOK, DeviceID: d.ID, Name: name, Secret: newSecret})
 	if err := sess.Send(ctx, b); err != nil {
-		// The device may retry with its saved keys; the record stands.
-		h.opts.Logf("hub: pair.ok not delivered: %v", err)
+		// The device saved nothing and the code's secret is already
+		// replaced: undo, so no ghost device is left behind.
+		h.deviceMu.Lock()
+		_ = h.opts.Store.Delete(ctx, "device/"+d.ID)
+		h.deviceMu.Unlock()
+		if link != nil {
+			_ = link.Release(ctx, p.id)
+		}
+		p.done <- pairResult{err: &omnillm.Error{Code: omnillm.CodePairingFailed, Msg: omnillm.MsgPairingFailed}}
+		return err
 	}
 	p.done <- pairResult{dev: d}
 	h.opts.Logf("hub: device %s paired", d.ID)

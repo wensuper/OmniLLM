@@ -54,6 +54,7 @@ type Server struct {
 	mu        sync.Mutex
 	hubs      map[[32]byte]*hubConn
 	hubsPerIP map[string]int
+	pending   int
 	claims    int
 	mailboxes map[relayproto.ID]*mailbox
 	failures  map[string]*bucket // per-IP failed device auth
@@ -81,8 +82,28 @@ type mailbox struct {
 type devConn struct {
 	conn   *websocket.Conn
 	cancel context.CancelFunc
-	out    chan []byte
+	out    chan outItem
 	gen    uint64
+}
+
+// outItem is a message for the device, or (close set) the instruction to
+// close after everything queued before it has been written.
+type outItem struct {
+	data  []byte
+	close bool
+	code  websocket.StatusCode
+	why   string
+}
+
+// closeAfterQueued closes a device connection once the messages already
+// queued for it are written (a "pairing denied" must reach the device
+// before its mailbox is closed). If the queue is full it closes at once.
+func (d *devConn) closeAfterQueued(code websocket.StatusCode, why string) {
+	select {
+	case d.out <- outItem{close: true, code: code, why: why}:
+	default:
+		closeLater(d.conn, code, why)
+	}
 }
 
 // New makes a relay.
@@ -182,15 +203,25 @@ func (s *Server) serveHub(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ip := s.clientIP(r)
+	// Take the per-IP slot before the upgrade, so a burst of parallel
+	// connections cannot all pass the check.
 	s.mu.Lock()
-	if s.hubs[id] == nil && (len(s.hubs) >= s.opts.MaxHubs || s.hubsPerIP[ip] >= s.opts.MaxHubsPerIP) {
+	if s.hubs[id] == nil && (len(s.hubs)+s.pending >= s.opts.MaxHubs || s.hubsPerIP[ip] >= s.opts.MaxHubsPerIP) {
 		s.mu.Unlock()
 		http.Error(w, "busy", http.StatusServiceUnavailable)
 		return
 	}
+	s.hubsPerIP[ip]++
+	s.pending++
 	s.mu.Unlock()
 	c, err := accept(w, r)
 	if err != nil {
+		s.mu.Lock()
+		s.pending--
+		if s.hubsPerIP[ip]--; s.hubsPerIP[ip] <= 0 {
+			delete(s.hubsPerIP, ip)
+		}
+		s.mu.Unlock()
 		return
 	}
 	ctx, cancel := context.WithCancel(r.Context())
@@ -202,7 +233,7 @@ func (s *Server) serveHub(w http.ResponseWriter, r *http.Request) {
 		s.dropHubLocked(old, websocket.StatusCode(relayproto.CloseReplaced), "replaced")
 	}
 	s.hubs[id] = h
-	s.hubsPerIP[ip]++
+	s.pending--
 	n := len(s.hubs)
 	s.mu.Unlock()
 	s.logf("relay: hub connected (%d online)", n)
@@ -281,7 +312,7 @@ func (s *Server) handleHubFrame(h *hubConn, t byte, mid relayproto.ID, payload [
 		}
 		s.mu.Unlock()
 		if dev != nil {
-			closeLater(dev.conn, websocket.StatusCode(relayproto.CloseKicked), "closed")
+			dev.closeAfterQueued(websocket.StatusCode(relayproto.CloseKicked), "closed")
 		}
 	case relayproto.Data:
 		s.mu.Lock()
@@ -297,7 +328,7 @@ func (s *Server) handleHubFrame(h *hubConn, t byte, mid relayproto.ID, payload [
 		// Each device has its own queue: one stalled device never blocks
 		// the hub's other mailboxes. A device that cannot keep up is cut.
 		select {
-		case dev.out <- payload:
+		case dev.out <- outItem{data: payload}:
 		default:
 			closeLater(dev.conn, websocket.StatusPolicyViolation, "slow")
 		}
@@ -419,7 +450,7 @@ func (s *Server) serveDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx, cancel := context.WithCancel(r.Context())
-	d := &devConn{conn: c, cancel: cancel, out: make(chan []byte, 128)}
+	d := &devConn{conn: c, cancel: cancel, out: make(chan outItem, 128)}
 
 	s.mu.Lock()
 	mb = s.mailboxes[mid]
@@ -441,6 +472,11 @@ func (s *Server) serveDevice(w http.ResponseWriter, r *http.Request) {
 	// Open and Closed carry the attachment's generation, so the hub ignores
 	// a Closed for an older connection that arrives after a newer Open.
 	if err := s.sendHub(h, relayproto.Open, mid, genBytes(d.gen)); err != nil {
+		s.mu.Lock()
+		if mb := s.mailboxes[mid]; mb != nil && mb.dev == d {
+			mb.dev = nil
+		}
+		s.mu.Unlock()
 		closeLater(c, websocket.StatusCode(relayproto.CloseUnavailable), "unavailable")
 		cancel()
 		return
@@ -458,9 +494,13 @@ func (s *Server) serveDevice(w http.ResponseWriter, r *http.Request) {
 	go func() { // hub → device
 		for {
 			select {
-			case b := <-d.out:
+			case it := <-d.out:
+				if it.close {
+					closeLater(c, it.code, it.why)
+					return
+				}
 				wctx, wc := context.WithTimeout(ctx, 15*time.Second)
-				err := c.Write(wctx, websocket.MessageBinary, b)
+				err := c.Write(wctx, websocket.MessageBinary, it.data)
 				wc()
 				if err != nil {
 					cancel()

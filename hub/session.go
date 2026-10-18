@@ -76,11 +76,18 @@ func (h *Hub) dispatch(link *relaylink.HubLink) {
 			select {
 			case c.in <- ev.Payload:
 			default:
-				// A device that floods its mailbox is cut off.
+				// A device that floods its mailbox is cut off, once.
+				h.mu.Lock()
+				if h.sessions[ev.Mailbox] == c {
+					delete(h.sessions, ev.Mailbox)
+				}
+				h.mu.Unlock()
 				c.close()
-				ctx, cancel := context.WithTimeout(h.ctx, 5*time.Second)
-				_ = link.Kick(ctx, ev.Mailbox)
-				cancel()
+				go func(id relayproto.ID) {
+					ctx, cancel := context.WithTimeout(h.ctx, 5*time.Second)
+					defer cancel()
+					_ = link.Kick(ctx, id)
+				}(ev.Mailbox)
 			}
 		case relayproto.Closed:
 			// Ignore a Closed for an older attachment that arrives after a

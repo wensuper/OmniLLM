@@ -311,3 +311,37 @@ func TestLocality(t *testing.T) {
 		t.Fatal("only the ollama kind may claim local")
 	}
 }
+
+func TestIdleStreamFreesItsSlot(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{\"content\":\"a\"}}]}\n\n")
+		w.(http.Flusher).Flush()
+		<-r.Context().Done()
+	}))
+	defer srv.Close()
+	lim := egress.New(func(string) egress.Limits { return egress.Limits{MaxConcurrent: 1, RequestsPerMinute: 6000} })
+	c, _ := New(Config{Name: "p", Kind: OpenAI, BaseURL: srv.URL, NeedsKey: true}, http.DefaultTransport, lim)
+	c.idle = 100 * time.Millisecond
+	// Abandoned: opened, never read, never closed.
+	if _, err := c.Stream(context.Background(), "m", req("x"), Credential{Key: sentinelKey}); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(300 * time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	rel, err := lim.Acquire(ctx, "p", omnillm.Interactive)
+	if err != nil {
+		t.Fatalf("an abandoned stream kept its slot: %v", err)
+	}
+	rel(egress.OK, 0)
+	// A reader waiting on a stalled upstream gets an error, not a hang.
+	s, err := c.Stream(context.Background(), "m", req("x"), Credential{Key: sentinelKey})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _ = s.Recv()
+	start := time.Now()
+	if _, err := s.Recv(); err == nil || time.Since(start) > 2*time.Second {
+		t.Fatalf("stalled upstream: err=%v after %s", err, time.Since(start))
+	}
+}

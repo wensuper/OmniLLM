@@ -92,13 +92,15 @@ func (h *Hub) complete(ctx context.Context, p principal, req omnillm.Request) (o
 // DefaultMaxTokens caps a reply when the caller sets no limit.
 const DefaultMaxTokens = 4096
 
-// estimateInput over-counts tokens from bytes (about 3 bytes a token).
+// estimateInput over-counts tokens: about 2 bytes a token, which is
+// generous for English and still covers CJK text (3 bytes a character,
+// often more than one token per character).
 func estimateInput(req omnillm.Request) int {
 	n := 0
 	for _, m := range req.Messages {
-		n += len(m.Content)/3 + 8
+		n += len(m.Content)/2 + 8
 	}
-	return n + len(req.JSONSchema)/3
+	return n + len(req.JSONSchema)/2
 }
 
 // accounted charges usage when the stream ends, however it ends. When the
@@ -149,7 +151,9 @@ func (a *accounted) settle(outcome string) {
 		if u.InputTokens == 0 {
 			u.InputTokens = a.inEst
 		}
-		if est := int(a.outBytes.Load()/3) + 1; u.OutputTokens < est && outcome != "ok" {
+		// No reported output (a cancelled stream, or a server that does not
+		// report usage) is charged from what was received.
+		if est := int(a.outBytes.Load()/2) + 1; u.OutputTokens == 0 || (outcome != "ok" && u.OutputTokens < est) {
 			u.OutputTokens = est
 		}
 		u.CostMicroUSD = a.m.cost(u)
@@ -158,8 +162,7 @@ func (a *accounted) settle(outcome string) {
 		a.mu.Unlock()
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		a.h.unreserve(a.p, a.reserved)
-		a.h.charge(ctx, a.p, u)
+		a.h.settleCharge(ctx, a.p, a.reserved, u)
 		a.h.audit(ctx, a.p, a.m, a.caller, u, outcome)
 	})
 }
@@ -191,8 +194,13 @@ func (h *Hub) reserve(ctx context.Context, p principal, worst int64) error {
 	defer h.accountMu.Unlock()
 	day := h.day()
 	var mine, total spend
-	_ = store.GetJSON(ctx, h.opts.Store, usageKey(day, p.key), &mine)
-	_ = store.GetJSON(ctx, h.opts.Store, usageKey(day, "_total"), &total)
+	// An unreadable usage record must not read as "nothing spent".
+	if err := getSpend(ctx, h.opts.Store, usageKey(day, p.key), &mine); err != nil {
+		return err
+	}
+	if err := getSpend(ctx, h.opts.Store, usageKey(day, "_total"), &total); err != nil {
+		return err
+	}
 	if h.reserved == nil {
 		h.reserved = map[string]int64{}
 	}
@@ -214,13 +222,33 @@ func (h *Hub) unreserve(p principal, worst int64) {
 	h.reserved["_total"] -= worst
 }
 
-func (h *Hub) charge(ctx context.Context, p principal, u omnillm.Usage) {
+func getSpend(ctx context.Context, st store.Store, k string, s *spend) error {
+	err := store.GetJSON(ctx, st, k, s)
+	if err == nil || errors.Is(err, store.ErrNotFound) {
+		return nil
+	}
+	return &omnillm.Error{Code: omnillm.CodeInternal, Msg: "internal", Detail: "usage record unreadable"}
+}
+
+// settleCharge releases a call's reservation and records what it really
+// cost in one step, so no concurrent reserve sees neither.
+func (h *Hub) settleCharge(ctx context.Context, p principal, worst int64, u omnillm.Usage) {
 	h.accountMu.Lock()
 	defer h.accountMu.Unlock()
+	h.reserved[p.key] -= worst
+	h.reserved["_total"] -= worst
+	h.chargeLocked(ctx, p, u)
+}
+
+func (h *Hub) chargeLocked(ctx context.Context, p principal, u omnillm.Usage) {
 	day := h.day()
 	for _, who := range []string{p.key, "_total"} {
 		var s spend
-		_ = store.GetJSON(ctx, h.opts.Store, usageKey(day, who), &s)
+		if err := getSpend(ctx, h.opts.Store, usageKey(day, who), &s); err != nil {
+			// Never overwrite a record we could not read.
+			h.opts.Logf("hub: usage record unreadable; this call is not recorded")
+			continue
+		}
 		s.MicroUSD += u.CostMicroUSD
 		s.InputTokens += int64(u.InputTokens)
 		s.OutputTokens += int64(u.OutputTokens)

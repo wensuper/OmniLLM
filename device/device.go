@@ -97,7 +97,20 @@ func Pair(ctx context.Context, opts Options, code, name string, show func(sas st
 	if err != nil {
 		return Info{}, err
 	}
-	conn, err := relaylink.DialMailbox(ctx, pc.Relay, mid, pc.Secret, opts.Transport)
+	// The hub registers the mailbox with the relay when it shows the code;
+	// a device that is very quick can arrive first, so retry briefly.
+	var conn *relaylink.DeviceConn
+	for wait := 100 * time.Millisecond; ; wait *= 2 {
+		conn, err = relaylink.DialMailbox(ctx, pc.Relay, mid, pc.Secret, opts.Transport)
+		if err == nil || !errors.Is(err, relaylink.ErrUnavailable) || wait > 3*time.Second {
+			break
+		}
+		select {
+		case <-time.After(wait):
+		case <-ctx.Done():
+			return Info{}, ctx.Err()
+		}
+	}
 	if err != nil {
 		return Info{}, &omnillm.Error{Code: omnillm.CodePairingFailed, Msg: omnillm.MsgPairingExpired}
 	}
@@ -178,6 +191,7 @@ type Device struct {
 
 	mu     sync.Mutex
 	cur    *conn
+	old    []*conn // retired, still finishing replies
 	closed bool
 	dialMu sync.Mutex
 	tools  chan struct{}
@@ -229,10 +243,13 @@ func (d *Device) ID() string { return d.id }
 func (d *Device) Close() error {
 	d.mu.Lock()
 	d.closed = true
-	c := d.cur
-	d.cur = nil
+	all := append([]*conn{}, d.old...)
+	if d.cur != nil {
+		all = append(all, d.cur)
+	}
+	d.cur, d.old = nil, nil
 	d.mu.Unlock()
-	if c != nil {
+	for _, c := range all {
 		c.close()
 	}
 	return nil
@@ -305,6 +322,16 @@ func (d *Device) connect(ctx context.Context) (*conn, error) {
 	}
 	old := d.cur
 	d.cur = c
+	live := d.old[:0]
+	for _, o := range d.old {
+		if o.ctx.Err() == nil {
+			live = append(live, o)
+		}
+	}
+	d.old = live
+	if old != nil {
+		d.old = append(d.old, old)
+	}
 	d.mu.Unlock()
 	if old != nil {
 		// Let replies already streaming on the old session finish; it
@@ -435,21 +462,24 @@ func (c *conn) startTool(env proto.Envelope) {
 func (c *conn) runTool(env proto.Envelope) {
 	ctx, cancel := context.WithTimeout(c.ctx, 2*time.Minute)
 	defer cancel()
-	if !c.toolAllowed(env.Tool) {
-		_ = c.send(ctx, toolErr(env.ID, &omnillm.Error{Code: omnillm.CodeToolNotAllowed, Msg: omnillm.MsgToolNotAllowed}))
-		return
-	}
 	var res json.RawMessage
 	var err error
+	allowed := false
 	func() {
-		// A tool that panics must not take the host down.
+		// A tool host that panics must not take the host program down.
 		defer func() {
 			if r := recover(); r != nil {
 				err = fmt.Errorf("tool panicked")
 			}
 		}()
-		res, err = c.d.opts.Tools.Call(ctx, env.Tool, env.Args)
+		if allowed = c.toolAllowed(env.Tool); allowed {
+			res, err = c.d.opts.Tools.Call(ctx, env.Tool, env.Args)
+		}
 	}()
+	if !allowed && err == nil {
+		_ = c.send(ctx, toolErr(env.ID, &omnillm.Error{Code: omnillm.CodeToolNotAllowed, Msg: omnillm.MsgToolNotAllowed}))
+		return
+	}
 	if err != nil {
 		_ = c.send(ctx, toolErr(env.ID, err))
 		return
@@ -457,7 +487,9 @@ func (c *conn) runTool(env proto.Envelope) {
 	if !json.Valid(res) {
 		res, _ = json.Marshal(string(res))
 	}
-	_ = c.send(ctx, proto.Envelope{T: proto.TToolResult, ID: env.ID, Result: res})
+	if err := c.send(ctx, proto.Envelope{T: proto.TToolResult, ID: env.ID, Result: res}); err != nil {
+		_ = c.send(ctx, toolErr(env.ID, &omnillm.Error{Code: omnillm.CodeBadRequest, Msg: "too_large"}))
+	}
 }
 
 // wireErr turns a chat.error into an error, never a nil pointer.

@@ -48,7 +48,8 @@ type Envelope struct {
 	Tool     string              `json:"tool,omitempty"`
 	Args     json.RawMessage     `json:"args,omitempty"`
 	Result   json.RawMessage     `json:"result,omitempty"`
-	// Secret is the replacement mailbox secret in pair.ok.
+	// Secret is the replacement mailbox secret in pair.ok. It is only ever
+	// marshalled inside the end-to-end session. #nosec G117
 	Secret []byte `json:"secret,omitempty"`
 }
 

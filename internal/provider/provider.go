@@ -118,18 +118,47 @@ func (c Config) Validate() error {
 	return nil
 }
 
+var (
+	blocked4 = cidrs("0.0.0.0/8", "10.0.0.0/8", "100.64.0.0/10", "127.0.0.0/8", "169.254.0.0/16", "172.16.0.0/12",
+		"192.0.0.0/24", "192.0.2.0/24", "192.88.99.0/24", "192.168.0.0/16", "198.18.0.0/15", "198.51.100.0/24", "203.0.113.0/24",
+		"224.0.0.0/4", "240.0.0.0/4")
+	blocked6 = cidrs("::/96", "::1/128", "64:ff9b::/96", "64:ff9b:1::/48", "100::/64", "2001::/23", "2001:db8::/32", "3fff::/20",
+		"2002::/16", "fc00::/7", "fe80::/10", "fec0::/10", "ff00::/8")
+)
+
+func cidrs(list ...string) []*net.IPNet {
+	out := make([]*net.IPNet, 0, len(list))
+	for _, c := range list {
+		_, n, err := net.ParseCIDR(c)
+		if err != nil {
+			panic(err)
+		}
+		out = append(out, n)
+	}
+	return out
+}
+
+// publicIP reports whether ip is a public unicast address. IPv4 (including
+// IPv4-mapped IPv6) is checked against IPv4 ranges only; native IPv6
+// against IPv6 ranges, including the ones that embed IPv4 (6to4, Teredo,
+// NAT64) or are private (ULA, site-local).
 func publicIP(ip net.IP) bool {
-	if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() ||
-		ip.IsMulticast() || ip.IsUnspecified() || ip.IsInterfaceLocalMulticast() {
+	if ip == nil {
 		return false
 	}
-	// Carrier-grade NAT, benchmarking, and the cloud metadata address.
-	for _, cidr := range []string{"100.64.0.0/10", "198.18.0.0/15", "169.254.0.0/16", "0.0.0.0/8", "192.0.0.0/24", "::ffff:0:0/96", "64:ff9b::/96", "2002::/16", "2001::/32", "fc00::/7", "fec0::/10"} {
-		_, n, _ := net.ParseCIDR(cidr)
-		if n.Contains(ip) {
-			if cidr == "::ffff:0:0/96" {
-				return publicIP(ip.To4())
+	if v4 := ip.To4(); v4 != nil {
+		for _, n := range blocked4 {
+			if n.Contains(v4) {
+				return false
 			}
+		}
+		return true
+	}
+	if len(ip) != net.IPv6len {
+		return false
+	}
+	for _, n := range blocked6 {
+		if n.Contains(ip) {
 			return false
 		}
 	}
@@ -187,6 +216,7 @@ type Client struct {
 	cfg  Config
 	http *http.Client
 	lim  *egress.Limiter
+	idle time.Duration // longest gap between stream lines (default 2 min)
 }
 
 // New makes a client. rt is the host's transport (nil: GuardedTransport).
@@ -197,7 +227,7 @@ func New(cfg Config, rt http.RoundTripper, lim *egress.Limiter) (*Client, error)
 	if rt == nil {
 		rt = GuardedTransport()
 	}
-	return &Client{cfg: cfg, lim: lim, http: &http.Client{
+	return &Client{cfg: cfg, lim: lim, idle: 2 * time.Minute, http: &http.Client{
 		Transport: rt,
 		// Never follow redirects: a redirect could carry the key elsewhere.
 		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
@@ -222,7 +252,7 @@ type stream struct {
 	release egress.Release
 	idle    time.Duration
 	cancel  context.CancelFunc
-	timer   *time.Timer
+	timer   atomic.Pointer[time.Timer]
 	parent  context.Context // the caller's context
 	inRecv  atomic.Bool
 	idled   atomic.Bool
@@ -254,9 +284,14 @@ func (s *stream) setFinish(f string) {
 func (s *stream) Recv() (omnillm.Chunk, error) {
 	for {
 		if s.done.Load() {
+			if s.idled.Load() {
+				return omnillm.Chunk{}, &omnillm.Error{Code: omnillm.CodeUpstream, Msg: omnillm.MsgUpstream, Detail: "upstream idle timeout"}
+			}
 			return omnillm.Chunk{}, io.EOF
 		}
-		s.timer.Reset(s.idle)
+		if t := s.timer.Load(); t != nil {
+			t.Reset(s.idle)
+		}
 		s.inRecv.Store(true)
 		more := s.sc.Scan()
 		s.inRecv.Store(false)
@@ -315,18 +350,27 @@ func (s *stream) failure() egress.Outcome {
 // onIdle fires when no line arrived for idle: an upstream stall if someone
 // was reading, an abandoned stream if not. Either way the slot is freed.
 func (s *stream) onIdle() {
-	s.idled.Store(true)
 	o := egress.ClientError
 	if s.inRecv.Load() {
 		o = egress.Failed
 	}
-	s.finishCall(o)
+	// Only a stream the timer actually ended reports a timeout; one that
+	// had just finished normally keeps its clean end.
+	s.once.Do(func() {
+		s.idled.Store(true)
+		s.done.Store(true)
+		s.release(o, 0)
+		s.body.Close()
+		s.cancel()
+	})
 }
 
 func (s *stream) finishCall(o egress.Outcome) {
 	s.once.Do(func() {
 		s.done.Store(true)
-		s.timer.Stop()
+		if t := s.timer.Load(); t != nil {
+			t.Stop()
+		}
 		s.release(o, 0)
 		s.body.Close()
 		s.cancel()
@@ -386,9 +430,9 @@ func (c *Client) Stream(ctx context.Context, upstreamModel string, req omnillm.R
 	}
 	sc := bufio.NewScanner(resp.Body)
 	sc.Buffer(make([]byte, 64<<10), 4<<20)
-	s := &stream{body: resp.Body, sc: sc, release: release, idle: 2 * time.Minute, cancel: cancel, parent: ctx}
+	s := &stream{body: resp.Body, sc: sc, release: release, idle: c.idle, cancel: cancel, parent: ctx}
 	s.parse = func(ev, data string) (string, bool, error) { return parse(s, ev, data) }
-	s.timer = time.AfterFunc(s.idle, s.onIdle)
+	s.timer.Store(time.AfterFunc(s.idle, s.onIdle))
 	return s, nil
 }
 
