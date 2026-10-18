@@ -141,8 +141,13 @@ func (l *HubLink) Run(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		}
-		if backoff < time.Minute {
+		// Capped low: after a relay outage the hub must be back within
+		// seconds, not minutes; jitter still spreads reconnecting hubs.
+		if backoff < maxBackoff {
 			backoff *= 2
+			if backoff > maxBackoff {
+				backoff = maxBackoff
+			}
 		}
 	}
 }
@@ -220,6 +225,9 @@ func (l *HubLink) write(ctx context.Context, c *websocket.Conn, b []byte) error 
 	defer cancel()
 	return c.Write(wctx, websocket.MessageBinary, b)
 }
+
+// maxBackoff caps the wait between reconnect attempts.
+const maxBackoff = 10 * time.Second
 
 // ErrDown is returned when the link is not connected.
 var ErrDown = errors.New("relaylink: not connected to the relay")
