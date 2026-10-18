@@ -1,0 +1,32 @@
+# Release build: signed checksums (cosign keyless, via GitHub OIDC) and an
+# SBOM per archive. Archive names match install.sh.
+version: 2
+project_name: omnillm
+builds:
+  - id: omnillm
+    main: ./cmd/omnillm
+    binary: omnillm
+    env: [CGO_ENABLED=0]
+    goos: [darwin, linux]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags: ["-s -w -X main.version={{ .Version }}"]
+    mod_timestamp: "{{ .CommitTimestamp }}"
+archives:
+  - id: omnillm
+    formats: [tar.gz]
+    name_template: "omnillm_{{ .Os }}_{{ .Arch }}"
+    files: [LICENSE, README.md, INSTALL.md]
+checksum:
+  name_template: checksums.txt
+sboms:
+  - artifacts: archive
+signs:
+  - cmd: cosign
+    artifacts: checksum
+    signature: "${artifact}.sig"
+    certificate: "${artifact}.pem"
+    args: ["sign-blob", "--output-certificate=${certificate}", "--output-signature=${signature}", "${artifact}", "--yes"]
+    output: true
+release:
+  prerelease: auto

@@ -509,7 +509,10 @@ NEXA（`pgclient`，Go）直接引入 OmniLLM 库。用户只装 NEXA：在 NEXA
 | 设备 `device` | 配对文字配对；自动重连；3 秒回执判断主机离线；工具白名单（默认只读）、并发上限、防崩溃 |
 | 本机接口 `localapi` | OpenAI 兼容 `/v1/models`（带 `x_omnillm.locality`）、`/v1/chat/completions`（含流式）、Anthropic 兼容 `/v1/messages`（非流式）；令牌、Host、Origin 校验；8 MB 请求上限；状态码表（§6） |
 | 提供方 `internal/provider` | OpenAI / OpenAI 兼容 / Anthropic / Ollama；不跟随重定向；上游报错改写为固定文案；防 SSRF（https、公网地址、拨号时再校验解析结果）；Anthropic 的结构化输出如实返回不支持 |
-| 命令行 `cmd/omnillm` | `hub run / provider add / pair / devices / revoke / app / model set / usage / audit / region confirm`、`connect pair / run / ask`、`relay` / `relay token`；Key 从标准输入读；控制通道是 0700 目录里的 0600 套接字；中英文提示 |
+| 命令行 `cmd/omnillm` | `install / uninstall / status / open`、`hub run / provider add / pair / devices / revoke / app / model set / usage / audit / region confirm`、`connect pair / run / ask`、`relay` / `relay token`；Key 从标准输入读；控制通道是 0700 目录里的 0600 套接字；中英文提示；`hub pair` 在终端里画二维码 |
+| 本机控制台 `console` | 只在 `127.0.0.1:8770`；`omnillm open` 经控制通道拿一次性登录链接（令牌在 `#` 后面，2 分钟、只能用一次），换成 HttpOnly + SameSite=Strict 的会话；每个接口校验 Host、同源（Origin，或浏览器自带的 Sec-Fetch-Site）和自定义请求头；严格 CSP、没有内联脚本、设备送来的文字只按纯文本显示；首次运行向导（自动发现本机 Ollama / 粘贴 Key 先验证再保存 / 只有网页订阅的说明）、二维码配对和 6 位数确认、设备、模型（数据去向、只给人用）、应用令牌（只显示一次）、用量（估算金额）；中英、深浅色、375 px |
+| 一步安装 | `INSTALL.md` 写给 AI：一句话交给 AI 就装好；`install.sh` 下载发布包并校验 SHA-256（有 cosign 时再校验签名来自本仓库的发布流程），没有发布包时从源码编译；`omnillm install` 全部默认值：装到 `~/.local/bin`、注册后台服务（macOS launchd / Linux systemd 用户服务）、Linux 上用加密文件存 Key、自动接入本机 Ollama、打开控制台；可重复运行；`uninstall --purge` 删干净 |
+| 发布 | GoReleaser：macOS / Linux × amd64 / arm64，校验和用 cosign 免密钥签名（GitHub OIDC），每个包附 SBOM；打 `v*` 标签时由 GitHub Actions 构建发布；CI 跑测试、vet、staticcheck、govulncheck |
 
 ### 13.2 测试
 
@@ -521,6 +524,8 @@ NEXA（`pgclient`，Go）直接引入 OmniLLM 库。用户只装 NEXA：在 NEXA
 | 端到端 | 真实连接服务 + 主机 + 设备；抓取连接服务收发的全部字节，断言看不到提示词、回复、API Key、模型名、设备名 |
 | 对抗 | 篡改流量的连接服务、乱发消息和刷屏的设备、只偷到信箱口令的人、同时配对、过期配对码、中途取消、连接服务重启、主机重启 |
 | 回归 | 三轮独立审查（安全、Go 正确性、红队复查）发现的问题各有一条测试守住；包括复查发现的公网 IPv4 地址检查无限递归（会让主机第一次调用云端模型就崩溃） |
+| 控制台 | Host、Origin、Sec-Fetch-Site、自定义头、会话、一次性登录链接、CSP 和静态资源检查；向导、配对（经真实连接服务和设备）、拒绝配对、请求体上限；在浏览器里实际走完向导、二维码配对、6 位数确认、试一下、中英切换、深色 375 px |
+| 安装 | 在 Linux 虚拟机里用真实 `install.sh`：被篡改的发布包和非 https 地址被拒；正常安装后 systemd 服务启用并运行、文件权限 0700 / 0600、只监听 127.0.0.1、重复安装、终端里添加 Key（磁盘和日志里没有明文）、重启、`uninstall --purge` 删干净 |
 | 真实上游 | 用一个故意无效的 Key 调真实的 OpenAI：经公网 DNS 和公网地址，得到“Key 不可用”的中文提示，主机不崩、日志里没有 Key |
 | 静态 | `go vet`、`staticcheck`、`govulncheck`（可达漏洞 0）、`gosec`（逐条确认无实际问题） |
 | 真实程序 | 编译后的 `omnillm` 跑一遍：连接服务、主机、终端配对、经中转问答、两种本机接口、移除设备；数据文件和日志里没有提示词和令牌 |
@@ -529,10 +534,9 @@ NEXA（`pgclient`，Go）直接引入 OmniLLM 库。用户只装 NEXA：在 NEXA
 
 | 内容 | 排在 |
 |---|---|
-| 本机网页控制台和首次运行向导（现在只有命令行） | v0.1 剩余 |
-| 二维码显示（现在用配对文字） | v0.1 剩余 |
 | 公共连接服务的部署 | v0.1 剩余，需要 zc 定部署位置 |
-| 一行安装（Homebrew、安装脚本）、签名发布 | v0.1 剩余 |
+| 发布第一个版本（打标签后自动构建签名；在那之前安装脚本从源码编译，需要 Go） | 等 zc 同意发布 |
+| Homebrew | 以后 |
 | 手机网页客户端、管理设备、通知 | v0.2 |
 | NEXA 以库嵌入（NEXA 侧按 §8.4 做） | v0.2 |
 | 对话里由模型调用 NEXA 工具的循环（现在有主机→设备的工具调用原语和白名单） | v0.2 |

@@ -475,3 +475,19 @@ func (h *Hub) Models(ctx context.Context) ([]omnillm.ModelInfo, error) {
 	}
 	return out, nil
 }
+
+// DetectOllama reports the models of a local Ollama on this machine, if one
+// is running (first-run wizard). It sends nothing off the machine.
+func (h *Hub) DetectOllama(ctx context.Context) ([]string, error) {
+	cfg, _ := provider.Default(provider.Ollama)
+	c, err := provider.New(cfg, h.opts.Transport, h.lim)
+	if err != nil {
+		return nil, err
+	}
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	return c.ListModels(ctx, provider.Credential{})
+}
+
+// RelayConfigured reports whether a relay address was given at all.
+func (h *Hub) RelayConfigured() bool { return h.opts.RelayURL != "" }

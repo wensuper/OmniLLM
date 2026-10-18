@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>OmniLLM</title>
+<link rel="stylesheet" href="app.css">
+<script src="app.js" defer></script>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="mark" aria-hidden="true"></span><span>OmniLLM</span></div>
+  <div class="status" id="status" aria-live="polite"></div>
+  <div class="tools">
+    <button type="button" class="ghost" id="lang" aria-label="Language">中文</button>
+    <button type="button" class="ghost" id="theme" aria-label="Theme">◐</button>
+  </div>
+</header>
+
+<main id="app">
+  <section id="loading" class="panel"><p data-t="loading"></p></section>
+
+  <section id="login-needed" class="panel" hidden>
+    <h1 data-t="loginTitle"></h1>
+    <p data-t="loginBody"></p>
+    <pre class="cmd">omnillm open</pre>
+  </section>
+
+  <!-- First-run wizard -->
+  <section id="wizard" class="panel" hidden>
+    <ol class="steps" aria-label="steps">
+      <li id="st1" data-t="step1"></li>
+      <li id="st2" data-t="step2"></li>
+      <li id="st3" data-t="step3"></li>
+    </ol>
+
+    <div id="w1">
+      <h1 data-t="w1Title"></h1>
+      <p class="muted" data-t="w1Body"></p>
+      <div id="ollama-box" class="choice" hidden>
+        <h2 data-t="ollamaFound"></h2>
+        <p class="muted" id="ollama-models"></p>
+        <button type="button" id="ollama-use" class="primary" data-t="ollamaUse"></button>
+      </div>
+      <form id="key-form" class="choice" autocomplete="off">
+        <h2 data-t="keyTitle"></h2>
+        <label for="kind" data-t="provider"></label>
+        <select id="kind">
+          <option value="anthropic">Anthropic (Claude)</option>
+          <option value="openai">OpenAI</option>
+          <option value="openai-compatible" data-t="otherCompatible"></option>
+        </select>
+        <div id="compat" hidden>
+          <label for="cname" data-t="cname"></label><input id="cname" maxlength="40" spellcheck="false">
+          <label for="curl" data-t="curl"></label><input id="curl" placeholder="https://" spellcheck="false">
+        </div>
+        <label for="key" data-t="key"></label>
+        <input id="key" type="password" autocomplete="off" spellcheck="false" required>
+        <p class="hint" data-t="keyHint"></p>
+        <button type="submit" class="primary" data-t="connect"></button>
+      </form>
+      <details class="choice">
+        <summary data-t="subOnly"></summary>
+        <p data-t="subOnlyBody"></p>
+      </details>
+    </div>
+
+    <div id="w2" hidden>
+      <h1 data-t="w2Title"></h1>
+      <div id="pair-area"></div>
+      <p class="muted"><button type="button" class="link" id="skip-pair" data-t="skipPair"></button></p>
+    </div>
+
+    <div id="w3" hidden>
+      <h1 data-t="w3Title"></h1>
+      <form id="try-form">
+        <label for="try-model" data-t="model"></label>
+        <select id="try-model"></select>
+        <label for="try-text" data-t="message"></label>
+        <input id="try-text" maxlength="500">
+        <button type="submit" class="primary" data-t="send"></button>
+      </form>
+      <div id="try-reply" class="reply" hidden></div>
+      <button type="button" id="finish" class="primary" hidden data-t="finish"></button>
+    </div>
+  </section>
+
+  <!-- Dashboard -->
+  <section id="dash" hidden>
+    <div class="cards">
+      <div class="card"><div class="k" data-t="todaySpend"></div><div class="v" id="spend-today"></div><div class="s" data-t="estimate"></div></div>
+      <div class="card"><div class="k" data-t="devices"></div><div class="v" id="n-devices"></div></div>
+      <div class="card"><div class="k" data-t="models"></div><div class="v" id="n-models"></div></div>
+    </div>
+
+    <nav class="tabs" role="tablist">
+      <button type="button" role="tab" data-tab="devices" data-t="devices"></button>
+      <button type="button" role="tab" data-tab="models" data-t="models"></button>
+      <button type="button" role="tab" data-tab="apps" data-t="apps"></button>
+      <button type="button" role="tab" data-tab="usage" data-t="usage"></button>
+    </nav>
+
+    <div class="tab" id="tab-devices">
+      <div class="row-head"><h2 data-t="devices"></h2><button type="button" class="primary" id="add-device" data-t="addDevice"></button></div>
+      <div id="pair-dash"></div>
+      <table class="narrow-hide2"><thead><tr><th data-t="name"></th><th data-t="lastSeen"></th><th data-t="budget"></th><th></th></tr></thead><tbody id="devices"></tbody></table>
+      <p class="empty" id="devices-empty" data-t="noDevices" hidden></p>
+    </div>
+
+    <div class="tab" id="tab-models" hidden>
+      <div class="row-head"><h2 data-t="models"></h2><button type="button" class="secondary" id="add-provider" data-t="addProvider"></button></div>
+      <table><thead><tr><th data-t="model"></th><th data-t="where"></th><th data-t="humanOnly"></th></tr></thead><tbody id="models"></tbody></table>
+      <h3 data-t="providers"></h3>
+      <table><thead><tr><th data-t="provider"></th><th data-t="keyLast4"></th><th></th></tr></thead><tbody id="providers"></tbody></table>
+    </div>
+
+    <div class="tab" id="tab-apps" hidden>
+      <div class="row-head"><h2 data-t="apps"></h2><button type="button" class="secondary" id="add-app" data-t="addApp"></button></div>
+      <p class="muted" data-t="appsBody"></p>
+      <div id="app-token" class="secret" hidden></div>
+      <table><thead><tr><th data-t="name"></th><th data-t="budget"></th><th></th></tr></thead><tbody id="apps"></tbody></table>
+    </div>
+
+    <div class="tab" id="tab-usage" hidden>
+      <h2 data-t="usage"></h2>
+      <p class="muted" data-t="usageBody"></p>
+      <table><thead><tr><th data-t="who"></th><th data-t="spend"></th><th data-t="calls"></th><th data-t="tokens"></th></tr></thead><tbody id="usage"></tbody></table>
+    </div>
+  </section>
+
+  <div id="toast" class="toast" role="status" hidden></div>
+</main>
+</body>
+</html>

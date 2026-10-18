@@ -19,8 +19,10 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -30,11 +32,13 @@ import (
 	"golang.org/x/term"
 
 	omnillm "github.com/wensuper/OmniLLM"
+	"github.com/wensuper/OmniLLM/console"
 	"github.com/wensuper/OmniLLM/device"
 	"github.com/wensuper/OmniLLM/hub"
 	"github.com/wensuper/OmniLLM/internal/control"
 	"github.com/wensuper/OmniLLM/internal/e2e"
 	"github.com/wensuper/OmniLLM/internal/provider"
+	"github.com/wensuper/OmniLLM/internal/qrcode"
 	"github.com/wensuper/OmniLLM/localapi"
 	"github.com/wensuper/OmniLLM/relay"
 	"github.com/wensuper/OmniLLM/secret"
@@ -75,6 +79,9 @@ func die(err error) {
 
 func usage() {
 	fmt.Fprint(os.Stderr, t(`用法：
+  omnillm install                    一步装好：主机作为后台服务运行，打开控制台
+  omnillm open                       打开本机控制台
+  omnillm status                     查看主机状态
   omnillm hub run                    启动主机（前台运行）
   omnillm hub provider add <openai|anthropic|ollama|openai-compatible> [--name N] [--base-url U]
                                      接入模型提供方（Key 从标准输入读，不写在命令行里）
@@ -91,6 +98,9 @@ func usage() {
   omnillm relay --listen :443 --autocert relay.example.com --hub-token-hash HEX
   omnillm relay token                生成一枚主机登记令牌和它的哈希
 `, `usage:
+  omnillm install                    one step: run the hub as a background service, open the console
+  omnillm open                       open the local console
+  omnillm status                     show the hub's status
   omnillm hub run                    run the hub (foreground)
   omnillm hub provider add <openai|anthropic|ollama|openai-compatible> [--name N] [--base-url U]
                                      connect a provider (the key is read from stdin, never argv)
@@ -122,11 +132,60 @@ func main() {
 		connectCmd(os.Args[2:])
 	case "relay":
 		relayCmd(os.Args[2:])
+	case "open":
+		openCmd()
+	case "install":
+		installCmd(os.Args[2:])
+	case "uninstall":
+		uninstallCmd(os.Args[2:])
+	case "status":
+		statusCmd(os.Args[2:])
 	case "version":
-		fmt.Println("omnillm 0.1.0-dev")
+		fmt.Println("omnillm " + version)
 	default:
 		usage()
 	}
+}
+
+// version is set at build time (-ldflags "-X main.version=…").
+var version = "0.1.0-dev"
+
+func openCmd() {
+	sock := filepath.Join(dataDir("hub"), "control.sock")
+	var url string
+	err := control.Call(sock, control.Request{Op: "console.login"}, func(r control.Reply) (bool, bool) {
+		url = r.Text
+		return false, false
+	})
+	if err != nil || !strings.HasPrefix(url, "http://127.0.0.1:") {
+		fmt.Fprintln(os.Stderr, t("主机没有在运行。先运行 omnillm install（或 omnillm hub run）。", "The hub is not running. Run omnillm install (or omnillm hub run) first."))
+		os.Exit(1)
+	}
+	if err := openBrowser(url); err != nil {
+		fmt.Println(t("在这台电脑的浏览器里打开（2 分钟内有效，只能用一次）：", "Open this in a browser on this computer (valid 2 minutes, single use):"))
+		fmt.Println(url)
+		return
+	}
+	fmt.Println(t("已在浏览器里打开控制台。", "Opened the console in your browser."))
+}
+
+func openBrowser(url string) error {
+	if os.Getenv("OMNILLM_NO_BROWSER") != "" {
+		return errors.New("browser disabled")
+	}
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "darwin":
+		cmd = exec.Command("open", url)
+	case "windows":
+		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
+	default:
+		if os.Getenv("DISPLAY") == "" && os.Getenv("WAYLAND_DISPLAY") == "" {
+			return errors.New("no display")
+		}
+		cmd = exec.Command("xdg-open", url)
+	}
+	return cmd.Start()
 }
 
 func dataDir(role string) string {
@@ -143,7 +202,22 @@ func dataDir(role string) string {
 // secrets: the system keychain, or an encrypted file when OMNILLM_MASTER_KEY
 // is set (servers without a keychain).
 func secrets(dir, service string) secret.Store {
-	if mk := os.Getenv("OMNILLM_MASTER_KEY"); mk != "" {
+	mk := os.Getenv("OMNILLM_MASTER_KEY")
+	if f := os.Getenv("OMNILLM_MASTER_KEY_FILE"); mk == "" && f != "" {
+		st, err := os.Stat(f)
+		if err != nil {
+			die(err)
+		}
+		if st.Mode().Perm()&0o077 != 0 {
+			die(errors.New(t("主密钥文件只能自己可读（0600）：", "The master key file must be readable only by you (0600): ") + f))
+		}
+		b, err := os.ReadFile(f)
+		if err != nil {
+			die(err)
+		}
+		mk = strings.TrimSpace(string(b))
+	}
+	if mk != "" {
 		k, err := secret.ParseMasterKey(mk)
 		if err != nil {
 			die(err)
@@ -273,6 +347,12 @@ func call(sock string, req control.Request) {
 					fmt.Println(string(r.Data))
 				}
 			}
+		case "qr":
+			if term.IsTerminal(int(os.Stdout.Fd())) {
+				if q, err := qrcode.Terminal(r.Text); err == nil {
+					fmt.Print(q)
+				}
+			}
 		case "confirm":
 			ans := readLine(r.Text + " [y/N] ")
 			return strings.EqualFold(ans, "y") || strings.EqualFold(ans, "yes") || ans == "是", true
@@ -289,6 +369,7 @@ func hubRun(dir, sock string, args []string) {
 	fs := flag.NewFlagSet("hub run", flag.ExitOnError)
 	relayURL := fs.String("relay", os.Getenv("OMNILLM_RELAY"), "relay URL (wss://…)")
 	api := fs.String("api", "", "serve the local API for app tokens on this loopback address, e.g. 127.0.0.1:8765")
+	consoleAddr := fs.String("console", "127.0.0.1:8770", "serve the local console on this loopback address (empty: off)")
 	_ = fs.Parse(args)
 	ctx, stop := signalCtx()
 	defer stop()
@@ -334,7 +415,19 @@ func hubRun(dir, sock string, args []string) {
 	if err != nil {
 		die(err)
 	}
-	go control.Serve(ctx, ln, hubHandler(h, *relayURL))
+	var con *console.Server
+	if *consoleAddr != "" {
+		con, err = console.New(h, *consoleAddr)
+		if err != nil {
+			die(err)
+		}
+		go func() {
+			if err := con.Serve(ctx); err != nil {
+				log.Printf(t("控制台没能启动：%v", "Console did not start: %v"), err)
+			}
+		}()
+	}
+	go control.Serve(ctx, ln, hubHandler(h, *relayURL, con))
 	if *api != "" {
 		go func() {
 			if err := localapi.Serve(ctx, *api, localapi.Handler(localapi.HubBackend{Hub: h})); err != nil {
@@ -361,10 +454,33 @@ func jsonData(v any) json.RawMessage {
 	return b
 }
 
-func hubHandler(h *hub.Hub, relayURL string) control.Handler {
+func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handler {
 	return func(ctx context.Context, c *control.Conn, req control.Request) error {
 		a := req.Args
 		switch req.Op {
+		case "ollama.auto":
+			ps, _ := h.Providers(ctx)
+			if len(ps) > 0 {
+				return c.Send(control.Reply{Event: "ok"})
+			}
+			if ids, err := h.DetectOllama(ctx); err == nil && len(ids) > 0 {
+				cfg, _ := provider.Default(provider.Ollama)
+				if _, err := h.AddProvider(ctx, cfg, ""); err != nil {
+					return errors.New(omnillm.Describe(lang(), err))
+				}
+			}
+			return c.Send(control.Reply{Event: "ok"})
+		case "console.login":
+			if con == nil {
+				return errors.New(t("控制台没有开启。", "The console is off."))
+			}
+			return c.Send(control.Reply{Event: "ok", Text: con.LoginURL()})
+		case "status":
+			ps, _ := h.Providers(ctx)
+			ds, _ := h.Devices(ctx)
+			st := map[string]any{"running": true, "version": version, "providers": len(ps), "devices": len(ds),
+				"relay_configured": relayURL != "", "relay_up": h.RelayUp(), "console": con != nil}
+			return c.Send(control.Reply{Event: "ok", Data: jsonData(st)})
 		case "provider.add":
 			cfg, err := provider.Default(provider.Kind(a["kind"]))
 			if a["kind"] == string(provider.OpenAICompatible) {
@@ -509,6 +625,9 @@ func pairOp(ctx context.Context, h *hub.Hub, c *control.Conn, a map[string]strin
 		}})
 	if err != nil {
 		return errors.New(omnillm.Describe(lang(), err))
+	}
+	if err := c.Send(control.Reply{Event: "qr", Text: p.Code}); err != nil {
+		return err
 	}
 	if err := c.Send(control.Reply{Event: "info", Text: fmt.Sprintf(t(
 		"在那台设备上运行 omnillm connect pair，然后粘贴下面这段配对文字（%s 前有效，只能用一次；不要发给别人，也不要贴到聊天里）：\n\n%s\n",

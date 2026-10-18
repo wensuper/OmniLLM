@@ -31,21 +31,17 @@ OmniLLM 让你在一台设备上接入大模型（登录账号、配置 API Key 
 
 ## 状态
 
-概要设计见 [docs/design.md](docs/design.md)。v0.1 的库、连接服务和命令行已实现并测试，实现状态见 §13。
+概要设计见 [docs/design.md](docs/design.md)。v0.1 的库、连接服务、命令行、本机控制台和一步安装已实现并测试；实现状态见 §13。
 
-## 试用（v0.1，命令行）
+## 安装：交给你的 AI
 
-```bash
-go install github.com/wensuper/OmniLLM/cmd/omnillm@latest
-omnillm relay token                     # 自己部署连接服务时用；公共连接服务上线后可省略
-omnillm hub run --relay wss://<连接服务>  # 主机，前台运行
-omnillm hub provider add anthropic      # 粘贴 API Key（不会显示）
-omnillm hub pair --name "我的服务器"      # 显示配对文字，在主机上确认 6 位数字
-omnillm connect pair                    # 在另一台设备上粘贴配对文字
-omnillm connect ask --model anthropic/<模型> "你好"
-```
+把这一句发给你正在用的 AI（Claude Code、Codex、Cursor 等），它会自己装好，全部用默认值：
 
-现在只有命令行；网页控制台、手机网页客户端、一行安装还在做，见 [docs/design.md §13](docs/design.md)。
+> 请阅读并按照 https://raw.githubusercontent.com/wensuper/OmniLLM/main/INSTALL.md 在这台电脑上安装 OmniLLM。
+
+装好后浏览器会打开本机控制台。唯一要你做的一件事是在控制台里粘贴 API Key（不要贴到和 AI 的聊天里）；如果这台电脑上已经有 Ollama 本地模型，连这一步都不用。
+
+安装说明是写给 AI 看的，人也可以照着做：[INSTALL.md](INSTALL.md)。支持 macOS 和 Linux。
 
 ## License
 

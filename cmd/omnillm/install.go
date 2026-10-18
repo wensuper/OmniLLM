@@ -1,0 +1,359 @@
+package main
+
+// "omnillm install": everything with defaults, no questions (design §10.1;
+// INSTALL.md is written for an AI agent to run it). It installs the binary
+// for this user, runs the hub as a background service, connects a local
+// Ollama if one is running, and opens the console. Running it again is
+// safe: it updates the service and restarts the hub.
+
+import (
+	"encoding/base64"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/wensuper/OmniLLM/internal/control"
+	"github.com/wensuper/OmniLLM/internal/e2e"
+)
+
+const (
+	launchdLabel = "dev.omnillm.hub"
+	systemdUnit  = "omnillm-hub.service"
+)
+
+// Status is what "omnillm status --json" prints for people and agents.
+type Status struct {
+	Running         bool   `json:"running"`
+	Version         string `json:"version,omitempty"`
+	Providers       int    `json:"providers"`
+	Devices         int    `json:"devices"`
+	RelayConfigured bool   `json:"relay_configured"`
+	RelayUp         bool   `json:"relay_up"`
+	Console         bool   `json:"console"`
+	Service         string `json:"service,omitempty"` // launchd | systemd | none
+	Next            string `json:"next"`              // the one thing to do next, for a person
+}
+
+func installCmd(args []string) {
+	noOpen := false
+	for _, a := range args {
+		if a == "--no-open" {
+			noOpen = true
+		}
+	}
+	if runtime.GOOS != "darwin" && runtime.GOOS != "linux" {
+		die(errors.New(t("这一版的一步安装只支持 macOS 和 Linux。", "One-step install supports macOS and Linux in this version.")))
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		die(err)
+	}
+	bin, err := installBinary(home)
+	if err != nil {
+		die(err)
+	}
+	dir := dataDir("hub")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		die(err)
+	}
+	env, err := secretEnv(dir)
+	if err != nil {
+		die(err)
+	}
+	service, err := installService(home, bin, dir, env)
+	if err != nil {
+		die(err)
+	}
+	st, ok := waitRunning(15 * time.Second)
+	if !ok {
+		die(errors.New(t("主机没有启动起来。日志在 ", "The hub did not start. Its log is at ") + filepath.Join(dir, "hub.log")))
+	}
+	if st.Providers == 0 {
+		// A local model needs no key and sends nothing off the machine.
+		_ = control.Call(filepath.Join(dir, "control.sock"), control.Request{Op: "ollama.auto"}, func(control.Reply) (bool, bool) { return false, false })
+		st, _ = waitRunning(time.Second)
+	}
+	st.Service = service
+	fmt.Println(t("OmniLLM 已安装，主机在后台运行（开机自动启动）。", "OmniLLM is installed; the hub runs in the background and starts at login."))
+	if !noOpen {
+		if url, err := loginURL(); err == nil && openBrowser(url) == nil {
+			fmt.Println(t("控制台已在浏览器里打开。", "The console is open in your browser."))
+		} else {
+			fmt.Println(t("在浏览器里打开控制台：运行 omnillm open", "To open the console, run: omnillm open"))
+		}
+	}
+	st.Next = nextStep(st)
+	fmt.Println(st.Next)
+	b, _ := json.Marshal(st)
+	fmt.Println("OMNILLM_STATUS " + string(b))
+}
+
+func nextStep(st Status) string {
+	switch {
+	case !st.Running:
+		return t("主机没有运行：运行 omnillm install。", "The hub is not running: run omnillm install.")
+	case st.Providers == 0:
+		return t("下一步：在控制台里接入一个模型（粘贴 API Key，或先安装 Ollama 用本地模型）。打开控制台：omnillm open",
+			"Next: connect a model in the console (paste an API key there, or install Ollama for a local model). Open it with: omnillm open")
+	case !st.RelayConfigured:
+		return t("已经可以在这台电脑上使用。要让其他设备连进来，需要先配置连接服务。",
+			"Ready on this computer. To let other devices connect, a connection service must be set up first.")
+	case st.Devices == 0:
+		return t("下一步：在控制台的“设备”里添加手机或其他电脑。", "Next: add a phone or another computer under Devices in the console.")
+	}
+	return t("一切正常。", "All set.")
+}
+
+// installBinary copies this executable to ~/.local/bin/omnillm (0755), so
+// the service has a stable path.
+func installBinary(home string) (string, error) {
+	self, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
+	self, _ = filepath.EvalSymlinks(self)
+	dst := filepath.Join(home, ".local", "bin", "omnillm")
+	if self == dst {
+		return dst, nil
+	}
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		return "", err
+	}
+	in, err := os.Open(self)
+	if err != nil {
+		return "", err
+	}
+	defer in.Close()
+	tmp := dst + ".new"
+	out, err := os.OpenFile(tmp, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o755)
+	if err != nil {
+		return "", err
+	}
+	if _, err := io.Copy(out, in); err != nil {
+		out.Close()
+		return "", err
+	}
+	if err := out.Close(); err != nil {
+		return "", err
+	}
+	return dst, os.Rename(tmp, dst)
+}
+
+// secretEnv picks where secrets live for the service. macOS: the keychain
+// (nothing to set). Linux: a background service usually has no unlocked
+// keyring, so secrets go into an encrypted file whose key is in a separate
+// 0600 file next to it; that is as strong as the account's file
+// permissions, and INSTALL.md says so.
+func secretEnv(dir string) (map[string]string, error) {
+	if runtime.GOOS == "darwin" {
+		return nil, nil
+	}
+	kf := filepath.Join(dir, "master.key")
+	if _, err := os.Stat(kf); errors.Is(err, os.ErrNotExist) {
+		k := base64.StdEncoding.EncodeToString(e2e.RandomBytes(32))
+		if err := os.WriteFile(kf, []byte(k+"\n"), 0o600); err != nil {
+			return nil, err
+		}
+	}
+	return map[string]string{"OMNILLM_MASTER_KEY_FILE": kf}, nil
+}
+
+func installService(home, bin, dir string, env map[string]string) (string, error) {
+	switch runtime.GOOS {
+	case "darwin":
+		return "launchd", installLaunchd(home, bin, dir, env)
+	default:
+		if _, err := exec.LookPath("systemctl"); err == nil {
+			if err := installSystemd(home, bin, dir, env); err == nil {
+				return "systemd", nil
+			}
+		}
+		return "none", startDetached(bin, dir, env)
+	}
+}
+
+func xmlEscape(s string) string {
+	return strings.NewReplacer("&", "&amp;", "<", "&lt;", ">", "&gt;", `"`, "&quot;").Replace(s)
+}
+
+func installLaunchd(home, bin, dir string, env map[string]string) error {
+	plist := filepath.Join(home, "Library", "LaunchAgents", launchdLabel+".plist")
+	var envXML strings.Builder
+	for k, v := range env {
+		fmt.Fprintf(&envXML, "<key>%s</key><string>%s</string>", xmlEscape(k), xmlEscape(v))
+	}
+	if relay := os.Getenv("OMNILLM_RELAY"); relay != "" {
+		fmt.Fprintf(&envXML, "<key>OMNILLM_RELAY</key><string>%s</string>", xmlEscape(relay))
+	}
+	body := `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>Label</key><string>` + launchdLabel + `</string>
+<key>ProgramArguments</key><array><string>` + xmlEscape(bin) + `</string><string>hub</string><string>run</string></array>
+<key>EnvironmentVariables</key><dict>` + envXML.String() + `</dict>
+<key>RunAtLoad</key><true/>
+<key>KeepAlive</key><true/>
+<key>ProcessType</key><string>Background</string>
+<key>StandardOutPath</key><string>` + xmlEscape(filepath.Join(dir, "hub.log")) + `</string>
+<key>StandardErrorPath</key><string>` + xmlEscape(filepath.Join(dir, "hub.log")) + `</string>
+</dict></plist>
+`
+	if err := os.MkdirAll(filepath.Dir(plist), 0o755); err != nil {
+		return err
+	}
+	if err := os.WriteFile(plist, []byte(body), 0o644); err != nil {
+		return err
+	}
+	domain := "gui/" + strconv.Itoa(os.Getuid())
+	_ = exec.Command("launchctl", "bootout", domain+"/"+launchdLabel).Run()
+	if out, err := exec.Command("launchctl", "bootstrap", domain, plist).CombinedOutput(); err != nil {
+		// Older systems or a non-GUI session: fall back to load.
+		if out2, err2 := exec.Command("launchctl", "load", "-w", plist).CombinedOutput(); err2 != nil {
+			return fmt.Errorf("launchctl: %s %s", strings.TrimSpace(string(out)), strings.TrimSpace(string(out2)))
+		}
+	}
+	return nil
+}
+
+func installSystemd(home, bin, dir string, env map[string]string) error {
+	unit := filepath.Join(home, ".config", "systemd", "user", systemdUnit)
+	var envLines strings.Builder
+	for k, v := range env {
+		fmt.Fprintf(&envLines, "Environment=%s=%s\n", k, strconv.Quote(v))
+	}
+	if relay := os.Getenv("OMNILLM_RELAY"); relay != "" {
+		fmt.Fprintf(&envLines, "Environment=OMNILLM_RELAY=%s\n", strconv.Quote(relay))
+	}
+	body := "[Unit]\nDescription=OmniLLM hub\nAfter=network-online.target\n\n[Service]\n" +
+		"ExecStart=" + strconv.Quote(bin) + " hub run\n" + envLines.String() +
+		"Restart=on-failure\nRestartSec=3\nNoNewPrivileges=yes\nPrivateTmp=yes\nUMask=0077\n\n[Install]\nWantedBy=default.target\n"
+	if err := os.MkdirAll(filepath.Dir(unit), 0o755); err != nil {
+		return err
+	}
+	if err := os.WriteFile(unit, []byte(body), 0o644); err != nil {
+		return err
+	}
+	for _, args := range [][]string{{"--user", "daemon-reload"}, {"--user", "enable", systemdUnit}, {"--user", "restart", systemdUnit}} {
+		if out, err := exec.Command("systemctl", args...).CombinedOutput(); err != nil {
+			return fmt.Errorf("systemctl %s: %s", strings.Join(args, " "), strings.TrimSpace(string(out)))
+		}
+	}
+	// Keep running after logout on servers.
+	_ = exec.Command("loginctl", "enable-linger").Run()
+	return nil
+}
+
+// startDetached runs the hub without a service manager (no autostart).
+func startDetached(bin, dir string, env map[string]string) error {
+	logf, err := os.OpenFile(filepath.Join(dir, "hub.log"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
+	if err != nil {
+		return err
+	}
+	cmd := exec.Command(bin, "hub", "run")
+	cmd.Stdout, cmd.Stderr = logf, logf
+	cmd.Env = os.Environ()
+	for k, v := range env {
+		cmd.Env = append(cmd.Env, k+"="+v)
+	}
+	detach(cmd)
+	return cmd.Start()
+}
+
+func queryStatus() (Status, bool) {
+	var st Status
+	sock := filepath.Join(dataDir("hub"), "control.sock")
+	ok := false
+	err := control.Call(sock, control.Request{Op: "status"}, func(r control.Reply) (bool, bool) {
+		if json.Unmarshal(r.Data, &st) == nil {
+			ok = true
+		}
+		return false, false
+	})
+	return st, err == nil && ok
+}
+
+func waitRunning(d time.Duration) (Status, bool) {
+	deadline := time.Now().Add(d)
+	for {
+		if st, ok := queryStatus(); ok {
+			return st, true
+		}
+		if time.Now().After(deadline) {
+			return Status{}, false
+		}
+		time.Sleep(250 * time.Millisecond)
+	}
+}
+
+func loginURL() (string, error) {
+	var url string
+	err := control.Call(filepath.Join(dataDir("hub"), "control.sock"), control.Request{Op: "console.login"},
+		func(r control.Reply) (bool, bool) { url = r.Text; return false, false })
+	if err != nil || !strings.HasPrefix(url, "http://127.0.0.1:") {
+		return "", errors.New("no console")
+	}
+	return url, nil
+}
+
+func statusCmd(args []string) {
+	st, ok := queryStatus()
+	st.Running = ok
+	st.Next = nextStep(st)
+	for _, a := range args {
+		if a == "--json" {
+			b, _ := json.Marshal(st)
+			fmt.Println(string(b))
+			return
+		}
+	}
+	if !ok {
+		fmt.Println(st.Next)
+		os.Exit(1)
+	}
+	fmt.Printf(t("主机在运行（%s）。模型提供方 %d 个，设备 %d 台。\n", "The hub is running (%s). Providers: %d, devices: %d.\n"), st.Version, st.Providers, st.Devices)
+	fmt.Println(st.Next)
+}
+
+func uninstallCmd(args []string) {
+	purge := false
+	for _, a := range args {
+		if a == "--purge" {
+			purge = true
+		}
+	}
+	home, _ := os.UserHomeDir()
+	switch runtime.GOOS {
+	case "darwin":
+		plist := filepath.Join(home, "Library", "LaunchAgents", launchdLabel+".plist")
+		_ = exec.Command("launchctl", "bootout", "gui/"+strconv.Itoa(os.Getuid())+"/"+launchdLabel).Run()
+		_ = os.Remove(plist)
+	case "linux":
+		_ = exec.Command("systemctl", "--user", "disable", "--now", systemdUnit).Run()
+		_ = os.Remove(filepath.Join(home, ".config", "systemd", "user", systemdUnit))
+		_ = exec.Command("systemctl", "--user", "daemon-reload").Run()
+	}
+	fmt.Println(t("后台服务已停止并移除。", "The background service is stopped and removed."))
+	if purge {
+		sec := secrets(dataDir("hub"), "omnillm-hub")
+		ctx, stop := signalCtx()
+		defer stop()
+		if names, err := sec.List(ctx, ""); err == nil {
+			for _, n := range names {
+				_ = sec.Delete(ctx, n)
+			}
+		}
+		_ = os.RemoveAll(filepath.Dir(dataDir("hub")))
+		fmt.Println(t("数据和保存的 Key 已删除。提供方后台的 Key 本身没有作废，需要的话请到提供方后台作废。",
+			"Data and saved keys are deleted. The keys themselves are still valid at the providers; revoke them there if needed."))
+	} else {
+		fmt.Println(t("数据和 Key 保留着；要一并删除，运行 omnillm uninstall --purge。", "Data and keys are kept; to delete them too, run omnillm uninstall --purge."))
+	}
+}
