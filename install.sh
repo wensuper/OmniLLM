@@ -54,6 +54,21 @@ case "$code" in
   200|404) ;;
   *) fail "could not reach GitHub releases (HTTP ${code:-none}); check the network and run this again" ;;
 esac
+if [ "$code" = "404" ]; then
+  # No stable release: use the newest pre-release, if any. Only the tag
+  # name is taken from the API answer, and it must look like a version;
+  # downloads still come from this repository's release files.
+  api=$(curl -fsSL --proto '=https' --tlsv1.2 -H 'Accept: application/vnd.github+json' \
+    "https://api.github.com/repos/$REPO/releases?per_page=5" 2>/dev/null) || fail "could not reach GitHub (API); check the network and run this again"
+  tag=$(printf '%s' "$api" | grep -o '"tag_name": *"[^"]*"' | head -n 1 | sed 's/.*"\([^"]*\)"$/\1/')
+  if [ -n "$tag" ]; then
+    printf '%s' "$tag" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$' || fail "unexpected release name: refusing"
+    BASE="https://github.com/$REPO/releases/download/$tag"
+    say "Using pre-release $tag."
+    code=$(curl -sSL --proto '=https' --tlsv1.2 -o "$work/checksums.txt" -w '%{http_code}' "$BASE/checksums.txt" 2>/dev/null || true)
+    [ "$code" = "200" ] || fail "release $tag has no checksums.txt (HTTP ${code:-none}); refusing"
+  fi
+fi
 if [ "$code" = "200" ]; then
   say "Downloading $asset ..."
   curl -fsSL --proto '=https' --tlsv1.2 -o "$work/$asset" "$BASE/$asset" || fail "download failed: $asset"
