@@ -268,6 +268,18 @@
 
 `GET /v1/models` 的每个模型带 `x_omnillm` 字段：`locality`（`local` 表示数据不出这台机器，`remote` 表示会到云端）和 `provider`。调用方（如 NEXA）按它如实显示数据去向；字段缺失时一律按 `remote` 处理。
 
+本机接口的错误状态码（固定，调用方可以据此分支）：
+
+| 状态码 | 含义 | 正文 `error.code` |
+|---|---|---|
+| 400 | 请求本身不被支持，如这个模型不支持所给的 `response_format` | `unsupported_response_format` 等 |
+| 401 | 令牌缺失、无效或已吊销 | `invalid_token` |
+| 403 | 令牌有效，但不允许用这个模型（不在这枚令牌的模型清单里，或该模型只能人手动使用） | `model_not_allowed` |
+| 429 | 排队已满或上游限流，带 `Retry-After` | `busy` |
+| 503 | 中心节点离线或连接服务不通 | `hub_offline` |
+
+`error.message` 是给人看的一句话（中英按 `Accept-Language`），不含凭据和上游原始报错。
+
 模型名用 `provider/model` 形式（如 `anthropic/claude-sonnet-5-5`、`ollama/qwen3`），也支持别名。界面上显示人看得懂的名字（如“Claude Sonnet 5.5”“本地 Qwen3”），并有一个默认模型，日常对话不用每次选。
 
 ## 7. 里程碑
@@ -297,13 +309,13 @@ NEXA（本机程序 `pgclient`）是用户本机的前置接洽 Agent。OmniLLM 
 
 - **一步接入**：控制台里点“接入 NEXA”（或 `omnillm nexa connect`）。OmniLLM 检测到本机的 NEXA 后，说明要做什么、请主人确认，然后：发一枚应用令牌、通过 NEXA 提供的设置命令把提供方、地址、令牌、模型一次写进 NEXA、再让 NEXA 跑一次模型测试，告诉主人结果。主人不用手动复制令牌、改配置。
   - NEXA 现在没有能写入模型设置的命令（只能在设置页或配置文件里改），所以需要 NEXA 加一个（§8.4）。在那之前，OmniLLM 打开 NEXA 的设置页，并把要填的三项显示出来，令牌一键复制。
-- **底层做法**：NEXA 的 OpenAI 兼容提供方（`llm.provider=openai`，`openai_base_url`，Key 来自钥匙串 `openai_api_key`）或 §8.4 新增的 `omnillm` 提供方；Key 位置放 OmniLLM 发的**应用令牌**，`llm.model` 填 OmniLLM 的模型名。
+- **底层做法**：用 NEXA 新增的 `omnillm` 提供方（§8.4）：`llm.provider=omnillm`，`llm.omnillm_url` 填 OmniLLM 本机接口地址，OmniLLM 发的**应用令牌**放进 NEXA 钥匙串的 `omnillm_api_key`（或环境变量 `OMNILLM_API_KEY`），`llm.model` 填 OmniLLM 的模型名。不用 NEXA 的 `openai` 提供方：它按主机名判断数据去向，会把经云端的请求显示成“只在本机”。
 - **应用令牌**：只在本机接口有效；单独设可用模型和额度；可以 `omnillm app revoke nexa` 单独吊销；它不是上游凭据，也换不到上游凭据。
 - **只走 API Key 和本地模型**：NEXA 的判断是后台自动调用，量大且持续。应用令牌默认不能用 OAuth 登录得来的订阅额度（§5.2），避免账号因自动化使用被封。
 - **结构化输出**：NEXA 依次试 `response_format` 的 `json_schema`（strict）、`json_object`、纯文本，遇到 400 / 422 就降一级。OmniLLM 对每个模型如实处理：上游支持就转成上游的结构化输出；不支持就返回 400，让 NEXA 降级，**不假装支持**。
-- **错误要可区分**（NEXA 原则 37：忙、等待、超时不能当结论）：排队满或被上游限流返回 429 + `Retry-After`；中心节点离线或 relay 不通返回 503；令牌被吊销返回 401；不返回 200 加空内容。
+- **错误要可区分**（NEXA 原则 37：忙、等待、超时不能当结论）：排队满或被上游限流返回 429 + `Retry-After`；中心节点离线或 relay 不通返回 503；令牌缺失、无效或被吊销返回 401；令牌有效但不允许用这个模型返回 403，正文 `{"error":{"code":"model_not_allowed","message":"…"}}`（不用 400，否则 NEXA 会当成结构化输出不支持而逐级降级重试）；不返回 200 加空内容。
 - **并发**：NEXA 的 `llm.max_concurrent` 不超过这枚应用令牌的并发上限（默认 2），多出来的在 OmniLLM 排队。
-- **数据去向如实报告（需要 NEXA 改动）**：NEXA 现在按 `openai_base_url` 的主机名判断数据是否留在本机，`127.0.0.1` 会被当成“只在本机”。但经 OmniLLM 出去的请求实际到了云端提供商，这样显示是错的。所以 NEXA 侧要加一个 `omnillm` 提供方（增量改动）：复用 OpenAI 兼容的调用，但数据去向按 OmniLLM 在 `/v1/models` 里报告的 `x_omnillm.locality` 和 `x_omnillm.provider` 来定（§6），字段缺失或拿不到时按 `remote`。只有中心节点就是这台机器、而且模型是本地模型（如 Ollama）时，才算“只在本机”。这个改动上线前，不建议把 NEXA 的判断模型指向 OmniLLM。
+- **数据去向如实报告（需要 NEXA 改动）**：NEXA 现在按 `openai_base_url` 的主机名判断数据是否留在本机，`127.0.0.1` 会被当成“只在本机”。但经 OmniLLM 出去的请求实际到了云端提供商，这样显示是错的。所以 NEXA 侧要加一个 `omnillm` 提供方（增量改动）：复用 OpenAI 兼容的调用，但数据去向按 OmniLLM 在 `/v1/models` 里报告的 `x_omnillm.locality` 和 `x_omnillm.provider` 来定（§6），字段缺失或拿不到时按 `remote`（NEXA 缓存 60 秒）。只有地址是本机回环、而且 OmniLLM 报告这个模型是 `local`（中心节点就是这台机器、模型是本地模型如 Ollama）时，才算“只在本机”。NEXA 侧已在分支上实现（pgclient 提交 7700e831，契约见 pgclient `docs/30-数据去向图设计.html` §10）；上线前不建议把 NEXA 的判断模型指向 OmniLLM。
 
 ### 8.3 角色二：当 NEXA 的 AI 应用
 
