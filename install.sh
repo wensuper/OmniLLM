@@ -13,8 +13,9 @@
 set -eu
 
 REPO="wensuper/OmniLLM"
-BASE="${OMNILLM_RELEASE_BASE:-https://github.com/$REPO/releases/latest/download}"
-case "$BASE" in https://*) ;; *) printf 'omnillm-install: release address must be https\n' >&2; exit 1 ;; esac
+# Fixed on purpose: no environment variable can point this at another
+# server (a mirror could serve its own archive and matching checksums).
+BASE="https://github.com/$REPO/releases/latest/download"
 
 say() { printf '%s\n' "$*"; }
 fail() { printf 'omnillm-install: %s\n' "$*" >&2; exit 1; }
@@ -45,7 +46,15 @@ sha256() {
 
 bin=""
 asset="omnillm_${os}_${arch}.tar.gz"
-if curl -fsSL --proto '=https' --tlsv1.2 -o "$work/checksums.txt" "$BASE/checksums.txt" 2>/dev/null; then
+# 200: a release exists. 404: none published yet (build from source).
+# Anything else (network error, blocked request): stop; never fall back to
+# an unverified build because a download failed.
+code=$(curl -sSL --proto '=https' --tlsv1.2 -o "$work/checksums.txt" -w '%{http_code}' "$BASE/checksums.txt" 2>/dev/null || true)
+case "$code" in
+  200|404) ;;
+  *) fail "could not reach GitHub releases (HTTP ${code:-none}); check the network and run this again" ;;
+esac
+if [ "$code" = "200" ]; then
   say "Downloading $asset ..."
   curl -fsSL --proto '=https' --tlsv1.2 -o "$work/$asset" "$BASE/$asset" || fail "download failed: $asset"
   want=$(grep "  $asset\$" "$work/checksums.txt" | cut -d' ' -f1)
@@ -58,7 +67,7 @@ if curl -fsSL --proto '=https' --tlsv1.2 -o "$work/checksums.txt" "$BASE/checksu
     curl -fsSL --proto '=https' --tlsv1.2 -o "$work/checksums.txt.sig" "$BASE/checksums.txt.sig" || fail "missing signature"
     cosign verify-blob \
       --certificate "$work/checksums.txt.pem" --signature "$work/checksums.txt.sig" \
-      --certificate-identity-regexp "^https://github.com/$REPO/\\.github/workflows/release\\.yml@refs/tags/v" \
+      --certificate-identity-regexp "^https://github\\.com/wensuper/OmniLLM/\\.github/workflows/release\\.yml@refs/tags/v[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.]+)?\$" \
       --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
       "$work/checksums.txt" >/dev/null 2>&1 || fail "signature check failed: refusing to install"
     say "Signature OK (built by $REPO's release workflow)."
@@ -68,7 +77,7 @@ if curl -fsSL --proto '=https' --tlsv1.2 -o "$work/checksums.txt" "$BASE/checksu
   tar -xzf "$work/$asset" -C "$work" omnillm || fail "archive is damaged"
   bin="$work/omnillm"
 else
-  say "No release published yet: building from source."
+  say "No release published yet: building from source (not signature-checked)."
   command -v go >/dev/null 2>&1 || fail "no release yet and Go is not installed. Install Go 1.27.2+ from https://go.dev/dl/ and run this again."
   GOBIN="$work" GOFLAGS=-trimpath go install "github.com/$REPO/cmd/omnillm@latest" || fail "build failed"
   bin="$work/omnillm"

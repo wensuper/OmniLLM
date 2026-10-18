@@ -14,6 +14,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"html"
 	"io"
 	"log"
 	"net"
@@ -161,12 +162,28 @@ func openCmd() {
 		fmt.Fprintln(os.Stderr, t("主机没有在运行。先运行 omnillm install（或 omnillm hub run）。", "The hub is not running. Run omnillm install (or omnillm hub run) first."))
 		os.Exit(1)
 	}
-	if err := openBrowser(url); err != nil {
+	if err := openLogin(url); err != nil {
 		fmt.Println(t("在这台电脑的浏览器里打开（2 分钟内有效，只能用一次）：", "Open this in a browser on this computer (valid 2 minutes, single use):"))
 		fmt.Println(url)
 		return
 	}
 	fmt.Println(t("已在浏览器里打开控制台。", "Opened the console in your browser."))
+}
+
+// openLogin opens the one-time login link without putting it on a command
+// line (other users can read command lines on a shared machine): the link
+// goes into a page readable only by this user, and the browser opens that.
+func openLogin(url string) error {
+	if os.Getenv("OMNILLM_NO_BROWSER") != "" {
+		return errors.New("browser disabled")
+	}
+	page := filepath.Join(dataDir("hub"), "open.html")
+	body := `<!doctype html><meta charset="utf-8"><meta name="referrer" content="no-referrer">` +
+		`<meta http-equiv="refresh" content="0;url=` + html.EscapeString(url) + `"><title>OmniLLM</title>`
+	if err := secret.WriteFileAtomic(page, []byte(body)); err != nil {
+		return err
+	}
+	return openBrowser("file://" + page)
 }
 
 func openBrowser(url string) error {

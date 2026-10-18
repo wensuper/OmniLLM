@@ -115,9 +115,13 @@ function applyTheme(v) {
   if (v) document.documentElement.dataset.theme = v; else delete document.documentElement.dataset.theme;
 }
 
+// The session secret lives in this origin's sessionStorage (not shared
+// with other localhost ports, unlike cookies) and goes with every call.
+function sessionSecret(v) { try { if (v === undefined) return sessionStorage.getItem("omnillm.session") || ""; sessionStorage.setItem("omnillm.session", v); } catch (_) { return ""; } }
+
 async function api(path, body) {
   const opts = { method: body === undefined ? "GET" : "POST", credentials: "same-origin",
-    headers: { "X-OmniLLM-Console": "1", "X-OmniLLM-Lang": lang } };
+    headers: { "X-OmniLLM-Console": "1", "X-OmniLLM-Lang": lang, "X-OmniLLM-Session": sessionSecret() } };
   if (body !== undefined) { opts.headers["Content-Type"] = "application/json"; opts.body = JSON.stringify(body); }
   const r = await fetch("/console/api/" + path, opts);
   let data = null;
@@ -461,7 +465,7 @@ async function boot() {
   const m = /(?:^|[#&])login=([0-9a-f]{64})/.exec(location.hash);
   if (m) {
     history.replaceState(null, "", "/console/");
-    try { await api("login", { token: m[1] }); } catch (e) { show("login-needed"); return; }
+    try { const r = await api("login", { token: m[1] }); sessionSecret(r.session); } catch (e) { show("login-needed"); return; }
   }
   try { await refresh(); } catch (e) { if (e.status === 401) show("login-needed"); else toast(e.message, true); }
 }

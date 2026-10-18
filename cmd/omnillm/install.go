@@ -22,6 +22,7 @@ import (
 
 	"github.com/wensuper/OmniLLM/internal/control"
 	"github.com/wensuper/OmniLLM/internal/e2e"
+	"github.com/wensuper/OmniLLM/internal/relaylink"
 )
 
 const (
@@ -84,7 +85,7 @@ func installCmd(args []string) {
 	st.Service = service
 	fmt.Println(t("OmniLLM 已安装，主机在后台运行（开机自动启动）。", "OmniLLM is installed; the hub runs in the background and starts at login."))
 	if !noOpen {
-		if url, err := loginURL(); err == nil && openBrowser(url) == nil {
+		if url, err := loginURL(); err == nil && openLogin(url) == nil {
 			fmt.Println(t("控制台已在浏览器里打开。", "The console is open in your browser."))
 		} else {
 			fmt.Println(t("在浏览器里打开控制台：运行 omnillm open", "To open the console, run: omnillm open"))
@@ -157,13 +158,41 @@ func secretEnv(dir string) (map[string]string, error) {
 		return nil, nil
 	}
 	kf := filepath.Join(dir, "master.key")
-	if _, err := os.Stat(kf); errors.Is(err, os.ErrNotExist) {
-		k := base64.StdEncoding.EncodeToString(e2e.RandomBytes(32))
-		if err := os.WriteFile(kf, []byte(k+"\n"), 0o600); err != nil {
-			return nil, err
-		}
+	if err := ensureMasterKey(kf); err != nil {
+		return nil, err
 	}
 	return map[string]string{"OMNILLM_MASTER_KEY_FILE": kf}, nil
+}
+
+// ensureMasterKey creates kf once (exclusively, 0600) or checks the one
+// that is there. It never replaces an existing key.
+func ensureMasterKey(kf string) error {
+	if b, err := os.ReadFile(kf); err == nil {
+		if raw, err := base64.StdEncoding.DecodeString(strings.TrimSpace(string(b))); err != nil || len(raw) != 32 {
+			// Never silently replace a key: the secrets file depends on it.
+			return fmt.Errorf(t("主密钥文件 %s 损坏，请检查或从备份恢复。", "The master key file %s is damaged; check it or restore it from a backup."), kf)
+		}
+	} else if errors.Is(err, os.ErrNotExist) {
+		k := base64.StdEncoding.EncodeToString(e2e.RandomBytes(32)) + "\n"
+		f, err := os.OpenFile(kf+".new", os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
+		if err != nil {
+			return err
+		}
+		if _, err := f.WriteString(k); err != nil {
+			f.Close()
+			return err
+		}
+		if err := f.Sync(); err != nil {
+			f.Close()
+			return err
+		}
+		f.Close()
+		defer os.Remove(kf + ".new")
+		return os.Link(kf+".new", kf) // fails if one appeared meanwhile
+	} else {
+		return err
+	}
+	return nil
 }
 
 func installService(home, bin, dir string, env map[string]string) (string, error) {
@@ -190,7 +219,7 @@ func installLaunchd(home, bin, dir string, env map[string]string) error {
 	for k, v := range env {
 		fmt.Fprintf(&envXML, "<key>%s</key><string>%s</string>", xmlEscape(k), xmlEscape(v))
 	}
-	if relay := os.Getenv("OMNILLM_RELAY"); relay != "" {
+	if relay := relayFromEnv(); relay != "" {
 		fmt.Fprintf(&envXML, "<key>OMNILLM_RELAY</key><string>%s</string>", xmlEscape(relay))
 	}
 	body := `<?xml version="1.0" encoding="UTF-8"?>
@@ -223,17 +252,36 @@ func installLaunchd(home, bin, dir string, env map[string]string) error {
 	return nil
 }
 
+// systemdQuote quotes a value for a unit file: systemd expands %
+// specifiers and $VARIABLES even inside quotes.
+func systemdQuote(v string) string {
+	return strings.NewReplacer("%", "%%", "$", "$$").Replace(strconv.Quote(v))
+}
+
+// relayFromEnv passes OMNILLM_RELAY to the service only if it is a valid
+// relay address.
+func relayFromEnv() string {
+	r := os.Getenv("OMNILLM_RELAY")
+	if r == "" {
+		return ""
+	}
+	if _, err := relaylink.CheckURL(r); err != nil {
+		die(fmt.Errorf("OMNILLM_RELAY: %w", err))
+	}
+	return r
+}
+
 func installSystemd(home, bin, dir string, env map[string]string) error {
 	unit := filepath.Join(home, ".config", "systemd", "user", systemdUnit)
 	var envLines strings.Builder
 	for k, v := range env {
-		fmt.Fprintf(&envLines, "Environment=%s=%s\n", k, strconv.Quote(v))
+		fmt.Fprintf(&envLines, "Environment=%s=%s\n", k, systemdQuote(v))
 	}
-	if relay := os.Getenv("OMNILLM_RELAY"); relay != "" {
-		fmt.Fprintf(&envLines, "Environment=OMNILLM_RELAY=%s\n", strconv.Quote(relay))
+	if relay := relayFromEnv(); relay != "" {
+		fmt.Fprintf(&envLines, "Environment=OMNILLM_RELAY=%s\n", systemdQuote(relay))
 	}
 	body := "[Unit]\nDescription=OmniLLM hub\nAfter=network-online.target\n\n[Service]\n" +
-		"ExecStart=" + strconv.Quote(bin) + " hub run\n" + envLines.String() +
+		"ExecStart=" + systemdQuote(bin) + " hub run\n" + envLines.String() +
 		"Restart=on-failure\nRestartSec=3\nNoNewPrivileges=yes\nPrivateTmp=yes\nUMask=0077\n\n[Install]\nWantedBy=default.target\n"
 	if err := os.MkdirAll(filepath.Dir(unit), 0o755); err != nil {
 		return err
@@ -350,10 +398,21 @@ func uninstallCmd(args []string) {
 				_ = sec.Delete(ctx, n)
 			}
 		}
-		_ = os.RemoveAll(filepath.Dir(dataDir("hub")))
+		for _, d := range purgeDirs() {
+			_ = os.RemoveAll(d)
+		}
+		if os.Getenv("OMNILLM_HOME") == "" {
+			_ = os.Remove(filepath.Dir(dataDir("hub"))) // only if now empty
+		}
 		fmt.Println(t("数据和保存的 Key 已删除。提供方后台的 Key 本身没有作废，需要的话请到提供方后台作废。",
 			"Data and saved keys are deleted. The keys themselves are still valid at the providers; revoke them there if needed."))
 	} else {
 		fmt.Println(t("数据和 Key 保留着；要一并删除，运行 omnillm uninstall --purge。", "Data and keys are kept; to delete them too, run omnillm uninstall --purge."))
 	}
+}
+
+// purgeDirs is what --purge deletes: only the folders OmniLLM creates,
+// never their parent (OMNILLM_HOME may point anywhere, even at $HOME).
+func purgeDirs() []string {
+	return []string{dataDir("hub"), dataDir("device"), dataDir("relay-certs")}
 }

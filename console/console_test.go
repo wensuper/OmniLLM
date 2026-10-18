@@ -55,6 +55,7 @@ type rig struct {
 	relayWS string
 	up      *httptest.Server
 	cookie  string
+	secret  string
 }
 
 func newRig(t *testing.T, withRelay bool) *rig {
@@ -93,6 +94,7 @@ type req struct {
 	host, origin       string
 	header             bool
 	cookie             string
+	secret             string
 	fetchSite          string
 }
 
@@ -110,6 +112,12 @@ func (r *rig) do(q req) *httptest.ResponseRecorder {
 	}
 	if q.cookie != "" {
 		hr.Header.Set("Cookie", cookieName+"="+q.cookie)
+		if q.secret == "" {
+			q.secret = r.secret
+		}
+	}
+	if q.secret != "" && q.secret != "-" {
+		hr.Header.Set(secretHeader, q.secret)
 	}
 	if q.fetchSite != "" {
 		hr.Header.Set("Sec-Fetch-Site", q.fetchSite)
@@ -128,6 +136,9 @@ func (r *rig) login(t *testing.T) string {
 	if w.Code != 200 {
 		t.Fatalf("login: %d %s", w.Code, w.Body)
 	}
+	var out map[string]string
+	_ = json.Unmarshal(w.Body.Bytes(), &out)
+	r.secret = out["session"]
 	for _, c := range w.Result().Cookies() {
 		if c.Name == cookieName {
 			r.cookie = c.Value
@@ -194,6 +205,8 @@ func TestHostAndOriginChecks(t *testing.T) {
 		{"cross-site fetch", req{method: "POST", path: "/console/api/apps/add", body: `{"name":"x"}`, origin: origin, header: true, cookie: sid, fetchSite: "cross-site"}, 403},
 		{"no session", req{method: "GET", path: "/console/api/status", origin: origin, header: true}, 401},
 		{"bad session", req{method: "GET", path: "/console/api/status", origin: origin, header: true, cookie: strings.Repeat("a", 64)}, 401},
+		{"cookie without the page secret (another localhost server saw it)", req{method: "GET", path: "/console/api/status", origin: origin, header: true, cookie: sid, secret: "-"}, 401},
+		{"cookie with a wrong page secret", req{method: "GET", path: "/console/api/status", origin: origin, header: true, cookie: sid, secret: strings.Repeat("b", 64)}, 401},
 		{"good", req{method: "GET", path: "/console/api/status", origin: origin, header: true, cookie: sid}, 200},
 		{"browser same-origin GET without Origin", req{method: "GET", path: "/console/api/status", header: true, cookie: sid, fetchSite: "same-origin"}, 200},
 		{"POST without Origin even if same-origin", req{method: "POST", path: "/console/api/apps/add", body: `{"name":"x"}`, header: true, cookie: sid, fetchSite: "same-origin"}, 403},
@@ -282,8 +295,8 @@ func TestAssetsHaveNoInlineCodeOrHTMLInsertion(t *testing.T) {
 			t.Fatalf("app.js uses %s", bad)
 		}
 	}
-	if strings.Contains(string(js), "localStorage.setItem(\"omnillm.key") || strings.Contains(string(js), "sessionStorage") {
-		t.Fatal("app.js stores secrets in browser storage")
+	if strings.Contains(string(js), "localStorage.setItem(\"omnillm.key") || strings.Contains(string(js), "localStorage.setItem(\"omnillm.session") {
+		t.Fatal("app.js keeps secrets in persistent browser storage")
 	}
 }
 

@@ -39,8 +39,10 @@ var assets embed.FS
 const (
 	cookieName   = "omnillm_console"
 	headerName   = "X-OmniLLM-Console"
+	secretHeader = "X-OmniLLM-Session"
 	loginTTL     = 2 * time.Minute
 	sessionIdle  = 12 * time.Hour
+	sessionMax   = 7 * 24 * time.Hour
 	maxBody      = 64 << 10
 	maxSessions  = 16
 	maxLoginsOut = 8
@@ -54,8 +56,18 @@ type Server struct {
 
 	mu       sync.Mutex
 	logins   map[string]time.Time // one-time login tokens → expiry
-	sessions map[string]time.Time // session id → last use
+	sessions map[string]*session
 	pairs    map[string]*pairState
+}
+
+// session pairs the cookie with a second secret the page keeps in its own
+// origin's sessionStorage and sends as a header. Browsers share cookies
+// across localhost ports; they do not share sessionStorage, so another
+// local web server that sees the cookie still cannot use it.
+type session struct {
+	secret  string
+	created time.Time
+	last    time.Time
 }
 
 // New makes a console. addr must be the loopback address it is served on.
@@ -68,7 +80,7 @@ func New(h *hub.Hub, addr string) (*Server, error) {
 		return nil, errors.New("console: must be served on 127.0.0.1")
 	}
 	return &Server{hub: h, addr: addr, now: time.Now, logins: map[string]time.Time{},
-		sessions: map[string]time.Time{}, pairs: map[string]*pairState{}}, nil
+		sessions: map[string]*session{}, pairs: map[string]*pairState{}}, nil
 }
 
 func token() string { return hex.EncodeToString(e2e.RandomBytes(32)) }
@@ -85,8 +97,15 @@ func (s *Server) LoginURL() string {
 			delete(s.logins, k)
 		}
 	}
-	if len(s.logins) >= maxLoginsOut {
-		s.logins = map[string]time.Time{}
+	for len(s.logins) >= maxLoginsOut {
+		// Drop the link that expires first, not all of them.
+		var oldest string
+		for k, exp := range s.logins {
+			if oldest == "" || exp.Before(s.logins[oldest]) {
+				oldest = k
+			}
+		}
+		delete(s.logins, oldest)
 	}
 	s.logins[t] = now.Add(loginTTL)
 	s.mu.Unlock()
@@ -230,13 +249,20 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 			delete(s.logins, t) // one use only
 		}
 	}
-	var sid string
+	var sid, sec string
 	if ok {
-		if len(s.sessions) >= maxSessions {
-			s.sessions = map[string]time.Time{}
+		s.pruneSessionsLocked(now)
+		for len(s.sessions) >= maxSessions {
+			var oldest string
+			for k, v := range s.sessions {
+				if oldest == "" || v.last.Before(s.sessions[oldest].last) {
+					oldest = k
+				}
+			}
+			delete(s.sessions, oldest)
 		}
-		sid = token()
-		s.sessions[sid] = now
+		sid, sec = token(), token()
+		s.sessions[sid] = &session{secret: sec, created: now, last: now}
 	}
 	s.mu.Unlock()
 	if !ok {
@@ -244,20 +270,35 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.SetCookie(w, &http.Cookie{Name: cookieName, Value: sid, Path: "/console", HttpOnly: true, SameSite: http.SameSiteStrictMode})
-	writeJSON(w, map[string]bool{"ok": true})
+	writeJSON(w, map[string]string{"session": sec})
+}
+
+func (s *Server) pruneSessionsLocked(now time.Time) {
+	for k, v := range s.sessions {
+		if now.Sub(v.last) >= sessionIdle || now.Sub(v.created) >= sessionMax {
+			delete(s.sessions, k)
+		}
+	}
 }
 
 func (s *Server) authed(f func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c, err := r.Cookie(cookieName)
+		sec := r.Header.Get(secretHeader)
 		ok := false
-		if err == nil && len(c.Value) == 64 {
+		// Any cookie with our name (another local server may have set one
+		// of its own) is tried; one must match together with the secret.
+		for _, c := range r.Cookies() {
+			if c.Name != cookieName || len(c.Value) != 64 || len(sec) != 64 {
+				continue
+			}
 			s.mu.Lock()
 			now := s.now()
-			for sid, last := range s.sessions {
-				if subtle.ConstantTimeCompare([]byte(sid), []byte(c.Value)) == 1 && now.Sub(last) < sessionIdle {
+			s.pruneSessionsLocked(now)
+			for sid, ss := range s.sessions {
+				if subtle.ConstantTimeCompare([]byte(sid), []byte(c.Value)) == 1 &&
+					subtle.ConstantTimeCompare([]byte(ss.secret), []byte(sec)) == 1 {
 					ok = true
-					s.sessions[sid] = now
+					ss.last = now
 				}
 			}
 			s.mu.Unlock()
@@ -503,8 +544,8 @@ func (s *Server) test(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &in) {
 		return
 	}
-	if len(in.Text) > 2000 {
-		in.Text = in.Text[:2000]
+	if r := []rune(in.Text); len(r) > 1000 {
+		in.Text = string(r[:1000])
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 90*time.Second)
 	defer cancel()
