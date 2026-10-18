@@ -25,8 +25,8 @@ OmniLLM 让你在一台设备上接入大模型（登录账号、配置 API Key 
 
 ## 状态
 
-项目刚刚开始，设计和技术选型进行中。
+概要设计已定，见 [docs/design.md](docs/design.md)：Go 单文件程序，客户端先做 PWA，远程访问推荐 Tailscale。代码开发中。
 
 ## License
 
-待定。
+[Apache-2.0](LICENSE)
