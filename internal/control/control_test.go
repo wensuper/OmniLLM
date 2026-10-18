@@ -3,10 +3,12 @@ package control
 import (
 	"context"
 	"errors"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func shortDir(t *testing.T) string {
@@ -88,5 +90,37 @@ func TestPathTooLong(t *testing.T) {
 func TestNoHub(t *testing.T) {
 	if err := Call(filepath.Join(shortDir(t), "none.sock"), Request{Op: "x"}, func(Reply) (bool, bool) { return false, false }); err == nil {
 		t.Fatal("expected an error")
+	}
+}
+
+// A handler's context ends when the client disconnects, so a pending
+// pairing does not outlive the "hub pair" command that started it.
+func TestClientDisconnectCancelsHandler(t *testing.T) {
+	sock := filepath.Join(shortDir(t), "hub", "c.sock")
+	ln, err := Listen(sock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	ended := make(chan struct{})
+	go Serve(ctx, ln, func(ctx context.Context, c *Conn, req Request) error {
+		_ = c.Send(Reply{Event: "info", Text: "waiting"})
+		<-ctx.Done()
+		close(ended)
+		return nil
+	})
+	c, err := net.Dial("unix", sock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _ = c.Write([]byte(`{"op":"pair"}` + "\n"))
+	buf := make([]byte, 64)
+	_, _ = c.Read(buf)
+	c.Close()
+	select {
+	case <-ended:
+	case <-time.After(3 * time.Second):
+		t.Fatal("handler kept running after the client left")
 	}
 }

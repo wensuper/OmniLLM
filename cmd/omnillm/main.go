@@ -651,6 +651,9 @@ func pairOp(ctx context.Context, h *hub.Hub, c *control.Conn, a map[string]strin
 	if err != nil {
 		return errors.New(omnillm.Describe(lang(), err))
 	}
+	// If this command ends early (the owner pressed Ctrl-C, the terminal
+	// closed), the code dies with it instead of holding a slot for 5 min.
+	defer p.Cancel()
 	if err := c.Send(control.Reply{Event: "qr", Text: p.Code}); err != nil {
 		return err
 	}

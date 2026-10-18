@@ -479,3 +479,29 @@ func TestListenSkipsATakenPort(t *testing.T) {
 		t.Fatal(s.LoginURL())
 	}
 }
+
+// Opening "add device" again and again (closing the dialog in between)
+// must not use up the hub's pairing slots: a new pairing ends the old one.
+func TestRepeatedPairStartsDoNotFillSlots(t *testing.T) {
+	r := newRig(t, true)
+	r.login(t)
+	var first string
+	for i := 0; i < 12; i++ {
+		code, out := r.api(t, "POST", "/console/api/pair/start", `{}`)
+		if code != 200 {
+			t.Fatalf("start %d: %d %v", i, code, out)
+		}
+		if i == 0 {
+			first, _ = out["id"].(string)
+		}
+	}
+	var st map[string]any
+	for i := 0; i < 100; i++ {
+		_, st = r.api(t, "GET", "/console/api/pair/state?id="+first, "")
+		if st["state"] == "failed" {
+			return
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	t.Fatalf("the replaced pairing is still %v", st["state"])
+}

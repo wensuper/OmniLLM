@@ -98,11 +98,14 @@ func Pair(ctx context.Context, opts Options, code, name string, show func(sas st
 		return Info{}, err
 	}
 	// The hub registers the mailbox with the relay when it shows the code;
-	// a device that is very quick can arrive first, so retry briefly.
+	// a device that is very quick can arrive first, and just after a relay
+	// restart the hub needs a few seconds to register it again. Retry for
+	// up to 20 seconds.
 	var conn *relaylink.DeviceConn
-	for wait := 100 * time.Millisecond; ; wait *= 2 {
+	deadline := time.Now().Add(20 * time.Second)
+	for wait := 100 * time.Millisecond; ; wait = min(wait*2, 2*time.Second) {
 		conn, err = relaylink.DialMailbox(ctx, pc.Relay, mid, pc.Secret, opts.Transport)
-		if err == nil || !errors.Is(err, relaylink.ErrUnavailable) || wait > 3*time.Second {
+		if err == nil || ctx.Err() != nil || time.Now().Add(wait).After(deadline) {
 			break
 		}
 		select {
@@ -112,7 +115,13 @@ func Pair(ctx context.Context, opts Options, code, name string, show func(sas st
 		}
 	}
 	if err != nil {
-		return Info{}, &omnillm.Error{Code: omnillm.CodePairingFailed, Msg: omnillm.MsgPairingExpired}
+		if ctx.Err() != nil {
+			return Info{}, ctx.Err()
+		}
+		if errors.Is(err, relaylink.ErrUnavailable) {
+			return Info{}, &omnillm.Error{Code: omnillm.CodePairingFailed, Msg: omnillm.MsgPairingExpired}
+		}
+		return Info{}, &omnillm.Error{Code: omnillm.CodeHubOffline, Msg: omnillm.MsgRelayUnavailable}
 	}
 	defer conn.Close()
 	sess, err := e2e.Dial(ctx, conn, mid[:], key, pc.HubKey, pc.PSK)

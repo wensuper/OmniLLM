@@ -125,12 +125,13 @@ func (l *HubLink) Run(ctx context.Context) {
 	defer close(l.events)
 	backoff := time.Second
 	for ctx.Err() == nil {
-		start := time.Now()
-		err := l.runOnce(ctx)
+		upFor, err := l.runOnce(ctx)
 		if ctx.Err() != nil {
 			return
 		}
-		if time.Since(start) > time.Minute {
+		// A link that worked for a while starts over from the shortest
+		// wait; one that drops right after connecting keeps backing off.
+		if upFor > 10*time.Second {
 			backoff = time.Second
 		}
 		l.logf("relay link down: %v; retrying in %s", err, backoff)
@@ -152,7 +153,7 @@ func (l *HubLink) Run(ctx context.Context) {
 	}
 }
 
-func (l *HubLink) runOnce(ctx context.Context) error {
+func (l *HubLink) runOnce(ctx context.Context) (upFor time.Duration, err error) {
 	dctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	c, resp, err := websocket.Dial(dctx, l.url, dialOpts(l.rt, l.token))
 	cancel()
@@ -160,8 +161,9 @@ func (l *HubLink) runOnce(ctx context.Context) error {
 		resp.Body.Close()
 	}
 	if err != nil {
-		return err
+		return 0, err
 	}
+	since := time.Now()
 	c.SetReadLimit(relayproto.MaxMessage)
 	// Go up and take the snapshot in one step: a Claim made after this
 	// point is sent directly, one made before is in the snapshot. Sending a
@@ -176,6 +178,7 @@ func (l *HubLink) runOnce(ctx context.Context) error {
 	}
 	l.mu.Unlock()
 	defer func() {
+		upFor = time.Since(since)
 		l.mu.Lock()
 		l.up = false
 		l.upCh = make(chan struct{})
@@ -192,20 +195,20 @@ func (l *HubLink) runOnce(ctx context.Context) error {
 	}()
 	for id, h := range claims {
 		if err := l.write(ctx, c, relayproto.Encode(relayproto.Claim, id, h[:])); err != nil {
-			return err
+			return 0, err
 		}
 	}
 	for {
 		typ, b, err := c.Read(ctx)
 		if err != nil {
-			return err
+			return 0, err
 		}
 		if typ != websocket.MessageBinary {
-			return errors.New("relaylink: unexpected text frame")
+			return 0, errors.New("relaylink: unexpected text frame")
 		}
 		t, id, payload, err := relayproto.Decode(b)
 		if err != nil {
-			return err
+			return 0, err
 		}
 		switch t {
 		case relayproto.Open, relayproto.Data, relayproto.Closed, relayproto.ClaimFail:
@@ -215,7 +218,7 @@ func (l *HubLink) runOnce(ctx context.Context) error {
 		select {
 		case l.events <- Event{Type: t, Mailbox: id, Payload: payload}:
 		case <-ctx.Done():
-			return ctx.Err()
+			return 0, ctx.Err()
 		}
 	}
 }

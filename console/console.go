@@ -615,7 +615,13 @@ type pairState struct {
 	errMsg  error
 	decide  chan bool
 	expires time.Time
+	seen    time.Time // last time the page asked about it
+	cancel  func()
 }
+
+// pairIdle: a console pairing nobody has looked at for this long is
+// cancelled (the page was closed), so it does not hold a pairing slot.
+const pairIdle = 90 * time.Second
 
 func (s *Server) pairStart(w http.ResponseWriter, r *http.Request) {
 	var in struct {
@@ -646,16 +652,35 @@ func (s *Server) pairStart(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, r, 0, err)
 		return
 	}
-	ps.expires = p.Expires
+	ps.expires, ps.seen, ps.cancel = p.Expires, time.Now(), p.Cancel
 	id := token()[:32]
 	s.mu.Lock()
 	for k, v := range s.pairs {
+		// One "add device" at a time: starting a new one ends the old one.
+		v.cancel()
 		if s.now().After(v.expires.Add(time.Minute)) {
 			delete(s.pairs, k)
 		}
 	}
 	s.pairs[id] = ps
 	s.mu.Unlock()
+	go func() {
+		t := time.NewTicker(5 * time.Second)
+		defer t.Stop()
+		for range t.C {
+			ps.mu.Lock()
+			open := ps.state == "waiting" || ps.state == "confirm"
+			idle := time.Since(ps.seen) > pairIdle
+			ps.mu.Unlock()
+			if !open {
+				return
+			}
+			if idle {
+				p.Cancel()
+				return
+			}
+		}
+	}()
 	go func() {
 		d, err := p.Wait(ctx)
 		ps.mu.Lock()
@@ -683,6 +708,7 @@ func (s *Server) pairGet(w http.ResponseWriter, r *http.Request) {
 	}
 	ps.mu.Lock()
 	defer ps.mu.Unlock()
+	ps.seen = time.Now()
 	out := map[string]any{"state": ps.state, "device_name": ps.name, "code": ps.sas, "device_id": ps.device}
 	if ps.errMsg != nil {
 		out["message"] = omnillm.Describe(lang(r), ps.errMsg)

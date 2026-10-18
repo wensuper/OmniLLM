@@ -9,6 +9,7 @@ import (
 	"errors"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 	"unicode"
 
@@ -182,6 +183,7 @@ type Pairing struct {
 	Code    string
 	Expires time.Time
 	done    chan pairResult
+	cancel  func()
 }
 
 type pairResult struct {
@@ -190,25 +192,37 @@ type pairResult struct {
 }
 
 // Wait blocks until the device pairs, the owner refuses, or it expires.
+// If ctx ends first the pairing is cancelled: its code stops working and
+// its slot is freed.
 func (p *Pairing) Wait(ctx context.Context) (Device, error) {
 	select {
 	case r := <-p.done:
 		return r.dev, r.err
 	case <-ctx.Done():
+		p.Cancel()
 		return Device{}, ctx.Err()
 	}
 }
 
+// Cancel ends a pending pairing; the code stops working. It does nothing
+// once the pairing has finished.
+func (p *Pairing) Cancel() {
+	if p.cancel != nil {
+		p.cancel()
+	}
+}
+
 type pairing struct {
-	id       relayproto.ID
-	psk      []byte
-	sh       [32]byte
-	opts     PairOptions
-	expires  time.Time
-	attempts int
-	inFlight bool
-	done     chan pairResult
-	finished bool
+	id        relayproto.ID
+	psk       []byte
+	sh        [32]byte
+	opts      PairOptions
+	expires   time.Time
+	attempts  int
+	inFlight  bool
+	done      chan pairResult
+	cancelled chan struct{}
+	finished  bool
 }
 
 // Pair starts a pairing. The hub must be connected to its relay.
@@ -219,7 +233,18 @@ func (h *Hub) Pair(ctx context.Context, opts PairOptions) (*Pairing, error) {
 	h.mu.Lock()
 	link := h.link
 	h.mu.Unlock()
-	if link == nil || !link.Up() {
+	if link == nil {
+		return nil, &omnillm.Error{Code: omnillm.CodeHubOffline, Msg: omnillm.MsgRelayUnavailable}
+	}
+	// Just after a relay restart the link may still be reconnecting; give
+	// it a moment instead of failing the owner's command.
+	wctx, wcancel := context.WithTimeout(ctx, 15*time.Second)
+	err := link.WaitUp(wctx)
+	wcancel()
+	if err != nil {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
 		return nil, &omnillm.Error{Code: omnillm.CodeHubOffline, Msg: omnillm.MsgRelayUnavailable}
 	}
 	if opts.TTL <= 0 || opts.TTL > 10*time.Minute {
@@ -232,7 +257,7 @@ func (h *Hub) Pair(ctx context.Context, opts PairOptions) (*Pairing, error) {
 	copy(id[:], e2e.RandomBytes(relayproto.IDLen))
 	secretB := e2e.RandomBytes(32)
 	p := &pairing{id: id, psk: e2e.RandomBytes(32), sh: relayproto.SecretHash(secretB), opts: opts,
-		expires: h.opts.Now().Add(opts.TTL), done: make(chan pairResult, 1)}
+		expires: h.opts.Now().Add(opts.TTL), done: make(chan pairResult, 1), cancelled: make(chan struct{})}
 	h.mu.Lock()
 	if len(h.pairings) >= 8 {
 		h.mu.Unlock()
@@ -256,9 +281,13 @@ func (h *Hub) Pair(ctx context.Context, opts PairOptions) (*Pairing, error) {
 			h.endPairing(p, &omnillm.Error{Code: omnillm.CodePairingFailed, Msg: omnillm.MsgPairingExpired})
 		case <-h.ctx.Done():
 			h.endPairing(p, h.ctx.Err())
+		case <-p.cancelled:
+			h.endPairing(p, &omnillm.Error{Code: omnillm.CodePairingFailed, Msg: omnillm.MsgPairingExpired})
 		}
 	}()
-	return &Pairing{Code: text, Expires: p.expires, done: p.done}, nil
+	var once sync.Once
+	return &Pairing{Code: text, Expires: p.expires, done: p.done,
+		cancel: func() { once.Do(func() { close(p.cancelled) }) }}, nil
 }
 
 // endPairing finishes a pending pairing once. On failure the mailbox is
@@ -313,6 +342,13 @@ func (h *Hub) finishPairing(ctx context.Context, p *pairing, sess *e2e.Session, 
 	}
 	code := e2e.SAS(sess.ChannelBinding())
 	cctx, cancel := context.WithDeadline(ctx, p.expires)
+	go func() {
+		select {
+		case <-p.cancelled: // the owner's command went away mid-question
+			cancel()
+		case <-cctx.Done():
+		}
+	}()
 	ok, err := p.opts.Confirm(cctx, PairRequest{DeviceName: name, Code: code})
 	cancel()
 	if err != nil || !ok {

@@ -35,12 +35,14 @@ type Reply struct {
 	Text  string          `json:"text,omitempty"`
 }
 
-// Conn is one client connection, used by handlers.
+// Conn is one client connection, used by handlers. The context handed to
+// a handler ends when the client goes away, so work it started (a pending
+// pairing) does not outlive the command that asked for it.
 type Conn struct {
-	c     net.Conn
-	r     *bufio.Reader
-	enc   *json.Encoder
-	askMu sync.Mutex // one question at a time on a connection
+	c       net.Conn
+	enc     *json.Encoder
+	askMu   sync.Mutex // one question at a time on a connection
+	answers chan Request
 }
 
 func (c *Conn) Send(r Reply) error { return c.enc.Encode(r) }
@@ -52,30 +54,38 @@ func (c *Conn) Ask(ctx context.Context, text string) (bool, error) {
 	if err := c.Send(Reply{Event: "confirm", Text: text}); err != nil {
 		return false, err
 	}
-	type res struct {
-		ok  bool
-		err error
+	select {
+	case q, ok := <-c.answers:
+		if !ok {
+			return false, errors.New("control: the client went away")
+		}
+		if q.Op != "answer" {
+			return false, errors.New("control: expected an answer")
+		}
+		return q.Args["yes"] == "true", nil
+	case <-ctx.Done():
+		return false, ctx.Err()
 	}
-	ch := make(chan res, 1)
-	go func() {
-		line, err := c.r.ReadSlice('\n')
+}
+
+// readLoop reads the client's later lines (answers) and cancels the
+// connection's context when the client disconnects.
+func readLoop(r *bufio.Reader, out chan<- Request, cancel context.CancelFunc) {
+	defer cancel()
+	defer close(out)
+	for {
+		line, err := r.ReadSlice('\n')
 		if err != nil {
-			ch <- res{err: err}
 			return
 		}
 		var q Request
-		if json.Unmarshal(line, &q) != nil || q.Op != "answer" {
-			ch <- res{err: errors.New("control: expected an answer")}
+		if json.Unmarshal(line, &q) != nil {
 			return
 		}
-		ch <- res{ok: q.Args["yes"] == "true"}
-	}()
-	select {
-	case r := <-ch:
-		return r.ok, r.err
-	case <-ctx.Done():
-		_ = c.c.SetReadDeadline(time.Now())
-		return false, ctx.Err()
+		select {
+		case out <- q:
+		default: // an answer nobody asked for
+		}
 	}
 }
 
@@ -134,8 +144,11 @@ func Serve(ctx context.Context, ln net.Listener, h Handler) {
 			if err := json.Unmarshal(line, &req); err != nil {
 				return
 			}
-			conn := &Conn{c: c, r: r, enc: json.NewEncoder(c)}
-			if err := h(ctx, conn, req); err != nil {
+			cctx, cancel := context.WithCancel(ctx)
+			defer cancel()
+			conn := &Conn{c: c, enc: json.NewEncoder(c), answers: make(chan Request, 1)}
+			go readLoop(r, conn.answers, cancel)
+			if err := h(cctx, conn, req); err != nil {
 				_ = conn.Send(Reply{Event: "error", Text: err.Error()})
 			}
 		}()
