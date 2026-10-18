@@ -28,5 +28,12 @@ signs:
     certificate: "${artifact}.pem"
     args: ["sign-blob", "--output-certificate=${certificate}", "--output-signature=${signature}", "${artifact}", "--yes"]
     output: true
+  # The same signature as one Sigstore bundle (what current cosign expects).
+  - id: bundle
+    cmd: cosign
+    artifacts: checksum
+    signature: "${artifact}.sigstore.json"
+    args: ["sign-blob", "--bundle=${signature}", "${artifact}", "--yes"]
+    output: true
 release:
   prerelease: auto

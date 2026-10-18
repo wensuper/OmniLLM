@@ -272,6 +272,14 @@ func (h *Hub) AddProvider(ctx context.Context, cfg provider.Config, apiKey strin
 	if err != nil {
 		return nil, err
 	}
+	if cfg.Kind == provider.Ollama {
+		// Local servers also list embedding and rerank models, which
+		// cannot hold a conversation.
+		ids = ChatModels(ids)
+		if len(ids) == 0 {
+			return nil, &omnillm.Error{Code: omnillm.CodeBadRequest, Msg: omnillm.MsgNoChatModel}
+		}
+	}
 	if cfg.NeedsKey {
 		if err := h.opts.Secrets.Set(ctx, providerKey(cfg.Name), []byte(apiKey)); err != nil {
 			return nil, err
@@ -491,3 +499,22 @@ func (h *Hub) DetectOllama(ctx context.Context) ([]string, error) {
 
 // RelayConfigured reports whether a relay address was given at all.
 func (h *Hub) RelayConfigured() bool { return h.opts.RelayURL != "" }
+
+// ChatModels drops models that cannot chat (embedding, rerank) from a
+// local model list, by their well-known names.
+func ChatModels(ids []string) []string {
+	var out []string
+	for _, id := range ids {
+		l := strings.ToLower(id)
+		chat := true
+		for _, w := range []string{"embed", "bge-", "bge:", "rerank", "minilm", "e5-", "gte-", "colbert", "clip"} {
+			if strings.Contains(l, w) {
+				chat = false
+			}
+		}
+		if chat {
+			out = append(out, id)
+		}
+	}
+	return out
+}

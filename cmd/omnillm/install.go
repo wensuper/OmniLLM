@@ -40,7 +40,10 @@ type Status struct {
 	RelayUp         bool   `json:"relay_up"`
 	Console         bool   `json:"console"`
 	Service         string `json:"service,omitempty"` // launchd | systemd | none
-	Next            string `json:"next"`              // the one thing to do next, for a person
+	// Headless: no display on this machine, so the console cannot be
+	// opened here and the person types a key in the terminal instead.
+	Headless bool   `json:"headless"`
+	Next     string `json:"next"` // the one thing to do next, for a person
 }
 
 func installCmd(args []string) {
@@ -83,8 +86,9 @@ func installCmd(args []string) {
 		st, _ = waitRunning(time.Second)
 	}
 	st.Service = service
+	st.Headless = headless()
 	fmt.Println(t("OmniLLM 已安装，主机在后台运行（开机自动启动）。", "OmniLLM is installed; the hub runs in the background and starts at login."))
-	if !noOpen {
+	if !noOpen && !st.Headless {
 		if url, err := loginURL(); err == nil && openLogin(url) == nil {
 			fmt.Println(t("控制台已在浏览器里打开。", "The console is open in your browser."))
 		} else {
@@ -97,10 +101,21 @@ func installCmd(args []string) {
 	fmt.Println("OMNILLM_STATUS " + string(b))
 }
 
+// headless reports a machine without a display (a server, an SSH session).
+func headless() bool {
+	if runtime.GOOS == "darwin" {
+		return os.Getenv("SSH_CONNECTION") != "" && os.Getenv("TERM_PROGRAM") == ""
+	}
+	return os.Getenv("DISPLAY") == "" && os.Getenv("WAYLAND_DISPLAY") == ""
+}
+
 func nextStep(st Status) string {
 	switch {
 	case !st.Running:
 		return t("主机没有运行：运行 omnillm install。", "The hub is not running: run omnillm install.")
+	case st.Providers == 0 && st.Headless:
+		return t("下一步：这台机器没有浏览器。请在这台机器的终端里亲自运行 omnillm hub provider add anthropic（或 openai、openai-compatible），然后在提示时粘贴 API Key；Key 不要发到聊天里。",
+			"Next: this machine has no browser. In this machine's terminal, run omnillm hub provider add anthropic (or openai, openai-compatible) yourself and paste the API key when asked; don't send the key in a chat.")
 	case st.Providers == 0:
 		return t("下一步：在控制台里接入一个模型（粘贴 API Key，或先安装 Ollama 用本地模型）。打开控制台：omnillm open",
 			"Next: connect a model in the console (paste an API key there, or install Ollama for a local model). Open it with: omnillm open")
@@ -282,6 +297,7 @@ func installSystemd(home, bin, dir string, env map[string]string) error {
 	}
 	body := "[Unit]\nDescription=OmniLLM hub\nAfter=network-online.target\n\n[Service]\n" +
 		"ExecStart=" + systemdQuote(bin) + " hub run\n" + envLines.String() +
+		"StandardOutput=append:" + filepath.Join(dir, "hub.log") + "\nStandardError=append:" + filepath.Join(dir, "hub.log") + "\n" +
 		"Restart=on-failure\nRestartSec=3\nNoNewPrivileges=yes\nPrivateTmp=yes\nUMask=0077\n\n[Install]\nWantedBy=default.target\n"
 	if err := os.MkdirAll(filepath.Dir(unit), 0o755); err != nil {
 		return err
@@ -354,6 +370,7 @@ func loginURL() (string, error) {
 func statusCmd(args []string) {
 	st, ok := queryStatus()
 	st.Running = ok
+	st.Headless = headless()
 	st.Next = nextStep(st)
 	for _, a := range args {
 		if a == "--json" {

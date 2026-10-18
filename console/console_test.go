@@ -455,3 +455,27 @@ func TestBodyLimit(t *testing.T) {
 	}
 	_ = io.Discard
 }
+
+func TestListenSkipsATakenPort(t *testing.T) {
+	busy, err := Listen("127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer busy.Close()
+	ln, err := Listen(busy.Addr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+	if ln.Addr().String() == busy.Addr().String() {
+		t.Fatal("bound a port another program holds")
+	}
+	if _, err := Listen("0.0.0.0:8770"); err == nil {
+		t.Fatal("listened beyond loopback")
+	}
+	// The login link follows the port actually bound.
+	s, _ := New(nil, ln.Addr().String())
+	if !strings.HasPrefix(s.LoginURL(), "http://"+ln.Addr().String()+"/console/#login=") {
+		t.Fatal(s.LoginURL())
+	}
+}

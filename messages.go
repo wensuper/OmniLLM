@@ -44,6 +44,8 @@ const (
 	MsgRelayUnavailable  = "relay_unavailable"
 	MsgBrowserRefused    = "browser_refused"
 	MsgWrongHost         = "wrong_host"
+	MsgNoChatModel       = "no_chat_model"
+	MsgLocalToken        = "local_token"
 )
 
 var texts = map[string][2]string{ // zh, en
@@ -80,6 +82,8 @@ var texts = map[string][2]string{ // zh, en
 	MsgNotFound:          {"没有找到。", "Not found."},
 	MsgBrowserRefused:    {"本机接口不接受网页发来的请求。请用程序直接调用。", "This local interface does not accept requests from web pages. Call it from a program."},
 	MsgWrongHost:         {"请用 127.0.0.1 或 localhost 访问本机接口。", "Reach the local interface as 127.0.0.1 or localhost."},
+	MsgNoChatModel:       {"本地模型里没有能对话的模型（只有向量 / 重排模型）。可以先用 ollama pull 下载一个对话模型，比如 qwen3。", "The local model server has no chat model (only embedding / rerank models). Download one first, for example: ollama pull qwen3."},
+	MsgLocalToken:        {"本机接口的令牌缺失或不对。令牌在这台设备 OmniLLM 数据文件夹里的 device/local.token 文件中（只有本用户能读）。", "The local token is missing or wrong. It is in device/local.token inside OmniLLM's data folder on this device (readable only by you)."},
 	MsgRelayUnavailable:  {"连接服务暂时不可用，稍后会自动重连。", "The connection service is unavailable. It will reconnect automatically."},
 }
 

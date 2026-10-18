@@ -22,6 +22,7 @@ import (
 	"io/fs"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -205,6 +206,38 @@ func (s *Server) Serve(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	return s.ServeListener(ctx, ln)
+}
+
+// Listen binds the console on addr, or, if that port is taken by another
+// program, on the next free one of the following 20 ports. The console's
+// address (and every login link) follows the port actually bound, so a
+// link never points at someone else's server.
+func Listen(addr string) (net.Listener, error) {
+	host, portS, err := net.SplitHostPort(addr)
+	if err != nil {
+		return nil, err
+	}
+	if ip := net.ParseIP(host); ip == nil || !ip.IsLoopback() {
+		return nil, errors.New("console: must be served on 127.0.0.1")
+	}
+	port, err := strconv.Atoi(portS)
+	if err != nil {
+		return nil, err
+	}
+	var last error
+	for p := port; p <= port+20 && p < 65536; p++ {
+		ln, err := net.Listen("tcp", net.JoinHostPort(host, strconv.Itoa(p)))
+		if err == nil {
+			return ln, nil
+		}
+		last = err
+	}
+	return nil, last
+}
+
+// ServeListener serves on an already bound listener until ctx ends.
+func (s *Server) ServeListener(ctx context.Context, ln net.Listener) error {
 	srv := &http.Server{Handler: s.Handler(), ReadHeaderTimeout: 10 * time.Second, ReadTimeout: time.Minute,
 		WriteTimeout: 2 * time.Minute, IdleTimeout: 2 * time.Minute, MaxHeaderBytes: 32 << 10}
 	stop := make(chan struct{})

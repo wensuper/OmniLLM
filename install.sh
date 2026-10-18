@@ -78,10 +78,15 @@ if [ "$code" = "200" ]; then
   [ "$want" = "$got" ] || fail "checksum mismatch for $asset: refusing to install"
   say "Checksum OK."
   if command -v cosign >/dev/null 2>&1; then
-    curl -fsSL --proto '=https' --tlsv1.2 -o "$work/checksums.txt.pem" "$BASE/checksums.txt.pem" || fail "missing signature certificate"
-    curl -fsSL --proto '=https' --tlsv1.2 -o "$work/checksums.txt.sig" "$BASE/checksums.txt.sig" || fail "missing signature"
-    cosign verify-blob \
-      --certificate "$work/checksums.txt.pem" --signature "$work/checksums.txt.sig" \
+    if curl -fsSL --proto '=https' --tlsv1.2 -o "$work/checksums.txt.sigstore.json" "$BASE/checksums.txt.sigstore.json" 2>/dev/null; then
+      sigargs="--bundle $work/checksums.txt.sigstore.json"
+    else
+      curl -fsSL --proto '=https' --tlsv1.2 -o "$work/checksums.txt.pem" "$BASE/checksums.txt.pem" || fail "missing signature certificate"
+      curl -fsSL --proto '=https' --tlsv1.2 -o "$work/checksums.txt.sig" "$BASE/checksums.txt.sig" || fail "missing signature"
+      sigargs="--certificate $work/checksums.txt.pem --signature $work/checksums.txt.sig"
+    fi
+    # shellcheck disable=SC2086
+    cosign verify-blob $sigargs \
       --certificate-identity-regexp "^https://github\\.com/wensuper/OmniLLM/\\.github/workflows/release\\.yml@refs/tags/v[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.]+)?\$" \
       --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
       "$work/checksums.txt" >/dev/null 2>&1 || fail "signature check failed: refusing to install"

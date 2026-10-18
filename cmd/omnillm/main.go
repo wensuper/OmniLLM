@@ -434,15 +434,23 @@ func hubRun(dir, sock string, args []string) {
 	}
 	var con *console.Server
 	if *consoleAddr != "" {
-		con, err = console.New(h, *consoleAddr)
+		// Bind first: the console exists (and login links are issued) only
+		// once its port is really ours.
+		cln, err := console.Listen(*consoleAddr)
 		if err != nil {
-			die(err)
-		}
-		go func() {
-			if err := con.Serve(ctx); err != nil {
-				log.Printf(t("控制台没能启动：%v", "Console did not start: %v"), err)
+			log.Printf(t("控制台没能启动：%v", "Console did not start: %v"), err)
+		} else {
+			con, err = console.New(h, cln.Addr().String())
+			if err != nil {
+				die(err)
 			}
-		}()
+			log.Printf(t("控制台：http://%s/console/（用 omnillm open 打开）", "Console: http://%s/console/ (open it with omnillm open)"), cln.Addr())
+			go func() {
+				if err := con.ServeListener(ctx, cln); err != nil {
+					log.Printf(t("控制台停止了：%v", "Console stopped: %v"), err)
+				}
+			}()
+		}
 	}
 	go control.Serve(ctx, ln, hubHandler(h, *relayURL, con))
 	if *api != "" {
@@ -480,7 +488,7 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 			if len(ps) > 0 {
 				return c.Send(control.Reply{Event: "ok"})
 			}
-			if ids, err := h.DetectOllama(ctx); err == nil && len(ids) > 0 {
+			if ids, err := h.DetectOllama(ctx); err == nil && len(hub.ChatModels(ids)) > 0 {
 				cfg, _ := provider.Default(provider.Ollama)
 				if _, err := h.AddProvider(ctx, cfg, ""); err != nil {
 					return errors.New(omnillm.Describe(lang(), err))

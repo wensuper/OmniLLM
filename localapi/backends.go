@@ -36,7 +36,7 @@ func NewDeviceBackend(d *device.Device, token string) *DeviceBackend {
 func (b *DeviceBackend) check(tok string) error {
 	h := sha256.Sum256([]byte(tok))
 	if tok == "" || subtle.ConstantTimeCompare(h[:], b.tokenHash[:]) != 1 {
-		return &omnillm.Error{Code: omnillm.CodeInvalidToken, Msg: omnillm.MsgInvalidToken}
+		return &omnillm.Error{Code: omnillm.CodeInvalidToken, Msg: omnillm.MsgLocalToken}
 	}
 	return nil
 }
