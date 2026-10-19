@@ -258,7 +258,7 @@ func installLaunchd(home, bin, dir string, env map[string]string) error {
 <key>EnvironmentVariables</key><dict>` + envXML.String() + `</dict>
 <key>RunAtLoad</key><true/>
 <key>KeepAlive</key><true/>
-<key>ProcessType</key><string>Background</string>
+<key>ProcessType</key><string>Standard</string>
 <key>StandardOutPath</key><string>` + xmlEscape(filepath.Join(dir, "hub.log")) + `</string>
 <key>StandardErrorPath</key><string>` + xmlEscape(filepath.Join(dir, "hub.log")) + `</string>
 </dict></plist>
