@@ -1,6 +1,6 @@
 # 更新记录
 
-## v0.2.0-alpha.1（未发布）
+## v0.2.0-alpha.1（2026-10-19）
 
 Mac 上登录好的 Claude 或 ChatGPT 订阅，手机、平板、Linux 服务器都能用；除了 Mac，别处尽量不装东西。
 
@@ -9,6 +9,7 @@ Mac 上登录好的 Claude 或 ChatGPT 订阅，手机、平板、Linux 服务�
 - 手机和平板：扫控制台上的二维码直接打开网页客户端（不装 App），在网页里配对和对话；加密在网页里用和命令行同一份代码（WebAssembly）完成，配对状态和对话加密存在浏览器里。
 - Linux 服务器：`install.sh --device` 只放一个程序、不装服务，粘贴配对文字就能用；`omnillm connect chat` 在终端里多轮对话；脚本（没有终端）用不了订阅。
 - 被移除的设备会被明确告知“已被移除”，不再一直显示“连不上主机”。
+- 公共连接服务 `wss://relay.ixxzh.com` 和网页客户端 `https://omni.ixxzh.com`（放在 ixxzh.com 的服务器上，步骤见 docs/relay-deploy.md）：中心节点默认连它；网页客户端随发布签名，不再用 GitHub Pages。
 - 请求节奏：订阅额度暂时用完时，20 秒内能轮到的就等一下再发，不再报错。
 
 ## v0.1.0-alpha.2（2026-10-18）

@@ -1,0 +1,18 @@
+# OmniLLM public connection service (relay) on 139.224.110.2, behind Tengine
+# (zz-relay.ixxzh.com.conf). Loopback only; systemd 219 (CentOS 7) options.
+[Unit]
+Description=OmniLLM relay (relay.ixxzh.com)
+After=network-online.target
+
+[Service]
+User=yunwei
+ExecStart=/opt/omnillm/omnillm relay --listen 127.0.0.1:8470 --behind-tls-proxy --open --web-origin https://omni.ixxzh.com
+Environment=LANG=en_US.UTF-8
+Restart=always
+RestartSec=3
+LimitNOFILE=65536
+NoNewPrivileges=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -68,7 +68,8 @@ Use the `next` field of `omnillm status --json` (or the `OMNILLM_STATUS` line) a
 |---|---|
 | `providers` is 0 and `headless` is true (a server, no browser) | The key has to be typed by the person, in this machine's terminal (not in the chat). This is the one command you hand to them instead of running it: `~/.local/bin/omnillm hub provider add anthropic` (or `openai`, or `openai-compatible`, which also asks for `--name` and `--base-url`). For a free local model, they can install Ollama on this machine and run `~/.local/bin/omnillm hub provider add ollama`. |
 | `providers` is 0 | "OmniLLM is running. In the console that just opened, paste an API key (Anthropic or OpenAI) and choose *Check and connect*. Please don't paste the key here in the chat." If the console isn't open, run `~/.local/bin/omnillm open`. If they have a Claude or ChatGPT subscription: they install Claude Code or Codex on this computer and log in once (that program's own login, done by the person), then you run `~/.local/bin/omnillm status` again: the hub connects it by itself. Otherwise suggest a pay-as-you-go API key, or Ollama for free local models. |
-| `relay_configured` is false | "It works on this computer. To use it from your phone or other devices, a connection service has to be set up; that isn't available in this version yet." |
+| `relay_configured` is false | Only when someone set `OMNILLM_RELAY=off`. "It works on this computer only; other devices can't connect." |
+| `relay_up` is false (and a relay is configured) | "The connection service (relay.ixxzh.com) can't be reached right now; the hub keeps retrying by itself. Everything on this computer still works." |
 | `devices` is 0 and a relay is configured | "To add your phone or another computer, open *Devices → Add device* in the console." |
 | everything set | "OmniLLM is ready." |
 

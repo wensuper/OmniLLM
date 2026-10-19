@@ -51,7 +51,7 @@ type Options struct {
 }
 
 // DefaultWebOrigins is where the project publishes its web client.
-var DefaultWebOrigins = []string{"https://wensuper.github.io"}
+var DefaultWebOrigins = []string{"https://omni.ixxzh.com"}
 
 // Browser devices cannot set headers on a WebSocket, so they offer two
 // subprotocols: WebProtocol, and WebAuthPrefix + the mailbox secret

@@ -13,7 +13,10 @@ import (
 )
 
 // DefaultWebAppURL is where the project publishes the web client.
-const DefaultWebAppURL = "https://wensuper.github.io/OmniLLM/"
+const DefaultWebAppURL = "https://omni.ixxzh.com/"
+
+// DefaultRelayURL is the project's public connection service.
+const DefaultRelayURL = "wss://relay.ixxzh.com"
 
 // subscription reports whether a provider runs an official program logged
 // in with the owner's subscription (Claude Code, Codex).

@@ -419,11 +419,17 @@ func call(sock string, req control.Request) {
 func hubRun(dir, sock string, args []string) {
 	log.SetFlags(log.LstdFlags) // a service log needs times
 	fs := flag.NewFlagSet("hub run", flag.ExitOnError)
-	relayURL := fs.String("relay", os.Getenv("OMNILLM_RELAY"), "relay URL (wss://…)")
+	relayURL := fs.String("relay", os.Getenv("OMNILLM_RELAY"), "relay URL (wss://…; default the project's; off: none)")
 	api := fs.String("api", "", "serve the local API for app tokens on this loopback address, e.g. 127.0.0.1:8765")
 	consoleAddr := fs.String("console", "127.0.0.1:8770", "serve the local console on this loopback address (empty: off)")
 	webApp := fs.String("web-app", "", "web client the pairing QR code opens (default: the project's)")
 	_ = fs.Parse(args)
+	switch *relayURL {
+	case "":
+		*relayURL = hub.DefaultRelayURL
+	case "off":
+		*relayURL = ""
+	}
 	if *webApp == "" {
 		*webApp = webAppFromEnv()
 	} else {
