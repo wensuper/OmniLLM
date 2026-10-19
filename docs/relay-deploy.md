@@ -41,6 +41,10 @@ zc 2026-10-19 决定：OmniLLM 的公共连接服务（relay）和手机网页�
 
 两个名字都用 zc 在阿里云申请的 DigiCert 证书（比 Let's Encrypt 兼容更多老手机），放在 `/etc/https/aliyun/<名字>/`，和 Parley 一样**不会自动续期**，2027-01-16 到期，巡检在剩 14 天时告警；续期步骤同 production.md §12。上线时签的 Let's Encrypt 证书留在 `/etc/https/acme/<名字>/`，acme.sh 照常续期，阿里云证书来不及续时把 vhost 的两行路径指回去即可。
 
+## 账号和权限（v0.2.0-alpha.3 起）
+
+relay 以无登录的 `omnillm-relay` 账号运行（`install-server.sh` 第一次会建），systemd 加固（只读文件系统、看不到 /home、没有特权）；程序和网页文件归 root、对别人只读。这样 relay 即使被攻破，也改不了手机加载的网页。`package.sh` 没有 cosign 就停下；`install-server.sh` 在服务器上按签名过的校验和再核对一遍，网页里不许有符号链接，Tengine 配置里出现记录 `Sec-WebSocket-Protocol` 的日志格式就停下。
+
 ## 以后每次发版
 
 只做第 3 步（`package.sh` → `scp` → `install-server.sh`）和第 5 步的核对。旧版本留在 `releases/` 下：回滚就是把 `/opt/omnillm/omnillm` 和 `/home/yunwei/www/omni/current` 两个链接指回上一个标签，再 `sudo systemctl restart omnillm-relay`。

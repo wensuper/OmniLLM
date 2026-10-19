@@ -3,6 +3,9 @@
 // connect`); this file is the page around it. It never builds HTML from
 // strings: every text goes through textContent.
 "use strict";
+// The build this script belongs to (stamped by scripts/build-web.sh, the
+// same in index.html and sw.js).
+const BUILD = "dev";
 if (window.top !== window.self) { document.documentElement.textContent = ""; throw new Error("framed"); }
 
 // ---------- language ----------
@@ -128,6 +131,21 @@ function deviceName() {
 }
 
 // ---------- start ----------
+// A page made of two versions (loaded while the server switched to a new
+// one) is reloaded once from the network, the cache cleared.
+(function sameBuild() {
+  const page = (document.querySelector('meta[name="omnillm-build"]') || {}).content;
+  if (page === BUILD) return;
+  let tried = false;
+  try { tried = sessionStorage.getItem("omnillm.rebuilt") === BUILD; sessionStorage.setItem("omnillm.rebuilt", BUILD); } catch {}
+  if (tried) return;
+  Promise.all([
+    navigator.serviceWorker ? navigator.serviceWorker.getRegistrations().then((rs) => Promise.all(rs.map((r) => r.unregister()))) : null,
+    window.caches ? caches.keys().then((ks) => Promise.all(ks.map((k) => caches.delete(k)))) : null,
+  ]).finally(() => location.reload());
+  throw new Error("mixed build");
+})();
+
 (async function main() {
   $("boot-text").textContent = t("loading");
   // A pairing link carries the code in the fragment; take it and wipe it
@@ -410,7 +428,14 @@ $("composer").addEventListener("submit", async (e) => {
   renderLog(); renderList();
   const log = $("log"), node = log.lastElementChild;
   const id = crypto.randomUUID(); S.busy = id; busyUI(true);
-  const msgs = chat.messages.slice(0, -1).map(({ role, content, images }) => (images ? { role, content, images } : { role, content }));
+  // Images go with the latest two turns that have them; older ones are
+  // named in the text, so a long chat with pictures keeps working.
+  const withImages = new Set(chat.messages.slice(0, -1).filter((m) => m.images && m.images.length).slice(-2));
+  const msgs = chat.messages.slice(0, -1).map((m) => {
+    if (!m.images || !m.images.length) return { role: m.role, content: m.content };
+    if (withImages.has(m)) return { role: m.role, content: m.content, images: m.images };
+    return { role: m.role, content: (m.content ? m.content + "\n" : "") + "[" + m.images.length + " earlier image(s)]" };
+  });
   let raf = 0;
   const flush = () => { raf = 0; node.textContent = ""; fill(node, reply.content); log.scrollTop = log.scrollHeight; };
   try {

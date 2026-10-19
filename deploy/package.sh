@@ -17,7 +17,10 @@ if command -v cosign >/dev/null 2>&1; then
     --certificate-identity-regexp '^https://github\.com/wensuper/OmniLLM/\.github/workflows/release\.yml@refs/tags/v' \
     --certificate-oidc-issuer https://token.actions.githubusercontent.com checksums.txt
 else
-  echo "cosign not installed: checking checksums only" >&2
+  # The checksums came from the same place as the files: without the
+  # signature check they prove nothing. Fail closed.
+  echo "cosign is required (brew install cosign) to verify the release signature" >&2
+  exit 1
 fi
 grep -E " (omnillm_linux_${arch}\.tar\.gz|omnillm-web\.tar\.gz)\$" checksums.txt > want.txt
 [ "$(wc -l < want.txt)" -eq 2 ] || { echo "release lacks a file" >&2; exit 1; }
@@ -26,4 +29,5 @@ mkdir -p bin web
 tar -xzf "omnillm_linux_${arch}.tar.gz" -C bin omnillm
 tar -xzf omnillm-web.tar.gz -C web
 echo "$tag" > TAG
+# want.txt stays: install-server.sh checks the archives again on the server.
 echo "$out"

@@ -351,7 +351,9 @@ func (c *Client) spawnCLI(ctx context.Context, model string, msgs []omnillm.Mess
 			if err := os.WriteFile(f, im.Data, 0o600); err != nil {
 				return fail(err)
 			}
-			args = append(args, "-i", f)
+			// One argument: -i takes several values, so a separate "-i f"
+			// could swallow the "-" that reads the prompt from stdin.
+			args = append(args, "--image="+f)
 		}
 		args = append(args, "-")
 	}

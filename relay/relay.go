@@ -400,6 +400,7 @@ func (s *Server) clientIP(r *http.Request) string {
 
 // tooManyFailures limits wrong-secret guessing per IP.
 func (s *Server) tooManyFailures(ip string, record bool) bool {
+	ip = limitKey(ip)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	b := s.failures[ip]
@@ -646,4 +647,14 @@ func (b *bucket) take() bool {
 	}
 	b.tokens--
 	return true
+}
+
+// limitKey groups addresses the way one client holds them: an IPv6 client
+// usually has a whole /64, so guesses are counted per /64.
+func limitKey(ip string) string {
+	a := net.ParseIP(ip)
+	if a == nil || a.To4() != nil {
+		return ip
+	}
+	return a.Mask(net.CIDRMask(64, 128)).String() + "/64"
 }

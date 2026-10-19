@@ -4,7 +4,15 @@
 const VERSION = "dev";
 const FILES = ["./", "index.html", "app.js", "app.css", "wasm_exec.js", "omni.wasm", "manifest.webmanifest", "icon.svg", "icon-180.png", "icon-512.png", "vendor/jsqr.js"];
 self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open("omnillm-" + VERSION).then((c) => c.addAll(FILES.map((f) => new Request(f, { cache: "reload" })))).then(() => self.skipWaiting()));
+  // Cache the whole set, then check it is one build (a deploy can switch
+  // mid-download); a mixed set is thrown away and tried on the next visit.
+  e.waitUntil(caches.open("omnillm-" + VERSION).then(async (c) => {
+    await c.addAll(FILES.map((f) => new Request(f, { cache: "reload" })));
+    for (const f of ["index.html", "app.js"]) {
+      const r = await c.match(f);
+      if (!r || !(await r.text()).includes(VERSION)) { await caches.delete("omnillm-" + VERSION); throw new Error("mixed build"); }
+    }
+  }).then(() => self.skipWaiting()));
 });
 self.addEventListener("activate", (e) => {
   e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k.startsWith("omnillm-") && k !== "omnillm-" + VERSION).map((k) => caches.delete(k)))));

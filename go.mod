@@ -8,6 +8,7 @@ require (
 	github.com/makiuchi-d/gozxing v0.1.1
 	github.com/zalando/go-keyring v0.2.8
 	golang.org/x/crypto v0.58.0
+	golang.org/x/image v0.47.0
 	golang.org/x/term v0.47.0
 	rsc.io/qr v0.2.0
 )
