@@ -23,6 +23,7 @@ const T = {
     chats: "对话", newChat: "新对话", placeholder: "输入消息", stop: "停止",
     addImage: "添加图片", removeImage: "移除图片", tooManyImages: "每条消息最多 4 张图片。", imageFailed: "这张图片打不开，换一张试试。", imageTitle: "图片",
     offline: "连不上主机：它可能睡眠了或者没联网。醒来后会自动恢复。", retry: "重试",
+    noNetwork: "这台设备没有联网。联网后会自动连上，刚才输入的内容还在。", loadingModels: "正在连接主机……",
     noModels: "主机上还没有可用的模型。", forget: "取消这台设备的配对", forgetQ: "这台设备将不能再使用主机上的模型。主机的设备列表里它还在，请也在主机上移除它。确定吗？",
     addHome: "添加到主屏幕", addHomeTip: "点浏览器的“分享”按钮，选“添加到主屏幕”。从主屏幕打开时需要再扫一次码。",
     deviceLine: "这台设备：{0}", sub: "订阅", empty: "有什么可以帮你？", cut: "（回复被截断）", stopped: "（已停止）",
@@ -41,6 +42,7 @@ const T = {
     chats: "Chats", newChat: "New chat", placeholder: "Message", stop: "Stop",
     addImage: "Add image", removeImage: "Remove image", tooManyImages: "Up to 4 images per message.", imageFailed: "This image can't be opened; try another one.", imageTitle: "Image",
     offline: "Can't reach your hub: it may be asleep or offline. This recovers by itself when it wakes.", retry: "Retry",
+    noNetwork: "This device is offline. It reconnects by itself when the network is back; what you typed is kept.", loadingModels: "Connecting to your hub…",
     noModels: "The hub has no models yet.", forget: "Unpair this device", forgetQ: "This device will no longer be able to use the hub's models. It still shows in the hub's device list; remove it there too. Continue?",
     addHome: "Add to Home Screen", addHomeTip: "Tap the browser's Share button and choose Add to Home Screen. Opened from the Home Screen, it asks for the code once more.",
     deviceLine: "This device: {0}", sub: "subscription", empty: "How can I help?", cut: "(reply cut off)", stopped: "(stopped)",
@@ -309,15 +311,23 @@ async function openChat() {
   await connect();
 }
 
-async function connect() {
-  try {
-    await omnillm.open(S.device.state);
-    await loadModels();
-    setOnline(true);
-  } catch (e) {
-    if (e && e.msg === "device_revoked") return unpaired();
-    setOnline(false, errText(e));
-  }
+// connect opens the device and loads the models; S.ready_ is that work,
+// so a message sent meanwhile waits for it instead of going nowhere.
+function connect() {
+  S.connecting = (async () => {
+    if (!navigator.onLine) { setOnline(false, t("noNetwork")); return; }
+    const sel = $("model");
+    if (!S.models.length) { sel.textContent = ""; const o = el("option", t("loadingModels")); o.value = ""; sel.append(o); }
+    try {
+      await omnillm.open(S.device.state);
+      await loadModels();
+      setOnline(true);
+    } catch (e) {
+      if (e && e.msg === "device_revoked") return unpaired();
+      setOnline(false, errText(e));
+    }
+  })();
+  return S.connecting;
 }
 
 async function loadModels() {
@@ -346,7 +356,10 @@ function setOnline(ok, why) {
     const r = el("button", t("retry"), "link"); r.type = "button"; r.addEventListener("click", connect); b.append(r);
   }
 }
-addEventListener("online", () => { if (!S.online && S.device) connect(); });
+// The phone's own network: say so at once, reconnect when it is back
+// (the old connection may be dead without anyone noticing).
+addEventListener("offline", () => { if (S.device) setOnline(false, t("noNetwork")); });
+addEventListener("online", () => { if (S.device) connect(); });
 document.addEventListener("visibilitychange", () => { if (!document.hidden && !S.online && S.device) connect(); });
 
 function newChat() {
@@ -415,9 +428,16 @@ $("composer").addEventListener("submit", async (e) => {
   e.preventDefault();
   if (S.busy) { omnillm.cancel(S.busy); return; }
   const text = input.value.trim();
-  const model = $("model").value;
   const images = S.pending.map(({ mime, data }) => ({ mime, data }));
-  if ((!text && !images.length) || !model) return;
+  if (!text && !images.length) return;
+  if (!navigator.onLine) { setOnline(false, t("noNetwork")); return; } // keep the text
+  if (!$("model").value && S.connecting) { // still loading the models
+    if (S.waiting) return;
+    S.waiting = true;
+    try { await S.connecting; } finally { S.waiting = false; }
+  }
+  const model = $("model").value;
+  if (!model) { if (S.online) setOnline(false); return; }
   input.value = ""; grow(); clearPending();
   const chat = S.cur; // this reply belongs to this conversation, whatever happens meanwhile
   chat.model = model;
