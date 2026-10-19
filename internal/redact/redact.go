@@ -11,6 +11,7 @@ var patterns = []*regexp.Regexp{
 	// Provider key shapes.
 	regexp.MustCompile(`\bsk-[A-Za-z0-9_\-]{8,}`),
 	regexp.MustCompile(`\bomni_[a-z]+_[A-Za-z0-9_\-]{8,}`),
+	regexp.MustCompile(`\bomnillm[0-9]-[A-Za-z0-9_\-]{8,}`), // pairing texts and links
 	// JWTs.
 	regexp.MustCompile(`\beyJ[A-Za-z0-9_\-]{8,}\.[A-Za-z0-9_\-]{8,}\.[A-Za-z0-9_\-]{8,}`),
 	// Long opaque base64/hex runs (pairing secrets, keys).

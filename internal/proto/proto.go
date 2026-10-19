@@ -4,10 +4,13 @@ package proto
 
 import (
 	"encoding/base64"
+	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	omnillm "github.com/wensuper/OmniLLM"
 )
@@ -105,12 +108,32 @@ type PairingCode struct {
 	Expires int64  `json:"e"` // unix seconds
 }
 
-const pairingPrefix = "omnillm1-"
+// Pairing text formats: "omnillm1-" + base64url(JSON) (v0.2.0-alpha.3 and
+// earlier), and the compact "omnillm2-" + base64url(binary) below, about
+// half as long, so the QR code is far less dense and phones scan it fast:
+//
+//	expires uint32 | mailbox 16 | secret 32 | hub key 32 | psk 32 | relay URL
+const (
+	pairingPrefix  = "omnillm1-"
+	pairingPrefix2 = "omnillm2-"
+	compactFixed   = 4 + 16 + 32 + 32 + 32
+)
 
-// Encode renders the pairing text.
+// Encode renders the pairing text (compact form).
 func (p PairingCode) Encode() string {
-	b, _ := json.Marshal(p)
-	return pairingPrefix + base64.RawURLEncoding.EncodeToString(b)
+	mb, err := hex.DecodeString(p.Mailbox)
+	if err != nil || len(mb) != 16 || len(p.Secret) != 32 || len(p.HubKey) != 32 || len(p.PSK) != 32 {
+		b, _ := json.Marshal(p) // not a complete code: keep it readable
+		return pairingPrefix + base64.RawURLEncoding.EncodeToString(b)
+	}
+	b := make([]byte, compactFixed, compactFixed+len(p.Relay))
+	binary.BigEndian.PutUint32(b[0:], uint32(p.Expires))
+	copy(b[4:], mb)
+	copy(b[20:], p.Secret)
+	copy(b[52:], p.HubKey)
+	copy(b[84:], p.PSK)
+	b = append(b, p.Relay...)
+	return pairingPrefix2 + base64.RawURLEncoding.EncodeToString(b)
 }
 
 // Link is the pairing link for the web client at webApp (what the QR code
@@ -129,15 +152,28 @@ func ParsePairingCode(s string, now time.Time) (PairingCode, error) {
 	if i := strings.Index(s, "#pair="); i >= 0 {
 		s = s[i+len("#pair="):]
 	}
-	if !strings.HasPrefix(s, pairingPrefix) || len(s) > 2048 {
+	damaged := errors.New("proto: pairing code is damaged; copy it again")
+	switch {
+	case len(s) > 2048:
 		return p, errors.New("proto: not a pairing code")
-	}
-	b, err := base64.RawURLEncoding.DecodeString(s[len(pairingPrefix):])
-	if err != nil {
-		return p, errors.New("proto: pairing code is damaged; copy it again")
-	}
-	if err := json.Unmarshal(b, &p); err != nil {
-		return p, errors.New("proto: pairing code is damaged; copy it again")
+	case strings.HasPrefix(s, pairingPrefix2):
+		b, err := base64.RawURLEncoding.DecodeString(s[len(pairingPrefix2):])
+		if err != nil || len(b) <= compactFixed || len(b) > compactFixed+512 || !utf8.Valid(b[compactFixed:]) {
+			return p, damaged
+		}
+		p = PairingCode{Expires: int64(binary.BigEndian.Uint32(b[0:])), Mailbox: hex.EncodeToString(b[4:20]),
+			Secret: append([]byte{}, b[20:52]...), HubKey: append([]byte{}, b[52:84]...), PSK: append([]byte{}, b[84:116]...),
+			Relay: string(b[compactFixed:])}
+	case strings.HasPrefix(s, pairingPrefix):
+		b, err := base64.RawURLEncoding.DecodeString(s[len(pairingPrefix):])
+		if err != nil {
+			return p, damaged
+		}
+		if err := json.Unmarshal(b, &p); err != nil {
+			return p, damaged
+		}
+	default:
+		return p, errors.New("proto: not a pairing code")
 	}
 	if len(p.Secret) != 32 || len(p.HubKey) != 32 || len(p.PSK) != 32 || len(p.Mailbox) != 32 || p.Relay == "" {
 		return p, errors.New("proto: pairing code is incomplete; copy it again")

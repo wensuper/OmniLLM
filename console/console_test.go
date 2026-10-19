@@ -367,7 +367,7 @@ func TestPairingThroughTheConsole(t *testing.T) {
 	id, _ := out["id"].(string)
 	pairText, _ := out["code"].(string)
 	qr, _ := out["qr"].(string)
-	if !strings.HasPrefix(qr, "data:image/svg+xml;base64,") || !strings.HasPrefix(pairText, "omnillm1-") {
+	if !strings.HasPrefix(qr, "data:image/svg+xml;base64,") || !strings.HasPrefix(pairText, "omnillm2-") {
 		t.Fatalf("pairing payload %v", out)
 	}
 	sas := make(chan string, 1)

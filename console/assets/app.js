@@ -36,6 +36,10 @@ const T = {
     removed: "已移除", connected: "已接入，{0} 个模型可用", saved: "已保存",
     local: "只在本机", remote: "会发到云端", sub: "订阅",
     pairHow: "手机或平板：用相机扫这个二维码，不用装任何东西。电脑或服务器：运行 omnillm connect pair，粘贴下面这段配对文字（{0} 前有效，只能用一次）。不要发给别人，也不要贴到聊天里。",
+    pairPhone: "手机或平板：用相机扫这个二维码，不用装任何东西。{0} 前有效，只能用一次。",
+    pairComputer: "电脑或服务器（没有摄像头）",
+    pairComputerNew: "还没装 OmniLLM 的，在那台机器上运行这一行（只装一个程序，不装后台服务），装完会提示粘贴配对文字：",
+    pairComputerHow: "已经装好的，运行 omnillm connect pair，粘贴下面这段配对文字。不要发给别人，也不要贴到聊天里。",
     pairWait: "等待设备连接……",
     pairConfirmQ: "设备“{0}”请求加入。它屏幕上显示的数字是这个吗？",
     pairYes: "一致，添加", pairNo: "不一致，拒绝",
@@ -82,6 +86,10 @@ const T = {
     removed: "Removed", connected: "Connected: {0} models available", saved: "Saved",
     local: "stays on this computer", remote: "goes to the cloud", sub: "subscription",
     pairHow: "Phone or tablet: scan the QR code with the camera; nothing to install. Computer or server: run omnillm connect pair and paste this pairing text (valid until {0}, single use). Don't send it to anyone or paste it into a chat.",
+    pairPhone: "Phone or tablet: scan this QR code with the camera; nothing to install. Valid until {0}, single use.",
+    pairComputer: "Computer or server (no camera)",
+    pairComputerNew: "Not installed there yet? Run this line on that machine (one program, no background service); it then asks for the pairing text:",
+    pairComputerHow: "Already installed: run omnillm connect pair and paste this pairing text. Don't send it to anyone or paste it into a chat.",
     pairWait: "Waiting for the device…",
     pairConfirmQ: "\"{0}\" wants to join. Does its screen show this number?",
     pairYes: "It matches, add it", pairNo: "It doesn't, refuse",
@@ -278,22 +286,31 @@ async function startPair(area, onDone) {
   }
   let p;
   try { p = await api("pair/start", {}); } catch (e) { area.append(el("p", e.message, "muted")); return; }
+  // Phones first: a big QR code and one sentence. Computers and servers
+  // (no camera) open the section below it.
   const box = el("div", undefined, "pair");
+  const exp = new Date(p.expires).toLocaleTimeString(lang === "zh" ? "zh-CN" : "en-US", { timeStyle: "short" });
+  const left = el("div", undefined, "pair-qr");
   const img = el("img");
   img.alt = "QR";
   img.src = p.qr;
+  left.append(img, el("p", t("pairPhone", exp), "muted small"));
   const right = el("div");
-  const exp = new Date(p.expires).toLocaleTimeString(lang === "zh" ? "zh-CN" : "en-US", { timeStyle: "short" });
-  right.append(el("p", t("pairHow", exp)));
-  const code = el("div", p.code, "code");
-  right.append(code);
-  const copy = el("button", t("copy"), "secondary");
-  copy.type = "button";
-  copy.addEventListener("click", async () => { try { await navigator.clipboard.writeText(p.code); copy.textContent = t("copied"); } catch (_) { /* select instead */ } });
-  right.append(copy);
   const state = el("p", t("pairWait"), "muted");
   right.append(state);
-  box.append(img, right);
+  const more = el("details", undefined, "pair-more");
+  more.append(el("summary", t("pairComputer")));
+  const copyBtn = (text) => {
+    const b = el("button", t("copy"), "secondary small-btn");
+    b.type = "button";
+    b.addEventListener("click", async () => { try { await navigator.clipboard.writeText(text); b.textContent = t("copied"); } catch (_) { /* select instead */ } });
+    return b;
+  };
+  const install = "curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh -o omnillm-install.sh && sh omnillm-install.sh --device";
+  more.append(el("p", t("pairComputerNew")), el("div", install, "code"), copyBtn(install),
+    el("p", t("pairComputerHow")), el("div", p.code, "code"), copyBtn(p.code));
+  right.append(more);
+  box.append(left, right);
   area.append(box);
   let asked = false;
   pairTimer = setInterval(async () => {
@@ -302,7 +319,7 @@ async function startPair(area, onDone) {
     if (st.state === "confirm" && !asked) {
       asked = true;
       const c = el("div", undefined, "confirm");
-      c.append(el("p", t("pairConfirmQ", st.device_name)), el("div", st.code, "sas"));
+      c.append(el("p", t("pairConfirmQ", st.device_name)), el("div", String(st.code).replace(/^(\d{3})(\d{3})$/, "$1 $2"), "sas"));
       const actions = el("div", undefined, "actions");
       const yes = el("button", t("pairYes"), "primary");
       const no = el("button", t("pairNo"), "secondary");

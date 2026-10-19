@@ -193,7 +193,7 @@ $("pair-retry").addEventListener("click", () => { show(S.device ? "chat" : "welc
 // and taps Connect; a code they scanned or pasted here needs no extra tap.
 async function pair(text, fromLink) {
   if (S.pairing) return;
-  const m = text.match(/omnillm1-[A-Za-z0-9_-]+/);
+  const m = text.match(/omnillm[12]-[A-Za-z0-9_-]+/);
   if (!m) { $("welcome-err").textContent = t("notCode"); show("welcome"); return; }
   text = m[0];
   S.pairing = true;
@@ -217,11 +217,18 @@ async function pair(text, fromLink) {
   } finally { S.pairing = false; }
 }
 
-function relayHost(code) {
+// relayURL reads the relay address out of a pairing text (both formats:
+// omnillm1- is base64url JSON, omnillm2- is binary with the URL after 116
+// bytes). Display only: the device code checks the text for real.
+function relayURL(code) {
   try {
-    const j = JSON.parse(atob(code.slice(9).replace(/-/g, "+").replace(/_/g, "/")));
-    return new URL(j.r).host;
-  } catch { return "?"; }
+    const raw = atob(code.slice(9).replace(/-/g, "+").replace(/_/g, "/"));
+    if (code.startsWith("omnillm2-")) return new TextDecoder().decode(Uint8Array.from(raw.slice(116), (c) => c.charCodeAt(0)));
+    return JSON.parse(raw).r;
+  } catch { return ""; }
+}
+function relayHost(code) {
+  try { return new URL(relayURL(code)).host; } catch { return "?"; }
 }
 
 async function connectPair(text) {
@@ -257,10 +264,8 @@ function errText(e, code) {
   return String(e && e.message || e);
 }
 function relayIsPlain(code) {
-  try {
-    const j = JSON.parse(atob(code.slice(9).replace(/-/g, "+").replace(/_/g, "/")));
-    return /^ws:\/\//.test(j.r) && !/^ws:\/\/(127\.0\.0\.1|localhost)[:/]/.test(j.r);
-  } catch { return false; }
+  const r = relayURL(code);
+  return /^ws:\/\//.test(r) && !/^ws:\/\/(127\.0\.0\.1|localhost)[:/]/.test(r);
 }
 
 // ---------- QR scanning (camera in the page; used from the Home Screen) ----------
@@ -287,7 +292,7 @@ async function startScan() {
     c.width = w; c.height = h; g.drawImage(v, 0, 0, w, h);
     const r = jsQR(g.getImageData(0, 0, w, h).data, w, h, { inversionAttempts: "dontInvert" });
     if (r && r.data) {
-      const m = r.data.match(/omnillm1-[A-Za-z0-9_-]+/);
+      const m = r.data.match(/omnillm[12]-[A-Za-z0-9_-]+/);
       stopScan(!!m);
       if (m) pair(m[0]); else { $("welcome-err").textContent = t("notCode"); }
     }
