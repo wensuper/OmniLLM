@@ -462,7 +462,7 @@ func uninstallCmd(args []string) {
 // purgeDirs is what --purge deletes: only the folders OmniLLM creates,
 // never their parent (OMNILLM_HOME may point anywhere, even at $HOME).
 func purgeDirs() []string {
-	return []string{dataDir("hub"), dataDir("device"), dataDir("relay-certs")}
+	return []string{dataDir("hub"), dataDir("device"), dataDir("relay-certs"), dataDir("codex-home")}
 }
 
 // installDevice sets this machine up as a device only (a server that uses
