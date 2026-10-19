@@ -197,6 +197,9 @@ const maxChatsPerDevice = 4
 func (h *Hub) serveDevice(ctx context.Context, c *mailboxConn) {
 	d, ok := h.deviceByMailbox(ctx, c.id)
 	if !ok {
+		if t, ok := h.tombstoneByMailbox(ctx, c.id); ok {
+			h.serveRemoved(ctx, c, t)
+		}
 		return
 	}
 	sess, err := e2e.Accept(ctx, c, c.id[:], h.key, nil, func(peer []byte) error {

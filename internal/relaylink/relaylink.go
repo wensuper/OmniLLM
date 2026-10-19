@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"math/rand/v2"
 	"net"
 	"net/http"
@@ -39,17 +38,6 @@ func CheckURL(raw string) (*url.URL, error) {
 		return nil, errors.New("relaylink: relay URL must be wss://")
 	}
 	return u, nil
-}
-
-func dialOpts(rt http.RoundTripper, auth string) *websocket.DialOptions {
-	h := http.Header{}
-	h.Set("Authorization", "Bearer "+auth)
-	c := &http.Client{Transport: rt, Timeout: 0}
-	if rt == nil {
-		c.Transport = http.DefaultTransport
-	}
-	c.CheckRedirect = func(*http.Request, []*http.Request) error { return errors.New("relaylink: redirects refused") }
-	return &websocket.DialOptions{HTTPClient: c, HTTPHeader: h, CompressionMode: websocket.CompressionDisabled}
 }
 
 // Event is something the relay told the hub.
@@ -302,15 +290,9 @@ func DialMailbox(ctx context.Context, relayURL string, id relayproto.ID, secret 
 	u.Path = "/v1/mailbox/" + id.String()
 	dctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
-	c, resp, err := websocket.Dial(dctx, u.String(), dialOpts(rt, base64.RawURLEncoding.EncodeToString(secret)))
-	if resp != nil && resp.Body != nil {
-		resp.Body.Close()
-	}
+	c, err := dialDevice(dctx, u.String(), base64.RawURLEncoding.EncodeToString(secret), rt)
 	if err != nil {
-		if resp != nil && (resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusTooManyRequests) {
-			return nil, ErrUnavailable
-		}
-		return nil, fmt.Errorf("relaylink: %w", err)
+		return nil, err
 	}
 	c.SetReadLimit(65535 + 64)
 	return &DeviceConn{c: c}, nil

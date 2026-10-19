@@ -95,7 +95,10 @@ func usage() {
   omnillm hub region confirm         确认主机所在地区变化并恢复调用
   omnillm connect pair               在这台设备上输入主机给的配对文字
   omnillm connect run [--listen 127.0.0.1:8766]
-  omnillm connect ask --model ID "问题"
+  omnillm connect chat [--model ID]  在终端里和主机上的模型对话
+  omnillm connect ask [--model ID] "问题"
+  omnillm connect models             列出能用的模型
+  omnillm connect forget             删除这台设备的配对
   omnillm relay --listen :443 --autocert relay.example.com --hub-token-hash HEX
   omnillm relay token                生成一枚主机登记令牌和它的哈希
 `, `usage:
@@ -114,7 +117,10 @@ func usage() {
   omnillm hub region confirm         accept the hub's new region and resume calls
   omnillm connect pair               enter the hub's pairing text on this device
   omnillm connect run [--listen 127.0.0.1:8766]
-  omnillm connect ask --model ID "question"
+  omnillm connect chat [--model ID]  chat with the hub's models in this terminal
+  omnillm connect ask [--model ID] "question"
+  omnillm connect models             list the models you can use
+  omnillm connect forget             delete this device's pairing
   omnillm relay --listen :443 --autocert relay.example.com --hub-token-hash HEX
   omnillm relay token                make a hub registration token and its hash
 `))
@@ -245,7 +251,35 @@ func secrets(dir, service string) secret.Store {
 		}
 		return f
 	}
-	return secret.NewKeyring(service)
+	kr := secret.NewKeyring(service)
+	if runtime.GOOS == "linux" {
+		// A server has no unlocked keyring. Use it when it answers;
+		// otherwise the private key file beside the data, as the installed
+		// hub does on Linux (secretEnv; as strong as the account's file
+		// permissions, INSTALL.md says so).
+		kf := filepath.Join(dir, "master.key")
+		_, statErr := os.Stat(kf)
+		if _, err := kr.Get(context.Background(), "omnillm/probe"); statErr != nil && errors.Is(err, secret.ErrNotFound) {
+			return kr
+		}
+		if err := ensureMasterKey(kf); err != nil {
+			die(err)
+		}
+		b, err := os.ReadFile(kf)
+		if err != nil {
+			die(err)
+		}
+		k, err := secret.ParseMasterKey(strings.TrimSpace(string(b)))
+		if err != nil {
+			die(err)
+		}
+		f, err := secret.NewFile(filepath.Join(dir, "secrets.enc"), k)
+		if err != nil {
+			die(err)
+		}
+		return f
+	}
+	return kr
 }
 
 func signalCtx() (context.Context, context.CancelFunc) {
@@ -387,7 +421,14 @@ func hubRun(dir, sock string, args []string) {
 	relayURL := fs.String("relay", os.Getenv("OMNILLM_RELAY"), "relay URL (wss://…)")
 	api := fs.String("api", "", "serve the local API for app tokens on this loopback address, e.g. 127.0.0.1:8765")
 	consoleAddr := fs.String("console", "127.0.0.1:8770", "serve the local console on this loopback address (empty: off)")
+	webApp := fs.String("web-app", "", "web client the pairing QR code opens (default: the project's)")
 	_ = fs.Parse(args)
+	if *webApp == "" {
+		*webApp = webAppFromEnv()
+	} else {
+		os.Setenv("OMNILLM_WEB_APP", *webApp)
+		*webApp = webAppFromEnv()
+	}
 	ctx, stop := signalCtx()
 	defer stop()
 	if err := os.MkdirAll(dir, 0o700); err != nil {
@@ -414,7 +455,7 @@ func hubRun(dir, sock string, args []string) {
 			token = string(b)
 		}
 	}
-	h, err := hub.New(ctx, hub.Options{Secrets: sec, Store: st, RelayURL: *relayURL, RelayToken: token,
+	h, err := hub.New(ctx, hub.Options{Secrets: sec, Store: st, RelayURL: *relayURL, RelayToken: token, WebAppURL: *webApp,
 		Logf: func(f string, a ...any) { log.Printf(f, a...) }})
 	if err != nil {
 		die(err)
@@ -453,6 +494,15 @@ func hubRun(dir, sock string, args []string) {
 		}
 	}
 	go control.Serve(ctx, ln, hubHandler(h, *relayURL, con))
+	// Subscriptions logged in on this machine since the last start
+	// (Claude Code, Codex) connect by themselves.
+	go func() {
+		for _, cfg := range h.DetectSubscriptions(ctx) {
+			if _, err := h.AddProvider(ctx, cfg, ""); err != nil {
+				log.Printf("hub: %s not connected: %s", cfg.Name, omnillm.Describe("en", err))
+			}
+		}
+	}()
 	if *api != "" {
 		go func() {
 			if err := localapi.Serve(ctx, *api, localapi.Handler(localapi.HubBackend{Hub: h})); err != nil {
@@ -483,7 +533,14 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 	return func(ctx context.Context, c *control.Conn, req control.Request) error {
 		a := req.Args
 		switch req.Op {
-		case "ollama.auto":
+		case "ollama.auto", "providers.auto":
+			// Subscriptions the owner is already logged in to on this
+			// machine (Claude Code, Codex) connect with no key at all.
+			for _, cfg := range h.DetectSubscriptions(ctx) {
+				if _, err := h.AddProvider(ctx, cfg, ""); err != nil {
+					log.Printf("hub: %s not connected: %s", cfg.Name, omnillm.Describe("en", err))
+				}
+			}
 			ps, _ := h.Providers(ctx)
 			if len(ps) > 0 {
 				return c.Send(control.Reply{Event: "ok"})
@@ -501,6 +558,11 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 			}
 			return c.Send(control.Reply{Event: "ok", Text: con.LoginURL()})
 		case "status":
+			if ps, _ := h.Providers(ctx); len(ps) == 0 {
+				for _, cfg := range h.DetectSubscriptions(ctx) {
+					_, _ = h.AddProvider(ctx, cfg, "")
+				}
+			}
 			ps, _ := h.Providers(ctx)
 			ds, _ := h.Devices(ctx)
 			st := map[string]any{"running": true, "version": version, "providers": len(ps), "devices": len(ds),
@@ -654,12 +716,12 @@ func pairOp(ctx context.Context, h *hub.Hub, c *control.Conn, a map[string]strin
 	// If this command ends early (the owner pressed Ctrl-C, the terminal
 	// closed), the code dies with it instead of holding a slot for 5 min.
 	defer p.Cancel()
-	if err := c.Send(control.Reply{Event: "qr", Text: p.Code}); err != nil {
+	if err := c.Send(control.Reply{Event: "qr", Text: p.Link}); err != nil {
 		return err
 	}
 	if err := c.Send(control.Reply{Event: "info", Text: fmt.Sprintf(t(
-		"在那台设备上运行 omnillm connect pair，然后粘贴下面这段配对文字（%s 前有效，只能用一次；不要发给别人，也不要贴到聊天里）：\n\n%s\n",
-		"On the device, run omnillm connect pair and paste this pairing text (valid until %s, single use; do not send it to anyone or paste it into a chat):\n\n%s\n"),
+		"手机或平板：用相机扫上面的二维码。电脑或服务器：运行 omnillm connect pair，粘贴下面这段配对文字（%s 前有效，只能用一次；不要发给别人，也不要贴到聊天里）：\n\n%s\n",
+		"Phone or tablet: scan the QR code above with the camera. Computer or server: run omnillm connect pair and paste this pairing text (valid until %s, single use; do not send it to anyone or paste it into a chat):\n\n%s\n"),
 		p.Expires.Format("15:04"), p.Code)}); err != nil {
 		return err
 	}
@@ -686,7 +748,7 @@ func connectCmd(args []string) {
 	switch args[0] {
 	case "pair":
 		if device.Paired(ctx, sec) {
-			die(errors.New(t("这台设备已经配对过。要重新配对，先在主机上移除它。", "This device is already paired. Remove it on the host first to pair again.")))
+			die(errors.New(t("这台设备已经配对过。要换一台主机或重新配对，先运行 omnillm connect forget。", "This device is already paired. To pair again (or with another hub), run omnillm connect forget first.")))
 		}
 		code := readSecret(t("粘贴主机给的配对文字：", "Paste the pairing text from the host: "))
 		host, _ := os.Hostname()
@@ -718,19 +780,52 @@ func connectCmd(args []string) {
 		if err := localapi.Serve(ctx, *listen, localapi.Handler(localapi.NewDeviceBackend(d, strings.TrimSpace(string(tok))))); err != nil {
 			die(err)
 		}
+	case "forget":
+		if err := device.Forget(ctx, sec); err != nil {
+			die(err)
+		}
+		fmt.Println(t("这台设备的配对已删除。主机上的设备列表里它还在，可以在主机上移除。", "This device's pairing is deleted. It still shows in the hub's device list; remove it there too."))
+	case "models":
+		d := openDevice(ctx, sec)
+		defer d.Close()
+		ms, err := d.Models(ctx)
+		if err != nil {
+			die(err)
+		}
+		for _, m := range ms {
+			note := ""
+			if m.HumanOnly {
+				note = t("（只在对话里用）", " (conversations only)")
+			}
+			fmt.Printf("%-28s %s%s\n", m.ID, m.DisplayName, note)
+		}
+	case "chat":
+		fs := flag.NewFlagSet("connect chat", flag.ExitOnError)
+		model := fs.String("model", "", "")
+		_ = fs.Parse(args[1:])
+		// Ctrl-C stops a reply, not the chat: only SIGTERM ends it.
+		stop()
+		cctx, cstop := signal.NotifyContext(context.Background(), syscall.SIGTERM)
+		defer cstop()
+		d := openDevice(cctx, sec)
+		defer d.Close()
+		chatLoop(cctx, d, *model)
 	case "ask":
 		fs := flag.NewFlagSet("connect ask", flag.ExitOnError)
 		model := fs.String("model", "", "")
 		_ = fs.Parse(args[1:])
-		if *model == "" || fs.NArg() == 0 {
+		if fs.NArg() == 0 {
 			usage()
 		}
-		d, err := device.Open(ctx, device.Options{Secrets: sec})
-		if err != nil {
-			die(errors.New(t("这台设备还没配对，先运行 omnillm connect pair。", "This device is not paired yet. Run omnillm connect pair first.")))
-		}
+		d := openDevice(ctx, sec)
 		defer d.Close()
-		s, err := d.Complete(ctx, omnillm.Request{Model: *model, Caller: omnillm.Interactive,
+		if *model == "" {
+			*model = defaultModel(ctx, d)
+		}
+		// A person at a terminal is waiting; from a script or cron (no
+		// terminal) it is a background call, and subscription models,
+		// kept for people, refuse it.
+		s, err := d.Complete(ctx, omnillm.Request{Model: *model, Caller: callerHere(),
 			Messages: []omnillm.Message{{Role: "user", Content: strings.Join(fs.Args(), " ")}}})
 		if err != nil {
 			die(err)
@@ -771,10 +866,14 @@ func relayCmd(args []string) {
 	keyFile := fs.String("tls-key", "", "")
 	open := fs.Bool("open", false, "let any hub register (a public relay)")
 	behindProxy := fs.Bool("behind-tls-proxy", false, "plain HTTP on loopback behind a TLS reverse proxy")
-	var hashes multi
+	var hashes, origins multi
 	fs.Var(&hashes, "hub-token-hash", "sha256 of an allowed hub token (repeatable)")
+	fs.Var(&origins, "web-origin", "origin of a web client allowed to open device mailboxes (repeatable; default the project's)")
 	_ = fs.Parse(args)
 	opts := relay.Options{Open: *open, TrustProxy: *behindProxy, Logf: func(f string, a ...any) { log.Printf(f, a...) }}
+	if len(origins) > 0 {
+		opts.WebOrigins = origins
+	}
 	for _, h := range hashes {
 		b, err := hex.DecodeString(h)
 		if err != nil || len(b) != 32 {

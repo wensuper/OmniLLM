@@ -1,0 +1,445 @@
+// OmniLLM web client: a phone or tablet becomes a device of the owner's hub.
+// All crypto runs in omni.wasm (the same Go device code as `omnillm
+// connect`); this file is the page around it. It never builds HTML from
+// strings: every text goes through textContent.
+"use strict";
+if (window.top !== window.self) { document.documentElement.textContent = ""; throw new Error("framed"); }
+
+// ---------- language ----------
+const T = {
+  zh: {
+    loading: "正在载入……", welcomeTitle: "在这台设备上用你的模型",
+    welcomeBody: "在你的主机（Mac 或电脑）上打开 OmniLLM 控制台，点“添加设备”，然后用这台设备扫描屏幕上的二维码。",
+    scan: "扫描二维码", pasteInstead: "或者粘贴配对文字", connect: "连接", cancel: "取消", back: "返回",
+    scanHint: "把主机屏幕上的二维码放进框里", camDenied: "没有拿到摄像头权限。可以改用下面的“粘贴配对文字”。",
+    pairTitle: "添加这台设备", pairConnecting: "正在连接你的主机……",
+    pairAsk: "把这台设备连到经过下面这个连接服务的主机上？只在你自己刚在主机上点了“添加设备”时继续。",
+    pairReplace: "这会替换这台设备现在的配对（{0}），之前的主机就不能再从这里用了。",
+    pairCheck: "在主机上核对这个数字，一致就在主机上点确认：", pairDone: "已添加。",
+    notCode: "这不是 OmniLLM 的配对二维码或配对文字。", needTLS: "这台主机的连接服务不支持手机网页（需要 wss:// 地址）。请在主机上设置一个公开的连接服务。",
+    chats: "对话", newChat: "新对话", placeholder: "输入消息", stop: "停止",
+    offline: "连不上主机：它可能睡眠了或者没联网。醒来后会自动恢复。", retry: "重试",
+    noModels: "主机上还没有可用的模型。", forget: "取消这台设备的配对", forgetQ: "这台设备将不能再使用主机上的模型。主机的设备列表里它还在，请也在主机上移除它。确定吗？",
+    addHome: "添加到主屏幕", addHomeTip: "点浏览器的“分享”按钮，选“添加到主屏幕”。从主屏幕打开时需要再扫一次码。",
+    deviceLine: "这台设备：{0}", sub: "订阅", empty: "有什么可以帮你？", cut: "（回复被截断）", stopped: "（已停止）",
+    today: "今天", copy: "复制", copied: "已复制",
+  },
+  en: {
+    loading: "Loading…", welcomeTitle: "Use your models on this device",
+    welcomeBody: "On your hub (your Mac or computer), open the OmniLLM console, choose Add device, and scan the QR code on its screen with this device.",
+    scan: "Scan QR code", pasteInstead: "Or paste the pairing text", connect: "Connect", cancel: "Cancel", back: "Back",
+    scanHint: "Point at the QR code on your hub's screen", camDenied: "No camera access. Use \"paste the pairing text\" below instead.",
+    pairTitle: "Add this device", pairConnecting: "Connecting to your hub…",
+    pairAsk: "Connect this device to the hub reached through the connection service below? Continue only if you just chose Add device on your own hub.",
+    pairReplace: "This replaces this device's current pairing ({0}); the previous hub can no longer be used from here.",
+    pairCheck: "Check this number on your hub and confirm there if it matches:", pairDone: "Added.",
+    notCode: "This is not an OmniLLM pairing QR code or pairing text.", needTLS: "This hub's connection service can't be used from a phone browser (it needs a wss:// address). Set up a public connection service on the hub.",
+    chats: "Chats", newChat: "New chat", placeholder: "Message", stop: "Stop",
+    offline: "Can't reach your hub: it may be asleep or offline. This recovers by itself when it wakes.", retry: "Retry",
+    noModels: "The hub has no models yet.", forget: "Unpair this device", forgetQ: "This device will no longer be able to use the hub's models. It still shows in the hub's device list; remove it there too. Continue?",
+    addHome: "Add to Home Screen", addHomeTip: "Tap the browser's Share button and choose Add to Home Screen. Opened from the Home Screen, it asks for the code once more.",
+    deviceLine: "This device: {0}", sub: "subscription", empty: "How can I help?", cut: "(reply cut off)", stopped: "(stopped)",
+    today: "Today", copy: "Copy", copied: "Copied",
+  },
+};
+const lang = (navigator.language || "en").toLowerCase().startsWith("zh") ? "zh" : "en";
+document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
+function t(k, ...a) { let s = (T[lang][k] ?? T.en[k] ?? k); a.forEach((v, i) => { s = s.replace("{" + i + "}", v); }); return s; }
+document.querySelectorAll("[data-t]").forEach((e) => { e.textContent = t(e.dataset.t); });
+const $ = (id) => document.getElementById(id);
+function el(tag, text, cls) { const e = document.createElement(tag); if (text !== undefined) e.textContent = text; if (cls) e.className = cls; return e; }
+function show(id) { document.querySelectorAll(".screen").forEach((s) => { s.hidden = s.id !== id; }); }
+
+// ---------- storage: IndexedDB, encrypted with a key the page cannot export ----------
+const idb = (() => {
+  let dbp;
+  function db() {
+    dbp ??= new Promise((res, rej) => {
+      const r = indexedDB.open("omnillm", 1);
+      r.onupgradeneeded = () => r.result.createObjectStore("kv");
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => rej(r.error);
+    });
+    return dbp;
+  }
+  async function op(mode, f) {
+    const d = await db();
+    return new Promise((res, rej) => {
+      const tx = d.transaction("kv", mode);
+      const req = f(tx.objectStore("kv"));
+      tx.oncomplete = () => res(req && req.result);
+      tx.onerror = () => rej(tx.error);
+    });
+  }
+  return {
+    get: (k) => op("readonly", (s) => s.get(k)),
+    put: (k, v) => op("readwrite", (s) => s.put(v, k)),
+    del: (k) => op("readwrite", (s) => s.delete(k)),
+  };
+})();
+
+let wrapKeyP = null;
+function wrapKey() {
+  wrapKeyP ??= (async () => {
+    let k = await idb.get("wrap");
+    if (!k) {
+      k = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+      await idb.put("wrap", k);
+    }
+    return k;
+  })();
+  return wrapKeyP;
+}
+async function seal(name, value) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv, additionalData: new TextEncoder().encode(name) }, await wrapKey(),
+    new TextEncoder().encode(JSON.stringify(value)));
+  await idb.put(name, { iv, ct });
+}
+async function unseal(name) {
+  const box = await idb.get(name);
+  if (!box) return null;
+  try {
+    const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: box.iv, additionalData: new TextEncoder().encode(name) }, await wrapKey(), box.ct);
+    return JSON.parse(new TextDecoder().decode(pt));
+  } catch { return null; }
+}
+
+// ---------- the Go side ----------
+const ready = new Promise((res) => addEventListener("omnillm-ready", res, { once: true }));
+async function startWasm() {
+  const go = new Go();
+  const r = await WebAssembly.instantiateStreaming(fetch("omni.wasm"), go.importObject);
+  go.run(r.instance);
+  await ready;
+}
+
+// ---------- state ----------
+const S = { device: null, models: [], chats: [], cur: null, busy: null, online: true };
+const isStandalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+function deviceName() {
+  const ua = navigator.userAgent;
+  if (/iPad/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) return "iPad";
+  if (/iPhone/.test(ua)) return "iPhone";
+  if (/Android/.test(ua)) return /Mobile/.test(ua) ? "Android phone" : "Android tablet";
+  return lang === "zh" ? "网页浏览器" : "Web browser";
+}
+
+// ---------- start ----------
+(async function main() {
+  $("boot-text").textContent = t("loading");
+  // A pairing link carries the code in the fragment; take it and wipe it
+  // from the address bar and history at once.
+  let link = "";
+  if (location.hash.startsWith("#pair=")) {
+    link = location.hash.slice(6);
+    history.replaceState(null, "", location.pathname + location.search);
+  }
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+  try { await startWasm(); } catch (e) { $("boot-text").textContent = String(e && e.message || e); return; }
+  S.ready = true;
+  if (S.pendingLink) { link = S.pendingLink; S.pendingLink = ""; }
+  S.device = await unseal("device");
+  S.chats = (await unseal("chats")) || [];
+  if (S.device && !link) return openChat();
+  if (link) return pair(link, true);
+  show("welcome");
+})();
+
+// A pairing link opened in a tab where the page is already loaded only
+// changes the fragment.
+addEventListener("hashchange", () => {
+  if (!location.hash.startsWith("#pair=")) return;
+  const code = location.hash.slice(6);
+  history.replaceState(null, "", location.pathname + location.search);
+  // Still loading: main() picks it up once the device code is ready.
+  if (!S.ready) { S.pendingLink = code; return; }
+  if (!S.busy && !S.pairing) pair(code, true);
+});
+
+// ---------- pairing ----------
+$("paste-go").addEventListener("click", () => {
+  const v = $("paste-text").value.trim();
+  if (!v) return;
+  pair(v);
+});
+$("pair-retry").addEventListener("click", () => { show(S.device ? "chat" : "welcome"); });
+
+// pair connects this device. A link (fromLink) could have been sent by
+// anyone, so the person first sees which connection service it leads to
+// and taps Connect; a code they scanned or pasted here needs no extra tap.
+async function pair(text, fromLink) {
+  if (S.pairing) return;
+  const m = text.match(/omnillm1-[A-Za-z0-9_-]+/);
+  if (!m) { $("welcome-err").textContent = t("notCode"); show("welcome"); return; }
+  text = m[0];
+  S.pairing = true;
+  try {
+    show("pairing");
+    $("pair-err").textContent = ""; $("pair-retry").hidden = true; $("sas").hidden = true; $("pair-status").textContent = "";
+    try { await omnillm.check(text); } catch (e) { $("pair-err").textContent = errText(e, text); $("pair-retry").hidden = false; return; }
+    if (fromLink || S.device) {
+      $("pair-host").textContent = relayHost(text);
+      $("pair-replace").hidden = !S.device;
+      if (S.device) $("pair-replace").textContent = t("pairReplace", S.device.name);
+      $("pair-ask").hidden = false;
+      const go = await new Promise((res) => {
+        $("pair-go").onclick = () => res(true);
+        $("pair-cancel").onclick = () => res(false);
+      });
+      $("pair-ask").hidden = true;
+      if (!go) { show(S.device ? "chat" : "welcome"); return; }
+    }
+    await connectPair(text);
+  } finally { S.pairing = false; }
+}
+
+function relayHost(code) {
+  try {
+    const j = JSON.parse(atob(code.slice(9).replace(/-/g, "+").replace(/_/g, "/")));
+    return new URL(j.r).host;
+  } catch { return "?"; }
+}
+
+async function connectPair(text) {
+  $("pair-status").textContent = t("pairConnecting");
+  try {
+    await omnillm.check(text);
+    const name = deviceName();
+    const state = await omnillm.pair(text, name, (code) => {
+      $("pair-status").textContent = t("pairCheck");
+      $("sas").textContent = code.slice(0, 3) + " " + code.slice(3);
+      $("sas").hidden = false;
+    });
+    if (S.device) { try { omnillm.close(); } catch {} }
+    S.device = { state, name, added: Date.now() };
+    await seal("device", S.device);
+    $("pair-status").textContent = t("pairDone");
+    $("sas").hidden = true;
+    S.cur = null;
+    setTimeout(openChat, 600);
+  } catch (e) {
+    $("sas").hidden = true;
+    $("pair-status").textContent = "";
+    $("pair-err").textContent = errText(e, text);
+    $("pair-retry").hidden = false;
+  }
+}
+
+function errText(e, code) {
+  if (e && e.code) {
+    if (code && e.code === "hub_offline" && relayIsPlain(code)) return t("needTLS");
+    return e.message;
+  }
+  return String(e && e.message || e);
+}
+function relayIsPlain(code) {
+  try {
+    const j = JSON.parse(atob(code.slice(9).replace(/-/g, "+").replace(/_/g, "/")));
+    return /^ws:\/\//.test(j.r) && !/^ws:\/\/(127\.0\.0\.1|localhost)[:/]/.test(j.r);
+  } catch { return false; }
+}
+
+// ---------- QR scanning (camera in the page; used from the Home Screen) ----------
+let camStream = null, camTimer = null;
+$("scan").addEventListener("click", startScan);
+$("scan-stop").addEventListener("click", stopScan);
+let jsqrLoaded = null;
+function loadJsQR() {
+  jsqrLoaded ??= new Promise((res, rej) => { const s = document.createElement("script"); s.src = "vendor/jsqr.js"; s.onload = res; s.onerror = rej; document.body.append(s); });
+  return jsqrLoaded;
+}
+async function startScan() {
+  $("welcome-err").textContent = "";
+  await loadJsQR().catch(() => {});
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+  } catch { $("welcome-err").textContent = t("camDenied"); $("welcome").querySelector("details").open = true; return; }
+  show("scanner");
+  const v = $("cam"); v.srcObject = camStream; await v.play().catch(() => {});
+  const c = $("cam-canvas"), g = c.getContext("2d", { willReadFrequently: true });
+  camTimer = setInterval(() => {
+    if (!v.videoWidth) return;
+    const w = Math.min(v.videoWidth, 720), h = Math.round(v.videoHeight * w / v.videoWidth);
+    c.width = w; c.height = h; g.drawImage(v, 0, 0, w, h);
+    const r = jsQR(g.getImageData(0, 0, w, h).data, w, h, { inversionAttempts: "dontInvert" });
+    if (r && r.data) {
+      const m = r.data.match(/omnillm1-[A-Za-z0-9_-]+/);
+      stopScan(!!m);
+      if (m) pair(m[0]); else { $("welcome-err").textContent = t("notCode"); }
+    }
+  }, 250);
+}
+function stopScan(keep) {
+  clearInterval(camTimer); camTimer = null;
+  if (camStream) camStream.getTracks().forEach((tr) => tr.stop());
+  camStream = null;
+  if (keep !== true) show(S.device ? "chat" : "welcome");
+}
+
+// ---------- chat ----------
+async function openChat() {
+  show("chat");
+  $("input").placeholder = t("placeholder");
+  $("device-line").textContent = t("deviceLine", S.device.name);
+  $("install-tip").hidden = isStandalone;
+  if (!S.cur) S.cur = S.chats[0] || newChat();
+  renderList(); renderLog();
+  await connect();
+}
+
+async function connect() {
+  try {
+    await omnillm.open(S.device.state);
+    await loadModels();
+    setOnline(true);
+  } catch (e) {
+    if (e && e.msg === "device_revoked") return unpaired();
+    setOnline(false, errText(e));
+  }
+}
+
+async function loadModels() {
+  const ms = await omnillm.models();
+  // Subscription models (people only) first: they are what the owner pays for already.
+  ms.sort((a, b) => (b.humanOnly - a.humanOnly) || a.name.localeCompare(b.name));
+  S.models = ms;
+  const sel = $("model"); sel.textContent = "";
+  for (const m of ms) { const o = el("option", m.name); o.value = m.id; sel.append(o); }
+  const want = S.cur && S.cur.model || localStorageGet("model");
+  // Without a choice yet: the Claude subscription's Sonnet, else the first.
+  const pick = [want, "claude-code/sonnet"].find((id) => id && ms.some((m) => m.id === id));
+  if (pick) sel.value = pick;
+  if (!ms.length) { const o = el("option", t("noModels")); o.disabled = true; sel.append(o); }
+}
+$("model").addEventListener("change", () => { localStorageSet("model", $("model").value); if (S.cur) S.cur.model = $("model").value; });
+function localStorageGet(k) { try { return localStorage.getItem("omnillm." + k); } catch { return null; } }
+function localStorageSet(k, v) { try { localStorage.setItem("omnillm." + k, v); } catch {} }
+
+function setOnline(ok, why) {
+  S.online = ok;
+  const b = $("banner");
+  b.hidden = ok; b.textContent = "";
+  if (!ok) {
+    b.append(el("span", why || t("offline")));
+    const r = el("button", t("retry"), "link"); r.type = "button"; r.addEventListener("click", connect); b.append(r);
+  }
+}
+addEventListener("online", () => { if (!S.online && S.device) connect(); });
+document.addEventListener("visibilitychange", () => { if (!document.hidden && !S.online && S.device) connect(); });
+
+function newChat() {
+  const c = { id: crypto.randomUUID(), title: "", model: $("model").value || localStorageGet("model") || "", messages: [], updated: Date.now() };
+  return c;
+}
+$("new").addEventListener("click", () => { if (S.busy) return; S.cur = newChat(); renderLog(); renderList(); closeDrawer(); $("input").focus(); });
+
+function renderLog() {
+  const log = $("log"); log.textContent = "";
+  if (!S.cur.messages.length) log.append(el("p", t("empty"), "empty"));
+  for (const m of S.cur.messages) log.append(bubble(m));
+  log.scrollTop = log.scrollHeight;
+}
+
+// bubble renders a message; fenced code becomes <pre>, the rest stays text.
+function bubble(m) {
+  const b = el("div", undefined, "msg " + m.role);
+  fill(b, m.content);
+  if (m.note) b.append(el("p", m.note, "note"));
+  if (m.role === "assistant" && m.content) {
+    const cp = el("button", t("copy"), "copy"); cp.type = "button";
+    cp.addEventListener("click", () => { navigator.clipboard.writeText(m.content).then(() => { cp.textContent = t("copied"); setTimeout(() => { cp.textContent = t("copy"); }, 1200); }); });
+    b.append(cp);
+  }
+  return b;
+}
+function fill(b, text) {
+  const parts = text.split(/```/);
+  parts.forEach((p, i) => {
+    if (i % 2) { const pre = el("pre"); pre.append(el("code", p.replace(/^[\w+-]*\n/, ""))); b.append(pre); }
+    else if (p) b.append(el("p", p));
+  });
+}
+
+function renderList() {
+  const ul = $("chat-list"); ul.textContent = "";
+  const all = [S.cur, ...S.chats.filter((c) => c.id !== S.cur.id)].filter((c) => c.messages.length || c === S.cur);
+  for (const c of all) {
+    const li = el("li"); const a = el("button", c.title || t("newChat"), c.id === S.cur.id ? "cur" : ""); a.type = "button";
+    a.addEventListener("click", () => { if (S.busy) return; S.cur = c; if (c.model) $("model").value = c.model; renderLog(); renderList(); closeDrawer(); });
+    li.append(a); ul.append(li);
+  }
+}
+
+async function saveChats() {
+  S.cur.updated = Date.now();
+  const rest = S.chats.filter((c) => c.id !== S.cur.id);
+  S.chats = [S.cur, ...rest].filter((c) => c.messages.length).slice(0, 50);
+  await seal("chats", S.chats).catch(() => {});
+}
+
+const input = $("input");
+input.addEventListener("input", grow);
+function grow() { input.style.height = "auto"; input.style.height = Math.min(input.scrollHeight, 180) + "px"; }
+input.addEventListener("keydown", (e) => {
+  // Enter sends on a computer keyboard; on phones the send button does.
+  if (e.key === "Enter" && !e.shiftKey && !e.isComposing && matchMedia("(pointer: fine)").matches) { e.preventDefault(); $("composer").requestSubmit(); }
+});
+$("composer").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (S.busy) { omnillm.cancel(S.busy); return; }
+  const text = input.value.trim();
+  const model = $("model").value;
+  if (!text || !model) return;
+  input.value = ""; grow();
+  const chat = S.cur; // this reply belongs to this conversation, whatever happens meanwhile
+  chat.model = model;
+  if (!chat.title) chat.title = text.slice(0, 40);
+  chat.messages.push({ role: "user", content: text });
+  const reply = { role: "assistant", content: "" };
+  chat.messages.push(reply);
+  renderLog(); renderList();
+  const log = $("log"), node = log.lastElementChild;
+  const id = crypto.randomUUID(); S.busy = id; busyUI(true);
+  const msgs = chat.messages.slice(0, -1).map(({ role, content }) => ({ role, content }));
+  let raf = 0;
+  const flush = () => { raf = 0; node.textContent = ""; fill(node, reply.content); log.scrollTop = log.scrollHeight; };
+  try {
+    const r = await omnillm.chat(id, model, JSON.stringify(msgs), (d) => { reply.content += d; if (!raf) raf = requestAnimationFrame(flush); });
+    if (r.finish === "length") reply.note = t("cut");
+    setOnline(true);
+  } catch (err) {
+    if (err && err.code === "cancelled") reply.note = t("stopped");
+    else if (err && err.msg === "device_revoked") return unpaired();
+    else {
+      reply.note = errText(err);
+      if (err && err.code === "hub_offline") setOnline(false);
+    }
+    if (!reply.content) { chat.messages.pop(); if (err && err.code !== "cancelled") { chat.messages.pop(); input.value = text; grow(); } }
+  } finally {
+    S.busy = null; busyUI(false);
+    // Removed meanwhile (unpaired): nothing left to show or save.
+    if (!S.device) return;
+    renderLog();
+    if (reply.note && !reply.content) { const n = el("p", reply.note, "note err"); $("log").append(n); }
+    await saveChats();
+  }
+});
+function busyUI(on) { $("send").classList.toggle("stop", on); $("send").setAttribute("aria-label", on ? t("stop") : "Send"); }
+
+// ---------- drawer ----------
+$("menu").addEventListener("click", () => { $("drawer").hidden = false; });
+$("drawer").addEventListener("click", (e) => { if (e.target.id === "drawer") closeDrawer(); });
+function closeDrawer() { $("drawer").hidden = true; }
+$("install-tip").addEventListener("click", () => { alert(t("addHomeTip")); });
+$("forget").addEventListener("click", async () => {
+  if (!confirm(t("forgetQ"))) return;
+  try { omnillm.close(); } catch {}
+  await unpaired();
+});
+async function unpaired() {
+  S.device = null; S.chats = []; S.cur = null;
+  await idb.del("device"); await idb.del("chats");
+  closeDrawer(); show("welcome");
+}

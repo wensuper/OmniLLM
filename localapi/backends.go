@@ -45,7 +45,19 @@ func (b *DeviceBackend) Models(ctx context.Context, tok string) ([]omnillm.Model
 	if err := b.check(tok); err != nil {
 		return nil, err
 	}
-	return b.Device.Models(ctx)
+	ms, err := b.Device.Models(ctx)
+	if err != nil {
+		return nil, err
+	}
+	// Programs on this device call as Background, so models kept for
+	// people (subscriptions) are not offered to them.
+	out := ms[:0]
+	for _, m := range ms {
+		if !m.HumanOnly {
+			out = append(out, m)
+		}
+	}
+	return out, nil
 }
 
 func (b *DeviceBackend) Complete(ctx context.Context, tok string, req omnillm.Request) (omnillm.Stream, error) {

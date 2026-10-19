@@ -7,11 +7,13 @@ package main
 // safe: it updates the service and restarts the hub.
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -20,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/wensuper/OmniLLM/device"
 	"github.com/wensuper/OmniLLM/internal/control"
 	"github.com/wensuper/OmniLLM/internal/e2e"
 	"github.com/wensuper/OmniLLM/internal/relaylink"
@@ -47,11 +50,18 @@ type Status struct {
 }
 
 func installCmd(args []string) {
-	noOpen := false
+	noOpen, deviceOnly := false, false
 	for _, a := range args {
-		if a == "--no-open" {
+		switch a {
+		case "--no-open":
 			noOpen = true
+		case "--device":
+			deviceOnly = true
 		}
+	}
+	if deviceOnly {
+		installDevice()
+		return
 	}
 	if runtime.GOOS != "darwin" && runtime.GOOS != "linux" {
 		die(errors.New(t("这一版的一步安装只支持 macOS 和 Linux。", "One-step install supports macOS and Linux in this version.")))
@@ -117,8 +127,8 @@ func nextStep(st Status) string {
 		return t("下一步：这台机器没有浏览器。请在这台机器的终端里亲自运行 omnillm hub provider add anthropic（或 openai、openai-compatible），然后在提示时粘贴 API Key；Key 不要发到聊天里。",
 			"Next: this machine has no browser. In this machine's terminal, run omnillm hub provider add anthropic (or openai, openai-compatible) yourself and paste the API key when asked; don't send the key in a chat.")
 	case st.Providers == 0:
-		return t("下一步：在控制台里接入一个模型（粘贴 API Key，或先安装 Ollama 用本地模型）。打开控制台：omnillm open",
-			"Next: connect a model in the console (paste an API key there, or install Ollama for a local model). Open it with: omnillm open")
+		return t("下一步：接入一个模型。用 Claude 或 ChatGPT 订阅的，在这台电脑上装好 Claude Code 或 Codex 并登录一次，再运行 omnillm status，会自动接上；也可以在控制台里粘贴 API Key（omnillm open），或安装 Ollama 用本地模型。",
+			"Next: connect a model. With a Claude or ChatGPT subscription, install Claude Code or Codex on this computer and log in once, then run omnillm status: it connects by itself. Or paste an API key in the console (omnillm open), or install Ollama for local models.")
 	case !st.RelayConfigured:
 		return t("已经可以在这台电脑上使用。要让其他设备连进来，需要先配置连接服务。",
 			"Ready on this computer. To let other devices connect, a connection service must be set up first.")
@@ -237,6 +247,9 @@ func installLaunchd(home, bin, dir string, env map[string]string) error {
 	if relay := relayFromEnv(); relay != "" {
 		fmt.Fprintf(&envXML, "<key>OMNILLM_RELAY</key><string>%s</string>", xmlEscape(relay))
 	}
+	if web := webAppFromEnv(); web != "" {
+		fmt.Fprintf(&envXML, "<key>OMNILLM_WEB_APP</key><string>%s</string>", xmlEscape(web))
+	}
 	body := `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
@@ -286,6 +299,21 @@ func relayFromEnv() string {
 	return r
 }
 
+// webAppFromEnv passes OMNILLM_WEB_APP (a self-hosted web client) to the
+// service: https, or http on this machine for testing.
+func webAppFromEnv() string {
+	w := os.Getenv("OMNILLM_WEB_APP")
+	if w == "" {
+		return ""
+	}
+	u, err := url.Parse(w)
+	local := err == nil && u.Scheme == "http" && (u.Hostname() == "localhost" || u.Hostname() == "127.0.0.1")
+	if err != nil || (u.Scheme != "https" && !local) || u.Host == "" || u.RawQuery != "" || u.Fragment != "" || u.User != nil {
+		die(errors.New("OMNILLM_WEB_APP must be an https:// address"))
+	}
+	return w
+}
+
 func installSystemd(home, bin, dir string, env map[string]string) error {
 	unit := filepath.Join(home, ".config", "systemd", "user", systemdUnit)
 	var envLines strings.Builder
@@ -294,6 +322,9 @@ func installSystemd(home, bin, dir string, env map[string]string) error {
 	}
 	if relay := relayFromEnv(); relay != "" {
 		fmt.Fprintf(&envLines, "Environment=OMNILLM_RELAY=%s\n", systemdQuote(relay))
+	}
+	if web := webAppFromEnv(); web != "" {
+		fmt.Fprintf(&envLines, "Environment=OMNILLM_WEB_APP=%s\n", systemdQuote(web))
 	}
 	body := "[Unit]\nDescription=OmniLLM hub\nAfter=network-online.target\n\n[Service]\n" +
 		"ExecStart=" + systemdQuote(bin) + " hub run\n" + envLines.String() +
@@ -432,4 +463,43 @@ func uninstallCmd(args []string) {
 // never their parent (OMNILLM_HOME may point anywhere, even at $HOME).
 func purgeDirs() []string {
 	return []string{dataDir("hub"), dataDir("device"), dataDir("relay-certs")}
+}
+
+// installDevice sets this machine up as a device only (a server that uses
+// the hub's models): the program in ~/.local/bin, no background service,
+// nothing else. Then it pairs, if a person is at the terminal.
+func installDevice() {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		die(err)
+	}
+	bin, err := installBinary(home)
+	if err != nil {
+		die(err)
+	}
+	fmt.Printf(t("已安装到 %s（只是一个程序，没有后台服务）。\n", "Installed to %s (just the program; no background service).\n"), bin)
+	dir := dataDir("device")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		die(err)
+	}
+	if device.Paired(context.Background(), secrets(dir, "omnillm-device")) {
+		fmt.Println(t("这台机器已经配对过，可以直接用：omnillm connect chat", "This machine is already paired. Ready: omnillm connect chat"))
+		return
+	}
+	tty, err := os.Open("/dev/tty")
+	if err != nil {
+		fmt.Println(t("下一步：运行 omnillm connect pair，粘贴主机给的配对文字。", "Next: run omnillm connect pair and paste the pairing text from the hub."))
+		return
+	}
+	tty.Close()
+	cmd := exec.Command(bin, "connect", "pair")
+	if in, err := os.Open("/dev/tty"); err == nil {
+		defer in.Close()
+		cmd.Stdin = in
+	}
+	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
+	if err := cmd.Run(); err != nil {
+		os.Exit(1)
+	}
+	fmt.Println(t("可以用了：omnillm connect chat", "Ready: omnillm connect chat"))
 }

@@ -51,8 +51,16 @@ func (h *Hub) complete(ctx context.Context, p principal, req omnillm.Request) (o
 	if len(p.models) > 0 && !slices.Contains(p.models, m.ID) {
 		return nil, &omnillm.Error{Code: omnillm.CodeModelNotAllowed, Msg: omnillm.MsgModelNotAllowed}
 	}
-	if m.HumanOnly && req.Caller != omnillm.Interactive {
+	if (m.HumanOnly || h.subscription(m.Provider)) && req.Caller != omnillm.Interactive {
 		return nil, &omnillm.Error{Code: omnillm.CodeModelNotAllowed, Msg: omnillm.MsgHumanOnly}
+	}
+	if h.subscription(m.Provider) {
+		// A device says itself that a person is waiting; how often it
+		// asks is what the hub can check. A pace no person keeps up is
+		// stopped before the account looks automated.
+		if err := h.subs.allow(p.key, h.opts.Now()); err != nil {
+			return nil, err
+		}
 	}
 	h.mu.Lock()
 	c := h.clients[m.Provider]

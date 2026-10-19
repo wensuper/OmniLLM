@@ -205,6 +205,12 @@ func parseAnthropic(s *stream, event, data string) (string, bool, error) {
 
 // ListModels asks the provider which models this key can use.
 func (c *Client) ListModels(ctx context.Context, cred Credential) ([]string, error) {
+	if c.cfg.Kind.Subscription() {
+		if !CLILoggedIn(ctx, c.cfg.Kind, c.cfg.Path) {
+			return nil, &omnillm.Error{Code: omnillm.CodeCredentialProblem, Msg: omnillm.MsgCLILogin, Args: []string{DisplayName(c.cfg.Kind), cliName(c.cfg.Kind)}}
+		}
+		return append([]string(nil), cliModels[c.cfg.Kind]...), nil
+	}
 	if c.cfg.NeedsKey && cred.Key == "" {
 		return nil, &omnillm.Error{Code: omnillm.CodeCredentialProblem, Msg: omnillm.MsgCredentialMissing, Args: []string{c.cfg.Name}}
 	}

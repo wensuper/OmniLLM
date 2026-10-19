@@ -45,7 +45,23 @@ type Options struct {
 	// TrustProxy uses the last X-Forwarded-For entry (the one the trusted
 	// reverse proxy appended) for per-IP limits.
 	TrustProxy bool
+	// WebOrigins are the web client origins whose pages may open a device
+	// mailbox (nil: DefaultWebOrigins). Hub sockets never accept a browser.
+	WebOrigins []string
 }
+
+// DefaultWebOrigins is where the project publishes its web client.
+var DefaultWebOrigins = []string{"https://wensuper.github.io"}
+
+// Browser devices cannot set headers on a WebSocket, so they offer two
+// subprotocols: WebProtocol, and WebAuthPrefix + the mailbox secret
+// (base64url). They cannot read an HTTP status either: a refused browser is
+// accepted and closed with CloseUnavailable, an admitted one first gets the
+// text frame "ready".
+const (
+	WebProtocol   = "omnillm.v1"
+	WebAuthPrefix = "omnillm.auth."
+)
 
 // Server is an http.Handler.
 type Server struct {
@@ -417,13 +433,34 @@ func genBytes(g uint64) []byte {
 }
 
 func (s *Server) serveDevice(w http.ResponseWriter, r *http.Request) {
+	web, webAuth := webProtocols(r)
+	if web && !s.webOriginAllowed(r.Header.Get("Origin")) {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	// refuse gives the one "unavailable" answer, in the form the client
+	// can read.
+	refuse := func(status int) {
+		if !web {
+			http.Error(w, "unavailable", status)
+			return
+		}
+		c, err := websocket.Accept(w, r, &websocket.AcceptOptions{Subprotocols: []string{WebProtocol},
+			CompressionMode: websocket.CompressionDisabled, OriginPatterns: s.originHosts()})
+		if err == nil {
+			_ = c.Close(websocket.StatusCode(relayproto.CloseUnavailable), "unavailable")
+		}
+	}
 	ip := s.clientIP(r)
 	if s.tooManyFailures(ip, false) {
-		http.Error(w, "unavailable", http.StatusTooManyRequests)
+		refuse(http.StatusTooManyRequests)
 		return
 	}
 	mid, err := relayproto.ParseID(r.PathValue("id"))
 	enc, ok := bearer(r)
+	if web {
+		enc, ok = []byte(webAuth), webAuth != ""
+	}
 	var secretB []byte
 	if ok {
 		secretB, err = base64.RawURLEncoding.DecodeString(string(enc))
@@ -431,7 +468,7 @@ func (s *Server) serveDevice(w http.ResponseWriter, r *http.Request) {
 	}
 	if err != nil || !ok {
 		s.tooManyFailures(ip, true)
-		http.Error(w, "unavailable", http.StatusNotFound)
+		refuse(http.StatusNotFound)
 		return
 	}
 	sh := relayproto.SecretHash(secretB)
@@ -442,10 +479,19 @@ func (s *Server) serveDevice(w http.ResponseWriter, r *http.Request) {
 	if !valid {
 		s.tooManyFailures(ip, true)
 		// Same answer for unknown mailbox, wrong secret and hub offline.
-		http.Error(w, "unavailable", http.StatusNotFound)
+		refuse(http.StatusNotFound)
 		return
 	}
-	c, err := accept(w, r)
+	var c *websocket.Conn
+	if web {
+		c, err = websocket.Accept(w, r, &websocket.AcceptOptions{Subprotocols: []string{WebProtocol},
+			CompressionMode: websocket.CompressionDisabled, OriginPatterns: s.originHosts()})
+		if err == nil {
+			c.SetReadLimit(relayproto.MaxMessage)
+		}
+	} else {
+		c, err = accept(w, r)
+	}
 	if err != nil {
 		return
 	}
@@ -468,6 +514,21 @@ func (s *Server) serveDevice(w http.ResponseWriter, r *http.Request) {
 	s.mu.Unlock()
 	if old != nil {
 		closeLater(old.conn, websocket.StatusCode(relayproto.CloseReplaced), "replaced")
+	}
+	if web {
+		wctx, wc := context.WithTimeout(ctx, 10*time.Second)
+		err := c.Write(wctx, websocket.MessageText, []byte("ready"))
+		wc()
+		if err != nil {
+			s.mu.Lock()
+			if mb := s.mailboxes[mid]; mb != nil && mb.dev == d {
+				mb.dev = nil
+			}
+			s.mu.Unlock()
+			cancel()
+			c.CloseNow()
+			return
+		}
 	}
 	// Open and Closed carry the attachment's generation, so the hub ignores
 	// a Closed for an older connection that arrives after a newer Open.

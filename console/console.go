@@ -401,6 +401,14 @@ func decode(w http.ResponseWriter, r *http.Request, v any) bool {
 func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	ps, _ := s.hub.Providers(ctx)
+	if len(ps) == 0 {
+		// Logged in to Claude Code or Codex since the hub started: connect
+		// it now, so the first step is already done.
+		for _, cfg := range s.hub.DetectSubscriptions(ctx) {
+			_, _ = s.hub.AddProvider(ctx, cfg, "")
+		}
+		ps, _ = s.hub.Providers(ctx)
+	}
 	ms, _ := s.hub.Models(ctx)
 	devs, _ := s.hub.Devices(ctx)
 	apps, _ := s.hub.Apps(ctx)
@@ -691,7 +699,7 @@ func (s *Server) pairStart(w http.ResponseWriter, r *http.Request) {
 		}
 		ps.state, ps.device, ps.name = "done", d.ID, d.Name
 	}()
-	svg, _ := qrcode.SVG(p.Code)
+	svg, _ := qrcode.SVG(p.Link)
 	writeJSON(w, map[string]any{
 		"id": id, "code": p.Code, "expires": p.Expires,
 		"qr": "data:image/svg+xml;base64," + base64.StdEncoding.EncodeToString([]byte(svg)),

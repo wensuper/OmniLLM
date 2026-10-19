@@ -42,6 +42,8 @@ type Config struct {
 	BaseURL string `json:"base_url"`
 	// NeedsKey is false for local models.
 	NeedsKey bool `json:"needs_key"`
+	// Path is the official program a subscription provider runs.
+	Path string `json:"path,omitempty"`
 }
 
 // Defaults for the built-in providers.
@@ -53,6 +55,12 @@ func Default(kind Kind) (Config, error) {
 		return Config{Name: "anthropic", Kind: Anthropic, BaseURL: "https://api.anthropic.com", NeedsKey: true}, nil
 	case Ollama:
 		return Config{Name: "ollama", Kind: Ollama, BaseURL: "http://127.0.0.1:11434/v1", NeedsKey: false}, nil
+	case ClaudeCode, Codex:
+		p := FindCLI(kind)
+		if p == "" {
+			return Config{}, &omnillm.Error{Code: omnillm.CodeBadRequest, Msg: omnillm.MsgCLINotFound, Args: []string{DisplayName(kind), cliName(kind)}}
+		}
+		return Config{Name: string(kind), Kind: kind, Path: p}, nil
 	}
 	return Config{}, errors.New("provider: unknown kind")
 }
@@ -83,6 +91,12 @@ func isLoopbackHost(h string) bool {
 func (c Config) Validate() error {
 	if c.Name == "" || len(c.Name) > 40 || strings.ContainsAny(c.Name, "/ \t\n") {
 		return errors.New("provider: bad name")
+	}
+	if c.Kind.Subscription() {
+		return validateCLI(c)
+	}
+	if c.Path != "" {
+		return errors.New("provider: only a subscription provider runs a program")
 	}
 	u, err := url.Parse(c.BaseURL)
 	if err != nil || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" {
@@ -217,6 +231,7 @@ type Client struct {
 	http *http.Client
 	lim  *egress.Limiter
 	idle time.Duration // longest gap between stream lines (default 2 min)
+	cli  cliCheck      // subscription programs: the no-tools check
 }
 
 // New makes a client. rt is the host's transport (nil: GuardedTransport).
@@ -398,6 +413,9 @@ func (s *stream) Close() error {
 // name) and returns the reply stream. The egress slot is held until the
 // stream ends.
 func (c *Client) Stream(ctx context.Context, upstreamModel string, req omnillm.Request, cred Credential) (omnillm.Stream, error) {
+	if c.cfg.Kind.Subscription() {
+		return c.streamCLI(ctx, upstreamModel, req)
+	}
 	if c.cfg.NeedsKey && cred.Key == "" {
 		return nil, &omnillm.Error{Code: omnillm.CodeCredentialProblem, Msg: omnillm.MsgCredentialMissing, Args: []string{c.cfg.Name}}
 	}

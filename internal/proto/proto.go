@@ -113,10 +113,22 @@ func (p PairingCode) Encode() string {
 	return pairingPrefix + base64.RawURLEncoding.EncodeToString(b)
 }
 
+// Link is the pairing link for the web client at webApp (what the QR code
+// holds): scanning it with a phone's camera opens the web client, which
+// reads the code from the fragment.
+func (p PairingCode) Link(webApp string) string {
+	return webApp + "#pair=" + p.Encode()
+}
+
 // ParsePairingCode reads a pairing text, checking shape and expiry.
 func ParsePairingCode(s string, now time.Time) (PairingCode, error) {
 	var p PairingCode
 	s = strings.TrimSpace(s)
+	// A pairing link (what the QR code holds) carries the text after
+	// "#pair=": the fragment, which a browser never sends to the web host.
+	if i := strings.Index(s, "#pair="); i >= 0 {
+		s = s[i+len("#pair="):]
+	}
 	if !strings.HasPrefix(s, pairingPrefix) || len(s) > 2048 {
 		return p, errors.New("proto: not a pairing code")
 	}

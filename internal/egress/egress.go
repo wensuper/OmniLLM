@@ -142,13 +142,14 @@ func (l *Limiter) Acquire(ctx context.Context, provider string, caller omnillm.C
 		return nil, busy(provider, omnillm.MsgBusyUpstream, w)
 	}
 	if ln.inUse < ln.limits.MaxConcurrent && len(ln.people) == 0 && (caller == omnillm.Interactive || len(ln.background) == 0) {
-		if err := l.takeToken(ln, provider, now); err != nil {
+		pause, err := l.takeToken(ln, provider, now)
+		if err != nil {
 			l.mu.Unlock()
 			return nil, err
 		}
 		ln.inUse++
 		l.mu.Unlock()
-		return l.releaser(provider), nil
+		return l.paced(ctx, ln, provider, pause)
 	}
 	if len(ln.people)+len(ln.background) >= ln.limits.MaxQueue {
 		l.mu.Unlock()
@@ -179,13 +180,14 @@ func (l *Limiter) Acquire(ctx context.Context, provider string, caller omnillm.C
 			l.mu.Unlock()
 			return nil, busy(provider, omnillm.MsgBusyUpstream, wait)
 		}
+		var pause time.Duration
 		switch {
 		case now.Before(ln.openUntil):
 			err = busy(provider, omnillm.MsgBreakerOpen, ln.openUntil.Sub(now))
 		case now.Before(ln.cooldown):
 			err = busy(provider, omnillm.MsgBusyUpstream, ln.cooldown.Sub(now))
 		default:
-			err = l.takeToken(ln, provider, now)
+			pause, err = l.takeToken(ln, provider, now)
 		}
 		if err != nil {
 			ln.inUse--
@@ -195,7 +197,7 @@ func (l *Limiter) Acquire(ctx context.Context, provider string, caller omnillm.C
 		if err != nil {
 			return nil, err
 		}
-		return l.releaser(provider), nil
+		return l.paced(ctx, ln, provider, pause)
 	case <-ctx.Done():
 		l.mu.Lock()
 		if w.fail {
@@ -212,14 +214,47 @@ func (l *Limiter) Acquire(ctx context.Context, provider string, caller omnillm.C
 	}
 }
 
-func (l *Limiter) takeToken(ln *lane, provider string, now time.Time) error {
+// maxPace is the longest the limiter's own pacing makes a call wait; a
+// longer wait is refused with a time to come back.
+const maxPace = 20 * time.Second
+
+// takeToken takes this minute's allowance for one call. When it is used
+// up and the next falls due within maxPace, the call takes it in advance
+// and waits that long (pause): a person sending two messages quickly is
+// slowed, not refused.
+func (l *Limiter) takeToken(ln *lane, provider string, now time.Time) (pause time.Duration, err error) {
 	ln.refill(now)
 	if ln.tokens < 1 {
 		need := time.Duration((1 - ln.tokens) / float64(ln.limits.RequestsPerMinute) * float64(time.Minute))
-		return busy(provider, omnillm.MsgBusyUpstream, need)
+		if need > maxPace {
+			return 0, busy(provider, omnillm.MsgBusyPace, need)
+		}
+		ln.tokens--
+		return need, nil
 	}
 	ln.tokens--
-	return nil
+	return 0, nil
+}
+
+// paced returns the slot after pause; a caller that gives up meanwhile
+// hands the slot and the allowance back.
+func (l *Limiter) paced(ctx context.Context, ln *lane, provider string, pause time.Duration) (Release, error) {
+	if pause <= 0 {
+		return l.releaser(provider), nil
+	}
+	t := time.NewTimer(pause)
+	defer t.Stop()
+	select {
+	case <-t.C:
+		return l.releaser(provider), nil
+	case <-ctx.Done():
+		l.mu.Lock()
+		ln.tokens++
+		ln.inUse--
+		l.handOffLocked(ln)
+		l.mu.Unlock()
+		return nil, ctx.Err()
+	}
 }
 
 func remove(ws []*waiter, w *waiter) []*waiter {

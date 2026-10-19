@@ -676,3 +676,10 @@ func (s *stream) Close() error {
 	})
 	return nil
 }
+
+// CheckPairingText reports whether text (a pairing text or link) can be
+// used: well formed and not expired. It contacts nothing.
+func CheckPairingText(text string) error {
+	_, err := proto.ParsePairingCode(text, time.Now())
+	return err
+}

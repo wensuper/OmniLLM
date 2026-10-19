@@ -129,24 +129,25 @@ func (h *Hub) Revoke(ctx context.Context, id string) error {
 		h.deviceMu.Unlock()
 		return err
 	}
-	err = h.opts.Store.Delete(ctx, "device/"+id)
+	// The tombstone first: the device is never without both records.
+	if err = h.putTombstone(ctx, d); err == nil {
+		err = h.opts.Store.Delete(ctx, "device/"+id)
+	}
 	_ = h.opts.Store.Delete(ctx, "devicelast/"+id)
 	h.deviceMu.Unlock()
 	if err != nil {
 		return err
 	}
+	// The mailbox stays claimed (revoked.go): when the device comes back
+	// it is told it was removed. Its open session ends now.
 	mid, _, err := d.mailbox()
 	if err == nil {
 		h.mu.Lock()
 		s := h.sessions[mid]
 		delete(h.sessions, mid)
-		link := h.link
 		h.mu.Unlock()
 		if s != nil {
 			s.close()
-		}
-		if link != nil {
-			_ = link.Release(ctx, mid)
 		}
 	}
 	h.opts.Logf("hub: device %s removed", d.ID)
@@ -180,7 +181,10 @@ type PairOptions struct {
 type Pairing struct {
 	// Code is the pairing text for the device (also what a QR code holds).
 	// It is a secret: show it only on the hub's own screen.
-	Code    string
+	Code string
+	// Link is the pairing link for phones and tablets: scanned with the
+	// camera it opens the web client, which pairs from it. Equally secret.
+	Link    string
 	Expires time.Time
 	done    chan pairResult
 	cancel  func()
@@ -269,8 +273,9 @@ func (h *Hub) Pair(ctx context.Context, opts PairOptions) (*Pairing, error) {
 		h.endPairing(p, &omnillm.Error{Code: omnillm.CodeHubOffline, Msg: omnillm.MsgRelayUnavailable})
 		return nil, err
 	}
-	text := proto.PairingCode{Relay: h.opts.RelayURL, Mailbox: id.String(), Secret: secretB,
-		HubKey: h.key.Public, PSK: append([]byte{}, p.psk...), Expires: p.expires.Unix()}.Encode()
+	pc := proto.PairingCode{Relay: h.opts.RelayURL, Mailbox: id.String(), Secret: secretB,
+		HubKey: h.key.Public, PSK: append([]byte{}, p.psk...), Expires: p.expires.Unix()}
+	text := pc.Encode()
 	h.wg.Add(1)
 	go func() {
 		defer h.wg.Done()
@@ -286,8 +291,14 @@ func (h *Hub) Pair(ctx context.Context, opts PairOptions) (*Pairing, error) {
 		}
 	}()
 	var once sync.Once
-	return &Pairing{Code: text, Expires: p.expires, done: p.done,
-		cancel: func() { once.Do(func() { close(p.cancelled) }) }}, nil
+	return &Pairing{Code: text, Link: pc.Link(h.opts.WebAppURL), Expires: p.expires, done: p.done,
+		cancel: func() {
+			once.Do(func() {
+				close(p.cancelled)
+				// Free the slot now, not when the timer goroutine runs.
+				h.endPairing(p, &omnillm.Error{Code: omnillm.CodePairingFailed, Msg: omnillm.MsgPairingExpired})
+			})
+		}}, nil
 }
 
 // endPairing finishes a pending pairing once. On failure the mailbox is
@@ -538,6 +549,10 @@ func (h *Hub) ModelsForApp(ctx context.Context, token string) ([]omnillm.ModelIn
 	}
 	var out []omnillm.ModelInfo
 	for _, m := range all {
+		// App tokens are Background: models kept for people are not theirs.
+		if m.HumanOnly {
+			continue
+		}
 		if len(a.Models) == 0 || contains(a.Models, m.ID) {
 			out = append(out, m)
 		}

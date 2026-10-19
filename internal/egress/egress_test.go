@@ -196,14 +196,30 @@ func TestCancelledWaiterLeavesNoSlot(t *testing.T) {
 }
 
 func TestRateBucket(t *testing.T) {
+	// A short pacing wait is waited out; giving up hands everything back.
 	l := New(func(string) Limits { return Limits{MaxConcurrent: 10, RequestsPerMinute: 6, MaxQueue: 8} })
 	r, err := l.Acquire(context.Background(), "p", omnillm.Background)
 	if err != nil {
 		t.Fatal(err)
 	}
 	r(OK, 0)
-	if _, err := l.Acquire(context.Background(), "p", omnillm.Background); !errors.Is(err, omnillm.ErrBusy) {
-		t.Fatalf("second request within the burst of 1 should be busy, got %v", err)
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+	start := time.Now()
+	if _, err := l.Acquire(ctx, "p", omnillm.Background); err == nil || time.Since(start) < 90*time.Millisecond {
+		t.Fatalf("second request within the burst of 1 should wait for its turn, got %v after %v", err, time.Since(start))
+	}
+	if ln := l.lanes["p"]; ln.inUse != 0 || ln.tokens > 0.01 || ln.tokens < -0.01 {
+		t.Fatalf("a caller that gave up kept its slot or allowance: inUse %d tokens %.2f", ln.inUse, ln.tokens)
+	}
+	// A long one is refused, saying it is our own pacing.
+	l = New(func(string) Limits { return Limits{MaxConcurrent: 10, RequestsPerMinute: 1, MaxQueue: 8} })
+	r, _ = l.Acquire(context.Background(), "p", omnillm.Background)
+	r(OK, 0)
+	_, err = l.Acquire(context.Background(), "p", omnillm.Background)
+	var e *omnillm.Error
+	if !errors.As(err, &e) || e.Msg != omnillm.MsgBusyPace || e.RetryAfter < 30*time.Second {
+		t.Fatalf("got %v", err)
 	}
 }
 

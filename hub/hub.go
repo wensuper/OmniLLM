@@ -41,6 +41,9 @@ type Options struct {
 	// runs without devices (in-process use only).
 	RelayURL   string
 	RelayToken string
+	// WebAppURL is the web client phones and tablets open from the pairing
+	// QR code (default DefaultWebAppURL).
+	WebAppURL string
 	// Logf receives redacted operational logs. Optional.
 	Logf func(format string, args ...any)
 	// Limits per provider (nil: defaults, 2 concurrent).
@@ -64,6 +67,7 @@ type Options struct {
 type Hub struct {
 	opts Options
 	lim  *egress.Limiter
+	subs subscriptionPace
 	key  e2e.KeyPair
 
 	mu          sync.Mutex
@@ -100,6 +104,9 @@ func New(ctx context.Context, opts Options) (*Hub, error) {
 	if opts.Now == nil {
 		opts.Now = time.Now
 	}
+	if opts.WebAppURL == "" {
+		opts.WebAppURL = DefaultWebAppURL
+	}
 	if opts.DefaultBudget <= 0 {
 		opts.DefaultBudget = 5 * dollar
 	}
@@ -109,7 +116,7 @@ func New(ctx context.Context, opts Options) (*Hub, error) {
 	if opts.HostBudget <= 0 {
 		opts.HostBudget = 5 * dollar
 	}
-	h := &Hub{opts: opts, lim: egress.New(opts.Limits), clients: map[string]*provider.Client{},
+	h := &Hub{opts: opts, lim: egress.New(subscriptionLimits(opts.Limits)), clients: map[string]*provider.Client{},
 		sessions: map[relayproto.ID]*mailboxConn{}, pairings: map[relayproto.ID]*pairing{}}
 	if err := h.loadKey(ctx); err != nil {
 		return nil, err
@@ -165,6 +172,9 @@ func (h *Hub) Start(ctx context.Context) error {
 		devs, err := h.listDevices(ctx)
 		if err != nil {
 			return err
+		}
+		for _, t := range h.tombstones(ctx) {
+			devs = append(devs, t.Device)
 		}
 		for _, d := range devs {
 			id, sh, err := d.mailbox()
@@ -229,6 +239,10 @@ type ProviderInfo struct {
 	BaseURL  string        `json:"base_url"`
 	KeyLast4 string        `json:"key_last4,omitempty"`
 	Local    bool          `json:"local"`
+	// Subscription: an official program logged in with the owner's
+	// subscription (no key here; the login stays in that program).
+	Subscription bool   `json:"subscription,omitempty"`
+	DisplayName  string `json:"display_name"`
 }
 
 func providerKey(name string) string { return "provider/" + name + "/key" }
@@ -249,8 +263,22 @@ func (h *Hub) loadProviders(ctx context.Context) error {
 			continue
 		}
 		h.clients[cfg.Name] = c
+		prepare(c)
 	}
 	return nil
+}
+
+// prepare runs a subscription program's safety check in the background,
+// so a person's first message does not wait for it.
+func prepare(c *provider.Client) {
+	if !c.Config().Kind.Subscription() {
+		return
+	}
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 4*time.Minute)
+		defer cancel()
+		_ = c.Prepare(ctx)
+	}()
 }
 
 // AddProvider connects a provider. For providers that need a key, the key is
@@ -291,6 +319,7 @@ func (h *Hub) AddProvider(ctx context.Context, cfg provider.Config, apiKey strin
 	h.mu.Lock()
 	h.clients[cfg.Name] = c
 	h.mu.Unlock()
+	prepare(c)
 	var added []omnillm.ModelInfo
 	for _, id := range ids {
 		// Re-adding a provider (a new key) keeps each model's settings:
@@ -303,6 +332,11 @@ func (h *Hub) AddProvider(ctx context.Context, cfg provider.Config, apiKey strin
 		if cfg.Local() {
 			m.PriceIn, m.PriceOut = 0, 0
 			m.PriceSet = true
+		}
+		if cfg.Kind.Subscription() {
+			// Paid for by the subscription, not per token; for people only.
+			m.PriceIn, m.PriceOut, m.PriceSet, m.HumanOnly = 0, 0, true, true
+			m.DisplayName = subscriptionModelName(cfg.Kind, id)
 		}
 		if err := h.putModel(ctx, m); err != nil {
 			return nil, err
@@ -344,7 +378,11 @@ func (h *Hub) Providers(ctx context.Context) ([]ProviderInfo, error) {
 	sort.Slice(cfgs, func(i, j int) bool { return cfgs[i].Name < cfgs[j].Name })
 	var out []ProviderInfo
 	for _, c := range cfgs {
-		pi := ProviderInfo{Name: c.Name, Kind: c.Kind, BaseURL: c.BaseURL, Local: c.Local()}
+		pi := ProviderInfo{Name: c.Name, Kind: c.Kind, BaseURL: c.BaseURL, Local: c.Local(),
+			Subscription: c.Kind.Subscription(), DisplayName: c.Name}
+		if c.Kind.Subscription() {
+			pi.DisplayName = provider.DisplayName(c.Kind)
+		}
 		if c.NeedsKey {
 			if k, err := h.opts.Secrets.Get(ctx, providerKey(c.Name)); err == nil {
 				pi.KeyLast4 = redact.Last4(string(k))
@@ -449,6 +487,11 @@ func (h *Hub) SetModel(ctx context.Context, id string, u ModelUpdate) error {
 		m.PriceIn, m.PriceOut, m.PriceSet = *u.PriceIn, *u.PriceOut, true
 	}
 	if u.HumanOnly != nil {
+		if !*u.HumanOnly && h.subscription(m.Provider) {
+			// A subscription login is for people only (design §5.2); the
+			// owner cannot turn that off.
+			return &omnillm.Error{Code: omnillm.CodeBadRequest, Msg: omnillm.MsgHumanOnly}
+		}
 		m.HumanOnly = *u.HumanOnly
 	}
 	return h.putModel(ctx, m)

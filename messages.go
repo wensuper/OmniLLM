@@ -46,6 +46,12 @@ const (
 	MsgWrongHost         = "wrong_host"
 	MsgNoChatModel       = "no_chat_model"
 	MsgLocalToken        = "local_token"
+	MsgCLILogin          = "cli_login"
+	MsgCLINotFound       = "cli_not_found"
+	MsgSubscriptionLimit = "subscription_limit"
+	MsgCLIUnsafe         = "cli_unsafe"
+	MsgSubscriptionPace  = "subscription_pace"
+	MsgBusyPace          = "busy_pace"
 )
 
 var texts = map[string][2]string{ // zh, en
@@ -85,6 +91,12 @@ var texts = map[string][2]string{ // zh, en
 	MsgNoChatModel:       {"本地模型里没有能对话的模型（只有向量 / 重排模型）。可以先用 ollama pull 下载一个对话模型，比如 qwen3。", "The local model server has no chat model (only embedding / rerank models). Download one first, for example: ollama pull qwen3."},
 	MsgLocalToken:        {"本机接口的令牌缺失或不对。令牌在这台设备 OmniLLM 数据文件夹里的 device/local.token 文件中（只有本用户能读）。", "The local token is missing or wrong. It is in device/local.token inside OmniLLM's data folder on this device (readable only by you)."},
 	MsgRelayUnavailable:  {"连接服务暂时不可用，稍后会自动重连。", "The connection service is unavailable. It will reconnect automatically."},
+	MsgCLILogin:          {"主机上的 %s 没有登录，或者登录已失效。请在主机上打开终端运行 %s，登录后再试。", "%s on the host is not logged in, or the login expired. On the host, open a terminal, run %s and log in, then try again."},
+	MsgCLINotFound:       {"主机上没有找到 %s（程序 %s）。先在主机上安装并登录它。", "%s (the %s program) is not installed on the host. Install it there and log in first."},
+	MsgCLIUnsafe:         {"主机上这个版本的 %s 关不掉工具（能运行命令或读文件），为了安全暂时不用它。请更新 OmniLLM。", "This version of %s on the host could not be kept from using tools (running commands or reading files), so OmniLLM won't use it for now. Update OmniLLM."},
+	MsgBusyPace:          {"为了让 %s 的用量看起来像一个人在用，请求要隔开一点。大约 %s 后再试。", "So %s's use looks like one person's, requests are spaced out. Try again in about %s."},
+	MsgSubscriptionPace:  {"这台设备用订阅模型太频繁了，超过了一个人聊天的速度。为了不让账号被当成自动化使用，约 %s 后再试，或者换一个用 API Key 的模型。", "This device is using the subscription models faster than a person chats. So the account doesn't look automated, try again in about %s, or pick a model that uses an API key."},
+	MsgSubscriptionLimit: {"%s 的订阅用量到了上限，大约 %s 后恢复。", "The %s subscription has reached its usage limit. It resets in about %s."},
 }
 
 // Text renders a message key in lang ("zh…" or anything else for English),

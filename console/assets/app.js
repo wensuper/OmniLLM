@@ -9,7 +9,7 @@ const T = {
     loginBody: "为了安全，控制台只能用主机给的一次性链接打开。在这台电脑上运行：",
     step1: "接入模型", step2: "添加设备", step3: "试一下",
     w1Title: "先接入一个模型",
-    w1Body: "API Key 只保存在这台电脑的钥匙串里，不会发到别的设备，也不会发给连接服务。",
+    w1Body: "用 Claude 或 ChatGPT 订阅的：在这台电脑上装好 Claude Code 或 Codex，登录一次，再刷新这个页面，会自动接上，登录只留在这台电脑。用 API Key 的：Key 只保存在这台电脑的钥匙串里，不会发到别的设备，也不会发给连接服务。",
     ollamaFound: "发现了这台电脑上的本地模型（Ollama）",
     ollamaUse: "直接使用本地模型",
     keyTitle: "粘贴一个 API Key", keyTitleOr: "或者粘贴一个 API Key",
@@ -27,7 +27,7 @@ const T = {
     todaySpend: "今天的花费", estimate: "估算", devices: "设备", models: "模型", apps: "应用", usage: "用量",
     addDevice: "添加设备", addProvider: "接入模型", addApp: "添加应用",
     name: "名字", lastSeen: "最近使用", budget: "每天额度", where: "数据去向", humanOnly: "只给人用",
-    providers: "提供方", keyLast4: "Key 末 4 位",
+    providers: "提供方", keyLast4: "Key 末 4 位", subLogin: "订阅登录（留在本机）",
     noDevices: "还没有设备。点“添加设备”。",
     appsBody: "给不能直接嵌入 OmniLLM 的程序（脚本、其他 App）用。应用只能做后台调用，只能用 API Key 和本地模型。",
     usageBody: "按提供方公布的价格估算；没设价格的模型按偏高的价格估算。",
@@ -35,7 +35,7 @@ const T = {
     remove: "移除", removeConfirm: "确定移除“{0}”？它会立即无法使用。",
     removed: "已移除", connected: "已接入，{0} 个模型可用", saved: "已保存",
     local: "只在本机", remote: "会发到云端",
-    pairHow: "在另一台设备上运行 omnillm connect pair，粘贴下面这段配对文字（{0} 前有效，只能用一次）。不要发给别人，也不要贴到聊天里。",
+    pairHow: "手机或平板：用相机扫这个二维码，不用装任何东西。电脑或服务器：运行 omnillm connect pair，粘贴下面这段配对文字（{0} 前有效，只能用一次）。不要发给别人，也不要贴到聊天里。",
     pairWait: "等待设备连接……",
     pairConfirmQ: "设备“{0}”请求加入。它屏幕上显示的数字是这个吗？",
     pairYes: "一致，添加", pairNo: "不一致，拒绝",
@@ -55,7 +55,7 @@ const T = {
     loginBody: "For safety the console opens only through a one-time link from the hub. On this computer, run:",
     step1: "Connect a model", step2: "Add a device", step3: "Try it",
     w1Title: "First, connect a model",
-    w1Body: "API keys stay in this computer's keychain. They are never sent to other devices or to the connection service.",
+    w1Body: "With a Claude or ChatGPT subscription: install Claude Code or Codex on this computer, log in once, and reload this page; it connects by itself and the login stays on this computer. With an API key: it stays in this computer's keychain and is never sent to other devices or to the connection service.",
     ollamaFound: "A local model (Ollama) is running on this computer",
     ollamaUse: "Use the local model",
     keyTitle: "Paste an API key", keyTitleOr: "Or paste an API key",
@@ -73,7 +73,7 @@ const T = {
     todaySpend: "Spent today", estimate: "estimate", devices: "Devices", models: "Models", apps: "Apps", usage: "Usage",
     addDevice: "Add device", addProvider: "Connect a model", addApp: "Add app",
     name: "Name", lastSeen: "Last used", budget: "Daily budget", where: "Data goes", humanOnly: "People only",
-    providers: "Providers", keyLast4: "Key ends",
+    providers: "Providers", keyLast4: "Key ends", subLogin: "subscription login (stays here)",
     noDevices: "No devices yet. Choose \"Add device\".",
     appsBody: "For programs that cannot embed OmniLLM (scripts, other apps). Apps make background calls only, with API keys and local models.",
     usageBody: "Estimated from the providers' published prices; models without a price are estimated high.",
@@ -81,7 +81,7 @@ const T = {
     remove: "Remove", removeConfirm: "Remove \"{0}\"? It stops working at once.",
     removed: "Removed", connected: "Connected: {0} models available", saved: "Saved",
     local: "stays on this computer", remote: "goes to the cloud",
-    pairHow: "On the other device, run omnillm connect pair and paste this pairing text (valid until {0}, single use). Don't send it to anyone or paste it into a chat.",
+    pairHow: "Phone or tablet: scan the QR code with the camera; nothing to install. Computer or server: run omnillm connect pair and paste this pairing text (valid until {0}, single use). Don't send it to anyone or paste it into a chat.",
     pairWait: "Waiting for the device…",
     pairConfirmQ: "\"{0}\" wants to join. Does its screen show this number?",
     pairYes: "It matches, add it", pairNo: "It doesn't, refuse",
@@ -391,8 +391,8 @@ function renderModels() {
   pb.textContent = "";
   for (const p of S.providers) {
     const tr = el("tr");
-    cell(tr, p.name + (p.local ? " · " + t("local") : ""));
-    cell(tr, p.key_last4 ? "…" + p.key_last4 : t("never"), "num");
+    cell(tr, (p.display_name || p.name) + (p.local ? " · " + t("local") : ""));
+    cell(tr, p.subscription ? t("subLogin") : p.key_last4 ? "…" + p.key_last4 : t("never"), "num");
     cell(tr, "").append(removeButton(p.name, "providers/remove", p.name));
     pb.append(tr);
   }
