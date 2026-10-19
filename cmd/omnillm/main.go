@@ -417,6 +417,7 @@ func call(sock string, req control.Request) {
 }
 
 func hubRun(dir, sock string, args []string) {
+	log.SetFlags(log.LstdFlags) // a service log needs times
 	fs := flag.NewFlagSet("hub run", flag.ExitOnError)
 	relayURL := fs.String("relay", os.Getenv("OMNILLM_RELAY"), "relay URL (wss://…)")
 	api := fs.String("api", "", "serve the local API for app tokens on this loopback address, e.g. 127.0.0.1:8765")
@@ -851,6 +852,7 @@ func connectCmd(args []string) {
 // ---------------- relay ----------------
 
 func relayCmd(args []string) {
+	log.SetFlags(log.LstdFlags)
 	if len(args) > 0 && args[0] == "token" {
 		tok := hex.EncodeToString(e2e.RandomBytes(32))
 		sum := sha256.Sum256([]byte(tok))

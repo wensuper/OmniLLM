@@ -527,6 +527,14 @@ func (c *conn) next(ctx context.Context, w *waiter, timeout <-chan time.Time) (p
 
 // Models lists what this device may use. Every model is Remote from here.
 func (d *Device) Models(ctx context.Context) ([]omnillm.ModelInfo, error) {
+	ms, err := d.models(ctx)
+	if errors.Is(err, omnillm.ErrHubOffline) && ctx.Err() == nil {
+		ms, err = d.models(ctx) // once more on a new connection, as Complete
+	}
+	return ms, err
+}
+
+func (d *Device) models(ctx context.Context) ([]omnillm.ModelInfo, error) {
 	c, err := d.connect(ctx)
 	if err != nil {
 		return nil, err
@@ -556,6 +564,18 @@ func (d *Device) Complete(ctx context.Context, req omnillm.Request) (omnillm.Str
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
+	s, err := d.complete(ctx, req)
+	// No answer on this connection: try once more on a new one before
+	// saying the hub can't be reached (a connection can die without
+	// either side noticing at once). A hub that is really gone is
+	// refused by the relay at once on the second try.
+	if errors.Is(err, omnillm.ErrHubOffline) && ctx.Err() == nil {
+		s, err = d.complete(ctx, req)
+	}
+	return s, err
+}
+
+func (d *Device) complete(ctx context.Context, req omnillm.Request) (omnillm.Stream, error) {
 	c, err := d.connect(ctx)
 	if err != nil {
 		return nil, err
