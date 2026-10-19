@@ -211,8 +211,16 @@ func (l *HubLink) runOnce(ctx context.Context) (upFor time.Duration, err error) 
 	}
 }
 
-func (l *HubLink) write(ctx context.Context, c *websocket.Conn, b []byte) error {
-	wctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+// write sends one frame. The WebSocket library closes the whole connection
+// when a write's context ends mid-write, so a write never takes the
+// caller's cancellation (one device giving up must not drop the link for
+// every device); it has its own time limit instead.
+func (l *HubLink) write(_ context.Context, c *websocket.Conn, b []byte) error {
+	return writeFrame(c, b)
+}
+
+func writeFrame(c *websocket.Conn, b []byte) error {
+	wctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	return c.Write(wctx, websocket.MessageBinary, b)
 }
@@ -313,10 +321,11 @@ func (d *DeviceConn) ReadMessage(ctx context.Context) ([]byte, error) {
 	return b, nil
 }
 
-func (d *DeviceConn) WriteMessage(ctx context.Context, b []byte) error {
-	wctx, cancel := context.WithTimeout(ctx, 15*time.Second)
-	defer cancel()
-	return d.c.Write(wctx, websocket.MessageBinary, b)
+// WriteMessage sends one frame; like the hub's writes it ignores the
+// caller's cancellation (a stopped reply must not close the connection the
+// device's other requests use).
+func (d *DeviceConn) WriteMessage(_ context.Context, b []byte) error {
+	return writeFrame(d.c, b)
 }
 
 func (d *DeviceConn) Close() error { return d.c.Close(websocket.StatusNormalClosure, "bye") }

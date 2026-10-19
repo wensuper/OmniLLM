@@ -481,9 +481,16 @@ func TestDeviceModelAllowlist(t *testing.T) {
 	}
 	d, _ := device.Open(ctx, device.Options{Secrets: sec})
 	defer d.Close()
-	ms, _ := d.Models(ctx)
-	if len(ms) != 1 || ms[0].ID != "fake/m1" {
-		t.Fatalf("device sees %v", ms)
+	// On a slow machine the hub's relay link can drop and come back right
+	// after pairing; that is "offline for a moment", not an empty list.
+	var ms []omnillm.ModelInfo
+	for start := time.Now(); time.Since(start) < 10*time.Second; time.Sleep(200 * time.Millisecond) {
+		if ms, err = d.Models(ctx); !errors.Is(err, omnillm.ErrHubOffline) {
+			break
+		}
+	}
+	if err != nil || len(ms) != 1 || ms[0].ID != "fake/m1" {
+		t.Fatalf("device sees %v (%v)", ms, err)
 	}
 	if _, _, err := ask(ctx, d, "fake/m2", "hello", omnillm.Interactive); !errors.Is(err, omnillm.ErrModelNotAllowed) {
 		t.Fatalf("want model_not_allowed, got %v", err)
