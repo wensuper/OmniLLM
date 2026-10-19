@@ -34,6 +34,7 @@ func (h *Hub) Complete(ctx context.Context, req omnillm.Request) (omnillm.Stream
 }
 
 func (h *Hub) complete(ctx context.Context, p principal, req omnillm.Request) (omnillm.Stream, error) {
+	start := time.Now()
 	if p.forceBackground {
 		req.Caller = omnillm.Background
 	}
@@ -94,7 +95,7 @@ func (h *Hub) complete(ctx context.Context, p principal, req omnillm.Request) (o
 		h.audit(ctx, p, m, req.Caller, omnillm.Usage{}, string(omnillm.AsError(err).Code))
 		return nil, err
 	}
-	return &accounted{Stream: s, h: h, p: p, m: m, caller: req.Caller, reserved: worst, inEst: inEst}, nil
+	return &accounted{Stream: s, h: h, p: p, m: m, caller: req.Caller, reserved: worst, inEst: inEst, start: start}, nil
 }
 
 // DefaultMaxTokens caps a reply when the caller sets no limit.
@@ -127,11 +128,16 @@ type accounted struct {
 	once     sync.Once
 	mu       sync.Mutex
 	usage    omnillm.Usage
+	start    time.Time    // when the call was made
+	first    atomic.Int64 // unix nanoseconds of the first text, 0 before
 }
 
 func (a *accounted) Recv() (omnillm.Chunk, error) {
 	c, err := a.Stream.Recv()
 	a.outBytes.Add(int64(len(c.Text)))
+	if c.Text != "" {
+		a.first.CompareAndSwap(0, time.Now().UnixNano())
+	}
 	if err != nil {
 		outcome := "ok"
 		if !errors.Is(err, io.EOF) {
@@ -173,6 +179,13 @@ func (a *accounted) settle(outcome string) {
 		defer cancel()
 		a.h.settleCharge(ctx, a.p, a.reserved, u)
 		a.h.audit(ctx, a.p, a.m, a.caller, u, outcome)
+		// Timing only, never content: how long people wait is what to watch.
+		ttft := "-"
+		if f := a.first.Load(); f != 0 {
+			ttft = time.Duration(f - a.start.UnixNano()).Round(100 * time.Millisecond).String()
+		}
+		a.h.opts.Logf("hub: call %s %s first text %s total %s (%s)", a.m.Provider, a.m.Upstream, ttft,
+			time.Since(a.start).Round(100*time.Millisecond), outcome)
 	})
 }
 
