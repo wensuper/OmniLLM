@@ -478,6 +478,9 @@ func (c *Client) classify(resp *http.Response, cred Credential, req omnillm.Requ
 	case (resp.StatusCode == 400 || resp.StatusCode == 422) && (len(req.JSONSchema) > 0 || req.JSONObject) &&
 		(strings.Contains(lower, "response_format") || strings.Contains(lower, "json_schema") || strings.Contains(lower, "json_object") || strings.Contains(lower, "structured")):
 		return &omnillm.Error{Code: omnillm.CodeUnsupportedFormat, Msg: omnillm.MsgUnsupportedFormat, Detail: detail}, egress.ClientError, 0
+	case (resp.StatusCode == 400 || resp.StatusCode == 422) && req.HasImages() &&
+		(strings.Contains(lower, "image") || strings.Contains(lower, "vision") || strings.Contains(lower, "multimodal")):
+		return &omnillm.Error{Code: omnillm.CodeBadRequest, Msg: omnillm.MsgNoVision, Detail: detail}, egress.ClientError, 0
 	case resp.StatusCode == http.StatusNotFound && strings.Contains(lower, "model"):
 		return &omnillm.Error{Code: omnillm.CodeModelNotAllowed, Msg: omnillm.MsgUnknownModel, Detail: detail}, egress.ClientError, 0
 	case resp.StatusCode >= 500:

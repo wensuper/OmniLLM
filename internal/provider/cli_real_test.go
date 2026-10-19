@@ -141,3 +141,26 @@ func TestRealCLINoOwnerInstructions(t *testing.T) {
 		})
 	}
 }
+
+// Both programs see an image while their tools stay off.
+func TestRealCLIImage(t *testing.T) {
+	img, _ := os.ReadFile("testdata/red.png")
+	for _, k := range []Kind{ClaudeCode, Codex} {
+		t.Run(string(k), func(t *testing.T) {
+			c := realCLI(t, k)
+			ms, _ := c.ListModels(context.Background(), Credential{})
+			ctx, cancel := context.WithTimeout(context.Background(), 4*time.Minute)
+			defer cancel()
+			s, err := c.Stream(ctx, ms[len(ms)-1], omnillm.Request{Caller: omnillm.Interactive, Messages: []omnillm.Message{{Role: "user",
+				Content: "What single color fills this image? Answer with one word.", Images: []omnillm.Image{{MIME: "image/png", Data: img}}}}}, Credential{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			text, err := collect(t, s)
+			t.Logf("%s: %q %v", k, text, err)
+			if !strings.Contains(strings.ToLower(text), "red") {
+				t.Fatalf("did not see the image: %q %v", text, err)
+			}
+		})
+	}
+}

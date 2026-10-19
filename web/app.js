@@ -18,6 +18,7 @@ const T = {
     pairCheck: "在主机上核对这个数字，一致就在主机上点确认：", pairDone: "已添加。",
     notCode: "这不是 OmniLLM 的配对二维码或配对文字。", needTLS: "这台主机的连接服务不支持手机网页（需要 wss:// 地址）。请在主机上设置一个公开的连接服务。",
     chats: "对话", newChat: "新对话", placeholder: "输入消息", stop: "停止",
+    addImage: "添加图片", removeImage: "移除图片", tooManyImages: "每条消息最多 4 张图片。", imageFailed: "这张图片打不开，换一张试试。", imageTitle: "图片",
     offline: "连不上主机：它可能睡眠了或者没联网。醒来后会自动恢复。", retry: "重试",
     noModels: "主机上还没有可用的模型。", forget: "取消这台设备的配对", forgetQ: "这台设备将不能再使用主机上的模型。主机的设备列表里它还在，请也在主机上移除它。确定吗？",
     addHome: "添加到主屏幕", addHomeTip: "点浏览器的“分享”按钮，选“添加到主屏幕”。从主屏幕打开时需要再扫一次码。",
@@ -35,6 +36,7 @@ const T = {
     pairCheck: "Check this number on your hub and confirm there if it matches:", pairDone: "Added.",
     notCode: "This is not an OmniLLM pairing QR code or pairing text.", needTLS: "This hub's connection service can't be used from a phone browser (it needs a wss:// address). Set up a public connection service on the hub.",
     chats: "Chats", newChat: "New chat", placeholder: "Message", stop: "Stop",
+    addImage: "Add image", removeImage: "Remove image", tooManyImages: "Up to 4 images per message.", imageFailed: "This image can't be opened; try another one.", imageTitle: "Image",
     offline: "Can't reach your hub: it may be asleep or offline. This recovers by itself when it wakes.", retry: "Retry",
     noModels: "The hub has no models yet.", forget: "Unpair this device", forgetQ: "This device will no longer be able to use the hub's models. It still shows in the hub's device list; remove it there too. Continue?",
     addHome: "Add to Home Screen", addHomeTip: "Tap the browser's Share button and choose Add to Home Screen. Opened from the Home Screen, it asks for the code once more.",
@@ -306,7 +308,7 @@ async function loadModels() {
   ms.sort((a, b) => (b.humanOnly - a.humanOnly) || a.name.localeCompare(b.name));
   S.models = ms;
   const sel = $("model"); sel.textContent = "";
-  for (const m of ms) { const o = el("option", m.name); o.value = m.id; sel.append(o); }
+  for (const m of ms) { const o = el("option", m.humanOnly ? m.name + " · " + t("sub") : m.name); o.value = m.id; sel.append(o); }
   const want = S.cur && S.cur.model || localStorageGet("model");
   // Without a choice yet: the Claude subscription's Sonnet, else the first.
   const pick = [want, "claude-code/sonnet"].find((id) => id && ms.some((m) => m.id === id));
@@ -345,6 +347,11 @@ function renderLog() {
 // bubble renders a message; fenced code becomes <pre>, the rest stays text.
 function bubble(m) {
   const b = el("div", undefined, "msg " + m.role);
+  if (m.images && m.images.length) {
+    const pics = el("div", undefined, "pics");
+    for (const im of m.images) { const i = el("img"); i.alt = t("imageTitle"); i.src = "data:" + im.mime + ";base64," + im.data; pics.append(i); }
+    b.append(pics);
+  }
   fill(b, m.content);
   if (m.note) b.append(el("p", m.note, "note"));
   if (m.role === "assistant" && m.content) {
@@ -357,8 +364,8 @@ function bubble(m) {
 function fill(b, text) {
   const parts = text.split(/```/);
   parts.forEach((p, i) => {
-    if (i % 2) { const pre = el("pre"); pre.append(el("code", p.replace(/^[\w+-]*\n/, ""))); b.append(pre); }
-    else if (p) b.append(el("p", p));
+    if (i % 2) { const pre = el("pre"); pre.append(el("code", p.replace(/^[\w+-]*\n/, "").replace(/\n+$/, ""))); b.append(pre); }
+    else if (p.trim()) b.append(el("p", p.replace(/^\n+|\n+$/g, "")));
   });
 }
 
@@ -391,18 +398,19 @@ $("composer").addEventListener("submit", async (e) => {
   if (S.busy) { omnillm.cancel(S.busy); return; }
   const text = input.value.trim();
   const model = $("model").value;
-  if (!text || !model) return;
-  input.value = ""; grow();
+  const images = S.pending.map(({ mime, data }) => ({ mime, data }));
+  if ((!text && !images.length) || !model) return;
+  input.value = ""; grow(); clearPending();
   const chat = S.cur; // this reply belongs to this conversation, whatever happens meanwhile
   chat.model = model;
-  if (!chat.title) chat.title = text.slice(0, 40);
-  chat.messages.push({ role: "user", content: text });
+  if (!chat.title) chat.title = text.slice(0, 40) || t("imageTitle");
+  chat.messages.push(images.length ? { role: "user", content: text, images } : { role: "user", content: text });
   const reply = { role: "assistant", content: "" };
   chat.messages.push(reply);
   renderLog(); renderList();
   const log = $("log"), node = log.lastElementChild;
   const id = crypto.randomUUID(); S.busy = id; busyUI(true);
-  const msgs = chat.messages.slice(0, -1).map(({ role, content }) => ({ role, content }));
+  const msgs = chat.messages.slice(0, -1).map(({ role, content, images }) => (images ? { role, content, images } : { role, content }));
   let raf = 0;
   const flush = () => { raf = 0; node.textContent = ""; fill(node, reply.content); log.scrollTop = log.scrollHeight; };
   try {
@@ -416,7 +424,7 @@ $("composer").addEventListener("submit", async (e) => {
       reply.note = errText(err);
       if (err && err.code === "hub_offline") setOnline(false);
     }
-    if (!reply.content) { chat.messages.pop(); if (err && err.code !== "cancelled") { chat.messages.pop(); input.value = text; grow(); } }
+    if (!reply.content) { chat.messages.pop(); if (err && err.code !== "cancelled") { chat.messages.pop(); input.value = text; grow(); S.pending = images; renderPending(); } }
   } finally {
     S.busy = null; busyUI(false);
     // Removed meanwhile (unpaired): nothing left to show or save.
@@ -426,6 +434,58 @@ $("composer").addEventListener("submit", async (e) => {
     await saveChats();
   }
 });
+// ---------- images ----------
+S.pending = [];
+$("attach").setAttribute("aria-label", t("addImage"));
+$("attach").addEventListener("click", () => $("file").click());
+$("file").addEventListener("change", async (e) => { await addImages([...e.target.files]); e.target.value = ""; });
+input.addEventListener("paste", (e) => {
+  const files = [...(e.clipboardData && e.clipboardData.files || [])].filter((f) => f.type.startsWith("image/"));
+  if (files.length) { e.preventDefault(); addImages(files); }
+});
+
+async function addImages(files) {
+  for (const f of files) {
+    if (S.pending.length >= 4) { toastText(t("tooManyImages")); break; }
+    try { S.pending.push(await shrink(f)); } catch { toastText(t("imageFailed")); }
+  }
+  renderPending();
+}
+
+// shrink makes a photo small enough to send quickly: the long side at most
+// 1600 px, JPEG, under 2 MB. A small GIF stays as it is (it may move).
+async function shrink(file) {
+  if (file.type === "image/gif" && file.size <= 1.5e6) return { mime: "image/gif", data: await b64(file) };
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+    const scale = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement("canvas");
+    c.width = Math.max(1, Math.round(img.naturalWidth * scale)); c.height = Math.max(1, Math.round(img.naturalHeight * scale));
+    const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+    for (const q of [0.85, 0.7, 0.55]) {
+      const blob = await new Promise((res) => c.toBlob(res, "image/jpeg", q));
+      if (blob && blob.size <= 1.9e6) return { mime: "image/jpeg", data: await b64(blob) };
+    }
+    throw new Error("too big");
+  } finally { URL.revokeObjectURL(url); }
+}
+function b64(blob) {
+  return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1]); r.onerror = rej; r.readAsDataURL(blob); });
+}
+function renderPending() {
+  const box = $("pending"); box.textContent = "";
+  box.hidden = !S.pending.length;
+  S.pending.forEach((p, i) => {
+    const f = el("figure"); const img = el("img"); img.alt = t("imageTitle"); img.src = "data:" + p.mime + ";base64," + p.data;
+    const x = el("button", "×"); x.type = "button"; x.setAttribute("aria-label", t("removeImage"));
+    x.addEventListener("click", () => { S.pending.splice(i, 1); renderPending(); });
+    f.append(img, x); box.append(f);
+  });
+}
+function clearPending() { S.pending = []; renderPending(); }
+function toastText(s) { setOnline(S.online); const n = el("p", s, "note err"); $("log").append(n); $("log").scrollTop = $("log").scrollHeight; setTimeout(() => n.remove(), 4000); }
+
 function busyUI(on) { $("send").classList.toggle("stop", on); $("send").setAttribute("aria-label", on ? t("stop") : "Send"); }
 
 // ---------- drawer ----------

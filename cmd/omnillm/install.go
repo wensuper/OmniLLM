@@ -271,11 +271,23 @@ func installLaunchd(home, bin, dir string, env map[string]string) error {
 	}
 	domain := "gui/" + strconv.Itoa(os.Getuid())
 	_ = exec.Command("launchctl", "bootout", domain+"/"+launchdLabel).Run()
-	if out, err := exec.Command("launchctl", "bootstrap", domain, plist).CombinedOutput(); err != nil {
-		// Older systems or a non-GUI session: fall back to load.
-		if out2, err2 := exec.Command("launchctl", "load", "-w", plist).CombinedOutput(); err2 != nil {
-			return fmt.Errorf("launchctl: %s %s", strings.TrimSpace(string(out)), strings.TrimSpace(string(out2)))
+	// bootout returns before the old service is gone; bootstrapping
+	// meanwhile fails ("Input/output error") and an upgrade would leave no
+	// service at all. Wait for it to go, then retry a few times.
+	for i := 0; i < 50 && exec.Command("launchctl", "print", domain+"/"+launchdLabel).Run() == nil; i++ {
+		time.Sleep(100 * time.Millisecond)
+	}
+	var out []byte
+	var err error
+	for try := 0; try < 5; try++ {
+		if out, err = exec.Command("launchctl", "bootstrap", domain, plist).CombinedOutput(); err == nil {
+			return nil
 		}
+		time.Sleep(time.Second)
+	}
+	// Older systems or a non-GUI session: fall back to load.
+	if out2, err2 := exec.Command("launchctl", "load", "-w", plist).CombinedOutput(); err2 != nil {
+		return fmt.Errorf("launchctl: %s %s", strings.TrimSpace(string(out)), strings.TrimSpace(string(out2)))
 	}
 	return nil
 }

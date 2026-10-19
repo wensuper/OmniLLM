@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"time"
 )
 
@@ -33,10 +34,18 @@ func (c Caller) String() string {
 	return "background"
 }
 
-// Message is one turn of a conversation.
+// Message is one turn of a conversation. A person's message may carry
+// images (a photo, a screenshot).
 type Message struct {
-	Role    string `json:"role"` // system | user | assistant
-	Content string `json:"content"`
+	Role    string  `json:"role"` // system | user | assistant
+	Content string  `json:"content"`
+	Images  []Image `json:"images,omitempty"`
+}
+
+// Image is one picture in a message: PNG, JPEG, GIF or WebP bytes.
+type Image struct {
+	MIME string `json:"mime"`
+	Data []byte `json:"data"` // base64 in JSON
 }
 
 // Request is a model call.
@@ -56,7 +65,10 @@ type Request struct {
 // Limits on a request, enforced before anything leaves the hub.
 const (
 	MaxMessages      = 512
-	MaxRequestBytes  = 4 << 20 // 4 MiB of message content in total
+	MaxRequestBytes  = 5 << 20 // 5 MiB of text and images in total (base64 still fits one 8 MiB message)
+	MaxImageBytes    = 2 << 20 // one image
+	MaxImagesPerMsg  = 4
+	MaxImages        = 8 // in one request
 	MaxOutputTokens  = 64000
 	MaxModelIDLength = 200
 )
@@ -69,7 +81,7 @@ func (r *Request) Validate() error {
 	if len(r.Messages) == 0 || len(r.Messages) > MaxMessages {
 		return &Error{Code: CodeBadRequest, Msg: msgBadMessages}
 	}
-	total := 0
+	total, images := 0, 0
 	for _, m := range r.Messages {
 		switch m.Role {
 		case "system", "user", "assistant":
@@ -77,6 +89,19 @@ func (r *Request) Validate() error {
 			return &Error{Code: CodeBadRequest, Msg: msgBadRole}
 		}
 		total += len(m.Content)
+		if len(m.Images) > 0 && (m.Role != "user" || len(m.Images) > MaxImagesPerMsg) {
+			return &Error{Code: CodeBadRequest, Msg: MsgBadImage}
+		}
+		for _, im := range m.Images {
+			if err := im.check(); err != nil {
+				return err
+			}
+			total += len(im.Data)
+			images++
+		}
+	}
+	if images > MaxImages {
+		return &Error{Code: CodeBadRequest, Msg: MsgBadImage}
 	}
 	if total > MaxRequestBytes {
 		return &Error{Code: CodeBadRequest, Msg: msgTooLarge}
@@ -94,6 +119,30 @@ func (r *Request) Validate() error {
 		return &Error{Code: CodeBadRequest, Msg: msgBadCaller}
 	}
 	return nil
+}
+
+// imageTypes are the formats every vision model takes.
+var imageTypes = map[string]bool{"image/png": true, "image/jpeg": true, "image/gif": true, "image/webp": true}
+
+// check accepts an image only when its bytes are what its type says.
+func (im Image) check() error {
+	if !imageTypes[im.MIME] || len(im.Data) == 0 || len(im.Data) > MaxImageBytes {
+		return &Error{Code: CodeBadRequest, Msg: MsgBadImage}
+	}
+	if http.DetectContentType(im.Data) != im.MIME {
+		return &Error{Code: CodeBadRequest, Msg: MsgBadImage}
+	}
+	return nil
+}
+
+// HasImages reports whether any message carries an image.
+func (r *Request) HasImages() bool {
+	for _, m := range r.Messages {
+		if len(m.Images) > 0 {
+			return true
+		}
+	}
+	return false
 }
 
 // Usage is what one call consumed.

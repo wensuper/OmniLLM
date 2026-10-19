@@ -67,7 +67,10 @@
     </header>
     <div id="banner" class="banner" role="status" hidden></div>
     <main id="log" class="log" aria-live="polite"></main>
+    <div id="pending" class="pending" hidden></div>
     <form id="composer" class="composer">
+      <button id="attach" class="attach" type="button" aria-label="Add image"></button>
+      <input id="file" type="file" accept="image/png,image/jpeg,image/gif,image/webp,image/heic,image/heif" multiple hidden>
       <textarea id="input" rows="1" enterkeyhint="send" autocomplete="off"></textarea>
       <button id="send" class="send" type="submit" aria-label="Send"></button>
     </form>

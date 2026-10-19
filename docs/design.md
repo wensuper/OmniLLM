@@ -551,6 +551,12 @@ NEXA（`pgclient`，Go）直接引入 OmniLLM 库。用户只装 NEXA：在 NEXA
 - 发布：网页客户端随程序一起在打标签的发布里构建（`omnillm-web.tar.gz`，校验和由 cosign 签名），放在只给它用的 `https://omni.ixxzh.com`（zc 10-19 定，见 docs/relay-deploy.md）；Service Worker 把整套文件缓存住，新版本整套替换。首次打开要信任托管方（§5.3 已说明）；签名更新留到以后。
 - 从主屏幕打开的网页应用和 Safari 的存储是分开的，所以网页里也能用摄像头扫码（jsQR）或粘贴配对文字。
 
+**文字 + 图片（v0.2.0-alpha.2）**
+
+- 消息可以带图片（PNG、JPEG、GIF、WebP；每张 ≤ 2 MB，每条 ≤ 4 张，一次请求文字加图片 ≤ 5 MB，加密消息仍在 8 MB 以内）。中心节点按文件开头的字节核对格式，和声明不符就拒绝。
+- 去向：OpenAI 兼容接口用 `image_url`（data: 网址），Anthropic 用 base64 图片块；Claude Code 用 `--input-format stream-json` 把图片放在输入里（不需要读文件的工具）；Codex 把图片写进本次调用的私有临时目录，用 `-i` 附上，调用结束即删。本机接口只收内联图片，不替程序去下载网址（防止中心节点被当成取任意网址的跳板）。
+- 手机网页在发送前把照片缩到长边 1600 像素、转成 JPEG（2 MB 以内），小 GIF 原样发。
+
 **Linux 服务器：一个程序，不装服务**
 
 - `install.sh --device`（或 `omnillm install --device`）只把程序放到 `~/.local/bin`，不装后台服务，然后在终端里提示粘贴配对文字。服务器没有钥匙串，设备私钥加密存在数据目录里，主密钥在旁边 0600 的文件里（和中心节点在 Linux 上一样）。

@@ -96,7 +96,7 @@ func usage() {
   omnillm connect pair               在这台设备上输入主机给的配对文字
   omnillm connect run [--listen 127.0.0.1:8766]
   omnillm connect chat [--model ID]  在终端里和主机上的模型对话
-  omnillm connect ask [--model ID] "问题"
+  omnillm connect ask [--model ID] [--image 图片文件] "问题"
   omnillm connect models             列出能用的模型
   omnillm connect forget             删除这台设备的配对
   omnillm relay --listen :443 --autocert relay.example.com --hub-token-hash HEX
@@ -118,7 +118,7 @@ func usage() {
   omnillm connect pair               enter the hub's pairing text on this device
   omnillm connect run [--listen 127.0.0.1:8766]
   omnillm connect chat [--model ID]  chat with the hub's models in this terminal
-  omnillm connect ask [--model ID] "question"
+  omnillm connect ask [--model ID] [--image FILE] "question"
   omnillm connect models             list the models you can use
   omnillm connect forget             delete this device's pairing
   omnillm relay --listen :443 --autocert relay.example.com --hub-token-hash HEX
@@ -820,9 +820,19 @@ func connectCmd(args []string) {
 	case "ask":
 		fs := flag.NewFlagSet("connect ask", flag.ExitOnError)
 		model := fs.String("model", "", "")
+		var imagePaths multi
+		fs.Var(&imagePaths, "image", "attach an image file (repeatable)")
 		_ = fs.Parse(args[1:])
-		if fs.NArg() == 0 {
+		if fs.NArg() == 0 && len(imagePaths) == 0 {
 			usage()
+		}
+		var images []omnillm.Image
+		for _, p := range imagePaths {
+			im, err := readImage(p)
+			if err != nil {
+				die(err)
+			}
+			images = append(images, im)
 		}
 		d := openDevice(ctx, sec)
 		defer d.Close()
@@ -833,7 +843,7 @@ func connectCmd(args []string) {
 		// terminal) it is a background call, and subscription models,
 		// kept for people, refuse it.
 		s, err := d.Complete(ctx, omnillm.Request{Model: *model, Caller: callerHere(),
-			Messages: []omnillm.Message{{Role: "user", Content: strings.Join(fs.Args(), " ")}}})
+			Messages: []omnillm.Message{{Role: "user", Content: strings.Join(fs.Args(), " "), Images: images}}})
 		if err != nil {
 			die(err)
 		}

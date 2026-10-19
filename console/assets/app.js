@@ -34,7 +34,7 @@ const T = {
     who: "谁", spend: "花费", calls: "次数", tokens: "token（入 / 出）",
     remove: "移除", removeConfirm: "确定移除“{0}”？它会立即无法使用。",
     removed: "已移除", connected: "已接入，{0} 个模型可用", saved: "已保存",
-    local: "只在本机", remote: "会发到云端",
+    local: "只在本机", remote: "会发到云端", sub: "订阅",
     pairHow: "手机或平板：用相机扫这个二维码，不用装任何东西。电脑或服务器：运行 omnillm connect pair，粘贴下面这段配对文字（{0} 前有效，只能用一次）。不要发给别人，也不要贴到聊天里。",
     pairWait: "等待设备连接……",
     pairConfirmQ: "设备“{0}”请求加入。它屏幕上显示的数字是这个吗？",
@@ -80,7 +80,7 @@ const T = {
     who: "Who", spend: "Spend", calls: "Calls", tokens: "tokens (in / out)",
     remove: "Remove", removeConfirm: "Remove \"{0}\"? It stops working at once.",
     removed: "Removed", connected: "Connected: {0} models available", saved: "Saved",
-    local: "stays on this computer", remote: "goes to the cloud",
+    local: "stays on this computer", remote: "goes to the cloud", sub: "subscription",
     pairHow: "Phone or tablet: scan the QR code with the camera; nothing to install. Computer or server: run omnillm connect pair and paste this pairing text (valid until {0}, single use). Don't send it to anyone or paste it into a chat.",
     pairWait: "Waiting for the device…",
     pairConfirmQ: "\"{0}\" wants to join. Does its screen show this number?",
@@ -215,7 +215,7 @@ function fillModels() {
   const sel = $("try-model");
   sel.textContent = "";
   for (const m of S.models) {
-    const o = el("option", m.display_name + (m.locality === "local" ? " · " + t("local") : ""));
+    const o = el("option", m.display_name + (m.locality === "local" ? " · " + t("local") : m.human_only ? " · " + t("sub") : ""));
     o.value = m.id;
     sel.append(o);
   }
@@ -374,7 +374,7 @@ function renderModels() {
   tb.textContent = "";
   for (const m of S.models) {
     const tr = el("tr");
-    cell(tr, m.display_name);
+    cell(tr, m.display_name + (m.human_only ? " · " + t("sub") : ""));
     cell(tr, "").append(el("span", m.locality === "local" ? t("local") : t("remote"), "tag" + (m.locality === "local" ? " local" : "")));
     const td = cell(tr, "");
     const box = el("input");

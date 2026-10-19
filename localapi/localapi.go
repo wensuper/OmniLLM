@@ -10,6 +10,7 @@ package localapi
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -177,26 +178,59 @@ func models(w http.ResponseWriter, r *http.Request, b Backend) {
 }
 
 // content accepts a string or an array of text parts.
-func content(raw json.RawMessage) (string, error) {
+// content reads a message's content: a string, or parts with text and
+// images. Images come inline only (OpenAI image_url with a data: URL,
+// Anthropic base64 source): the hub never fetches a URL a program names.
+func content(raw json.RawMessage) (string, []omnillm.Image, error) {
 	var s string
 	if json.Unmarshal(raw, &s) == nil {
-		return s, nil
+		return s, nil, nil
 	}
 	var parts []struct {
-		Type string `json:"type"`
-		Text string `json:"text"`
+		Type     string `json:"type"`
+		Text     string `json:"text"`
+		ImageURL struct {
+			URL string `json:"url"`
+		} `json:"image_url"`
+		Source struct {
+			Type      string `json:"type"`
+			MediaType string `json:"media_type"`
+			Data      string `json:"data"`
+		} `json:"source"`
 	}
 	if err := json.Unmarshal(raw, &parts); err != nil {
-		return "", errors.New("content")
+		return "", nil, errors.New("content")
 	}
 	var b strings.Builder
+	var imgs []omnillm.Image
 	for _, p := range parts {
-		if p.Type != "text" {
-			return "", errors.New("only text content is supported")
+		switch p.Type {
+		case "text":
+			b.WriteString(p.Text)
+		case "image_url":
+			mime, data, ok := strings.Cut(strings.TrimPrefix(p.ImageURL.URL, "data:"), ";base64,")
+			if !strings.HasPrefix(p.ImageURL.URL, "data:") || !ok {
+				return "", nil, errors.New("only inline (data:) images are supported")
+			}
+			d, err := base64.StdEncoding.DecodeString(data)
+			if err != nil {
+				return "", nil, errors.New("image")
+			}
+			imgs = append(imgs, omnillm.Image{MIME: mime, Data: d})
+		case "image":
+			if p.Source.Type != "base64" {
+				return "", nil, errors.New("only inline (base64) images are supported")
+			}
+			d, err := base64.StdEncoding.DecodeString(p.Source.Data)
+			if err != nil {
+				return "", nil, errors.New("image")
+			}
+			imgs = append(imgs, omnillm.Image{MIME: p.Source.MediaType, Data: d})
+		default:
+			return "", nil, errors.New("unsupported content")
 		}
-		b.WriteString(p.Text)
 	}
-	return b.String(), nil
+	return b.String(), imgs, nil
 }
 
 type chatReq struct {
@@ -247,12 +281,12 @@ func chat(w http.ResponseWriter, r *http.Request, b Backend) {
 		if role == "developer" {
 			role = "system"
 		}
-		c, err := content(m.Content)
+		c, imgs, err := content(m.Content)
 		if err != nil {
 			writeErr(w, r, badRequest(), 0)
 			return
 		}
-		req.Messages = append(req.Messages, omnillm.Message{Role: role, Content: c})
+		req.Messages = append(req.Messages, omnillm.Message{Role: role, Content: c, Images: imgs})
 	}
 	if rf := cr.ResponseFormat; rf != nil {
 		switch rf.Type {
@@ -372,20 +406,20 @@ func messages(w http.ResponseWriter, r *http.Request, b Backend) {
 	}
 	req := omnillm.Request{Model: mr.Model, MaxTokens: mr.MaxTokens, Temperature: mr.Temperature, Caller: omnillm.Background}
 	if len(mr.System) > 0 {
-		s, err := content(mr.System)
-		if err != nil {
+		s, imgs, err := content(mr.System)
+		if err != nil || len(imgs) > 0 {
 			writeErr(w, r, badRequest(), 0)
 			return
 		}
 		req.Messages = append(req.Messages, omnillm.Message{Role: "system", Content: s})
 	}
 	for _, m := range mr.Messages {
-		c, err := content(m.Content)
+		c, imgs, err := content(m.Content)
 		if err != nil {
 			writeErr(w, r, badRequest(), 0)
 			return
 		}
-		req.Messages = append(req.Messages, omnillm.Message{Role: m.Role, Content: c})
+		req.Messages = append(req.Messages, omnillm.Message{Role: m.Role, Content: c, Images: imgs})
 	}
 	s, err := b.Complete(r.Context(), token(r), req)
 	if err != nil {

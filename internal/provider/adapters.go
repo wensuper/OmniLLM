@@ -3,6 +3,7 @@ package provider
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -31,9 +32,44 @@ func (c *Client) build(ctx context.Context, model string, req omnillm.Request, c
 
 // ---- OpenAI-compatible (OpenAI, Ollama, others) ----
 
+// oaMsg's Content is a string, or for a message with images a list of
+// parts (OpenAI: text and image_url; Anthropic: text and image).
 type oaMsg struct {
 	Role    string `json:"role"`
-	Content string `json:"content"`
+	Content any    `json:"content"`
+}
+
+func dataURL(im omnillm.Image) string {
+	return "data:" + im.MIME + ";base64," + base64.StdEncoding.EncodeToString(im.Data)
+}
+
+func openAIContent(m omnillm.Message) any {
+	if len(m.Images) == 0 {
+		return m.Content
+	}
+	parts := []map[string]any{}
+	if m.Content != "" {
+		parts = append(parts, map[string]any{"type": "text", "text": m.Content})
+	}
+	for _, im := range m.Images {
+		parts = append(parts, map[string]any{"type": "image_url", "image_url": map[string]string{"url": dataURL(im)}})
+	}
+	return parts
+}
+
+func anthropicContent(m omnillm.Message) any {
+	if len(m.Images) == 0 {
+		return m.Content
+	}
+	parts := []map[string]any{}
+	for _, im := range m.Images {
+		parts = append(parts, map[string]any{"type": "image", "source": map[string]string{
+			"type": "base64", "media_type": im.MIME, "data": base64.StdEncoding.EncodeToString(im.Data)}})
+	}
+	if m.Content != "" {
+		parts = append(parts, map[string]any{"type": "text", "text": m.Content})
+	}
+	return parts
 }
 
 type oaReq struct {
@@ -50,7 +86,7 @@ func (c *Client) buildOpenAI(ctx context.Context, model string, req omnillm.Requ
 	body := oaReq{Model: model, Stream: true, StreamOptions: map[string]bool{"include_usage": true},
 		MaxTokens: req.MaxTokens, Temperature: req.Temperature}
 	for _, m := range req.Messages {
-		body.Messages = append(body.Messages, oaMsg{Role: m.Role, Content: m.Content})
+		body.Messages = append(body.Messages, oaMsg{Role: m.Role, Content: openAIContent(m)})
 	}
 	switch {
 	case len(req.JSONSchema) > 0:
@@ -142,7 +178,7 @@ func (c *Client) buildAnthropic(ctx context.Context, model string, req omnillm.R
 			sys = append(sys, m.Content)
 			continue
 		}
-		body.Messages = append(body.Messages, oaMsg{Role: m.Role, Content: m.Content})
+		body.Messages = append(body.Messages, oaMsg{Role: m.Role, Content: anthropicContent(m)})
 	}
 	body.System = strings.Join(sys, "\n\n")
 	if len(body.Messages) == 0 {

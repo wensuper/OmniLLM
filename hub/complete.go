@@ -107,6 +107,7 @@ func estimateInput(req omnillm.Request) int {
 	n := 0
 	for _, m := range req.Messages {
 		n += len(m.Content)/2 + 8
+		n += 1600 * len(m.Images) // a large image is about 1,600 tokens
 	}
 	return n + len(req.JSONSchema)/2
 }

@@ -44,9 +44,9 @@ func subscriptionLimits(host func(string) egress.Limits) func(string) egress.Lim
 
 func subscriptionModelName(k provider.Kind, id string) string {
 	if k == provider.Codex {
-		return "Codex (ChatGPT subscription)"
+		return "Codex (ChatGPT)"
 	}
-	return "Claude " + strings.ToUpper(id[:1]) + id[1:] + " (subscription)"
+	return "Claude " + strings.ToUpper(id[:1]) + id[1:]
 }
 
 // Per-device pace for subscription models: more than a person chats.

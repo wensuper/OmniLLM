@@ -510,7 +510,13 @@ func (h *Hub) info(m Model) omnillm.ModelInfo {
 	if c != nil && c.Config().Local() {
 		loc = omnillm.Local
 	}
-	return omnillm.ModelInfo{ID: m.ID, DisplayName: m.DisplayName, Provider: m.Provider, Locality: loc, HumanOnly: m.HumanOnly}
+	// Screens add their own word for "subscription" (in the person's
+	// language); names stored by v0.2.0-alpha.1 carried it in English.
+	name := strings.TrimSuffix(strings.TrimSuffix(m.DisplayName, " (subscription)"), " (ChatGPT subscription)")
+	if name != m.DisplayName && strings.HasPrefix(name, "Codex") {
+		name = "Codex (ChatGPT)"
+	}
+	return omnillm.ModelInfo{ID: m.ID, DisplayName: name, Provider: m.Provider, Locality: loc, HumanOnly: m.HumanOnly}
 }
 
 // Models lists every model, with where its data goes as seen from this

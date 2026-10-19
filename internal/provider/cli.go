@@ -12,8 +12,10 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -202,15 +204,48 @@ func cliPrompt(k Kind, msgs []omnillm.Message) (system, prompt string) {
 		return system, turns[0].Content
 	}
 	b.WriteString("The conversation so far is below. Reply to the user's last message as the assistant.\n")
+	n := 0
 	for _, m := range turns {
 		who := "User"
 		if m.Role == "assistant" {
 			who = "Assistant"
 		}
 		b.WriteString("\n" + who + ":\n" + m.Content + "\n")
+		for range m.Images {
+			n++
+			fmt.Fprintf(&b, "[attached image %d]\n", n)
+		}
 	}
 	return system, b.String()
 }
+
+// cliImages lists the conversation's images in order (the transcript
+// numbers them the same way).
+func cliImages(msgs []omnillm.Message) []omnillm.Image {
+	var out []omnillm.Image
+	for _, m := range msgs {
+		out = append(out, m.Images...)
+	}
+	return out
+}
+
+// claudeInput is Claude Code's stream-json input: one user message with
+// the images and the prompt.
+func claudeInput(images []omnillm.Image, prompt string) string {
+	var parts []map[string]any
+	for _, im := range images {
+		parts = append(parts, map[string]any{"type": "image", "source": map[string]string{
+			"type": "base64", "media_type": im.MIME, "data": base64.StdEncoding.EncodeToString(im.Data)}})
+	}
+	if strings.TrimSpace(prompt) == "" {
+		prompt = "(The user sent the image above without any text.)"
+	}
+	parts = append(parts, map[string]any{"type": "text", "text": prompt})
+	b, _ := json.Marshal(map[string]any{"type": "user", "message": map[string]any{"role": "user", "content": parts}})
+	return string(b) + "\n"
+}
+
+var imageExt = map[string]string{"image/png": ".png", "image/jpeg": ".jpg", "image/gif": ".gif", "image/webp": ".webp"}
 
 // cliStream is a reply read from the program's JSON lines.
 type cliStream struct {
@@ -291,6 +326,12 @@ func (c *Client) spawnCLI(ctx context.Context, model string, msgs []omnillm.Mess
 		if model != "" && model != "default" {
 			args = append(args, "--model", model)
 		}
+		if imgs := cliImages(req.Messages); len(imgs) > 0 {
+			// Images go in as base64 in Claude Code's JSON input, not as
+			// files it would need a tool to read.
+			args = append(args, "--input-format", "stream-json")
+			prompt = claudeInput(imgs, prompt)
+		}
 	} else {
 		home, err := prepareCodexHome()
 		if err != nil {
@@ -302,6 +343,15 @@ func (c *Client) spawnCLI(ctx context.Context, model string, msgs []omnillm.Mess
 			"--sandbox", "read-only", "--color", "never", "-C", scratch}, codexToolsOff...)
 		if model != "" && model != "default" {
 			args = append(args, "-m", model)
+		}
+		// Images as files in the private scratch folder, attached with -i
+		// (Codex reads them itself; its tools stay off).
+		for i, im := range cliImages(req.Messages) {
+			f := filepath.Join(scratch, fmt.Sprintf("image-%d%s", i+1, imageExt[im.MIME]))
+			if err := os.WriteFile(f, im.Data, 0o600); err != nil {
+				return fail(err)
+			}
+			args = append(args, "-i", f)
 		}
 		args = append(args, "-")
 	}

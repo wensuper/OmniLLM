@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -92,10 +93,11 @@ func chatLoop(ctx context.Context, d *device.Device, model string) {
 		}
 		return id
 	}
-	fmt.Fprintf(os.Stderr, t("和 %s 对话。/model 换模型，/new 重新开始，Ctrl-C 停止回答，Ctrl-D 退出。\n",
-		"Chatting with %s. /model to switch, /new to start over, Ctrl-C stops a reply, Ctrl-D quits.\n"), name(model))
+	fmt.Fprintf(os.Stderr, t("和 %s 对话。/model 换模型，/image 文件 附一张图片，/new 重新开始，Ctrl-C 停止回答，Ctrl-D 退出。\n",
+		"Chatting with %s. /model to switch, /image FILE to attach a picture, /new to start over, Ctrl-C stops a reply, Ctrl-D quits.\n"), name(model))
 	in := bufio.NewReader(os.Stdin)
 	var msgs []omnillm.Message
+	var pending []omnillm.Image // attached with /image, sent with the next message
 	for {
 		fmt.Fprint(os.Stderr, "\n> ")
 		line, err := in.ReadString('\n')
@@ -110,8 +112,22 @@ func chatLoop(ctx context.Context, d *device.Device, model string) {
 		case line == "/exit" || line == "/quit":
 			return
 		case line == "/new":
-			msgs = nil
+			msgs, pending = nil, nil
 			fmt.Fprintln(os.Stderr, t("已重新开始。", "Started over."))
+			continue
+		case strings.HasPrefix(line, "/image"):
+			path := strings.TrimSpace(strings.TrimPrefix(line, "/image"))
+			im, err := readImage(path)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, omnillm.Describe(lang(), err))
+				continue
+			}
+			if len(pending) >= omnillm.MaxImagesPerMsg {
+				fmt.Fprintln(os.Stderr, omnillm.Describe(lang(), &omnillm.Error{Code: omnillm.CodeBadRequest, Msg: omnillm.MsgBadImage}))
+				continue
+			}
+			pending = append(pending, im)
+			fmt.Fprintf(os.Stderr, t("已附上图片（%d 张），和下一条消息一起发。\n", "Image attached (%d); it goes with your next message.\n"), len(pending))
 			continue
 		case line == "/model" || strings.HasPrefix(line, "/model "):
 			arg := strings.TrimSpace(strings.TrimPrefix(line, "/model"))
@@ -140,7 +156,8 @@ func chatLoop(ctx context.Context, d *device.Device, model string) {
 			fmt.Fprintf(os.Stderr, t("现在用 %s。\n", "Now using %s.\n"), name(model))
 			continue
 		}
-		msgs = append(msgs, omnillm.Message{Role: "user", Content: line})
+		msgs = append(msgs, omnillm.Message{Role: "user", Content: line, Images: pending})
+		pending = nil
 		reply, err := chatOnce(ctx, d, model, msgs)
 		if reply != "" {
 			msgs = append(msgs, omnillm.Message{Role: "assistant", Content: reply})
@@ -193,4 +210,22 @@ func chatOnce(ctx context.Context, d *device.Device, model string, msgs []omnill
 		b.WriteString(c.Text)
 		fmt.Print(c.Text)
 	}
+}
+
+// readImage loads a picture file for a message (PNG, JPEG, GIF or WebP up
+// to 2 MB; the hub checks it again).
+func readImage(path string) (omnillm.Image, error) {
+	path = strings.Trim(path, "'\"")
+	st, err := os.Stat(path)
+	if err != nil {
+		return omnillm.Image{}, err
+	}
+	if st.Size() > omnillm.MaxImageBytes {
+		return omnillm.Image{}, &omnillm.Error{Code: omnillm.CodeBadRequest, Msg: omnillm.MsgBadImage}
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return omnillm.Image{}, err
+	}
+	return omnillm.Image{MIME: http.DetectContentType(b), Data: b}, nil
 }
