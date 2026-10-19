@@ -18,6 +18,7 @@ type Limits struct {
 	MaxConcurrent     int           // default 2
 	RequestsPerMinute int           // default 30
 	MaxQueue          int           // waiting callers before ErrBusy, default 16
+	Burst             int           // calls allowed back to back, default RequestsPerMinute/6
 	BreakerFailures   int           // consecutive failures that open the breaker, default 5
 	BreakerOpen       time.Duration // default 60s
 	MaxCooldown       time.Duration // cap on a Retry-After, default 10 min
@@ -100,6 +101,9 @@ func (l *Limiter) lane(p string) *lane {
 }
 
 func burst(lim Limits) int {
+	if lim.Burst > 0 {
+		return lim.Burst
+	}
 	b := lim.RequestsPerMinute / 6
 	if b < 1 {
 		b = 1

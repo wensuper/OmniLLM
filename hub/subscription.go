@@ -33,7 +33,9 @@ func (h *Hub) subscription(name string) bool {
 func subscriptionLimits(host func(string) egress.Limits) func(string) egress.Limits {
 	return func(p string) egress.Limits {
 		if provider.Kind(p).Subscription() {
-			return egress.Limits{MaxConcurrent: 1, RequestsPerMinute: 12, MaxQueue: 4}
+			// A person may send, stop and resend a few in a row; the
+			// sustained pace and the per-device caps stay low.
+			return egress.Limits{MaxConcurrent: 1, RequestsPerMinute: 12, Burst: 4, MaxQueue: 4}
 		}
 		if host != nil {
 			return host(p)
