@@ -37,6 +37,10 @@ zc 2026-10-19 决定：OmniLLM 的公共连接服务（relay）和手机网页�
    ```
    然后在 Mac 上装好的 OmniLLM 里加一台设备，用真手机扫码，发一条消息。
 
+## 证书（2026-10-20 起）
+
+两个名字都用 zc 在阿里云申请的 DigiCert 证书（比 Let's Encrypt 兼容更多老手机），放在 `/etc/https/aliyun/<名字>/`，和 Parley 一样**不会自动续期**，2027-01-16 到期，巡检在剩 14 天时告警；续期步骤同 production.md §12。上线时签的 Let's Encrypt 证书留在 `/etc/https/acme/<名字>/`，acme.sh 照常续期，阿里云证书来不及续时把 vhost 的两行路径指回去即可。
+
 ## 以后每次发版
 
 只做第 3 步（`package.sh` → `scp` → `install-server.sh`）和第 5 步的核对。旧版本留在 `releases/` 下：回滚就是把 `/opt/omnillm/omnillm` 和 `/home/yunwei/www/omni/current` 两个链接指回上一个标签，再 `sudo systemctl restart omnillm-relay`。
