@@ -145,9 +145,16 @@ func (h *Hub) Revoke(ctx context.Context, id string) error {
 		h.mu.Lock()
 		s := h.sessions[mid]
 		delete(h.sessions, mid)
+		link := h.link
 		h.mu.Unlock()
 		if s != nil {
 			s.close()
+		}
+		// Have the relay drop the device's connection too: its next
+		// request then reconnects at once and is told it was removed,
+		// instead of waiting for an answer on a connection nobody serves.
+		if link != nil {
+			_ = link.Kick(ctx, mid)
 		}
 	}
 	h.opts.Logf("hub: device %s removed", d.ID)
