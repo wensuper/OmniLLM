@@ -31,6 +31,7 @@ const T = {
     addHome: "添加到主屏幕", addHomeTip: "点浏览器的“分享”按钮，选“添加到主屏幕”。从主屏幕打开时需要再扫一次码。",
     deviceLine: "这台设备：{0}", sub: "订阅", empty: "有什么可以帮你？", cut: "（回复被截断）", stopped: "（已停止）",
     today: "今天", copy: "复制", copied: "已复制",
+    volatile: "这个浏览器不能安全地保存配对，所以只在这个页面打开时有效；关掉后要在主机上重新添加。换用 Safari 或 Chrome 可以一直保存。",
     removedHere: "这台设备已在主机上被移除，对话记录也已从这台设备上清除。需要的话，在主机上重新添加。",
   },
   en: {
@@ -54,6 +55,7 @@ const T = {
     addHome: "Add to Home Screen", addHomeTip: "Tap the browser's Share button and choose Add to Home Screen. Opened from the Home Screen, it asks for the code once more.",
     deviceLine: "This device: {0}", sub: "subscription", empty: "How can I help?", cut: "(reply cut off)", stopped: "(stopped)",
     today: "Today", copy: "Copy", copied: "Copied",
+    volatile: "This browser can't keep the pairing safely, so it only lasts while this page is open; after closing it, add the device on the hub again. Safari or Chrome keep it.",
     removedHere: "This device was removed on the hub, and its conversations were cleared from it. Add it again on the hub if you need it.",
   },
 };
@@ -99,7 +101,11 @@ function wrapKey() {
     let k = await idb.get("wrap");
     if (!k) {
       k = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
-      await idb.put("wrap", k);
+      // Some browsers can't keep a non-exportable key in storage (it throws
+      // "can not be cloned"). Then the key lives only while this page is
+      // open: pairing and chatting work, and the page says that closing it
+      // means pairing again. The key is never made exportable.
+      try { await idb.put("wrap", k); } catch (e) { S.volatile = true; }
     }
     return k;
   })();
@@ -377,6 +383,7 @@ function stopScan(keep) {
 
 // ---------- chat ----------
 async function openChat() {
+  if (S.volatile && !S.volatileSaid) { S.volatileSaid = true; setTimeout(() => { const n = el("p", t("volatile"), "note warn-note"); $("log").prepend(n); setTimeout(() => n.remove(), 15000); }, 500); }
   show("chat");
   $("input").placeholder = t("placeholder");
   $("device-line").textContent = t("deviceLine", S.device.name);
