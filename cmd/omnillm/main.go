@@ -71,11 +71,31 @@ func t(z, e string) string {
 }
 
 func die(err error) {
-	fmt.Fprintln(os.Stderr, omnillm.Describe(lang(), err))
-	if e := omnillm.AsError(err); e.Code == omnillm.CodeInternal {
-		fmt.Fprintln(os.Stderr, "  ("+err.Error()+")")
-	}
+	fmt.Fprintln(os.Stderr, describe(err))
 	os.Exit(1)
+}
+
+// sayErr is a sentence already written for people (in their language).
+type sayErr string
+
+func (e sayErr) Error() string { return string(e) }
+
+func say(s string) error                 { return sayErr(s) }
+func sayf(format string, a ...any) error { return sayErr(fmt.Sprintf(format, a...)) }
+
+// describe is what a person sees for err: our own sentence as it is, the
+// library's message, and for anything unexpected the generic message plus
+// the underlying cause, so it can be reported.
+func describe(err error) string {
+	var s sayErr
+	if errors.As(err, &s) {
+		return string(s)
+	}
+	msg := omnillm.Describe(lang(), err)
+	if e := omnillm.AsError(err); e.Code == omnillm.CodeInternal {
+		msg += "\n  (" + err.Error() + ")"
+	}
+	return msg
 }
 
 func usage() {
@@ -232,7 +252,7 @@ func secrets(dir, service string) secret.Store {
 			die(err)
 		}
 		if st.Mode().Perm()&0o077 != 0 {
-			die(errors.New(t("主密钥文件只能自己可读（0600）：", "The master key file must be readable only by you (0600): ") + f))
+			die(say(t("主密钥文件只能自己可读（0600）：", "The master key file must be readable only by you (0600): ") + f))
 		}
 		b, err := os.ReadFile(f)
 		if err != nil {
@@ -555,13 +575,13 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 			if ids, err := h.DetectOllama(ctx); err == nil && len(hub.ChatModels(ids)) > 0 {
 				cfg, _ := provider.Default(provider.Ollama)
 				if _, err := h.AddProvider(ctx, cfg, ""); err != nil {
-					return errors.New(omnillm.Describe(lang(), err))
+					return say(describe(err))
 				}
 			}
 			return c.Send(control.Reply{Event: "ok"})
 		case "console.login":
 			if con == nil {
-				return errors.New(t("控制台没有开启。", "The console is off."))
+				return say(t("控制台没有开启。", "The console is off."))
 			}
 			return c.Send(control.Reply{Event: "ok", Text: con.LoginURL()})
 		case "status":
@@ -581,7 +601,7 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 				cfg, err = provider.Config{Kind: provider.OpenAICompatible, NeedsKey: true}, nil
 			}
 			if err != nil {
-				return errors.New(t("不认识这个提供方类型。", "Unknown provider kind."))
+				return say(t("不认识这个提供方类型。", "Unknown provider kind."))
 			}
 			if a["name"] != "" {
 				cfg.Name = a["name"]
@@ -591,7 +611,7 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 			}
 			ms, err := h.AddProvider(ctx, cfg, req.Secret)
 			if err != nil {
-				return errors.New(omnillm.Describe(lang(), err))
+				return say(describe(err))
 			}
 			return c.Send(control.Reply{Event: "ok", Text: fmt.Sprintf(t("已接入 %s，%d 个模型可用。", "Connected %s: %d models available."), cfg.Name, len(ms))})
 		case "providers":
@@ -648,7 +668,7 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 			return c.Send(control.Reply{Event: "ok", Data: jsonData(u)})
 		case "revoke":
 			if err := h.Revoke(ctx, a["id"]); err != nil {
-				return errors.New(omnillm.Describe(lang(), err))
+				return say(describe(err))
 			}
 			return c.Send(control.Reply{Event: "ok", Text: t("已移除，立即生效。", "Removed. Effective now.")})
 		case "app.add":
@@ -673,7 +693,7 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 				pi, err1 := strconv.ParseFloat(a["price_in"], 64)
 				po, err2 := strconv.ParseFloat(a["price_out"], 64)
 				if err1 != nil || err2 != nil || pi < 0 || po < 0 {
-					return errors.New(t("请同时给出 --price-in 和 --price-out（美元/百万 token）。", "Give both --price-in and --price-out (USD per million tokens)."))
+					return say(t("请同时给出 --price-in 和 --price-out（美元/百万 token）。", "Give both --price-in and --price-out (USD per million tokens)."))
 				}
 				u.PriceIn, u.PriceOut = &pi, &po
 			}
@@ -686,7 +706,7 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 				u.HumanOnly = &v
 			}
 			if err := h.SetModel(ctx, a["id"], u); err != nil {
-				return errors.New(omnillm.Describe(lang(), err))
+				return say(describe(err))
 			}
 			return c.Send(control.Reply{Event: "ok", Text: t("已更新。", "Updated.")})
 		case "region.confirm":
@@ -718,7 +738,7 @@ func pairOp(ctx context.Context, h *hub.Hub, c *control.Conn, a map[string]strin
 				"Device \"%s\" wants to join. Does its screen show %s? Confirm only if it matches."), r.DeviceName, r.Code))
 		}})
 	if err != nil {
-		return errors.New(omnillm.Describe(lang(), err))
+		return say(describe(err))
 	}
 	// If this command ends early (the owner pressed Ctrl-C, the terminal
 	// closed), the code dies with it instead of holding a slot for 5 min.
@@ -734,7 +754,7 @@ func pairOp(ctx context.Context, h *hub.Hub, c *control.Conn, a map[string]strin
 	}
 	d, err := p.Wait(ctx)
 	if err != nil {
-		return errors.New(omnillm.Describe(lang(), err))
+		return say(describe(err))
 	}
 	return c.Send(control.Reply{Event: "done", Text: fmt.Sprintf(t("已添加设备“%s”（%s），每天额度 %s。", "Added \"%s\" (%s), daily budget %s."), d.Name, d.ID, usd(d.Budget))})
 }
@@ -754,8 +774,12 @@ func connectCmd(args []string) {
 	defer stop()
 	switch args[0] {
 	case "pair":
-		if device.Paired(ctx, sec) {
-			die(errors.New(t("这台设备已经配对过。要换一台主机或重新配对，先运行 omnillm connect forget。", "This device is already paired. To pair again (or with another hub), run omnillm connect forget first.")))
+		paired, err := device.CheckPaired(ctx, sec)
+		if err != nil {
+			die(sayf(t("读不出这台设备保存的配对（%s）。如果它已经配对过，请用配对时的同一个用户运行；确实要重新配对，先运行 omnillm connect forget。", "Can't read this device's saved pairing (%s). If it is already paired, run as the same user it was paired as; to pair again, run omnillm connect forget first."), dir))
+		}
+		if paired {
+			die(say(t("这台设备已经配对过（"+dir+"）。要换一台主机或重新配对，先运行 omnillm connect forget。", "This device is already paired ("+dir+"). To pair again (or with another hub), run omnillm connect forget first.")))
 		}
 		code := readSecret(t("粘贴主机给的配对文字：", "Paste the pairing text from the host: "))
 		host, _ := os.Hostname()
@@ -772,7 +796,7 @@ func connectCmd(args []string) {
 		_ = fs.Parse(args[1:])
 		d, err := device.Open(ctx, device.Options{Secrets: sec, Logf: func(f string, a ...any) { log.Printf(f, a...) }})
 		if err != nil {
-			die(errors.New(t("这台设备还没配对，先运行 omnillm connect pair。", "This device is not paired yet. Run omnillm connect pair first.")))
+			openFailed(ctx, sec, dir, err)
 		}
 		defer d.Close()
 		tokPath := filepath.Join(dir, "local.token")
@@ -793,7 +817,7 @@ func connectCmd(args []string) {
 		}
 		fmt.Println(t("这台设备的配对已删除。主机上的设备列表里它还在，可以在主机上移除。", "This device's pairing is deleted. It still shows in the hub's device list; remove it there too."))
 	case "models":
-		d := openDevice(ctx, sec)
+		d := openDevice(ctx, sec, dir)
 		defer d.Close()
 		ms, err := d.Models(ctx)
 		if err != nil {
@@ -814,7 +838,7 @@ func connectCmd(args []string) {
 		stop()
 		cctx, cstop := signal.NotifyContext(context.Background(), syscall.SIGTERM)
 		defer cstop()
-		d := openDevice(cctx, sec)
+		d := openDevice(cctx, sec, dir)
 		defer d.Close()
 		chatLoop(cctx, d, *model)
 	case "ask":
@@ -834,7 +858,7 @@ func connectCmd(args []string) {
 			}
 			images = append(images, im)
 		}
-		d := openDevice(ctx, sec)
+		d := openDevice(ctx, sec, dir)
 		defer d.Close()
 		if *model == "" {
 			*model = defaultModel(ctx, d)
@@ -902,7 +926,7 @@ func relayCmd(args []string) {
 		opts.HubTokenHashes = append(opts.HubTokenHashes, x)
 	}
 	if !*open && len(opts.HubTokenHashes) == 0 {
-		die(errors.New(t("没有允许的主机：用 --hub-token-hash 或 --open。", "No hubs allowed: pass --hub-token-hash or --open.")))
+		die(say(t("没有允许的主机：用 --hub-token-hash 或 --open。", "No hubs allowed: pass --hub-token-hash or --open.")))
 	}
 	srv := &http.Server{Addr: *listen, Handler: relay.New(opts), ReadHeaderTimeout: 10 * time.Second, MaxHeaderBytes: 16 << 10,
 		TLSConfig: &tls.Config{MinVersion: tls.VersionTLS13}}
@@ -931,11 +955,11 @@ func relayCmd(args []string) {
 	case *behindProxy:
 		host, _, _ := net.SplitHostPort(*listen)
 		if ip := net.ParseIP(host); ip == nil || !ip.IsLoopback() {
-			die(errors.New(t("--behind-tls-proxy 只能监听 127.0.0.1。", "--behind-tls-proxy may only listen on 127.0.0.1.")))
+			die(say(t("--behind-tls-proxy 只能监听 127.0.0.1。", "--behind-tls-proxy may only listen on 127.0.0.1.")))
 		}
 		err = srv.ListenAndServe()
 	default:
-		die(errors.New(t("连接服务必须用 TLS：用 --autocert、--tls-cert，或在 TLS 反向代理后面用 --behind-tls-proxy。",
+		die(say(t("连接服务必须用 TLS：用 --autocert、--tls-cert，或在 TLS 反向代理后面用 --behind-tls-proxy。",
 			"The relay requires TLS: use --autocert, --tls-cert, or --behind-tls-proxy behind a TLS reverse proxy.")))
 	}
 	if err != nil && !errors.Is(err, http.ErrServerClosed) {

@@ -64,7 +64,7 @@ func installCmd(args []string) {
 		return
 	}
 	if runtime.GOOS != "darwin" && runtime.GOOS != "linux" {
-		die(errors.New(t("这一版的一步安装只支持 macOS 和 Linux。", "One-step install supports macOS and Linux in this version.")))
+		die(say(t("这一版的一步安装只支持 macOS 和 Linux。", "One-step install supports macOS and Linux in this version.")))
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -88,7 +88,7 @@ func installCmd(args []string) {
 	}
 	st, ok := waitRunning(15 * time.Second)
 	if !ok {
-		die(errors.New(t("主机没有启动起来。日志在 ", "The hub did not start. Its log is at ") + filepath.Join(dir, "hub.log")))
+		die(say(t("主机没有启动起来。日志在 ", "The hub did not start. Its log is at ") + filepath.Join(dir, "hub.log")))
 	}
 	if st.Providers == 0 {
 		// A local model needs no key and sends nothing off the machine.
@@ -195,7 +195,7 @@ func ensureMasterKey(kf string) error {
 	if b, err := os.ReadFile(kf); err == nil {
 		if raw, err := base64.StdEncoding.DecodeString(strings.TrimSpace(string(b))); err != nil || len(raw) != 32 {
 			// Never silently replace a key: the secrets file depends on it.
-			return fmt.Errorf(t("主密钥文件 %s 损坏，请检查或从备份恢复。", "The master key file %s is damaged; check it or restore it from a backup."), kf)
+			return sayf(t("主密钥文件 %s 损坏，请检查或从备份恢复。", "The master key file %s is damaged; check it or restore it from a backup."), kf)
 		}
 	} else if errors.Is(err, os.ErrNotExist) {
 		k := base64.StdEncoding.EncodeToString(e2e.RandomBytes(32)) + "\n"

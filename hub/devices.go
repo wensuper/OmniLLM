@@ -278,7 +278,10 @@ func (h *Hub) Pair(ctx context.Context, opts PairOptions) (*Pairing, error) {
 	h.mu.Unlock()
 	if err := link.Claim(ctx, id, p.sh); err != nil {
 		h.endPairing(p, &omnillm.Error{Code: omnillm.CodeHubOffline, Msg: omnillm.MsgRelayUnavailable})
-		return nil, err
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		return nil, &omnillm.Error{Code: omnillm.CodeHubOffline, Msg: omnillm.MsgRelayUnavailable, Detail: err.Error()}
 	}
 	pc := proto.PairingCode{Relay: h.opts.RelayURL, Mailbox: id.String(), Secret: secretB,
 		HubKey: h.key.Public, PSK: append([]byte{}, p.psk...), Expires: p.expires.Unix()}

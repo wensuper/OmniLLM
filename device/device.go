@@ -173,8 +173,19 @@ func Pair(ctx context.Context, opts Options, code, name string, show func(sas st
 
 // Paired reports whether this device has a complete saved pairing.
 func Paired(ctx context.Context, s secret.Store) bool {
+	ok, err := CheckPaired(ctx, s)
+	return ok && err == nil
+}
+
+// CheckPaired is Paired that tells "not paired" apart from "the saved
+// pairing can't be read" (a locked keyring, a key file that doesn't match),
+// so a caller never pairs over a pairing it merely failed to read.
+func CheckPaired(ctx context.Context, s secret.Store) (bool, error) {
 	_, err := s.Get(ctx, sID)
-	return err == nil
+	if errors.Is(err, secret.ErrNotFound) {
+		return false, nil
+	}
+	return err == nil, err
 }
 
 // Forget deletes this device's pairing (sID first, so a partial delete

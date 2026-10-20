@@ -17,10 +17,24 @@ import (
 	"golang.org/x/term"
 )
 
-func openDevice(ctx context.Context, sec secret.Store) *device.Device {
+// openFailed says why this device can't be used: not paired (and where it
+// looked, since another user or data folder is the usual cause), or the
+// saved pairing can't be read.
+func openFailed(ctx context.Context, sec secret.Store, dir string, err error) {
+	paired, cerr := device.CheckPaired(ctx, sec)
+	switch {
+	case cerr != nil:
+		die(sayf(t("读不出这台设备保存的配对（%s）。请用配对时的同一个用户运行。", "Can't read this device's saved pairing (%s). Run as the same user it was paired as."), dir))
+	case !paired:
+		die(sayf(t("这台设备还没配对（在 %s 里没有找到配对），先运行 omnillm connect pair。", "This device is not paired yet (no pairing in %s). Run omnillm connect pair first."), dir))
+	}
+	die(err)
+}
+
+func openDevice(ctx context.Context, sec secret.Store, dir string) *device.Device {
 	d, err := device.Open(ctx, device.Options{Secrets: sec})
 	if err != nil {
-		die(errors.New(t("这台设备还没配对，先运行 omnillm connect pair。", "This device is not paired yet. Run omnillm connect pair first.")))
+		openFailed(ctx, sec, dir, err)
 	}
 	return d
 }
@@ -63,11 +77,11 @@ func pickModel(ms []omnillm.ModelInfo, person bool) string {
 		}
 	}
 	if !person {
-		die(errors.New(t("在脚本里（没有终端）只能用 API Key 或本地模型；主机上只有订阅模型，它们只给人在终端里对话用。",
+		die(say(t("在脚本里（没有终端）只能用 API Key 或本地模型；主机上只有订阅模型，它们只给人在终端里对话用。",
 			"From a script (no terminal) only API-key or local models can be used; the hub has only subscription models, which are for a person typing in a terminal.")))
 	}
 	if len(ms) == 0 {
-		die(errors.New(t("主机上还没有可用的模型。", "The hub has no models yet.")))
+		die(say(t("主机上还没有可用的模型。", "The hub has no models yet.")))
 	}
 	return ms[0].ID
 }
@@ -80,7 +94,7 @@ func chatLoop(ctx context.Context, d *device.Device, model string) {
 		die(err)
 	}
 	if len(ms) == 0 {
-		die(errors.New(t("主机上还没有可用的模型。", "The hub has no models yet.")))
+		die(say(t("主机上还没有可用的模型。", "The hub has no models yet.")))
 	}
 	if model == "" {
 		model = pickModel(ms, atTerminal())
