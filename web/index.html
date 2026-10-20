@@ -21,13 +21,15 @@
 <body>
 <div id="app">
   <section id="boot" class="screen center">
+    <img src="icon.svg" alt="" class="boot-mark">
     <div class="spinner" aria-hidden="true"></div>
     <p id="boot-text" class="muted"></p>
     <button id="boot-retry" type="button" class="primary" data-t="bootRetry" hidden></button>
   </section>
 
   <section id="welcome" class="screen center" hidden>
-    <img src="icon.svg" alt="" class="logo">
+    <!-- Brand: the name and the slogan (the brand's own words, never translated). -->
+    <div class="hero"><img src="icon.svg" alt="" class="logo"><span class="hero-name">OmniLLM</span><span class="hero-sub">Your AI, Everywhere</span></div>
     <h1 data-t="welcomeTitle"></h1>
     <p class="muted" data-t="welcomeBody"></p>
     <button id="scan" class="primary" data-t="scan"></button>
@@ -80,6 +82,7 @@
 
   <aside id="drawer" class="drawer" hidden>
     <div class="drawer-panel">
+      <div class="brand"><img class="brand-mark" src="icon.svg" alt="" width="32" height="32"><span class="brand-text"><span class="brand-name">OmniLLM</span><span class="brand-sub">Your AI, Everywhere</span></span></div>
       <h2 data-t="chats"></h2>
       <ul id="chat-list"></ul>
       <div class="drawer-foot">

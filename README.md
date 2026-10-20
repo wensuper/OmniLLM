@@ -1,4 +1,8 @@
-# OmniLLM
+<p align="center"><img src="web/icon.svg" width="96" height="96" alt=""></p>
+
+<h1 align="center">OmniLLM</h1>
+
+<p align="center"><b>Your AI, Everywhere</b></p>
 
 **在一台电脑上登录大模型，手机、平板、服务器都能用。**
 *Log in to your LLM once, on one computer. Use it from every device you own.*
