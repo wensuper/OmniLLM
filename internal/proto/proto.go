@@ -163,10 +163,12 @@ func ParsePairingCode(s string, now time.Time) (PairingCode, error) {
 	if i := strings.Index(s, "#pair="); i >= 0 {
 		s = s[i+len("#pair="):]
 	}
-	damaged := errors.New("proto: pairing code is damaged; copy it again")
+	// People see these, so they carry a message that says what to do.
+	damaged := &omnillm.Error{Code: omnillm.CodeBadRequest, Msg: omnillm.MsgPairingDamaged, Detail: "pairing code is damaged"}
+	notCode := &omnillm.Error{Code: omnillm.CodeBadRequest, Msg: omnillm.MsgNotPairing, Detail: "not a pairing code"}
 	switch {
 	case len(s) > 2048:
-		return p, errors.New("proto: not a pairing code")
+		return p, notCode
 	case strings.HasPrefix(s, pairingPrefix2), strings.HasPrefix(s, pairingPrefix3):
 		b, err := base64.RawURLEncoding.DecodeString(s[len(pairingPrefix2):])
 		if err == nil && strings.HasPrefix(s, pairingPrefix3) {
@@ -194,10 +196,10 @@ func ParsePairingCode(s string, now time.Time) (PairingCode, error) {
 			return p, damaged
 		}
 	default:
-		return p, errors.New("proto: not a pairing code")
+		return p, notCode
 	}
 	if len(p.Secret) != 32 || len(p.HubKey) != 32 || len(p.PSK) != 32 || len(p.Mailbox) != 32 || p.Relay == "" {
-		return p, errors.New("proto: pairing code is incomplete; copy it again")
+		return p, damaged
 	}
 	if now.Unix() > p.Expires {
 		return p, &omnillm.Error{Code: omnillm.CodePairingFailed, Msg: omnillm.MsgPairingExpired}

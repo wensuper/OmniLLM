@@ -39,6 +39,8 @@ const (
 	MsgPairingExpired    = "pairing_expired"
 	MsgPairingDenied     = "pairing_denied"
 	MsgPairingFailed     = "pairing_failed"
+	MsgPairingDamaged    = "pairing_damaged"
+	MsgNotPairing        = "not_pairing"
 	MsgToolNotAllowed    = "tool_not_allowed"
 	MsgNotFound          = "not_found"
 	MsgRelayUnavailable  = "relay_unavailable"
@@ -60,7 +62,7 @@ var texts = map[string][2]string{ // zh, en
 	msgBadModel:          {"请求里没有指定模型，或者模型名太长。", "The request names no model, or the model name is too long."},
 	msgBadMessages:       {"请求里没有消息，或者消息太多。", "The request has no messages, or too many."},
 	msgBadRole:           {"消息的角色只能是 system、user 或 assistant。", "A message role must be system, user or assistant."},
-	msgTooLarge:          {"请求内容太大（上限 4 MB），请缩短后再试。", "The request is too large (4 MB limit). Shorten it and try again."},
+	msgTooLarge:          {"请求内容太大（文字加图片上限 5 MB），请缩短或少放几张图再试。", "The request is too large (5 MB of text and images). Shorten it or send fewer images."},
 	msgBadMaxTokens:      {"回复长度上限不在允许范围内。", "The reply length limit is out of range."},
 	msgBadTemperature:    {"temperature 要在 0 到 2 之间。", "temperature must be between 0 and 2."},
 	msgBadSchema:         {"结构化输出的 JSON Schema 不是合法的 JSON。", "The structured-output JSON Schema is not valid JSON."},
@@ -86,6 +88,8 @@ var texts = map[string][2]string{ // zh, en
 	MsgPairingExpired:    {"这个配对码已过期或已用过，请在主机上重新生成。", "This pairing code has expired or was already used. Make a new one on the host."},
 	MsgPairingDenied:     {"主机上没有确认这台设备，配对已取消。", "The host did not confirm this device, so pairing was cancelled."},
 	MsgPairingFailed:     {"配对没有成功，请在主机上重新生成配对码再试。", "Pairing failed. Make a new pairing code on the host and try again."},
+	MsgPairingDamaged:    {"配对文字不完整或被改动了，请在主机上重新完整复制一次。", "The pairing text is incomplete or altered. Copy it again, in full, from the host."},
+	MsgNotPairing:        {"这不是 OmniLLM 的配对文字。请从主机控制台的“添加设备”里复制。", "This is not an OmniLLM pairing text. Copy it from Add device in the host's console."},
 	MsgToolNotAllowed:    {"这个工具不允许从别的设备调用。可以在主机上调整。", "This tool may not be called from another device. You can change that on the host."},
 	MsgNotFound:          {"没有找到。", "Not found."},
 	MsgBrowserRefused:    {"本机接口不接受网页发来的请求。请用程序直接调用。", "This local interface does not accept requests from web pages. Call it from a program."},

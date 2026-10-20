@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	omnillm "github.com/wensuper/OmniLLM"
 )
 
 func samplePairing() PairingCode {
@@ -57,5 +59,25 @@ func TestCompactPairingCode(t *testing.T) {
 	expired.Expires = time.Now().Add(-time.Minute).Unix()
 	if _, err := ParsePairingCode(expired.Encode(), time.Now()); err == nil {
 		t.Fatal("expired code accepted")
+	}
+}
+
+// People pasting a broken or wrong text get a message that says what to do,
+// not "something went wrong inside".
+func TestPairingTextErrorsSayWhatToDo(t *testing.T) {
+	good := samplePairing().Encode()
+	cases := map[string]string{
+		good[:len(good)-6]:          omnillm.MsgPairingDamaged,
+		good[:20] + "x" + good[21:]: omnillm.MsgPairingDamaged,
+		"omnillm1-" + base64.RawURLEncoding.EncodeToString([]byte(`{"relay":"wss://x"}`)): omnillm.MsgPairingDamaged,
+		"hello":                   omnillm.MsgNotPairing,
+		strings.Repeat("a", 3000): omnillm.MsgNotPairing,
+	}
+	for text, want := range cases {
+		_, err := ParsePairingCode(text, time.Now())
+		e := omnillm.AsError(err)
+		if e == nil || e.Msg != want || e.Code == omnillm.CodeInternal {
+			t.Errorf("%.30q: got %v, want message %s", text, err, want)
+		}
 	}
 }
