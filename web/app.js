@@ -11,7 +11,10 @@ if (window.top !== window.self) { document.documentElement.textContent = ""; thr
 // ---------- language ----------
 const T = {
   zh: {
-    loading: "正在载入……", welcomeTitle: "在这台设备上用你的模型",
+    loading: "正在载入……", bootDownload: "正在下载……", bootStart: "正在启动……", bootStorage: "正在读取这台设备上保存的内容……",
+    bootSlow: "载入超过 20 秒还没完成，停在“{0}”。点下面的按钮清掉缓存重新载入；网络慢的话也可以换个网络再试。",
+    bootCrashed: "程序意外停止了。点下面的按钮清掉缓存重新载入。", bootError: "载入失败：", bootRetry: "重新载入",
+    welcomeTitle: "在这台设备上用你的模型",
     welcomeBody: "在你的主机（Mac 或电脑）上打开 OmniLLM 控制台，点“添加设备”，然后用这台设备扫描屏幕上的二维码。",
     scan: "扫描二维码", pasteInstead: "或者粘贴配对文字", connect: "连接", cancel: "取消", back: "返回",
     scanHint: "把主机屏幕上的二维码放进框里", camDenied: "没有拿到摄像头权限。可以改用下面的“粘贴配对文字”。",
@@ -31,7 +34,10 @@ const T = {
     removedHere: "这台设备已在主机上被移除，对话记录也已从这台设备上清除。需要的话，在主机上重新添加。",
   },
   en: {
-    loading: "Loading…", welcomeTitle: "Use your models on this device",
+    loading: "Loading…", bootDownload: "Downloading…", bootStart: "Starting…", bootStorage: "Reading what this device saved…",
+    bootSlow: "Loading has taken over 20 seconds and is stuck at \"{0}\". Tap below to clear the cache and load again; on a slow network, another network may help.",
+    bootCrashed: "The program stopped unexpectedly. Tap below to clear the cache and load again.", bootError: "Loading failed: ", bootRetry: "Load again",
+    welcomeTitle: "Use your models on this device",
     welcomeBody: "On your hub (your Mac or computer), open the OmniLLM console, choose Add device, and scan the QR code on its screen with this device.",
     scan: "Scan QR code", pasteInstead: "Or paste the pairing text", connect: "Connect", cancel: "Cancel", back: "Back",
     scanHint: "Point at the QR code on your hub's screen", camDenied: "No camera access. Use \"paste the pairing text\" below instead.",
@@ -116,10 +122,54 @@ async function unseal(name) {
 
 // ---------- the Go side ----------
 const ready = new Promise((res) => addEventListener("omnillm-ready", res, { once: true }));
+// boot shows the loading step; the watchdog names it if loading stalls.
+const B = { stage: "", started: Date.now(), err: "", timer: null };
+function boot(stage, detail) {
+  B.stage = stage;
+  if (!$("boot").hidden) $("boot-text").textContent = t(stage) + (detail ? " " + detail : "");
+}
+function bootFailed(why) {
+  clearTimeout(B.timer);
+  $("boot-text").textContent = why;
+  $("boot-retry").hidden = false;
+}
+function bootWatch() {
+  B.timer = setTimeout(() => {
+    if (B.done) return;
+    bootFailed(t("bootSlow", t(B.stage)) + (B.err ? " (" + B.err + ")" : ""));
+  }, 20000);
+}
+// Errors while loading are shown, not swallowed.
+addEventListener("error", (e) => { if (!B.done) B.err = String(e.message || e.error || "error").slice(0, 160); });
+addEventListener("unhandledrejection", (e) => { if (!B.done) B.err = String(e.reason && e.reason.message || e.reason).slice(0, 160); });
+async function cleanReload() {
+  try {
+    if (navigator.serviceWorker) await Promise.all((await navigator.serviceWorker.getRegistrations()).map((r) => r.unregister()));
+    if (window.caches) await Promise.all((await caches.keys()).map((k) => caches.delete(k)));
+  } catch {}
+  location.reload();
+}
 async function startWasm() {
+  boot("bootDownload");
+  const res = await fetch("omni.wasm");
+  if (!res.ok) throw new Error("omni.wasm HTTP " + res.status);
+  // Read it ourselves to show progress (the size is the compressed one when
+  // the server says so; then the percentage is only an estimate).
+  const total = Number(res.headers.get("content-length")) || 0;
+  const reader = res.body.getReader();
+  const parts = []; let got = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    parts.push(value); got += value.length;
+    boot("bootDownload", total && total >= got ? Math.floor(got * 100 / total) + "%" : (got / 1048576).toFixed(1) + " MB");
+  }
+  const bytes = new Uint8Array(got); let o = 0;
+  for (const p of parts) { bytes.set(p, o); o += p.length; }
+  boot("bootStart");
   const go = new Go();
-  const r = await WebAssembly.instantiateStreaming(fetch("omni.wasm"), go.importObject);
-  go.run(r.instance);
+  const r = await WebAssembly.instantiate(bytes, go.importObject);
+  go.run(r.instance).then(() => { if (!B.done) bootFailed(t("bootCrashed")); });
   await ready;
 }
 
@@ -150,6 +200,8 @@ function deviceName() {
   throw new Error("mixed build");
 })();
 
+$("boot-retry").addEventListener("click", cleanReload);
+
 (async function main() {
   $("boot-text").textContent = t("loading");
   // A pairing link carries the code in the fragment; take it and wipe it
@@ -161,8 +213,10 @@ function deviceName() {
   }
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
-  try { await startWasm(); } catch (e) { $("boot-text").textContent = String(e && e.message || e); return; }
+  bootWatch();
+  try { await startWasm(); } catch (e) { bootFailed(t("bootError") + String(e && e.message || e)); return; }
   S.ready = true;
+  boot("bootStorage");
   if (S.pendingLink) { link = S.pendingLink; S.pendingLink = ""; }
   // A link that arrived while loading may have changed the address without
   // a hashchange event (seen once in 10 rounds): read the address itself.
@@ -170,8 +224,11 @@ function deviceName() {
     link = location.hash.slice(6);
     history.replaceState(null, "", location.pathname + location.search);
   }
-  S.device = await unseal("device");
-  S.chats = (await unseal("chats")) || [];
+  try {
+    S.device = await unseal("device");
+    S.chats = (await unseal("chats")) || [];
+  } catch (e) { bootFailed(t("bootError") + String(e && e.message || e)); return; }
+  B.done = true; clearTimeout(B.timer);
   if (S.device && !link) return openChat();
   if (link) return pair(link, true);
   show("welcome");
