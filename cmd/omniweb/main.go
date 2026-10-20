@@ -212,25 +212,42 @@ func chat(_ js.Value, a []js.Value) any {
 			cancelFn()
 		}()
 		// A person typed this: the hub lets subscription models answer.
-		s, err := d.Complete(ctx, omnillm.Request{Model: model, Messages: msgs, Caller: omnillm.Interactive})
-		if err != nil {
-			return nil, err
-		}
-		defer s.Close()
-		for {
-			c, err := s.Recv()
-			if errors.Is(err, io.EOF) {
-				break
-			}
+		req := omnillm.Request{Model: model, Messages: msgs, Caller: omnillm.Interactive}
+		for retried := false; ; retried = true {
+			s, err := d.Complete(ctx, req)
 			if err != nil {
 				return nil, err
 			}
-			if c.Text != "" {
-				onDelta.Invoke(c.Text)
+			got := false
+			for {
+				c, err := s.Recv()
+				if errors.Is(err, io.EOF) {
+					break
+				}
+				// The connection dropped before any of the reply came (a
+				// phone switching networks with a picture on its way): the
+				// hub has stopped that call, so ask once more.
+				if err != nil && !got && !retried && errors.Is(err, omnillm.ErrHubOffline) && ctx.Err() == nil {
+					s.Close()
+					s = nil
+					break
+				}
+				if err != nil {
+					s.Close()
+					return nil, err
+				}
+				if c.Text != "" {
+					got = true
+					onDelta.Invoke(c.Text)
+				}
 			}
+			if s == nil {
+				continue
+			}
+			u := s.Usage()
+			s.Close()
+			return map[string]any{"in": u.InputTokens, "out": u.OutputTokens, "finish": s.FinishReason()}, nil
 		}
-		u := s.Usage()
-		return map[string]any{"in": u.InputTokens, "out": u.OutputTokens, "finish": s.FinishReason()}, nil
 	})
 }
 

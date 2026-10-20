@@ -44,6 +44,7 @@ const T = {
     pairDone: "已添加“{0}”", pairFailed: "配对没有完成：{0}",
     pairDenied: "已拒绝",
     noRelay: "还没有配置连接服务，其他设备暂时连不上。可以先跳过；配好连接服务后，在“设备”里添加。",
+    relayWait: "正在连上连接服务……", relayDown: "连接服务现在连不上，请检查这台电脑的网络。连上之后这里会自动继续。",
     relayOn: "连接服务已连上", relayOff: "连接服务未连上", relayNone: "未配置连接服务",
     regionPaused: "主机所在地区变了，已暂停调用。", regionConfirm: "确认继续",
     appToken: "“{0}”的令牌（只显示这一次，请现在复制保存）：",
@@ -92,6 +93,7 @@ const T = {
     pairDone: "Added \"{0}\"", pairFailed: "Pairing did not finish: {0}",
     pairDenied: "Refused",
     noRelay: "No connection service is set up yet, so other devices can't connect. Skip for now; add devices under Devices once it is set up.",
+    relayWait: "Connecting to the connection service…", relayDown: "The connection service can't be reached right now; check this computer's network. This continues by itself once it connects.",
     relayOn: "Connection service online", relayOff: "Connection service offline", relayNone: "No connection service",
     regionPaused: "The host's region changed; calls are paused.", regionConfirm: "Confirm and resume",
     appToken: "Token for \"{0}\" (shown once — copy it now):",
@@ -163,6 +165,19 @@ async function refresh() {
     showDash();
   }
 }
+
+// The hub reaches the relay a moment after it starts, and reconnects by
+// itself after a drop: keep the status line current instead of showing
+// what was true when the page opened.
+setInterval(async () => {
+  if (!S || document.hidden) return;
+  let r;
+  try { r = await api("relay"); } catch (_) { return; }
+  if (r.relay_up !== S.relay_up || r.relay_configured !== S.relay_configured) {
+    S.relay_up = r.relay_up; S.relay_configured = r.relay_configured;
+    renderStatus();
+  }
+}, 3000);
 
 function wizardDone() { return store("omnillm.wizard") === "done"; }
 
@@ -276,8 +291,23 @@ function stopPair() { if (pairTimer) { clearInterval(pairTimer); pairTimer = nul
 async function startPair(area, onDone) {
   stopPair();
   area.textContent = "";
-  if (!S.relay_configured || !S.relay_up) {
+  if (!S.relay_configured) {
     area.append(el("p", t("noRelay"), "muted"));
+    return;
+  }
+  if (!S.relay_up) {
+    // Configured but not connected yet (just started, or the network is
+    // down): wait for it here and carry on by itself.
+    const w = el("p", t("relayWait"), "muted");
+    area.append(w);
+    const since = Date.now();
+    pairTimer = setInterval(async () => {
+      let r;
+      try { r = await api("relay"); } catch (_) { return; }
+      S.relay_up = r.relay_up; S.relay_configured = r.relay_configured;
+      if (r.relay_up || !r.relay_configured) { renderStatus(); startPair(area, onDone); return; }
+      if (Date.now() - since > 15000) w.textContent = t("relayDown");
+    }, 1000);
     return;
   }
   let p;

@@ -30,7 +30,7 @@ fi
 os=$(uname -s | tr '[:upper:]' '[:lower:]')
 case "$os" in
   darwin|linux) ;;
-  *) fail "$(t "暂不支持这个系统：$os（目前只支持 macOS 和 Linux）" "unsupported system: $os (macOS and Linux only for now)")" ;;
+  *) fail "$(t "暂不支持这个系统：${os}（目前只支持 macOS 和 Linux）" "unsupported system: $os (macOS and Linux only for now)")" ;;
 esac
 arch=$(uname -m)
 case "$arch" in
@@ -84,7 +84,7 @@ if [ "$code" = "404" ]; then
   if [ -n "$tag" ]; then
     printf '%s' "$tag" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$' || fail "unexpected release name: refusing"
     BASE="https://github.com/$REPO/releases/download/$tag"
-    say "$(t "使用预发布版 $tag。" "Using pre-release $tag.")"
+    say "$(t "使用预发布版 ${tag}。" "Using pre-release $tag.")"
     code=$(curl -sSL --proto '=https' --tlsv1.2 -o "$work/checksums.txt" -w '%{http_code}' "$BASE/checksums.txt" 2>/dev/null || true)
     [ "$code" = "200" ] || fail "release $tag has no checksums.txt (HTTP ${code:-none}); refusing"
   fi

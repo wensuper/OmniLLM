@@ -154,6 +154,7 @@ func (s *Server) Handler() http.Handler {
 		mux.HandleFunc(pattern, s.authed(f))
 	}
 	api("GET /console/api/status", s.status)
+	api("GET /console/api/relay", s.relay)
 	api("GET /console/api/ollama", s.ollama)
 	api("POST /console/api/providers/add", s.addProvider)
 	api("POST /console/api/providers/remove", s.removeProvider)
@@ -455,6 +456,11 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 		"relay_up": s.hub.RelayUp(), "relay_configured": s.hub.RelayConfigured(),
 		"region": map[string]any{"confirmed": confirmed, "seen": seen, "paused": paused},
 	})
+}
+
+// relay is the cheap part of status, polled while the hub (re)connects.
+func (s *Server) relay(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, map[string]any{"relay_up": s.hub.RelayUp(), "relay_configured": s.hub.RelayConfigured()})
 }
 
 func (s *Server) ollama(w http.ResponseWriter, r *http.Request) {

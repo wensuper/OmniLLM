@@ -401,7 +401,10 @@ function connect() {
     const sel = $("model");
     if (!S.models.length) { sel.textContent = ""; const o = el("option", t("loadingModels")); o.value = ""; sel.append(o); }
     try {
-      await omnillm.open(S.device.state);
+      // Open once per pairing: reopening closes the old device, and with it
+      // a reply still on its way (the network coming back fires "online"
+      // mid-reply). An open device reconnects by itself.
+      if (S.openedState !== S.device.state) { await omnillm.open(S.device.state); S.openedState = S.device.state; }
       await loadModels();
       setOnline(true);
     } catch (e) {

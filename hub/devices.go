@@ -7,6 +7,7 @@ import (
 	"encoding/base32"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"sort"
 	"strings"
 	"sync"
@@ -333,6 +334,24 @@ func (h *Hub) endPairing(p *pairing, err error) {
 }
 
 // cleanName keeps a device name printable and short.
+// uniqueName returns name, or name with the lowest number from 2 up that
+// no device in devs already has (case does not count).
+func uniqueName(name string, devs []Device) string {
+	taken := make(map[string]bool, len(devs))
+	for _, d := range devs {
+		taken[strings.ToLower(d.Name)] = true
+	}
+	if !taken[strings.ToLower(name)] {
+		return name
+	}
+	for i := 2; ; i++ {
+		n := fmt.Sprintf("%s %d", name, i)
+		if !taken[strings.ToLower(n)] {
+			return n
+		}
+	}
+}
+
 func cleanName(s string) string {
 	var b strings.Builder
 	for _, r := range s {
@@ -360,6 +379,11 @@ func (h *Hub) finishPairing(ctx context.Context, p *pairing, sess *e2e.Session, 
 	name := cleanName(hello.Name)
 	if p.opts.Name != "" {
 		name = cleanName(p.opts.Name)
+	}
+	// Two phones both called "iPhone" can't be told apart in the device
+	// list (and the wrong one gets removed): the second is "iPhone 2".
+	if devs, err := h.listDevices(ctx); err == nil {
+		name = uniqueName(name, devs)
 	}
 	code := e2e.SAS(sess.ChannelBinding())
 	cctx, cancel := context.WithDeadline(ctx, p.expires)

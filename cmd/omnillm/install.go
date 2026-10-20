@@ -107,6 +107,7 @@ func installCmd(args []string) {
 		_ = control.Call(filepath.Join(dir, "control.sock"), control.Request{Op: "ollama.auto"}, func(control.Reply) (bool, bool) { return false, false })
 		st, _ = waitRunning(time.Second)
 	}
+	st = waitRelay(st, 10*time.Second)
 	st.Service = service
 	st.Headless = headless()
 	fmt.Println(t("OmniLLM 已安装，主机在后台运行（开机自动启动）。", "OmniLLM is installed; the hub runs in the background and starts at login."))
@@ -144,6 +145,9 @@ func nextStep(st Status) string {
 	case !st.RelayConfigured:
 		return t("已经可以在这台电脑上使用。要让其他设备连进来，需要先配置连接服务。",
 			"Ready on this computer. To let other devices connect, a connection service must be set up first.")
+	case !st.RelayUp:
+		return t("连接服务现在连不上，手机和其他设备暂时用不了；主机会自己重连。请检查这台电脑的网络。",
+			"The connection service can't be reached right now, so phones and other devices can't connect; the hub keeps retrying. Check this computer's network.")
 	case st.Devices == 0:
 		return t("下一步：在控制台的“设备”里添加手机或其他电脑。", "Next: add a phone or another computer under Devices in the console.")
 	}
@@ -412,6 +416,20 @@ func waitRunning(d time.Duration) (Status, bool) {
 	}
 }
 
+// waitRelay gives a hub that has just started a moment to reach the
+// relay, so the first status after a start doesn't report it as down.
+func waitRelay(st Status, d time.Duration) Status {
+	deadline := time.Now().Add(d)
+	for st.Running && st.RelayConfigured && !st.RelayUp && time.Now().Before(deadline) {
+		time.Sleep(250 * time.Millisecond)
+		if s, ok := queryStatus(); ok {
+			s.Running = true
+			st = s
+		}
+	}
+	return st
+}
+
 func loginURL() (string, error) {
 	var url string
 	err := control.Call(filepath.Join(dataDir("hub"), "control.sock"), control.Request{Op: "console.login"},
@@ -425,6 +443,7 @@ func loginURL() (string, error) {
 func statusCmd(args []string) {
 	st, ok := queryStatus()
 	st.Running = ok
+	st = waitRelay(st, 5*time.Second)
 	st.Headless = headless()
 	st.Next = nextStep(st)
 	for _, a := range args {

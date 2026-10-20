@@ -51,7 +51,7 @@ func TestSystemdQuote(t *testing.T) {
 }
 
 func TestNextStepAlwaysSaysSomething(t *testing.T) {
-	for _, st := range []Status{{}, {Running: true}, {Running: true, Providers: 1}, {Running: true, Providers: 1, RelayConfigured: true}, {Running: true, Providers: 1, RelayConfigured: true, Devices: 1}} {
+	for _, st := range []Status{{}, {Running: true}, {Running: true, Providers: 1}, {Running: true, Providers: 1, RelayConfigured: true}, {Running: true, Providers: 1, RelayConfigured: true, Devices: 1}, {Running: true, Providers: 1, RelayConfigured: true, RelayUp: true, Devices: 1}} {
 		if nextStep(st) == "" {
 			t.Fatalf("%+v", st)
 		}
