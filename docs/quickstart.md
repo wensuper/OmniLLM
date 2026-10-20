@@ -120,6 +120,8 @@ omnillm connect models                               # 看能用哪些模型
 
 不指定模型时，默认用 Claude Sonnet（有 Claude 订阅时）。
 
+安装程序会把 `~/.local/bin` 加到 PATH（写进 `~/.bashrc`、`~/.zshrc` 等），新开的终端里可以直接输入 `omnillm`；刚装完的那个终端里，用安装结束时打印的完整路径 `~/.local/bin/omnillm`。
+
 ## 第 5 步（可选）：让程序也能用
 
 设备上的程序（脚本、编辑器插件、其他 AI 应用）可以通过一个兼容 OpenAI 的本机接口使用主机的模型：
