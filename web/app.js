@@ -12,7 +12,7 @@ if (window.top !== window.self) { document.documentElement.textContent = ""; thr
 const T = {
   zh: {
     loading: "正在载入……", bootDownload: "正在下载……", bootStart: "正在启动……", bootStorage: "正在读取这台设备上保存的内容……",
-    bootSlow: "载入超过 20 秒还没完成，停在“{0}”。点下面的按钮清掉缓存重新载入；网络慢的话也可以换个网络再试。",
+    bootSlow: "载入停了 20 秒没有进展，停在“{0}”。点下面的按钮清掉缓存重新载入；网络慢的话也可以换个网络再试。",
     bootCrashed: "程序意外停止了。点下面的按钮清掉缓存重新载入。", bootError: "载入失败：", bootRetry: "重新载入",
     welcomeTitle: "在这台设备上用你的模型",
     welcomeBody: "在你的主机（Mac 或电脑）上打开 OmniLLM 控制台，点“添加设备”，然后用这台设备扫描屏幕上的二维码。",
@@ -35,7 +35,7 @@ const T = {
   },
   en: {
     loading: "Loading…", bootDownload: "Downloading…", bootStart: "Starting…", bootStorage: "Reading what this device saved…",
-    bootSlow: "Loading has taken over 20 seconds and is stuck at \"{0}\". Tap below to clear the cache and load again; on a slow network, another network may help.",
+    bootSlow: "Loading has made no progress for 20 seconds, stuck at \"{0}\". Tap below to clear the cache and load again; on a slow network, another network may help.",
     bootCrashed: "The program stopped unexpectedly. Tap below to clear the cache and load again.", bootError: "Loading failed: ", bootRetry: "Load again",
     welcomeTitle: "Use your models on this device",
     welcomeBody: "On your hub (your Mac or computer), open the OmniLLM console, choose Add device, and scan the QR code on its screen with this device.",
@@ -133,7 +133,10 @@ function bootFailed(why) {
   $("boot-text").textContent = why;
   $("boot-retry").hidden = false;
 }
+// bootWatch fires when loading makes no progress for 20 s: a slow but
+// moving download keeps it waiting (each chunk calls bootWatch again).
 function bootWatch() {
+  clearTimeout(B.timer);
   B.timer = setTimeout(() => {
     if (B.done) return;
     bootFailed(t("bootSlow", t(B.stage)) + (B.err ? " (" + B.err + ")" : ""));
@@ -162,11 +165,12 @@ async function startWasm() {
     const { done, value } = await reader.read();
     if (done) break;
     parts.push(value); got += value.length;
+    bootWatch();
     boot("bootDownload", total && total >= got ? Math.floor(got * 100 / total) + "%" : (got / 1048576).toFixed(1) + " MB");
   }
   const bytes = new Uint8Array(got); let o = 0;
   for (const p of parts) { bytes.set(p, o); o += p.length; }
-  boot("bootStart");
+  boot("bootStart"); bootWatch();
   const go = new Go();
   const r = await WebAssembly.instantiate(bytes, go.importObject);
   go.run(r.instance).then(() => { if (!B.done) bootFailed(t("bootCrashed")); });
@@ -216,7 +220,7 @@ $("boot-retry").addEventListener("click", cleanReload);
   bootWatch();
   try { await startWasm(); } catch (e) { bootFailed(t("bootError") + String(e && e.message || e)); return; }
   S.ready = true;
-  boot("bootStorage");
+  boot("bootStorage"); bootWatch();
   if (S.pendingLink) { link = S.pendingLink; S.pendingLink = ""; }
   // A link that arrived while loading may have changed the address without
   // a hashchange event (seen once in 10 rounds): read the address itself.
