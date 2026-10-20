@@ -1,0 +1,145 @@
+# 快速上手
+
+目标：5 分钟内在手机上用到你 Mac 上的 Claude 或 ChatGPT，全程不花额外的钱、不用自己的服务器。
+
+- [开始前：你需要什么](#开始前你需要什么)
+- [第 1 步：在主机上安装](#第-1-步在主机上安装)
+- [第 2 步：接上模型](#第-2-步接上模型)
+- [第 3 步：加手机或平板](#第-3-步加手机或平板)
+- [第 4 步：加 Linux 服务器或另一台电脑](#第-4-步加-linux-服务器或另一台电脑)
+- [第 5 步（可选）：让程序也能用](#第-5-步可选让程序也能用)
+- [检查一下](#检查一下)
+
+## 开始前：你需要什么
+
+| 需要 | 说明 |
+|---|---|
+| 一台做主机的电脑 | macOS 或 Linux（x86-64、ARM64）。设备只有在它开着、联网时才能用，所以最好是常开的那台。Windows 暂不支持做主机 |
+| 一个模型来源，三选一 | **订阅**：主机上装好并登录 Claude Code（Claude Pro / Max）或 Codex（ChatGPT Plus / Pro）。**API Key**：Anthropic、OpenAI 或兼容 OpenAI 接口的服务。**本地模型**：主机上装 [Ollama](https://ollama.com)，免费，数据不出这台电脑 |
+| 手机或平板 | 一个现代浏览器：iPhone / iPad 用 Safari，安卓用 Chrome。不用装 App |
+
+**不需要**：服务器、域名、改路由器、注册任何新账号、sudo 权限。主机和设备都连项目提供的公共连接服务（`relay.ixxzh.com`），免费，它只转发加密数据。想用自己的，见[自己部署连接服务](self-host.md)。
+
+## 第 1 步：在主机上安装
+
+**方法一：交给你的 AI 助手（推荐）。** 把这一句发给 Claude Code、Codex、Cursor 等：
+
+> 请阅读并按照 https://raw.githubusercontent.com/wensuper/OmniLLM/main/INSTALL.md 在这台电脑上安装 OmniLLM。
+
+它会下载、核对签名、安装，然后告诉你下一步。它不会、也不应该让你把任何 Key 贴进聊天。
+
+**方法二：自己运行。** 在终端里（普通用户，不要 sudo）：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh -o omnillm-install.sh && sh omnillm-install.sh
+```
+
+安装脚本会做这些事，不会改动别的东西：
+
+1. 从本仓库的 GitHub 发布页下载对应系统的程序，核对 SHA-256 校验和；装了 [cosign](https://github.com/sigstore/cosign) 的话，还会核对校验和是本仓库的发布流程签的。任何一步对不上就停下。
+2. 把程序放到 `~/.local/bin/omnillm`。
+3. 注册一个只属于当前用户的后台服务（macOS 用 launchd，Linux 用 systemd 用户服务），开机登录后自动运行。
+4. 打开本机控制台（只在这台电脑的浏览器里打开，地址是 `127.0.0.1`）。
+
+控制台关掉了，随时用这条命令再打开：
+
+```bash
+~/.local/bin/omnillm open
+```
+
+## 第 2 步：接上模型
+
+### 用订阅（Claude 或 ChatGPT）
+
+在主机上装好官方程序，**自己**登录一次：
+
+| 订阅 | 装什么 | 怎么登录 |
+|---|---|---|
+| Claude Pro / Max | [Claude Code](https://claude.com/claude-code) | 终端里运行 `claude`，按提示登录 |
+| ChatGPT Plus / Pro | [Codex](https://github.com/openai/codex) | 终端里运行 `codex login` |
+
+登录好以后，再打开一次控制台（或运行 `~/.local/bin/omnillm status`），主机会发现它并自动接上。Claude 的 Sonnet、Opus、Haiku 和 Codex 的默认模型会出现在模型列表里，不用填任何东西。
+
+登录始终留在官方程序自己那里，OmniLLM 只问它“登录了吗”，不读取、不复制登录信息。主机调用它时关掉了它所有的工具（运行命令、读写文件、联网搜索、插件），只当纯文本模型用，所以设备上的人没法让它动你 Mac 上的文件。
+
+### 用 API Key
+
+在控制台的「模型」里选提供商，粘贴 Key，点「验证并接入」。主机会先发一个最小请求验证，通过了才保存。Key 存进系统钥匙串（Linux 上是只有你能读的加密文件）。
+
+**只在控制台里粘贴 Key**，不要贴进和 AI 的聊天，也不要写在命令行上：聊天会发给 AI 服务商，命令行会留在 shell 历史里。
+
+没有浏览器的 Linux 主机，在它的终端里运行下面这条，然后按提示粘贴 Key（Key 从输入读取，不出现在命令行上）：
+
+```bash
+~/.local/bin/omnillm hub provider add anthropic   # 或 openai
+```
+
+### 用本地模型
+
+装好 [Ollama](https://ollama.com) 并下载一个模型（如 `ollama pull qwen3`），主机会自动发现并接上。没有自动接上的话，运行 `~/.local/bin/omnillm hub provider add ollama`。
+
+## 第 3 步：加手机或平板
+
+1. 在控制台里点「设备」→「添加设备」。屏幕上出现一个大二维码。
+2. 用手机**相机**扫码，打开链接。网页会说明它要连到哪个连接服务，点「连接」。
+3. 电脑和手机上会显示同一个 6 位数。**核对一致**，再在电脑上点「确认」。
+4. 手机上出现对话界面，发一句试试。
+
+几点说明：
+
+- 二维码 5 分钟内有效，只能用一次。过期了点「添加设备」重新生成。
+- 想像 App 一样打开：iPhone 上点 Safari 的「分享」→「添加到主屏幕」，安卓上点 Chrome 菜单里的「添加到主屏幕」。从主屏幕打开的网页有自己的存储，第一次需要在里面再配对一次（页面上可以直接用摄像头扫码，或粘贴配对文字）。
+- 每台设备默认能用所有已接入的模型，每天额度 5 美元（估算；订阅模型不计钱，按次数限）。在控制台的「设备」里可以改。
+- 平板和手机步骤一样，每台设备各配对一次。
+
+## 第 4 步：加 Linux 服务器或另一台电脑
+
+没有摄像头的机器用**配对文字**代替二维码。服务器上只放一个程序，不装后台服务，不需要 sudo。
+
+1. 在主机控制台点「添加设备」，展开「电脑或服务器（没有摄像头）」。
+2. 在那台机器上运行页面上给出的这一行：
+
+   ```bash
+   curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh -o omnillm-install.sh && sh omnillm-install.sh --device
+   ```
+
+   装完它会提示你粘贴配对文字。
+3. 从控制台复制配对文字（以 `omnillm3-` 开头），粘贴过去。配对文字由你自己搬运，比如通过 SSH 粘贴；不要发给别人，也不要贴进聊天。
+4. 和手机一样，核对两边的 6 位数，在主机上点「确认」。
+
+已经装过程序的机器，直接运行 `~/.local/bin/omnillm connect pair`，再粘贴配对文字。
+
+配好以后，在那台机器的终端里：
+
+```bash
+omnillm connect chat                                 # 多轮对话；Ctrl-C 只停这一次回答
+omnillm connect ask "用一句话解释什么是端到端加密"      # 问一句就退出
+omnillm connect ask --image 截图.png "这张图里有什么？" # 带图片
+omnillm connect models                               # 看能用哪些模型
+```
+
+不指定模型时，默认用 Claude Sonnet（有 Claude 订阅时）。
+
+## 第 5 步（可选）：让程序也能用
+
+设备上的程序（脚本、编辑器插件、其他 AI 应用）可以通过一个兼容 OpenAI 的本机接口使用主机的模型：
+
+```bash
+omnillm connect run          # 在 http://127.0.0.1:8766/v1 提供接口，令牌文件的位置会打印出来
+```
+
+把程序的 API 地址填成 `http://127.0.0.1:8766/v1`，Key 填令牌文件里的内容。也支持 Anthropic 格式的 `/v1/messages`。
+
+**程序只能用 API Key 和本地模型，看不到订阅模型。** 订阅只给人手动对话用：用订阅跑脚本、批量任务，是最容易被封号的用法。这条规则写在代码里，关不掉。
+
+## 检查一下
+
+在主机上运行：
+
+```bash
+~/.local/bin/omnillm status
+```
+
+它会说主机是否在运行、接了几个模型、配了几台设备，还有哪一步没做。显示 “All set.” 就全部好了。
+
+下一步：[日常使用和常见问题](usage.md) · [安全说明](security.md)
