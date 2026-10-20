@@ -42,6 +42,21 @@ esac
 work=$(mktemp -d "${TMPDIR:-/tmp}/omnillm.XXXXXX")
 trap 'rm -rf "$work"' EXIT INT TERM
 
+# newest prints the highest of the version tags on stdin (vMAJOR.MINOR.PATCH
+# with an optional -pre.release.N); anything else is ignored.
+newest() {
+  awk '
+    /^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$/ {
+      t = $0; v = substr(t, 2); pre = "~"   # a release sorts after its pre-releases
+      i = index(v, "-"); if (i) { pre = substr(v, i + 1); v = substr(v, 1, i - 1) }
+      n = split(v, c, "."); k = ""
+      for (j = 1; j <= n; j++) k = k sprintf("%09d.", c[j])
+      if (pre != "~") { m = split(pre, p, "."); pre = ""
+        for (j = 1; j <= m; j++) pre = pre ((p[j] ~ /^[0-9]+$/) ? sprintf("%09d", p[j]) : p[j]) "." }
+      print k "|" pre "\t" t
+    }' | sort | tail -n 1 | cut -f 2
+}
+
 sha256() {
   if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | cut -d' ' -f1
   else shasum -a 256 "$1" | cut -d' ' -f1; fi
@@ -62,8 +77,10 @@ if [ "$code" = "404" ]; then
   # name is taken from the API answer, and it must look like a version;
   # downloads still come from this repository's release files.
   api=$(curl -fsSL --proto '=https' --tlsv1.2 -H 'Accept: application/vnd.github+json' \
-    "https://api.github.com/repos/$REPO/releases?per_page=5" 2>/dev/null) || fail "$(t "连不上 GitHub（API），请检查网络后再运行一次" "could not reach GitHub (API); check the network and run this again")"
-  tag=$(printf '%s' "$api" | grep -o '"tag_name": *"[^"]*"' | head -n 1 | sed 's/.*"\([^"]*\)"$/\1/')
+    "https://api.github.com/repos/$REPO/releases?per_page=30" 2>/dev/null) || fail "$(t "连不上 GitHub（API），请检查网络后再运行一次" "could not reach GitHub (API); check the network and run this again")"
+  # The API lists releases in no version order (alpha.10 comes after
+  # alpha.5), so pick the highest version: numbers compare as numbers.
+  tag=$(printf '%s' "$api" | grep -o '"tag_name": *"[^"]*"' | sed 's/.*"\([^"]*\)"$/\1/' | newest)
   if [ -n "$tag" ]; then
     printf '%s' "$tag" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$' || fail "unexpected release name: refusing"
     BASE="https://github.com/$REPO/releases/download/$tag"

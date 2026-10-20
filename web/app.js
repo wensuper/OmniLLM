@@ -439,12 +439,15 @@ function prose(text) {
   return p;
 }
 function inline(p, line, strong) {
-  const re = /\*\*([^*]+)\*\*|__([^_]+)__|`([^`]+)`/g;
+  // **bold**, __bold__, `code`, and *italic* that isn't part of a word
+  // (no lookbehind: older iPhones' Safari lacks it).
+  const re = /\*\*([^*]+)\*\*|__([^_]+)__|`([^`]+)`|(^|[^*\w])\*([^*\s][^*]*?)\*(?![*\w])/g;
   let last = 0, m;
   const put = (s, tag) => { if (!s) return; if (tag) p.append(el(tag, s)); else if (strong) p.append(el("strong", s)); else p.append(s); };
   while ((m = re.exec(line))) {
-    put(line.slice(last, m.index));
-    if (m[3] !== undefined) put(m[3], "code"); else put(m[1] || m[2], "strong");
+    const lead = m[4] || "";
+    put(line.slice(last, m.index) + lead);
+    if (m[3] !== undefined) put(m[3], "code"); else if (m[5] !== undefined) put(m[5], "em"); else put(m[1] || m[2], "strong");
     last = re.lastIndex;
   }
   put(line.slice(last));
