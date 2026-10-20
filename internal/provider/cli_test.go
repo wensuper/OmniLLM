@@ -169,3 +169,21 @@ func TestCLICanaryRefusesToolUse(t *testing.T) {
 		t.Fatal("the failed version passed later")
 	}
 }
+
+// Without a system text of its own, a chat says what it is: no tools, the
+// person's language (Claude Code otherwise calls itself an agent that works
+// with files).
+func TestCLIPromptDefaultSystem(t *testing.T) {
+	sys, _ := cliPrompt(ClaudeCode, []omnillm.Message{{Role: "user", Content: "hi"}})
+	if !strings.Contains(sys, "Claude") || !strings.Contains(sys, "no tools") {
+		t.Fatalf("claude default: %q", sys)
+	}
+	sys, _ = cliPrompt(Codex, []omnillm.Message{{Role: "user", Content: "hi"}})
+	if strings.Contains(sys, "Claude") || !strings.Contains(sys, "no tools") {
+		t.Fatalf("codex default: %q", sys)
+	}
+	sys, _ = cliPrompt(ClaudeCode, []omnillm.Message{{Role: "system", Content: "Be terse."}, {Role: "user", Content: "hi"}})
+	if sys != "Be terse." {
+		t.Fatalf("own system text kept: %q", sys)
+	}
+}

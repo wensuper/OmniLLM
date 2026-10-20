@@ -179,6 +179,11 @@ var codexToolsOff = func() []string {
 	return append(out, "-c", `web_search="disabled"`)
 }()
 
+// chatOnly says what this is when the chat brings no system text of its own.
+const chatOnly = "You are chatting with a person from their phone or computer. " +
+	"In this chat you have no tools: you cannot read or write files, run commands or browse the web; if asked, say so briefly. " +
+	"Answer the user's message directly, in the user's language."
+
 // cliPrompt turns a chat into the one text the programs take. The system
 // text goes to Claude's --system-prompt; Codex has no such flag, so it
 // leads the prompt there.
@@ -194,7 +199,13 @@ func cliPrompt(k Kind, msgs []omnillm.Message) (system, prompt string) {
 	}
 	system = strings.Join(sys, "\n\n")
 	if system == "" {
-		system = "You are a helpful assistant. Answer the user's message directly."
+		// Claude Code adds its own "built on the Claude Agent SDK" line
+		// and the model then offers to work with files. Say plainly what
+		// this is: a chat, from the person's phone or computer, no tools.
+		system = "You are a helpful AI assistant. " + chatOnly
+		if k == ClaudeCode {
+			system = "You are Claude, an AI assistant made by Anthropic. " + chatOnly
+		}
 	}
 	var b strings.Builder
 	if k == Codex {
