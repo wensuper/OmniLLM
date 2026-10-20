@@ -3,6 +3,8 @@
 package proto
 
 import (
+	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/hex"
@@ -108,14 +110,22 @@ type PairingCode struct {
 	Expires int64  `json:"e"` // unix seconds
 }
 
-// Pairing text formats: "omnillm1-" + base64url(JSON) (v0.2.0-alpha.3 and
-// earlier), and the compact "omnillm2-" + base64url(binary) below, about
-// half as long, so the QR code is far less dense and phones scan it fast:
+// Pairing text formats, all still read:
 //
-//	expires uint32 | mailbox 16 | secret 32 | hub key 32 | psk 32 | relay URL
+//   - "omnillm1-" + base64url(JSON) (v0.2.0-alpha.3 and earlier);
+//
+//   - "omnillm2-" + base64url(binary) (alpha.4), about half as long, so the
+//     QR code is far less dense and phones scan it fast;
+//
+//   - "omnillm3-" (written now): the same binary after a 4-byte checksum,
+//     so a pasted text that lost or changed a character is refused as
+//     damaged at once instead of failing later in a confusing way.
+//
+//     [sha256(rest)[:4] |] expires uint32 | mailbox 16 | secret 32 | hub key 32 | psk 32 | relay URL
 const (
 	pairingPrefix  = "omnillm1-"
 	pairingPrefix2 = "omnillm2-"
+	pairingPrefix3 = "omnillm3-"
 	compactFixed   = 4 + 16 + 32 + 32 + 32
 )
 
@@ -133,7 +143,8 @@ func (p PairingCode) Encode() string {
 	copy(b[52:], p.HubKey)
 	copy(b[84:], p.PSK)
 	b = append(b, p.Relay...)
-	return pairingPrefix2 + base64.RawURLEncoding.EncodeToString(b)
+	sum := sha256.Sum256(b)
+	return pairingPrefix3 + base64.RawURLEncoding.EncodeToString(append(sum[:4], b...))
 }
 
 // Link is the pairing link for the web client at webApp (what the QR code
@@ -156,8 +167,18 @@ func ParsePairingCode(s string, now time.Time) (PairingCode, error) {
 	switch {
 	case len(s) > 2048:
 		return p, errors.New("proto: not a pairing code")
-	case strings.HasPrefix(s, pairingPrefix2):
+	case strings.HasPrefix(s, pairingPrefix2), strings.HasPrefix(s, pairingPrefix3):
 		b, err := base64.RawURLEncoding.DecodeString(s[len(pairingPrefix2):])
+		if err == nil && strings.HasPrefix(s, pairingPrefix3) {
+			if len(b) < 4 {
+				return p, damaged
+			}
+			sum := sha256.Sum256(b[4:])
+			if subtle.ConstantTimeCompare(sum[:4], b[:4]) != 1 {
+				return p, damaged
+			}
+			b = b[4:]
+		}
 		if err != nil || len(b) <= compactFixed || len(b) > compactFixed+512 || !utf8.Valid(b[compactFixed:]) {
 			return p, damaged
 		}
