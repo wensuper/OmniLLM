@@ -66,7 +66,8 @@ h1 { font-size: 22px; margin: 0; } h2 { font-size: 17px; margin: 0 0 8px; }
 .log > * { max-width: 760px; width: 100%; margin-left: auto; margin-right: auto; }
 .empty { color: var(--muted); text-align: center; margin-top: 30vh; }
 .msg { padding: 10px 14px; border-radius: var(--radius); overflow-wrap: anywhere; position: relative; }
-.msg p { margin: 0 0 8px; white-space: pre-wrap; } .msg p:last-of-type { margin-bottom: 0; }
+.msg p { margin: 0 0 8px; white-space: pre-wrap; }
+.msg p code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .92em; background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; } .msg p:last-of-type { margin-bottom: 0; }
 .msg.user { background: var(--user); align-self: flex-end; max-width: min(85%, 640px); margin-right: 0; }
 .msg.assistant { background: var(--surface); border: 1px solid var(--line); }
 .msg pre { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px; overflow-x: auto; margin: 8px 0; }

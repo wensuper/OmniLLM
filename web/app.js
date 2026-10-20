@@ -28,6 +28,7 @@ const T = {
     addHome: "添加到主屏幕", addHomeTip: "点浏览器的“分享”按钮，选“添加到主屏幕”。从主屏幕打开时需要再扫一次码。",
     deviceLine: "这台设备：{0}", sub: "订阅", empty: "有什么可以帮你？", cut: "（回复被截断）", stopped: "（已停止）",
     today: "今天", copy: "复制", copied: "已复制",
+    removedHere: "这台设备已在主机上被移除，对话记录也已从这台设备上清除。需要的话，在主机上重新添加。",
   },
   en: {
     loading: "Loading…", welcomeTitle: "Use your models on this device",
@@ -47,6 +48,7 @@ const T = {
     addHome: "Add to Home Screen", addHomeTip: "Tap the browser's Share button and choose Add to Home Screen. Opened from the Home Screen, it asks for the code once more.",
     deviceLine: "This device: {0}", sub: "subscription", empty: "How can I help?", cut: "(reply cut off)", stopped: "(stopped)",
     today: "Today", copy: "Copy", copied: "Copied",
+    removedHere: "This device was removed on the hub, and its conversations were cleared from it. Add it again on the hub if you need it.",
   },
 };
 const lang = (navigator.language || "en").toLowerCase().startsWith("zh") ? "zh" : "en";
@@ -335,12 +337,22 @@ function connect() {
       await loadModels();
       setOnline(true);
     } catch (e) {
-      if (e && e.msg === "device_revoked") return unpaired();
+      if (e && e.msg === "device_revoked") return unpaired(true);
       setOnline(false, errText(e));
     }
   })();
   return S.connecting;
 }
+
+async function recheck() {
+  if (!S.device || S.busy || document.hidden || !navigator.onLine) return;
+  try { await loadModels(); setOnline(true); } catch (e) {
+    if (e && e.msg === "device_revoked") return unpaired(true);
+    if (e && e.code === "hub_offline") setOnline(false);
+  }
+}
+document.addEventListener("visibilitychange", () => { if (!document.hidden) recheck(); });
+setInterval(recheck, 120000);
 
 async function loadModels() {
   const ms = await omnillm.models();
@@ -408,8 +420,34 @@ function fill(b, text) {
   const parts = text.split(/```/);
   parts.forEach((p, i) => {
     if (i % 2) { const pre = el("pre"); pre.append(el("code", p.replace(/^[\w+-]*\n/, "").replace(/\n+$/, ""))); b.append(pre); }
-    else if (p.trim()) b.append(el("p", p.replace(/^\n+|\n+$/g, "")));
+    else if (p.trim()) b.append(prose(p.replace(/^\n+|\n+$/g, "")));
   });
+}
+// prose shows the light Markdown models write (headings, **bold**, `code`,
+// list bullets) as formatting. Everything stays text nodes: nothing a model
+// writes is ever parsed as HTML.
+function prose(text) {
+  const p = el("p");
+  text.split("\n").forEach((line, i) => {
+    if (i) p.append("\n");
+    let strong = false;
+    const h = line.match(/^#{1,6}\s+(.*)$/);
+    if (h) { line = h[1]; strong = true; }
+    line = line.replace(/^(\s*)[-*+]\s+/, "$1• ");
+    inline(p, line, strong);
+  });
+  return p;
+}
+function inline(p, line, strong) {
+  const re = /\*\*([^*]+)\*\*|__([^_]+)__|`([^`]+)`/g;
+  let last = 0, m;
+  const put = (s, tag) => { if (!s) return; if (tag) p.append(el(tag, s)); else if (strong) p.append(el("strong", s)); else p.append(s); };
+  while ((m = re.exec(line))) {
+    put(line.slice(last, m.index));
+    if (m[3] !== undefined) put(m[3], "code"); else put(m[1] || m[2], "strong");
+    last = re.lastIndex;
+  }
+  put(line.slice(last));
 }
 
 function renderList() {
@@ -476,7 +514,7 @@ $("composer").addEventListener("submit", async (e) => {
     setOnline(true);
   } catch (err) {
     if (err && err.code === "cancelled") reply.note = t("stopped");
-    else if (err && err.msg === "device_revoked") return unpaired();
+    else if (err && err.msg === "device_revoked") return unpaired(true);
     else {
       reply.note = errText(err);
       if (err && err.code === "hub_offline") setOnline(false);
@@ -555,8 +593,9 @@ $("forget").addEventListener("click", async () => {
   try { omnillm.close(); } catch {}
   await unpaired();
 });
-async function unpaired() {
+async function unpaired(removed) {
   S.device = null; S.chats = []; S.cur = null;
   await idb.del("device"); await idb.del("chats");
   closeDrawer(); show("welcome");
+  $("welcome-err").textContent = removed ? t("removedHere") : "";
 }

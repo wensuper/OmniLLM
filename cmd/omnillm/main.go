@@ -784,12 +784,15 @@ func connectCmd(args []string) {
 		code := readSecret(t("粘贴主机给的配对文字：", "Paste the pairing text from the host: "))
 		host, _ := os.Hostname()
 		info, err := device.Pair(ctx, device.Options{Secrets: sec}, code, host, func(sas string) {
-			fmt.Printf(t("\n请核对：主机上显示的数字应该是  %s  。一致就在主机上确认。\n", "\nCheck: the host should show  %s . Confirm on the host if it matches.\n"), sas)
+			if len(sas) == 6 {
+				sas = sas[:3] + " " + sas[3:]
+			}
+			fmt.Printf(t("\n请核对：主机上显示的数字应该是 %s，一致就在主机上点确认。\n", "\nCheck: the host should show %s. If it matches, confirm on the host.\n"), sas)
 		})
 		if err != nil {
 			die(err)
 		}
-		fmt.Printf(t("配对成功，设备 ID：%s\n", "Paired. Device ID: %s\n"), info.DeviceID)
+		fmt.Printf(t("配对成功（这台设备在主机上叫“%s”）。\n", "Paired (the host lists this device as \"%s\").\n"), info.Name)
 	case "run":
 		fs := flag.NewFlagSet("connect run", flag.ExitOnError)
 		listen := fs.String("listen", "127.0.0.1:8766", "")

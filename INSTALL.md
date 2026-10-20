@@ -50,7 +50,7 @@ What the script does:
 - Downloads the latest release for this OS and CPU (the newest pre-release while there is no stable one) and verifies its SHA-256 against the release's `checksums.txt`. If `cosign` is installed, it also verifies that `checksums.txt` was signed by this repository's release workflow. If either check fails, it stops.
 - If no release is published yet, it builds from source with Go 1.27.2 or newer. If Go is missing, it stops with a message saying where to get Go. In that case, tell the person and stop.
 - Runs `omnillm install`, which:
-  - copies the binary to `~/.local/bin/omnillm`;
+  - copies the binary to `~/.local/bin/omnillm` and, if that folder isn't on PATH, adds one line to the shell's startup file (`~/.zshrc`, `~/.bashrc`, …) so new terminals find `omnillm`; in this terminal, use the full path `~/.local/bin/omnillm`;
   - starts the hub as a background service for this user (launchd on macOS, a systemd user service on Linux), so it starts again at login;
   - stores secrets in the macOS keychain, or on Linux in an encrypted file whose key is in a separate file readable only by this user;
   - connects a local Ollama automatically if one is running (no key needed, and nothing leaves the computer);

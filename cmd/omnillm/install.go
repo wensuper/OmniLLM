@@ -74,6 +74,7 @@ func installCmd(args []string) {
 	if err != nil {
 		die(err)
 	}
+	ensureOnPath(home)
 	dir := dataDir("hub")
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		die(err)
@@ -82,6 +83,13 @@ func installCmd(args []string) {
 	if err != nil {
 		die(err)
 	}
+	if env == nil {
+		env = map[string]string{}
+	}
+	// A login service has no LANG: without this, what the hub says back to
+	// `omnillm hub pair` (the question, the pairing text, errors) and its
+	// log would always be English for a person who installed in Chinese.
+	env["OMNILLM_LANG"] = lang()
 	service, err := installService(home, bin, dir, env)
 	if err != nil {
 		die(err)
@@ -102,11 +110,11 @@ func installCmd(args []string) {
 		if url, err := loginURL(); err == nil && openLogin(url) == nil {
 			fmt.Println(t("控制台已在浏览器里打开。", "The console is open in your browser."))
 		} else {
-			fmt.Println(t("在浏览器里打开控制台：运行 omnillm open", "To open the console, run: omnillm open"))
+			fmt.Println(runnable(t("在浏览器里打开控制台：运行 omnillm open", "To open the console, run: omnillm open")))
 		}
 	}
 	st.Next = nextStep(st)
-	fmt.Println(st.Next)
+	fmt.Println(runnable(st.Next))
 	b, _ := json.Marshal(st)
 	fmt.Println("OMNILLM_STATUS " + string(b))
 }
@@ -423,11 +431,11 @@ func statusCmd(args []string) {
 		}
 	}
 	if !ok {
-		fmt.Println(st.Next)
+		fmt.Println(runnable(st.Next))
 		os.Exit(1)
 	}
 	fmt.Printf(t("主机在运行（%s）。模型提供方 %d 个，设备 %d 台。\n", "The hub is running (%s). Providers: %d, devices: %d.\n"), st.Version, st.Providers, st.Devices)
-	fmt.Println(st.Next)
+	fmt.Println(runnable(st.Next))
 }
 
 func uninstallCmd(args []string) {
@@ -490,17 +498,18 @@ func installDevice() {
 		die(err)
 	}
 	fmt.Printf(t("已安装到 %s（只是一个程序，没有后台服务）。\n", "Installed to %s (just the program; no background service).\n"), bin)
+	ensureOnPath(home)
 	dir := dataDir("device")
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		die(err)
 	}
 	if device.Paired(context.Background(), secrets(dir, "omnillm-device")) {
-		fmt.Println(t("这台机器已经配对过，可以直接用：omnillm connect chat", "This machine is already paired. Ready: omnillm connect chat"))
+		fmt.Println(runnable(t("这台机器已经配对过，可以直接用：omnillm connect chat", "This machine is already paired. Ready: omnillm connect chat")))
 		return
 	}
 	tty, err := os.Open("/dev/tty")
 	if err != nil {
-		fmt.Println(t("下一步：运行 omnillm connect pair，粘贴主机给的配对文字。", "Next: run omnillm connect pair and paste the pairing text from the hub."))
+		fmt.Println(runnable(t("下一步：运行 omnillm connect pair，粘贴主机给的配对文字。", "Next: run omnillm connect pair and paste the pairing text from the hub.")))
 		return
 	}
 	tty.Close()
@@ -513,5 +522,5 @@ func installDevice() {
 	if err := cmd.Run(); err != nil {
 		os.Exit(1)
 	}
-	fmt.Println(t("可以用了：omnillm connect chat", "Ready: omnillm connect chat"))
+	fmt.Println(runnable(t("可以用了：在终端里运行 omnillm connect chat 对话，或 omnillm connect ask \"问题\" 问一句。", "Ready: run omnillm connect chat to chat, or omnillm connect ask \"question\" for one answer.")))
 }

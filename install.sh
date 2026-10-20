@@ -17,23 +17,26 @@ REPO="wensuper/OmniLLM"
 # server (a mirror could serve its own archive and matching checksums).
 BASE="https://github.com/$REPO/releases/latest/download"
 
+# Messages follow the person's language (the same variables omnillm reads).
+case "${OMNILLM_LANG:-${LC_ALL:-${LANG:-}}}" in zh*|ZH*) zh=1 ;; *) zh="" ;; esac
+t() { if [ -n "$zh" ]; then printf '%s' "$1"; else printf '%s' "$2"; fi; }
 say() { printf '%s\n' "$*"; }
 fail() { printf 'omnillm-install: %s\n' "$*" >&2; exit 1; }
 
 if [ "$(id -u)" = "0" ]; then
-  fail "do not run as root; OmniLLM installs for the current user only"
+  fail "$(t "不要用 root 运行（do not run as root）：OmniLLM 只为当前用户安装，去掉 sudo 再运行。" "do not run as root; OmniLLM installs for the current user only")"
 fi
 
 os=$(uname -s | tr '[:upper:]' '[:lower:]')
 case "$os" in
   darwin|linux) ;;
-  *) fail "unsupported system: $os (macOS and Linux only for now)" ;;
+  *) fail "$(t "暂不支持这个系统：$os（目前只支持 macOS 和 Linux）" "unsupported system: $os (macOS and Linux only for now)")" ;;
 esac
 arch=$(uname -m)
 case "$arch" in
   x86_64|amd64) arch=amd64 ;;
   arm64|aarch64) arch=arm64 ;;
-  *) fail "unsupported CPU: $arch" ;;
+  *) fail "$(t "暂不支持这种 CPU：$arch" "unsupported CPU: $arch")" ;;
 esac
 
 work=$(mktemp -d "${TMPDIR:-/tmp}/omnillm.XXXXXX")
@@ -52,31 +55,31 @@ asset="omnillm_${os}_${arch}.tar.gz"
 code=$(curl -sSL --proto '=https' --tlsv1.2 -o "$work/checksums.txt" -w '%{http_code}' "$BASE/checksums.txt" 2>/dev/null || true)
 case "$code" in
   200|404) ;;
-  *) fail "could not reach GitHub releases (HTTP ${code:-none}); check the network and run this again" ;;
+  *) fail "$(t "连不上 GitHub 的发布页（HTTP ${code:-none}），请检查网络后再运行一次" "could not reach GitHub releases (HTTP ${code:-none}); check the network and run this again")" ;;
 esac
 if [ "$code" = "404" ]; then
   # No stable release: use the newest pre-release, if any. Only the tag
   # name is taken from the API answer, and it must look like a version;
   # downloads still come from this repository's release files.
   api=$(curl -fsSL --proto '=https' --tlsv1.2 -H 'Accept: application/vnd.github+json' \
-    "https://api.github.com/repos/$REPO/releases?per_page=5" 2>/dev/null) || fail "could not reach GitHub (API); check the network and run this again"
+    "https://api.github.com/repos/$REPO/releases?per_page=5" 2>/dev/null) || fail "$(t "连不上 GitHub（API），请检查网络后再运行一次" "could not reach GitHub (API); check the network and run this again")"
   tag=$(printf '%s' "$api" | grep -o '"tag_name": *"[^"]*"' | head -n 1 | sed 's/.*"\([^"]*\)"$/\1/')
   if [ -n "$tag" ]; then
     printf '%s' "$tag" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$' || fail "unexpected release name: refusing"
     BASE="https://github.com/$REPO/releases/download/$tag"
-    say "Using pre-release $tag."
+    say "$(t "使用预发布版 $tag。" "Using pre-release $tag.")"
     code=$(curl -sSL --proto '=https' --tlsv1.2 -o "$work/checksums.txt" -w '%{http_code}' "$BASE/checksums.txt" 2>/dev/null || true)
     [ "$code" = "200" ] || fail "release $tag has no checksums.txt (HTTP ${code:-none}); refusing"
   fi
 fi
 if [ "$code" = "200" ]; then
-  say "Downloading $asset ..."
+  say "$(t "正在下载 $asset ……" "Downloading $asset ...")"
   curl -fsSL --proto '=https' --tlsv1.2 -o "$work/$asset" "$BASE/$asset" || fail "download failed: $asset"
   want=$(grep "  $asset\$" "$work/checksums.txt" | cut -d' ' -f1)
   [ -n "$want" ] || fail "checksums.txt has no entry for $asset"
   got=$(sha256 "$work/$asset")
-  [ "$want" = "$got" ] || fail "checksum mismatch for $asset: refusing to install"
-  say "Checksum OK."
+  [ "$want" = "$got" ] || fail "$(t "$asset 的校验和对不上（checksum mismatch），不安装" "checksum mismatch for $asset: refusing to install")"
+  say "$(t "校验和核对通过。" "Checksum OK.")"
   if command -v cosign >/dev/null 2>&1; then
     if curl -fsSL --proto '=https' --tlsv1.2 -o "$work/checksums.txt.sigstore.json" "$BASE/checksums.txt.sigstore.json" 2>/dev/null; then
       sigargs="--bundle $work/checksums.txt.sigstore.json"
@@ -89,10 +92,10 @@ if [ "$code" = "200" ]; then
     cosign verify-blob $sigargs \
       --certificate-identity-regexp "^https://github\\.com/wensuper/OmniLLM/\\.github/workflows/release\\.yml@refs/tags/v[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.]+)?\$" \
       --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-      "$work/checksums.txt" >/dev/null 2>&1 || fail "signature check failed: refusing to install"
-    say "Signature OK (built by $REPO's release workflow)."
+      "$work/checksums.txt" >/dev/null 2>&1 || fail "$(t "签名核对没有通过（signature check failed），不安装" "signature check failed: refusing to install")"
+    say "$(t "签名核对通过（由 $REPO 的发布流程构建）。" "Signature OK (built by $REPO's release workflow).")"
   else
-    say "cosign not found: checked the checksum only."
+    say "$(t "没有找到 cosign：只核对了校验和（checked the checksum only）。" "cosign not found: checked the checksum only.")"
   fi
   tar -xzf "$work/$asset" -C "$work" omnillm || fail "archive is damaged"
   bin="$work/omnillm"

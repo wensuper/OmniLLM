@@ -575,6 +575,14 @@ NEXA（`pgclient`，Go）直接引入 OmniLLM 库。用户只装 NEXA：在 NEXA
 - 设备本机接口和应用令牌看不到订阅模型；Linux 上有可用的钥匙串时仍用钥匙串，没有时才用数据目录里的密钥文件。
 - 网页客户端用只给它用的域名 `omni.ixxzh.com`（不再用 GitHub Pages：那个域名下别的 Pages 项目和它同源，能读它的存储）。Service Worker 还不校验更新的签名，写在这里。
 
+**易用性走查后补的（2026-10-20，v0.2.0-alpha.8）**
+
+- `~/.local/bin` 不在新 Mac 的 PATH 里：安装时如果终端按名字找不到 `omnillm`，在 shell 启动文件（zsh 的 `~/.zshrc`、bash 的 `~/.bashrc` 或 macOS 的 `~/.bash_profile`、fish、其他 `~/.profile`）末尾追加一行，只加一次；这次安装打印的下一步命令用完整路径，保证照着能运行。
+- 后台服务没有 LANG：安装时把装的人用的语言写进服务的 `OMNILLM_LANG`，`omnillm hub pair` 的问题、配对文字、报错和日志才是中文。安装脚本的提示也跟语言走（中文提示里保留 checksum mismatch 等英文关键词，INSTALL.md 的对照表照样认）。
+- 网页客户端把模型常写的 Markdown（标题、`**粗体**`、行内代码、列表）显示成格式，全部用文字节点生成，不解析 HTML。
+- 被移除的手机不用等到发消息才知道：页面回到前台时和打开期间每两分钟，静默向主机取一次模型列表；被移除就清掉配对和对话并说明原因（顺带拿到新接入的模型）。
+- 终端配对时的 6 位数按“123 456”显示；配对成功说这台设备在主机上叫什么，不再显示设备 ID。
+
 **公共连接服务**：`wss://relay.ixxzh.com`（zc 10-19 定，和网页客户端一起放在 139.224.110.2，按服务器上线流程；步骤见 docs/relay-deploy.md）。中心节点默认就连它；`OMNILLM_RELAY=off` 只在本机用，也可以自己部署 `omnillm relay --autocert 域名`。
 
 ### 13.4 还没做（按里程碑排期）
