@@ -59,6 +59,10 @@ func installCmd(args []string) {
 			deviceOnly = true
 		}
 	}
+	if os.Geteuid() == 0 {
+		// Root would leave root-owned files in the person's home folder.
+		die(say(t("不要用 root 或 sudo 运行：OmniLLM 只为当前用户安装。", "Don't run this as root or with sudo: OmniLLM installs for the current user only.")))
+	}
 	if deviceOnly {
 		installDevice()
 		return

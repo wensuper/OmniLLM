@@ -54,7 +54,7 @@ newest() {
       if (pre != "~") { m = split(pre, p, "."); pre = ""
         for (j = 1; j <= m; j++) pre = pre ((p[j] ~ /^[0-9]+$/) ? sprintf("%09d", p[j]) : p[j]) "." }
       print k "|" pre "\t" t
-    }' | sort | tail -n 1 | cut -f 2
+    }' | LC_ALL=C sort | tail -n 1 | cut -f 2
 }
 
 sha256() {

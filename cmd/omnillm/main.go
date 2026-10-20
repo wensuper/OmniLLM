@@ -83,6 +83,16 @@ func (e sayErr) Error() string { return string(e) }
 func say(s string) error                 { return sayErr(s) }
 func sayf(format string, a ...any) error { return sayErr(fmt.Sprintf(format, a...)) }
 
+// hubSay is what the hub answers a CLI over the control socket: the
+// message for people only; an unexpected cause goes to the hub's own log.
+func hubSay(err error) error {
+	if e := omnillm.AsError(err); e.Code == omnillm.CodeInternal {
+		log.Printf("hub: control: %v", err)
+		return say(omnillm.Describe(lang(), err) + t("（原因写在主机日志里）", " (the cause is in the hub's log)"))
+	}
+	return say(omnillm.Describe(lang(), err))
+}
+
 // describe is what a person sees for err: our own sentence as it is, the
 // library's message, and for anything unexpected the generic message plus
 // the underlying cause, so it can be reported.
@@ -575,7 +585,7 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 			if ids, err := h.DetectOllama(ctx); err == nil && len(hub.ChatModels(ids)) > 0 {
 				cfg, _ := provider.Default(provider.Ollama)
 				if _, err := h.AddProvider(ctx, cfg, ""); err != nil {
-					return say(describe(err))
+					return hubSay(err)
 				}
 			}
 			return c.Send(control.Reply{Event: "ok"})
@@ -611,7 +621,7 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 			}
 			ms, err := h.AddProvider(ctx, cfg, req.Secret)
 			if err != nil {
-				return say(describe(err))
+				return hubSay(err)
 			}
 			return c.Send(control.Reply{Event: "ok", Text: fmt.Sprintf(t("已接入 %s，%d 个模型可用。", "Connected %s: %d models available."), cfg.Name, len(ms))})
 		case "providers":
@@ -668,7 +678,7 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 			return c.Send(control.Reply{Event: "ok", Data: jsonData(u)})
 		case "revoke":
 			if err := h.Revoke(ctx, a["id"]); err != nil {
-				return say(describe(err))
+				return hubSay(err)
 			}
 			return c.Send(control.Reply{Event: "ok", Text: t("已移除，立即生效。", "Removed. Effective now.")})
 		case "app.add":
@@ -706,7 +716,7 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 				u.HumanOnly = &v
 			}
 			if err := h.SetModel(ctx, a["id"], u); err != nil {
-				return say(describe(err))
+				return hubSay(err)
 			}
 			return c.Send(control.Reply{Event: "ok", Text: t("已更新。", "Updated.")})
 		case "region.confirm":
@@ -738,7 +748,7 @@ func pairOp(ctx context.Context, h *hub.Hub, c *control.Conn, a map[string]strin
 				"Device \"%s\" wants to join. Does its screen show %s? Confirm only if it matches."), r.DeviceName, r.Code))
 		}})
 	if err != nil {
-		return say(describe(err))
+		return hubSay(err)
 	}
 	// If this command ends early (the owner pressed Ctrl-C, the terminal
 	// closed), the code dies with it instead of holding a slot for 5 min.
@@ -754,7 +764,7 @@ func pairOp(ctx context.Context, h *hub.Hub, c *control.Conn, a map[string]strin
 	}
 	d, err := p.Wait(ctx)
 	if err != nil {
-		return say(describe(err))
+		return hubSay(err)
 	}
 	return c.Send(control.Reply{Event: "done", Text: fmt.Sprintf(t("已添加设备“%s”（%s），每天额度 %s。", "Added \"%s\" (%s), daily budget %s."), d.Name, d.ID, usd(d.Budget))})
 }

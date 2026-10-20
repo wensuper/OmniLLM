@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 )
@@ -36,8 +37,11 @@ func runnable(s string) string {
 	if n == "omnillm" {
 		return s
 	}
-	return strings.ReplaceAll(s, "omnillm ", n+" ")
+	return bareCmd.ReplaceAllString(s, "${1}"+n+" ")
 }
+
+// bareCmd is "omnillm " not already part of a path or a word.
+var bareCmd = regexp.MustCompile(`(^|[^/\w.-])omnillm `)
 
 // rcFile is the startup file of the person's shell.
 func rcFile(home string) (path, line string) {
@@ -65,6 +69,11 @@ func ensureOnPath(home string) {
 	rc, line := rcFile(home)
 	if b, err := os.ReadFile(rc); err == nil && strings.Contains(string(b), ".local/bin") {
 		fmt.Println(t("新开一个终端窗口后，就可以直接输入 omnillm。", "Open a new terminal window and omnillm works by name."))
+		return
+	}
+	// Only a plain file of the person's own: never write through a link.
+	if fi, err := os.Lstat(rc); err == nil && !fi.Mode().IsRegular() {
+		fmt.Println(t("提示：~/.local/bin 不在 PATH 里，请用完整路径 ~/.local/bin/omnillm 运行。", "Note: ~/.local/bin is not on PATH; run omnillm as ~/.local/bin/omnillm."))
 		return
 	}
 	if err := os.MkdirAll(filepath.Dir(rc), 0o755); err != nil {
