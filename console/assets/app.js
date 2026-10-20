@@ -219,7 +219,7 @@ function fillModels() {
   const sel = $("try-model");
   sel.textContent = "";
   for (const m of S.models) {
-    const o = el("option", m.display_name + (m.locality === "local" ? " · " + t("local") : m.human_only ? " · " + t("sub") : ""));
+    const o = el("option", m.display_name + (m.locality === "local" ? " · " + t("local") : isSub(m) ? " · " + t("sub") : ""));
     o.value = m.id;
     sel.append(o);
   }
@@ -356,6 +356,9 @@ function showDash() {
   renderUsage();
 }
 
+// isSub: a Claude or ChatGPT subscription (the official programs on this
+// computer), not merely a model kept for people.
+function isSub(m) { return m.provider === "claude-code" || m.provider === "codex"; }
 function cell(row, text, cls) { const td = el("td", text, cls); row.append(td); return td; }
 
 function removeButton(label, path, id) {
@@ -387,7 +390,7 @@ function renderModels() {
   tb.textContent = "";
   for (const m of S.models) {
     const tr = el("tr");
-    cell(tr, m.display_name + (m.human_only ? " · " + t("sub") : ""));
+    cell(tr, m.display_name + (isSub(m) ? " · " + t("sub") : ""));
     cell(tr, "").append(el("span", m.locality === "local" ? t("local") : t("remote"), "tag" + (m.locality === "local" ? " local" : "")));
     const td = cell(tr, "");
     const box = el("input");

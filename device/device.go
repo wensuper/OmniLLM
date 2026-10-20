@@ -214,6 +214,7 @@ type Device struct {
 	closed bool
 	dialMu sync.Mutex
 	tools  chan struct{}
+	lastOK atomic.Int64 // unix nanos of the hub's last answer
 }
 
 // Open loads the saved pairing. Connecting happens on first use.
@@ -537,11 +538,46 @@ func (c *conn) next(ctx context.Context, w *waiter, timeout <-chan time.Time) (p
 
 // Models lists what this device may use. Every model is Remote from here.
 func (d *Device) Models(ctx context.Context) ([]omnillm.ModelInfo, error) {
-	ms, err := d.models(ctx)
-	if errors.Is(err, omnillm.ErrHubOffline) && ctx.Err() == nil {
-		ms, err = d.models(ctx) // once more on a new connection, as Complete
+	var ms []omnillm.ModelInfo
+	err := d.whileOffline(ctx, func() (err error) { ms, err = d.models(ctx); return err })
+	if err == nil {
+		d.lastOK.Store(time.Now().UnixNano())
 	}
 	return ms, err
+}
+
+// offlineWaits are the pauses before each new try while the hub can't be
+// reached: a relay restart, the hub re-registering after its own restart,
+// or a phone switching networks all pass within about 10 seconds.
+var offlineWaits = []time.Duration{0, time.Second, 2 * time.Second, 3 * time.Second, 4 * time.Second}
+
+// whileOffline runs f, and again on a new connection while it says the hub
+// can't be reached. Only requests the hub never acknowledged come back as
+// offline, so a resend can't run one twice. The long wait is only for a
+// hub that answered within the last minute (a blip: a relay restart, the
+// hub re-registering); a hub that has been away (a sleeping Mac) is
+// reported after one quick retry, as before.
+func (d *Device) whileOffline(ctx context.Context, f func() error) error {
+	waits := offlineWaits[:2]
+	if time.Since(time.Unix(0, d.lastOK.Load())) < time.Minute {
+		waits = offlineWaits
+	}
+	var err error
+	for _, w := range waits {
+		if w > 0 {
+			t := time.NewTimer(w)
+			select {
+			case <-ctx.Done():
+				t.Stop()
+				return err
+			case <-t.C:
+			}
+		}
+		if err = f(); !errors.Is(err, omnillm.ErrHubOffline) || ctx.Err() != nil {
+			return err
+		}
+	}
+	return err
 }
 
 func (d *Device) models(ctx context.Context) ([]omnillm.ModelInfo, error) {
@@ -574,13 +610,13 @@ func (d *Device) Complete(ctx context.Context, req omnillm.Request) (omnillm.Str
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-	s, err := d.complete(ctx, req)
-	// No answer on this connection: try once more on a new one before
-	// saying the hub can't be reached (a connection can die without
-	// either side noticing at once). A hub that is really gone is
-	// refused by the relay at once on the second try.
-	if errors.Is(err, omnillm.ErrHubOffline) && ctx.Err() == nil {
-		s, err = d.complete(ctx, req)
+	// No answer on this connection: try again on new ones before saying
+	// the hub can't be reached (a connection can die without either side
+	// noticing at once, and a relay restart takes a few seconds).
+	var s omnillm.Stream
+	err := d.whileOffline(ctx, func() (err error) { s, err = d.complete(ctx, req); return err })
+	if err == nil {
+		d.lastOK.Store(time.Now().UnixNano())
 	}
 	return s, err
 }

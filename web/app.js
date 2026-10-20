@@ -415,13 +415,18 @@ async function recheck() {
 document.addEventListener("visibilitychange", () => { if (!document.hidden) recheck(); });
 setInterval(recheck, 120000);
 
+// isSub: a Claude or ChatGPT subscription (the official programs on the
+// hub), not merely a model kept for people (a local model can be that too).
+function isSub(m) { return m.provider === "claude-code" || m.provider === "codex"; }
+function modelName(id) { const m = S.models.find((x) => x.id === id); return m ? m.name : id; }
+
 async function loadModels() {
   const ms = await omnillm.models();
   // Subscription models (people only) first: they are what the owner pays for already.
-  ms.sort((a, b) => (b.humanOnly - a.humanOnly) || a.name.localeCompare(b.name));
+  ms.sort((a, b) => (isSub(b) - isSub(a)) || a.name.localeCompare(b.name));
   S.models = ms;
   const sel = $("model"); sel.textContent = "";
-  for (const m of ms) { const o = el("option", m.humanOnly ? m.name + " · " + t("sub") : m.name); o.value = m.id; sel.append(o); }
+  for (const m of ms) { const o = el("option", isSub(m) ? m.name + " · " + t("sub") : m.name); o.value = m.id; sel.append(o); }
   const want = S.cur && S.cur.model || localStorageGet("model");
   // Without a choice yet: the Claude subscription's Sonnet, else the first.
   const pick = [want, "claude-code/sonnet"].find((id) => id && ms.some((m) => m.id === id));
@@ -470,6 +475,8 @@ function bubble(m) {
   }
   fill(b, m.content);
   if (m.note) b.append(el("p", m.note, "note"));
+  // Which model wrote this reply, so a chat that switched models stays clear.
+  if (m.role === "assistant" && m.by) b.append(el("span", m.by, "by"));
   if (m.role === "assistant" && m.content) {
     const cp = el("button", t("copy"), "copy"); cp.type = "button";
     cp.addEventListener("click", () => { navigator.clipboard.writeText(m.content).then(() => { cp.textContent = t("copied"); setTimeout(() => { cp.textContent = t("copy"); }, 1200); }); });
@@ -557,7 +564,7 @@ $("composer").addEventListener("submit", async (e) => {
   chat.model = model;
   if (!chat.title) chat.title = text.slice(0, 40) || t("imageTitle");
   chat.messages.push(images.length ? { role: "user", content: text, images } : { role: "user", content: text });
-  const reply = { role: "assistant", content: "" };
+  const reply = { role: "assistant", content: "", by: modelName(model) };
   chat.messages.push(reply);
   renderLog(); renderList();
   const log = $("log"), node = log.lastElementChild;

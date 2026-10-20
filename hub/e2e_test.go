@@ -440,7 +440,9 @@ func TestHubOfflineIsFast(t *testing.T) {
 	if !errors.Is(err, omnillm.ErrHubOffline) {
 		t.Fatalf("want hub_offline, got %v", err)
 	}
-	if el := time.Since(start); el > 4*time.Second {
+	// The device answered a moment ago, so it rides out a blip for about
+	// 10 s before saying so (device.offlineWaits); never much longer.
+	if el := time.Since(start); el > 14*time.Second {
 		t.Fatalf("offline took %s", el)
 	}
 }

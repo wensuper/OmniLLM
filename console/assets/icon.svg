@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- OmniLLM: one hub (the core) and the devices around it, in NEXA's
+       Aurora family: deep violet tile, violet-to-cyan edge and links. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#241A5E"/><stop offset="1" stop-color="#07061A"/></linearGradient>
+    <linearGradient id="edge" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8C7BFF" stop-opacity=".9"/><stop offset="1" stop-color="#22D3EE" stop-opacity=".35"/></linearGradient>
+    <linearGradient id="link" gradientUnits="userSpaceOnUse" x1="96" y1="416" x2="416" y2="96"><stop offset="0" stop-color="#8C7BFF"/><stop offset="1" stop-color="#22D3EE"/></linearGradient>
+    <radialGradient id="core" cx=".35" cy=".35" r=".75"><stop offset="0" stop-color="#E4DEFF"/><stop offset=".45" stop-color="#8C7BFF"/><stop offset="1" stop-color="#5B48F0"/></radialGradient>
+  </defs>
+  <rect x="8" y="8" width="496" height="496" rx="124" fill="url(#bg)"/>
+  <rect x="14" y="14" width="484" height="484" rx="118" fill="none" stroke="url(#edge)" stroke-width="12"/>
+  <circle cx="256" cy="256" r="118" fill="none" stroke="url(#link)" stroke-width="18" stroke-opacity=".55"/>
+  <g stroke="url(#link)" stroke-width="16" stroke-linecap="round"><path d="M256 196V140M316 256h56M256 316v56M196 256h-56"/></g>
+  <g fill="#B8ACFF"><circle cx="256" cy="116" r="24"/><circle cx="396" cy="256" r="24"/><circle cx="256" cy="396" r="24"/><circle cx="116" cy="256" r="24"/></g>
+  <circle cx="256" cy="256" r="60" fill="url(#core)"/>
+</svg>
