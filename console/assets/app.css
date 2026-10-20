@@ -62,8 +62,8 @@ button.link { background: none; border: none; color: var(--accent); padding: 0; 
 button.danger { background: transparent; color: var(--danger); border-color: var(--line); padding: 5px 10px; font-size: 13px; }
 button:disabled { opacity: .55; cursor: default; }
 
-.steps { display: flex; gap: 8px; list-style: none; padding: 0; margin: 0 0 24px; counter-reset: s; flex-wrap: wrap; }
-.steps li { counter-increment: s; flex: 1; min-width: 120px; color: var(--muted); font-size: 13px; padding-top: 8px; border-top: 3px solid var(--line); }
+.steps { display: flex; gap: 8px; list-style: none; padding: 0; margin: 0 0 24px; counter-reset: s; }
+.steps li { counter-increment: s; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--muted); font-size: 13px; padding-top: 8px; border-top: 3px solid var(--line); }
 .steps li::before { content: counter(s) " · "; }
 .steps li.now { color: var(--ink); border-top-color: var(--accent); font-weight: 600; }
 .steps li.done { color: var(--ok); border-top-color: var(--ok); }
