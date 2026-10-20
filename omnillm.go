@@ -8,18 +8,10 @@
 package omnillm
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"image"
-	"image/gif"
-	"image/jpeg"
-	"image/png"
-	"net/http"
 	"time"
-
-	"golang.org/x/image/webp"
 )
 
 // Caller says who is asking. Background callers (automated programs such as
@@ -138,25 +130,13 @@ func (im Image) check() error {
 	if !imageTypes[im.MIME] || len(im.Data) == 0 || len(im.Data) > MaxImageBytes {
 		return &Error{Code: CodeBadRequest, Msg: MsgBadImage}
 	}
-	if http.DetectContentType(im.Data) != im.MIME {
+	if sniffImage(im.Data) != im.MIME {
 		return &Error{Code: CodeBadRequest, Msg: MsgBadImage}
 	}
 	// A few KB can claim huge dimensions; whoever decodes it (the hub's
 	// Claude Code or Codex, a provider) would spend gigabytes on it.
-	var cfg image.Config
-	var err error
-	switch im.MIME {
-	case "image/png":
-		cfg, err = png.DecodeConfig(bytes.NewReader(im.Data))
-	case "image/jpeg":
-		cfg, err = jpeg.DecodeConfig(bytes.NewReader(im.Data))
-	case "image/gif":
-		cfg, err = gif.DecodeConfig(bytes.NewReader(im.Data))
-	case "image/webp":
-		cfg, err = webp.DecodeConfig(bytes.NewReader(im.Data))
-	}
-	if err != nil || cfg.Width <= 0 || cfg.Height <= 0 || cfg.Width > MaxImageSide || cfg.Height > MaxImageSide ||
-		cfg.Width*cfg.Height > MaxImagePixels {
+	w, h, err := imageSize(im.MIME, im.Data)
+	if err != nil || w <= 0 || h <= 0 || w > MaxImageSide || h > MaxImageSide || w*h > MaxImagePixels {
 		return &Error{Code: CodeBadRequest, Msg: MsgBadImage}
 	}
 	return nil

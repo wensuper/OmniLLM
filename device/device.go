@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
 	"slices"
 	"sync"
 	"sync/atomic"
@@ -42,8 +41,8 @@ type ToolHost interface {
 
 // Options is what the host decides.
 type Options struct {
-	Secrets   secret.Store      // required
-	Transport http.RoundTripper // to the relay; nil: default
+	Secrets   secret.Store // required
+	Transport roundTripper // http.RoundTripper to the relay; nil: default
 	Logf      func(format string, args ...any)
 	Tools     ToolHost
 	// AllowedTools names the tools the hub may call. Nil: only ReadOnly

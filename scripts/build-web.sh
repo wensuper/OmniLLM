@@ -15,7 +15,11 @@ got=$(shasum -a 256 web/vendor/jsqr.js | cut -d' ' -f1)
 cp -R web/. "$out/"
 rm -f "$out/vendor/jsqr.sha256"
 cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" "$out/wasm_exec.js"
-GOOS=js GOARCH=wasm CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o "$out/omni.wasm" ./cmd/omniweb
+# Size matters on a phone's first open (docs/design.md §13.3). nojsonv2 keeps
+# encoding/json on its classic code instead of the json/v2 engine Go 1.27
+# uses by default: same behaviour, about 250 KB less after gzip. If a later
+# Go drops the experiment, remove it here (the build says so).
+GOEXPERIMENT=nojsonv2 GOOS=js GOARCH=wasm CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o "$out/omni.wasm" ./cmd/omniweb
 hash=$(cd "$out" && find . -type f ! -name sw.js | LC_ALL=C sort | xargs shasum -a 256 | shasum -a 256 | cut -c1-16)
 sed "s/const VERSION = \"dev\";/const VERSION = \"$hash\";/" web/sw.js > "$out/sw.js"
 # The same build stamp in the page and its script (app.js checks they match).

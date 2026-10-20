@@ -546,10 +546,11 @@ NEXA（`pgclient`，Go）直接引入 OmniLLM 库。用户只装 NEXA：在 NEXA
 **手机和平板：网页客户端，不装 App**
 
 - 配对二维码里是一个链接：`<网页客户端>#pair=<配对文字>`。相机扫码直接打开网页，配对文字在 `#` 后面，浏览器不会把它发给网页托管方；网页一打开就把它从地址栏和历史里抹掉。
-- 网页里跑的是和 `omnillm connect` 同一份设备代码，编译成 WebAssembly（约 2 MB 压缩后），加密全在里面做。配对状态（设备私钥等）存在 IndexedDB，用浏览器生成的、不可导出的 AES-GCM 密钥加密；对话记录同样加密保存。
+- 网页里跑的是和 `omnillm connect` 同一份设备代码，编译成 WebAssembly（gzip 后约 1.35 MB，见下面“首次打开的大小”），加密全在里面做。配对状态（设备私钥等）存在 IndexedDB，用浏览器生成的、不可导出的 AES-GCM 密钥加密；对话记录同样加密保存。
 - 浏览器不能给 WebSocket 加请求头，也读不到 HTTP 状态：relay 为浏览器开一条路，信箱口令放在子协议 `omnillm.auth.<口令>` 里，只接受登记过的网页来源（默认 `https://omni.ixxzh.com`）；口令不对、信箱不存在、主机不在线一律接受后用 4404 关闭，成功的先收到一帧 `ready`。主机的连接仍然拒绝任何浏览器。
 - 发布：网页客户端随程序一起在打标签的发布里构建（`omnillm-web.tar.gz`，校验和由 cosign 签名），放在只给它用的 `https://omni.ixxzh.com`（zc 10-19 定，见 docs/relay-deploy.md）；Service Worker 把整套文件缓存住，新版本整套替换。首次打开要信任托管方（§5.3 已说明）；签名更新留到以后。
 - 从主屏幕打开的网页应用和 Safari 的存储是分开的，所以网页里也能用摄像头扫码（jsQR）或粘贴配对文字。
+- 首次打开的大小（2026-10-20）：服务器约 500 KB/s，手机第一次打开要下完整个 WebAssembly。浏览器版（`GOOS=js`）只编译设备需要的部分：连信箱直接用浏览器自带的 WebSocket（`syscall/js`，子协议、`ready` 帧、4404 和原来一样），不链接 `net/http`（TLS、证书、MIME 等）和 WebSocket 库；图片只按文件开头核对格式，PNG、GIF 从固定的头部读尺寸，JPEG、WebP 的尺寸留给中心节点（它对每张图都解码头部再用）；`encoding/json` 用经典实现（`GOEXPERIMENT=nojsonv2`，行为相同）。原生程序和公开接口不变：`device.Options.Transport` 在原生构建里仍是 `http.RoundTripper`，浏览器里不用。结果：8.2 MB → 4.7 MB，gzip 2.24 MB → 1.35 MB。
 
 **配对文字的紧凑格式（v0.2.0-alpha.4，alpha.5 加校验）**：`omnillm3-` + base64url(SHA-256 前 4 字节 | 过期时间 4 字节 | 信箱 16 | 信箱口令 32 | 中心节点公钥 32 | 一次性配对密钥 32 | relay 地址)，比 JSON 的 `omnillm1-` 短约四成，二维码明显更稀、更好扫；粘贴损坏的文字靠校验马上被认出来。`omnillm1-`、`omnillm2-`（无校验）都还认。网页客户端必须先于中心节点升级，否则旧网页认不出新格式。
 
