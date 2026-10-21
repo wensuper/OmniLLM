@@ -627,3 +627,32 @@ func TestPairReasonDeviceLeft(t *testing.T) {
 		t.Fatalf("denied: %q", got)
 	}
 }
+
+// The console's 中文 / English is the hub's choice, which the menu bar reads
+// too; one made elsewhere shows in the status the page polls.
+func TestLanguageIsSharedWithTheMenuBar(t *testing.T) {
+	r := newRig(t, false)
+	sid := r.login(t)
+	w := r.do(req{method: "POST", path: "/console/api/lang", body: `{"lang":"zh"}`, origin: origin, header: true, cookie: sid})
+	if w.Code != 200 {
+		t.Fatalf("set: %d %s", w.Code, w.Body)
+	}
+	if l := r.h.UILang(context.Background()); l != "zh" {
+		t.Fatalf("hub keeps %q", l)
+	}
+	if err := r.h.SetUILang(context.Background(), "en"); err != nil { // the menu bar's switch
+		t.Fatal(err)
+	}
+	for _, path := range []string{"/console/api/status", "/console/api/relay"} {
+		w = r.do(req{method: "GET", path: path, origin: origin, header: true, cookie: sid})
+		var out map[string]any
+		_ = json.Unmarshal(w.Body.Bytes(), &out)
+		if out["lang"] != "en" {
+			t.Fatalf("%s: lang %v", path, out["lang"])
+		}
+	}
+	w = r.do(req{method: "POST", path: "/console/api/lang", body: `{"lang":"fr"}`, origin: origin, header: true, cookie: sid})
+	if w.Code != 400 {
+		t.Fatalf("unknown language accepted: %d", w.Code)
+	}
+}

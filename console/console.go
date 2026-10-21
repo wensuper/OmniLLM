@@ -173,6 +173,7 @@ func (s *Server) Handler() http.Handler {
 	api("POST /console/api/apps/remove", s.removeApp)
 	api("POST /console/api/apps/update", s.updateApp)
 	api("POST /console/api/daily-total", s.setDailyTotal)
+	api("POST /console/api/lang", s.setLang)
 	api("POST /console/api/pair/start", s.pairStart)
 	api("GET /console/api/pair/state", s.pairGet)
 	api("POST /console/api/pair/decide", s.pairDecide)
@@ -510,12 +511,15 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 		"region":                map[string]any{"confirmed": confirmed, "seen": seen, "paused": paused},
 		// The page says "this Mac" on macOS and "this computer" elsewhere.
 		"os": runtime.GOOS,
+		// The owner's language for the console and the menu bar ("" when
+		// not chosen); the page follows a choice made in the menu bar.
+		"lang": s.hub.UILang(ctx),
 	})
 }
 
 // relay is the cheap part of status, polled while the hub (re)connects.
 func (s *Server) relay(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, map[string]any{"relay_up": s.hub.RelayUp(), "relay_configured": s.hub.RelayConfigured()})
+	writeJSON(w, map[string]any{"relay_up": s.hub.RelayUp(), "relay_configured": s.hub.RelayConfigured(), "lang": s.hub.UILang(r.Context())})
 }
 
 func (s *Server) ollama(w http.ResponseWriter, r *http.Request) {
@@ -677,6 +681,26 @@ func orEmpty(xs []string) []string {
 		return []string{}
 	}
 	return xs
+}
+
+// setLang keeps the page's 中文 / English choice in the hub, where the menu
+// bar reads it too.
+func (s *Server) setLang(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Lang string `json:"lang"`
+	}
+	if !decode(w, r, &in) {
+		return
+	}
+	if in.Lang != "zh" && in.Lang != "en" && in.Lang != "" {
+		writeErr(w, r, http.StatusBadRequest, &omnillm.Error{Code: omnillm.CodeBadRequest, Msg: omnillm.MsgNotFound})
+		return
+	}
+	if err := s.hub.SetUILang(r.Context(), in.Lang); err != nil {
+		writeErr(w, r, 0, err)
+		return
+	}
+	writeJSON(w, map[string]any{"lang": in.Lang})
 }
 
 func (s *Server) setDailyTotal(w http.ResponseWriter, r *http.Request) {

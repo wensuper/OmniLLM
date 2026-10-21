@@ -71,6 +71,9 @@ type Status struct {
 	// UpdateFailed: installing it automatically didn't work.
 	Update       string `json:"update,omitempty"`
 	UpdateFailed bool   `json:"update_failed,omitempty"`
+	// Lang: the language chosen for the console and the menu bar ("" when
+	// not chosen: each follows its system).
+	Lang string `json:"lang,omitempty"`
 }
 
 // SourceProblem is a model source that needs the owner: Problem is

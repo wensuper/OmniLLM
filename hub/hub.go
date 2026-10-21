@@ -277,6 +277,28 @@ func (h *Hub) SetDailyTotal(ctx context.Context, v int64) error {
 	return nil
 }
 
+const uiLangKey = "settings/ui_lang"
+
+// UILang is the language the owner chose for the hub's own screens (the
+// console and the menu bar): "zh" or "en", or "" when not chosen (each
+// screen follows its system's language then).
+func (h *Hub) UILang(ctx context.Context) string {
+	var l string
+	if err := store.GetJSON(ctx, h.opts.Store, uiLangKey, &l); err != nil || (l != "zh" && l != "en") {
+		return ""
+	}
+	return l
+}
+
+// SetUILang keeps the owner's choice of language: "zh", "en", or "" to
+// follow the system again.
+func (h *Hub) SetUILang(ctx context.Context, l string) error {
+	if l != "" && l != "zh" && l != "en" {
+		return errors.New("hub: language must be zh, en or empty")
+	}
+	return store.PutJSON(ctx, h.opts.Store, uiLangKey, l)
+}
+
 // RelayUp reports whether devices can reach the hub right now.
 func (h *Hub) RelayUp() bool {
 	h.mu.Lock()

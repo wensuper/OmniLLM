@@ -365,6 +365,8 @@ async function refresh() {
   S = next;
   // The status says which system this is: the fixed words follow it.
   if (onMac() !== appliedMac) applyLang();
+  // The owner's language, if chosen (here or in the menu bar).
+  if ((S.lang === "zh" || S.lang === "en") && S.lang !== lang) { lang = S.lang; store("omnillm.lang", lang); applyLang(); }
   renderStatus();
   if (!wizardDone() && (S.providers.length === 0 || (S.devices.length === 0 && !store("omnillm.skipPair")))) {
     showWizard();
@@ -385,6 +387,7 @@ setInterval(async () => {
     return;
   }
   $("hub-down").hidden = true;
+  followLang(r.lang);
   if (r.relay_up !== S.relay_up || r.relay_configured !== S.relay_configured) {
     S.relay_up = r.relay_up; S.relay_configured = r.relay_configured;
     renderStatus();
@@ -404,6 +407,7 @@ setInterval(async () => {
   try { next = await load(true); } catch (_) { return; }
   if (!next || $("dash").hidden || busy()) return;
   S = next;
+  if (followLang(S.lang)) return;
   renderStatus();
   showDash();
 }, 10000);
@@ -1502,7 +1506,33 @@ appForm.addEventListener("submit", async (ev) => {
   } catch (e) { toast(e.message, true); ok.disabled = false; }
 });
 
-$("lang").addEventListener("click", () => { lang = lang === "zh" ? "en" : "zh"; store("omnillm.lang", lang); applyLang(); if (S) { renderStatus(); if (!$("dash").hidden) showDash(); } });
+// The language is the owner's choice for the console and the menu bar
+// together: the hub keeps it, so a switch here changes the menu bar, and
+// one made in the menu bar shows here within a few seconds (followLang).
+function useLang(l) {
+  lang = l; store("omnillm.lang", lang); applyLang();
+  if (S) { renderStatus(); if (!$("dash").hidden) showDash(); }
+}
+// followLang takes the hub's choice when it differs from the page's; true
+// when it redrew.
+function followLang(l) {
+  if ((l !== "zh" && l !== "en") || l === lang) return false;
+  if (S) S.lang = l;
+  useLang(l);
+  return true;
+}
+// Back in view (polls pause while hidden): pick up a language chosen in
+// the menu bar meanwhile at once.
+document.addEventListener("visibilitychange", async () => {
+  if (document.hidden || !S || signedOut) return;
+  try { followLang((await api("relay")).lang); } catch (_) {}
+});
+$("lang").addEventListener("click", () => {
+  const l = lang === "zh" ? "en" : "zh";
+  if (S) S.lang = l;
+  useLang(l);
+  api("lang", { lang: l }).catch(() => {});
+});
 $("theme").addEventListener("click", () => {
   const cur = document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
   const next = cur === "dark" ? "light" : "dark";

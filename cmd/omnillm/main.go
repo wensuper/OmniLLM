@@ -946,7 +946,7 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 			_, _, paused := h.RegionStatus()
 			st := map[string]any{"running": true, "version": version, "providers": len(ps), "devices": len(ds), "online": online,
 				"relay_configured": relayURL != "", "relay_up": h.RelayUp(), "console": con != nil, "os": runtime.GOOS,
-				"region_paused": paused, "problems": problems}
+				"region_paused": paused, "problems": problems, "lang": h.UILang(ctx)}
 			return c.Send(control.Reply{Event: "ok", Data: jsonData(st)})
 		case "provider.add":
 			cfg, err := provider.Default(provider.Kind(a["kind"]))
@@ -1150,6 +1150,15 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 				return hubSay(l, err)
 			}
 			return c.Send(control.Reply{Event: "ok", Text: fmt.Sprintf(tl(l, "已移除“%s”，它的模型不再能用。", "Removed “%s”; its models can’t be used any more."), sourceNameIn(l, p))})
+		case "ui_lang.set":
+			// The menu bar's 中文 / English; the console sets the same one.
+			if v := a["lang"]; v != "" && v != "zh" && v != "en" {
+				return say(tl(l, "语言只能是 zh 或 en。", "The language must be zh or en."))
+			}
+			if err := h.SetUILang(ctx, a["lang"]); err != nil {
+				return hubSay(l, err)
+			}
+			return c.Send(control.Reply{Event: "ok"})
 		case "daily_total.set":
 			v, err := strconv.ParseInt(a["micro_usd"], 10, 64)
 			if err != nil || (v <= 0 && v != hub.NoLimit) || v > maxMicroUSD {

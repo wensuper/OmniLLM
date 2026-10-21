@@ -16,6 +16,8 @@ import (
 	"time"
 
 	"fyne.io/systray"
+
+	"github.com/wensuper/OmniLLM/internal/control"
 )
 
 // The menu bar mark as macOS template images (black + alpha; the system
@@ -37,15 +39,22 @@ func trayCmd() {
 		fmt.Fprintln(os.Stderr, t("OmniLLM 已经在菜单栏里了。", "OmniLLM is already in the menu bar."))
 		return
 	}
-	// The menu follows the system language, as NEXA's does; the login
-	// item's OMNILLM_LANG is only the shell's at install time.
-	if l := trayLang(); l != "" {
-		os.Setenv("OMNILLM_LANG", l)
+	// Until the owner picks a language (menu or console), the menu follows
+	// the system's; the login item's OMNILLM_LANG is only the shell's at
+	// install time.
+	sysLang = trayLang()
+	if st, ok := queryStatus(); ok && st.Lang != "" {
+		os.Setenv("OMNILLM_LANG", st.Lang)
+	} else if sysLang != "" {
+		os.Setenv("OMNILLM_LANG", sysLang)
 	}
 	systray.Run(trayReady, func() {})
 }
 
-// trayLang is the language the menu shows: OMNILLM_TRAY_LANG when set (for
+// sysLang is the system's language, for "Use the system language".
+var sysLang string
+
+// trayLang is the system's language for the menu: OMNILLM_TRAY_LANG when set (for
 // tests), else the first of macOS's preferred languages ("" when unknown).
 func trayLang() string {
 	if v := os.Getenv("OMNILLM_TRAY_LANG"); v != "" {
@@ -82,8 +91,8 @@ func trayReady() {
 	sources := systray.AddMenuItem("", "")
 	// No separator here: while the hub is down the counts are hidden, and
 	// two separators would stand together.
-	add := systray.AddMenuItem(t("添加设备…", "Add device…"), "")
-	open := systray.AddMenuItem(t("打开控制台…", "Open the console…"), "")
+	add := systray.AddMenuItem("", "")
+	open := systray.AddMenuItem("", "")
 	systray.AddSeparator()
 	// The version line: grey while this is the latest; 有新版本 X when a
 	// newer one is out, and one click installs it (trayversion.go).
@@ -93,6 +102,65 @@ func trayReady() {
 	// keeps the menu open so its result shows where it was clicked.
 	check := systray.AddMenuItem("", "")
 	check.SetKeepOpen(true)
+	// Language, on its own at the bottom as macOS menus keep their
+	// settings: the title names itself in both languages, so it is found
+	// whichever is showing; the choices name themselves (中文, English) and
+	// the one in use carries the check. The console has the same choice:
+	// the hub keeps it, and each follows the other (show reads it).
+	systray.AddSeparator()
+	langMenu := systray.AddMenuItem("", "")
+	langZh := langMenu.AddSubMenuItemCheckbox("中文", "", false)
+	langEn := langMenu.AddSubMenuItemCheckbox("English", "", false)
+	langSys := langMenu.AddSubMenuItemCheckbox("", "", false)
+	chosen := ""          // the hub's choice: "zh", "en", or "" (the system's)
+	var show func()       // set below; a language change redraws everything
+	var showUpdate func() // likewise
+	// label sets the titles that change only with the language.
+	label := func() {
+		start.SetTitle(t("启动 OmniLLM", "Start OmniLLM"))
+		add.SetTitle(t("添加设备…", "Add device…"))
+		open.SetTitle(t("打开控制台…", "Open the console…"))
+		langMenu.SetTitle(t("语言 · Language", "Language · 语言"))
+		langSys.SetTitle(t("跟随系统", "Use system language"))
+		for _, c := range []struct {
+			item *systray.MenuItem
+			on   bool
+		}{{langZh, chosen == "zh"}, {langEn, chosen == "en"}, {langSys, chosen == ""}} {
+			if c.on {
+				c.item.Check()
+			} else {
+				c.item.Uncheck()
+			}
+		}
+	}
+	// useLang shows the menu in the hub's choice (or the system's).
+	useLang := func(l string) {
+		chosen = l
+		eff := l
+		if eff == "" {
+			eff = sysLang
+		}
+		if eff != "" {
+			os.Setenv("OMNILLM_LANG", eff)
+		}
+		label()
+		if show != nil {
+			show()
+			showUpdate()
+		}
+	}
+	if st, ok := queryStatus(); ok {
+		chosen = st.Lang
+	}
+	label()
+	// pickLang keeps the choice in the hub (the console follows it) and
+	// redraws at once.
+	pickLang := func(l string) {
+		sock := filepath.Join(dataDir("hub"), "control.sock")
+		if ctl(sock, control.Request{Op: "ui_lang.set", Args: map[string]string{"lang": l}}, func(control.Reply) (bool, bool) { return false, false }) == nil {
+			useLang(l)
+		}
+	}
 
 	startFailed := false // launchctl kickstart failed: say what to do instead
 	// Updates: checked a minute after start, then every day, and on a click.
@@ -102,8 +170,13 @@ func trayReady() {
 	lockPath := filepath.Join(dataDir("hub"), "update.lock")
 	up := updateState{Log: logPath}
 	starting := false // a launchctl kickstart is under way
-	show := func() {
+	show = func() {
 		st, ok := queryStatus()
+		if ok && st.Lang != chosen {
+			// Chosen in the console: follow it.
+			useLang(st.Lang)
+			return
+		}
 		up.HubUpdating = up.Installing == "" && lockHeld(lockPath)
 		updating := up.Installing != "" || up.HubUpdating
 		head.SetTitle(statusLine(st, ok, updating, startFailed))
@@ -139,7 +212,7 @@ func trayReady() {
 	show()
 
 	checkClick, installClick := false, false
-	showUpdate := func() {
+	showUpdate = func() {
 		title, inst := versionLine(version, up)
 		ver.SetTitle(title)
 		ver.SetTooltip(versionTip(version, up))
@@ -268,6 +341,12 @@ func trayReady() {
 				trayOpen("&tab=models")
 			case <-add.ClickedCh:
 				trayOpen("&add")
+			case <-langZh.ClickedCh:
+				pickLang("zh")
+			case <-langEn.ClickedCh:
+				pickLang("en")
+			case <-langSys.ClickedCh:
+				pickLang("")
 			case <-start.ClickedCh:
 				if starting {
 					break
