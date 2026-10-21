@@ -20,7 +20,15 @@ import (
 // each alias and logs every prompt it is sent.
 func fakeClaude(t *testing.T) (path, log string) {
 	t.Helper()
-	dir := t.TempDir()
+	// Not t.TempDir: adding a subscription starts its safety check in the
+	// background (prepare), which may still run this program and append to
+	// its log after the test returns; t.TempDir's cleanup then fails on a
+	// directory that is not empty.
+	dir, err := os.MkdirTemp("", "fakeclaude-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(dir) })
 	log = filepath.Join(dir, "calls")
 	script := `#!/bin/sh
 if [ "$1" = auth ]; then echo '{"loggedIn":true}'; exit 0; fi
