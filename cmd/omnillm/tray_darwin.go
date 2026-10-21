@@ -65,13 +65,14 @@ func trayLang() string {
 		return ""
 	}
 	// ( "en-SG", "zh-Hans-SG" ): the first entry wins.
-	for _, f := range strings.FieldsFunc(string(out), func(r rune) bool { return strings.ContainsRune("(),\"\n\t ", r) }) {
-		if strings.HasPrefix(strings.ToLower(f), "zh") {
-			return "zh"
-		}
-		return "en"
+	fields := strings.FieldsFunc(string(out), func(r rune) bool { return strings.ContainsRune("(),\"\n\t ", r) })
+	if len(fields) == 0 {
+		return ""
 	}
-	return ""
+	if strings.HasPrefix(strings.ToLower(fields[0]), "zh") {
+		return "zh"
+	}
+	return "en"
 }
 
 // The menu, laid out as NEXA's: one status line; the counts, each opening
