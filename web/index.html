@@ -117,42 +117,79 @@
   </section>
 
   <section id="chat" class="screen chat" hidden>
-    <header class="bar">
-      <button id="menu" class="icon" data-ta="menu"><span></span></button>
-      <!-- The dot: green while the Mac answers, grey while it can't be reached. -->
-      <div class="model-wrap"><span id="live-dot" class="live-dot" role="img"></span><select id="model" data-ta="model"></select></div>
-      <button id="new" class="icon plus" data-ta="newChat"></button>
-    </header>
-    <div id="banner" class="banner" role="status" hidden></div>
-    <main id="log" class="log" aria-live="polite"></main>
-    <div class="jump-wrap"><button id="jump" type="button" class="jump" hidden></button></div>
-    <div id="pending" class="pending" hidden></div>
-    <form id="composer" class="composer">
-      <button id="attach" class="attach" type="button" aria-label="Add image"></button>
-      <input id="file" type="file" accept="image/png,image/jpeg,image/gif,image/webp,image/heic,image/heif" multiple hidden>
-      <textarea id="input" rows="1" enterkeyhint="send" autocomplete="off"></textarea>
-      <button id="send" class="send" type="submit" data-ta="send"></button>
-    </form>
-  </section>
-
-  <aside id="drawer" class="drawer" hidden>
-    <div class="drawer-panel">
-      <div class="brand"><img class="brand-mark" src="icon.svg" alt="" width="32" height="32"><span class="brand-text"><span class="brand-name">OmniLLM</span><span class="brand-sub">Your AI, Everywhere</span></span><button id="drawer-close" type="button" class="close-x"></button></div>
-      <input id="chat-search" class="search" type="search" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
-      <h2 data-t="chats"></h2>
-      <ul id="chat-list"></ul>
-      <div class="drawer-foot">
-        <p class="muted small" data-t="chatsLocal"></p>
-        <p id="device-line" class="muted small"></p>
-        <button id="install-tip" class="link small" data-t="addHome" hidden></button>
-        <button id="forget" class="link danger small" data-t="forget"></button>
+    <!-- The chat list: a sidebar on wide screens, a drawer on phones. -->
+    <aside id="drawer" class="drawer" hidden>
+      <div class="drawer-panel">
+        <div class="brand"><img class="brand-mark" src="icon.svg" alt="" width="32" height="32"><span class="brand-text"><span class="brand-name">OmniLLM</span><span class="brand-sub">Your AI, Everywhere</span></span><button id="side-hide" type="button" class="ibtn side-hide" data-ta="hideSide"><span class="ic i-side"></span></button><button id="drawer-close" type="button" class="ibtn drawer-x"><span class="ic i-x"></span></button></div>
+        <button id="new-side" type="button" class="newchat"><span class="ic i-compose s16"></span><span data-t="newChat"></span></button>
+        <label class="search"><span class="ic i-search s16"></span><input id="chat-search" type="search" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search"></label>
+        <ul id="chat-list"></ul>
+        <div class="drawer-foot">
+          <button id="mac" type="button" class="mac" aria-haspopup="menu" aria-expanded="false" aria-controls="mac-menu"><span id="live-dot" class="live-dot" role="img"></span><span class="mac-t"><b data-t="yourMac"></b><small id="mac-state"></small></span><span class="ic i-updown s16"></span></button>
+          <div id="mac-menu" class="pop mac-menu" role="menu" hidden>
+            <div class="pop-head"><span class="ic i-mac"></span><span class="pop-head-t"><b id="mac-head"></b><small id="device-line"></small></span></div>
+            <hr>
+            <button id="lang-btn" type="button" class="pop-item" role="menuitem" aria-expanded="false" aria-controls="lang-list"><span class="ic i-lang s16"></span><span class="nm" data-t="language"></span><small id="lang-now"></small><span class="ic i-chev s14 lang-chev"></span></button>
+            <div id="lang-list" class="lang-list" role="group" hidden>
+              <button type="button" class="pop-item" role="menuitemradio" data-lang=""><span class="nm" data-t="langMac"></span><span class="ic i-check s16 tick"></span></button>
+              <button type="button" class="pop-item" role="menuitemradio" data-lang="zh"><span class="nm">中文</span><span class="ic i-check s16 tick"></span></button>
+              <button type="button" class="pop-item" role="menuitemradio" data-lang="en"><span class="nm">English</span><span class="ic i-check s16 tick"></span></button>
+            </div>
+            <button id="keys-btn" type="button" class="pop-item keys-item" role="menuitem"><span class="ic i-key s16"></span><span class="nm" data-t="shortcuts"></span><small class="kbd-hint" data-k="⌘/"></small></button>
+            <button id="install-tip" type="button" class="pop-item" role="menuitem" hidden><span class="ic i-home s16"></span><span class="nm" data-t="addHome"></span></button>
+            <hr>
+            <p class="pop-note" data-t="chatsLocal"></p>
+            <button id="forget" type="button" class="pop-item danger" role="menuitem"><span class="ic i-trash s16"></span><span class="nm" data-t="forget"></span></button>
+          </div>
+        </div>
       </div>
+    </aside>
+    <div class="main">
+      <header class="bar">
+        <button id="menu" type="button" class="ibtn" data-ta="chats"><span class="ic i-menu s20"></span></button>
+        <div id="bar-title" class="bar-t"></div>
+        <button id="new" type="button" class="ibtn" data-ta="newChat"><span class="ic i-compose s20"></span></button>
+      </header>
+      <!-- Sidebar hidden on a wide screen: show it again, or start a chat. -->
+      <div class="side-btns">
+        <button id="side-show" type="button" class="ibtn" data-ta="showSide"><span class="ic i-side s20"></span></button>
+        <button id="new-float" type="button" class="ibtn" data-ta="newChat"><span class="ic i-compose s20"></span></button>
+      </div>
+      <main id="log" class="log" aria-live="polite"></main>
+      <div class="dock">
+        <div class="dock-in">
+          <div class="jump-wrap"><button id="jump" type="button" class="jump" hidden></button></div>
+          <div id="banner" class="banner" role="status" hidden></div>
+          <form id="composer" class="composer">
+            <div id="pending" class="pending" hidden></div>
+            <textarea id="input" rows="1" enterkeyhint="send" autocomplete="off"></textarea>
+            <div class="comp-row">
+              <button id="attach" class="ibtn attach" type="button"><span class="ic i-image"></span></button>
+              <input id="file" type="file" accept="image/png,image/jpeg,image/gif,image/webp,image/heic,image/heif" multiple hidden>
+              <div class="mwrap">
+                <button id="mpick" type="button" class="mpick" aria-haspopup="listbox" aria-expanded="false" aria-controls="mmenu"><span id="pick-dot" class="live-dot" aria-hidden="true"></span><span id="pick-name" class="nmx"></span><span class="ic i-chev s14 pick-chev"></span></button>
+                <div id="mmenu" class="pop mmenu" role="listbox" tabindex="-1" hidden></div>
+              </div>
+              <!-- The chosen model's id lives here (the picker above draws it). -->
+              <select id="model" hidden></select>
+              <span class="sp"></span>
+              <button id="send" class="send" type="submit" data-ta="send"></button>
+            </div>
+          </form>
+        </div>
+      </div>
+      <div id="drop" class="drop" hidden><span class="ic i-image s20"></span><span data-t="dropHere"></span></div>
     </div>
-  </aside>
+  </section>
   <!-- In-page questions (delete a chat, remove this device, a tip). -->
   <dialog id="ask" class="ask">
     <p id="ask-text"></p>
     <div class="ask-btns"><button id="ask-no" type="button" class="secondary"></button><button id="ask-yes" type="button" class="primary"></button></div>
+  </dialog>
+  <dialog id="keys" class="ask keys">
+    <h2 data-t="shortcuts"></h2>
+    <table id="keys-table"></table>
+    <div class="ask-btns"><button id="keys-ok" type="button" class="primary" data-t="gotIt"></button></div>
   </dialog>
   <div id="toast" class="toast" role="status" hidden></div>
   <section id="other-tab" class="other-tab" hidden>

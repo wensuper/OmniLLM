@@ -311,7 +311,8 @@ func (ds *devSession) handle(ctx context.Context, env proto.Envelope, d Device) 
 		}
 		// The device's name goes with its models: the owner may have
 		// renamed it on the Mac, and the device shows the name the Mac uses.
-		_ = ds.send(ctx, proto.Envelope{T: proto.TModels, ID: env.ID, Models: ms, Name: d.Name})
+		// So does the owner's language, so the device speaks it too.
+		_ = ds.send(ctx, proto.Envelope{T: proto.TModels, ID: env.ID, Models: ms, Name: d.Name, Lang: ds.h.DeviceLang(ctx)})
 	case proto.TChatStart:
 		ds.startChat(ctx, env, d)
 	case proto.TDeviceLeave:

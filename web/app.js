@@ -45,7 +45,11 @@ const T = {
     addHome: "添加到主屏幕", addHomeTip: "点浏览器的“分享”按钮，选“添加到主屏幕”。第一次从主屏幕打开时，需要再扫一次码。",
     deviceLine: "这台设备：{0}", empty: "有什么可以帮你？", cut: "（回复太长被截断了。发“继续”让它接着写。）", stopped: "（已停止）",
     today: "今天", copy: "复制", copied: "已复制", again: "重新回答", againWith: "用 {0} 再答一次", thinking: "正在思考",
-    earlier: "之前的回答（{0}）· 展开", earlierOpen: "之前的回答（{0}）· 收起",
+    earlier: "之前的回答（{0}）", earlierOpen: "之前的回答（{0}）",
+    yourMac: "你的 Mac", macOn: "在线", macOff: "连不上 · 醒来后自动恢复", macWait: "正在连接……", macPaused: "已暂停这台设备", macNoNet: "这台设备没有联网",
+    language: "语言", langMac: "跟随你的 Mac", shortcuts: "键盘快捷键", hideSide: "收起侧栏", showSide: "展开侧栏", dropHere: "松开就能添加图片",
+    grpToday: "今天", grpYesterday: "昨天", grpWeek: "前 7 天", grpOlder: "更早", copyCode: "复制", modelMenu: "选择模型",
+    kNew: "新对话", kSearch: "搜索对话", kSide: "收起或展开侧栏", kStop: "停止回答", kCopyLast: "复制最后一条回答", kFocus: "跳到输入框", kSend: "发送", kLine: "换行",
     dropped: "（连接断了，回答没写完。连上后点“重试”。）",
     longChat: "对话已经很长，每次都会整段发出。开个新对话会更快，用 API Key 时也更省。", longChatSub: "对话已经很长，开个新对话回答会更快。", paused: "已暂停", pausedDot: "已在你的 Mac 上暂停", waited: "{0} 秒", slow: "比平常慢。可以点停止，换个模型再问。",
     switchedTo: "换成了 {0}", newContent: "↓ 新内容", waitReply: "等这条回答完成，或先点停止。",
@@ -87,7 +91,11 @@ const T = {
     addHome: "Add to Home Screen", addHomeTip: "Tap the browser’s “Share” button and choose “Add to Home Screen”. The first time it’s opened from the Home Screen, you’ll scan the QR code once more.",
     deviceLine: "This device: {0}", empty: "How can I help?", cut: "(The reply was cut off. Send “continue” to have it go on.)", stopped: "(stopped)",
     today: "Today", copy: "Copy", copied: "Copied", again: "Answer again", againWith: "Answer again with {0}", thinking: "Thinking",
-    earlier: "Earlier answer ({0}) · Show", earlierOpen: "Earlier answer ({0}) · Hide",
+    earlier: "Earlier answer ({0})", earlierOpen: "Earlier answer ({0})",
+    yourMac: "Your Mac", macOn: "Online", macOff: "Can’t reach it · back when it wakes", macWait: "Connecting…", macPaused: "Paused this device", macNoNet: "This device is offline",
+    language: "Language", langMac: "Follow your Mac", shortcuts: "Keyboard shortcuts", hideSide: "Hide sidebar", showSide: "Show sidebar", dropHere: "Drop to add the pictures",
+    grpToday: "Today", grpYesterday: "Yesterday", grpWeek: "Previous 7 days", grpOlder: "Earlier", copyCode: "Copy", modelMenu: "Choose a model",
+    kNew: "New chat", kSearch: "Search chats", kSide: "Hide or show the sidebar", kStop: "Stop the answer", kCopyLast: "Copy the last answer", kFocus: "Go to the message box", kSend: "Send", kLine: "New line",
     dropped: "(Connection lost; the reply is incomplete. Tap Retry once reconnected.)",
     longChat: "This chat is long and is sent in full each time. A new chat is faster, and cheaper with an API key.", longChatSub: "This chat is long; a new chat gets faster replies.", paused: "Paused", pausedDot: "Paused on your Mac", waited: "{0}s", slow: "Slower than usual. You can tap Stop and try another model.",
     switchedTo: "Switched to {0}", newContent: "↓ New", waitReply: "Wait for this reply, or tap Stop first.",
@@ -97,7 +105,12 @@ const T = {
     otherTab: "OmniLLM is open in another tab.", useHere: "Use here",
   },
 };
-const lang = (navigator.language || "en").toLowerCase().startsWith("zh") ? "zh" : "en";
+// The page's language: chosen here (the "Your Mac" menu), else the one the
+// Mac speaks (it says so with the models; kept for the next start), else
+// the browser's.
+const oneLang = (v) => (v === "zh" || v === "en" ? v : "");
+const browserLang = (navigator.language || "en").toLowerCase().startsWith("zh") ? "zh" : "en";
+const lang = oneLang(localStorageGet("lang")) || oneLang(localStorageGet("maclang")) || browserLang;
 document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
 function t(k, ...a) { let s = (T[lang][k] ?? T.en[k] ?? k); a.forEach((v, i) => { s = s.replace("{" + i + "}", v); }); return s; }
 const $ = (id) => document.getElementById(id);
@@ -110,7 +123,11 @@ function quoted(e, s) {
   return e;
 }
 document.querySelectorAll("[data-t]").forEach((e) => { quoted(e, t(e.dataset.t)); });
-document.querySelectorAll("[data-ta]").forEach((e) => { e.setAttribute("aria-label", t(e.dataset.ta)); });
+document.querySelectorAll("[data-ta]").forEach((e) => { e.setAttribute("aria-label", t(e.dataset.ta)); e.title = t(e.dataset.ta); });
+// Shortcuts are written the Mac way (⌘, ⇧); elsewhere they read Ctrl+, Shift+.
+const MAC = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+function keyName(k) { return MAC ? k : k.replace(/⌘/g, "Ctrl+").replace(/⇧/g, "Shift+"); }
+document.querySelectorAll("[data-k]").forEach((e) => { e.textContent = keyName(e.dataset.k); });
 // Every screen opens at its top (the welcome page kept the chat's or the
 // paste box's scroll, cutting off a notice placed at the top).
 function show(id) { document.querySelectorAll(".screen").forEach((s) => { s.hidden = s.id !== id; if (!s.hidden) s.scrollTop = 0; }); window.scrollTo(0, 0); }
@@ -244,6 +261,10 @@ function deviceName() {
   if (/iPad/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) return "iPad";
   if (/iPhone/.test(ua)) return "iPhone";
   if (/Android/.test(ua)) return lang === "zh" ? (/Mobile/.test(ua) ? "安卓手机" : "安卓平板") : (/Mobile/.test(ua) ? "Android phone" : "Android tablet");
+  // A computer: the browser and the system ("Chrome (Mac)"), so two can be told apart.
+  const br = /Edg\//.test(ua) ? "Edge" : /Firefox\//.test(ua) ? "Firefox" : /Chrome\//.test(ua) ? "Chrome" : /Safari\//.test(ua) ? "Safari" : "";
+  const os = /Mac OS X|Macintosh/.test(ua) ? "Mac" : /Windows/.test(ua) ? "Windows" : /Linux/.test(ua) ? "Linux" : "";
+  if (br && os) return lang === "zh" ? br + "（" + os + "）" : br + " (" + os + ")";
   return lang === "zh" ? "网页浏览器" : "Web browser";
 }
 
@@ -311,9 +332,11 @@ function watchUpdates() {
   document.addEventListener("visibilitychange", () => { if (!document.hidden) check(); });
   setInterval(check, 30 * 60 * 1000);
 }
+// S.relang: the Mac now speaks another language; the page reloads in it the
+// same way.
 function reloadIfIdle() {
   // A quiet tab stays quiet: reloading would take over from the tab in use.
-  if (!UP.ready || S.quiet || S.busy || (S.pending && S.pending.length)) return;
+  if (!(UP.ready || S.relang) || S.quiet || S.busy || (S.pending && S.pending.length)) return;
   try { sessionStorage.setItem("omnillm.draft", $("input").value); } catch {}
   location.reload();
 }
@@ -619,7 +642,8 @@ async function openChat() {
   show("chat");
   $("input").placeholder = t("placeholder");
   $("device-line").textContent = t("deviceLine", S.device.name);
-  $("install-tip").hidden = isStandalone;
+  $("install-tip").hidden = isStandalone || MOUSE_ONLY;
+  setSide(localStorageGet("side") === "off");
   if (!S.cur) S.cur = S.chats[0] || newChat();
   try { const d = sessionStorage.getItem("omnillm.draft"); if (d) { $("input").value = d; sessionStorage.removeItem("omnillm.draft"); grow(); } } catch {}
   renderList(); renderLog(); sendState();
@@ -632,7 +656,7 @@ function connect() {
   S.connecting = (async () => {
     if (!navigator.onLine) { setOnline(false, t("noNetwork")); return; }
     const sel = $("model");
-    if (!S.models.length) { sel.textContent = ""; const o = el("option", t("loadingModels")); o.value = ""; sel.append(o); }
+    if (!S.models.length) { sel.textContent = ""; const o = el("option", t("loadingModels")); o.value = ""; sel.append(o); paintPick(); }
     liveDot("wait");
     S.dialing = true;
     try {
@@ -699,9 +723,21 @@ async function loadModels() {
     if (group(m) !== g) { g = group(m); og = el("optgroup"); og.label = t(["grpSub", "grpKey", "grpLocal"][g]); sel.append(og); }
     const o = el("option", m.name); o.value = m.id; og.append(o);
   }
-  if (!ms.length) { const o = el("option", t("noModelsOpt")); o.value = ""; o.disabled = true; sel.append(o); sel.value = ""; return; }
+  macLang();
+  if (!ms.length) { const o = el("option", t("noModelsOpt")); o.value = ""; o.disabled = true; sel.append(o); sel.value = ""; paintPick(); return; }
   if (pickModel()) renderLog(true);
   if (S.cur) renderList(); // the drawer names models by name now
+}
+// macLang: the language the Mac speaks (the owner's choice there, else the
+// Mac's own) is kept for the next start; when it changes and nothing was
+// chosen here, the page reloads in it once idle. A browser that can't keep
+// it (no storage) never reloads for it, so it can't loop.
+function macLang() {
+  const ml = oneLang(omnillm.lang ? omnillm.lang() : "");
+  if (ml === oneLang(localStorageGet("maclang"))) return;
+  localStorageSet("maclang", ml);
+  if (oneLang(localStorageGet("maclang")) !== ml || oneLang(localStorageGet("lang"))) return;
+  if ((ml || browserLang) !== lang) { S.relang = true; reloadIfIdle(); }
 }
 // syncName keeps this device's name as the Mac has it (the owner may rename
 // it there; the hub sends it with the models): the drawer line and the
@@ -721,12 +757,13 @@ function pickModel() {
   if (!ms.length) return false;
   const want = S.cur && S.cur.model;
   sel.value = [want, localStorageGet("model"), "claude-code/sonnet"].find((id) => id && ms.some((m) => m.id === id)) || ms[0].id;
+  paintPick();
   if (!want || want === sel.value) return false;
   if (S.cur.messages.length) S.cur.gone = t("modelGone", modelName(sel.value));
   S.cur.model = sel.value;
   return true;
 }
-$("model").addEventListener("change", () => { localStorageSet("model", $("model").value); if (S.cur) S.cur.model = $("model").value; refreshActs(); });
+$("model").addEventListener("change", () => { localStorageSet("model", $("model").value); if (S.cur) S.cur.model = $("model").value; paintPick(); refreshActs(); });
 function localStorageGet(k) { try { return localStorage.getItem("omnillm." + k); } catch { return null; } }
 function localStorageSet(k, v) { try { localStorage.setItem("omnillm." + k, v); } catch {} }
 
@@ -734,9 +771,12 @@ function localStorageSet(k, v) { try { localStorage.setItem("omnillm." + k, v); 
 // there), amber while the Mac has paused this device, grey when it can't
 // be reached, pulsing grey while connecting.
 function liveDot(state) {
-  const d = $("live-dot"); d.className = "live-dot " + state;
   const label = t({ on: "liveOn", off: "liveOff", paused: "pausedDot" }[state] || "liveWait");
-  d.title = label; d.setAttribute("aria-label", label);
+  for (const id of ["live-dot", "pick-dot"]) { const d = $(id); d.className = "live-dot " + state; d.title = label; }
+  $("live-dot").setAttribute("aria-label", label);
+  const said = t({ on: "macOn", off: navigator.onLine ? "macOff" : "macNoNet", paused: "macPaused" }[state] || "macWait");
+  $("mac-state").textContent = said;
+  $("mac-head").textContent = t("yourMac") + " · " + said;
 }
 // Any answer from the Mac other than "paused" ends a pause.
 function setOnline(ok, why) {
@@ -749,13 +789,18 @@ function setOnline(ok, why) {
 function setPaused(why) {
   S.online = true; S.paused = why;
   // Paused before the list ever came: the picker says so, not "loading".
-  if (!S.models.length) { const sel = $("model"); sel.textContent = ""; const o = el("option", t("paused")); o.value = ""; sel.append(o); }
+  if (!S.models.length) { const sel = $("model"); sel.textContent = ""; const o = el("option", t("paused")); o.value = ""; sel.append(o); paintPick(); }
   paintBanner(); sendState(); refreshActs();
 }
 // paintBanner: paused, offline (why, and that the text is kept if a send
 // was blocked), or a Mac with no models; Retry only when this device has
 // a network (without one it can't help; the page retries by itself).
 function paintBanner() {
+  // The notice sits above the composer: the talk keeps its bottom in view.
+  const stick = !$("chat").hidden && nearBottom();
+  try { paintNotice(); } finally { if (stick) toBottom(); }
+}
+function paintNotice() {
   liveDot(!S.online ? "off" : S.paused ? "paused" : "on");
   const b = $("banner"), none = S.online && !S.paused && S.listed && !S.models.length;
   b.textContent = ""; b.hidden = S.online && !none && !S.paused;
@@ -783,10 +828,11 @@ function newChat() {
   const c = { id: crypto.randomUUID(), title: "", model: $("model").value || localStorageGet("model") || "", messages: [], updated: Date.now() };
   return c;
 }
-$("new").addEventListener("click", () => {
+function startNew() {
   if (S.busy) return toastText(t("waitReply"));
   S.cur = newChat(); renderLog(); renderList(); closeDrawer(); $("input").focus();
-});
+}
+for (const id of ["new", "new-side", "new-float"]) $(id).addEventListener("click", startNew);
 
 // ---------- the log ----------
 // It follows a reply only while the person is at the bottom (within 80 px);
@@ -803,25 +849,32 @@ function renderLog(keep) {
   const log = $("log"), stay = keep && !nearBottom(), top = log.scrollTop;
   log.textContent = "";
   const msgs = S.cur.messages;
-  // Just paired: the first empty chat says once that the Mac is there.
-  if (!msgs.length && S.hello === S.cur.id) log.append(switchLine(t("connectedMac")));
-  if (!msgs.length) log.append(el("p", t("empty"), "empty"));
-  // A line where the chat changes model, so who answered what stays clear.
-  // Compared by model id (the name gains its version once known). An
-  // earlier answer (kept by "answer again") folds above the new one and
-  // doesn't count.
+  $("chat").classList.toggle("fresh", !msgs.length);
+  paintTitle();
+  if (!msgs.length) log.append(hero());
+  // Who answered is said once, then again where the model changes: the
+  // first reply is headed with its model's name, a change gets a line
+  // ("Switched to X"), and every other reply names its model in the row
+  // under it. Compared by model id (the name gains its version once
+  // known). An earlier answer (kept by "answer again") folds above the new
+  // one and doesn't count.
   let last = "", userEl = null;
+  S.lastWho = false;
   msgs.forEach((m, i) => {
     if (m.prev) { log.append(earlier(m)); return; }
+    let who = false;
     if (m.role === "assistant" && m.by) {
       const key = m.model || m.by;
       if (last && key !== last) {
         const line = switchLine(t("switchedTo", m.by));
         if (userEl && !(msgs[i - 1] && msgs[i - 1].prev)) userEl.before(line); else log.append(line);
       }
+      who = !last;
       last = key;
     }
-    const b = bubble(m, i === msgs.length - 1);
+    const isLast = i === msgs.length - 1;
+    if (isLast) S.lastWho = who;
+    const b = bubble(m, isLast, who);
     if (m.role === "user") userEl = b;
     log.append(b);
     if (S.cur.long === i + 1) log.append(switchLine(t(S.cur.longSub ? "longChatSub" : "longChat")));
@@ -831,6 +884,26 @@ function renderLog(keep) {
   if (S.cur.gone) log.append(switchLine(S.cur.gone));
   if (stay) log.scrollTop = top; else toBottom();
 }
+// hero: a new chat says what it is for (and, just paired, that the Mac is there).
+function hero() {
+  const h = el("div", undefined, "hero"), img = el("img");
+  img.src = "icon.svg"; img.alt = "";
+  h.append(img, el("h1", t("empty")));
+  if (S.hello === S.cur.id) h.append(el("p", t("connectedMac"), "hello"));
+  return h;
+}
+// paintTitle: the chat's title in the bar (phones) and the browser tab.
+function paintTitle() {
+  const title = S.cur && S.cur.title;
+  $("bar-title").textContent = title || t("newChat");
+  document.title = title ? title + " · OmniLLM" : "OmniLLM";
+}
+function icon(cls) { const i = el("span", "", "ic " + cls); i.setAttribute("aria-hidden", "true"); return i; }
+function iconButton(cls, label) {
+  const b = el("button", undefined, "ibtn"); b.type = "button";
+  b.setAttribute("aria-label", label); b.title = label; b.append(icon(cls));
+  return b;
+}
 // actsRow: under the last turn, once it is over: copy, and answer again
 // (with the model now selected, so it doubles as "ask another model"); a
 // reply that failed or was stopped, or a question left without one,
@@ -839,13 +912,16 @@ function actsRow() {
   const msgs = S.cur ? S.cur.messages : [], end = msgs[msgs.length - 1];
   if (!end || end.live || S.busy || !(end.role === "user" || end.content || end.note)) return null;
   const row = el("div", undefined, "acts");
-  if (end.role === "assistant" && end.content) row.append(copyButton(end, "act copy-act"));
+  if (end.role === "assistant" && end.content) row.append(copyButton(end.content));
   const retry = end.role === "user" || end.failed, pick = $("model").value;
   const label = retry ? t("retry") : pick && end.model && pick !== end.model ? t("againWith", modelName(pick)) : t("again");
-  const again = el("button", label, "act again-act"); again.type = "button";
+  let again;
+  if (retry) { again = el("button", undefined, "retry"); again.type = "button"; again.append(icon("i-again s14"), label); }
+  else again = iconButton("i-again s16", label);
   again.disabled = !S.online || !!S.paused;
   again.addEventListener("click", answerAgain);
   row.append(again);
+  if (end.role === "assistant" && end.by && !S.lastWho) row.append(el("span", end.by, "by"));
   return row;
 }
 // refreshActs redraws only that row (the picker or the connection changed).
@@ -860,7 +936,8 @@ function refreshActs() {
 function earlier(m) {
   const box = el("div", undefined, "earlier");
   const open = S.opened && S.opened.has(m);
-  const tg = el("button", t(open ? "earlierOpen" : "earlier", m.by || modelName(m.model)), "earlier-toggle"); tg.type = "button";
+  const tg = el("button", undefined, "earlier-toggle"); tg.type = "button";
+  tg.append(icon("i-chev s14"), t(open ? "earlierOpen" : "earlier", m.by || modelName(m.model)));
   tg.setAttribute("aria-expanded", String(!!open));
   tg.addEventListener("click", () => {
     S.opened ??= new WeakSet();
@@ -868,27 +945,37 @@ function earlier(m) {
     box.replaceWith(earlier(m));
   });
   box.append(tg);
-  if (open) box.append(bubble(m, false));
+  if (open) box.append(bubble(m, false, true));
   return box;
 }
 function switchLine(text) { const line = el("div", undefined, "switch-line"); line.append(el("span", text)); return line; }
-function copyButton(m, cls) {
-  const cp = el("button", t("copy"), cls); cp.type = "button";
-  cp.addEventListener("click", () => { navigator.clipboard.writeText(m.content).then(() => { cp.textContent = t("copied"); setTimeout(() => { cp.textContent = t("copy"); }, 1200); }); });
+// copyButton copies text; the icon turns into a tick for a moment.
+function copyButton(text) {
+  const cp = iconButton("i-copy s16", t("copy"));
+  cp.addEventListener("click", () => copyText(text, () => {
+    cp.classList.add("done"); cp.firstChild.className = "ic i-check s16"; cp.title = t("copied");
+    setTimeout(() => { cp.classList.remove("done"); cp.firstChild.className = "ic i-copy s16"; cp.title = t("copy"); }, 1200);
+  }));
   return cp;
 }
+function copyText(text, done) {
+  if (!navigator.clipboard) return;
+  navigator.clipboard.writeText(text).then(done, () => {});
+}
 
-// bubble renders a message; fenced code becomes <pre>, the rest stays text.
-// A reply says first which model is writing it; until its first words
-// arrive it shows "connecting to your Mac", then that model thinking (an
-// orbiting core, as in the logo). The last reply's Copy sits in the row
-// under it instead.
-function bubble(m, isLast) {
+// bubble renders a message; fenced code becomes a code block, the rest
+// stays text. who heads a reply with its model's name. Until a reply's
+// first words arrive it shows "connecting to your Mac", then that model
+// thinking (an orbiting core, as in the logo). Earlier replies carry their
+// own row (Copy and who answered), shown on hover or a tap; the last
+// reply's row sits under it in the log instead.
+function bubble(m, isLast, who) {
   const b = el("div", undefined, "msg " + m.role + (isLast ? " last" : ""));
-  if (m.role === "assistant" && m.by) {
-    const who = el("div", undefined, "who");
-    who.append(el("span", "", "who-dot"), el("span", m.by, "by"));
-    b.append(who);
+  if (m.role === "assistant" && m.by && who) {
+    const head = el("div", undefined, "who");
+    const orb = el("span", "", "orb"); orb.setAttribute("aria-hidden", "true");
+    head.append(orb, el("span", m.by, "by"));
+    b.append(head);
   }
   if (m.images && m.images.length) {
     const pics = el("div", undefined, "pics");
@@ -904,8 +991,19 @@ function bubble(m, isLast) {
     if (last && (last.tagName === "UL" || last.tagName === "OL")) last = last.lastElementChild;
     (last && (last.tagName === "P" || last.tagName === "LI") ? last : body).append(el("span", "", "caret"));
   }
-  if (m.note) b.append(quoted(el("p", undefined, "note"), m.note));
-  if (m.role === "assistant" && m.content && !m.live && !isLast) b.append(copyButton(m, "copy"));
+  if (m.note) {
+    // Stopped or cut short is a quiet line; anything else went wrong (red).
+    const quietNote = m.note === t("stopped") || m.note === t("cut");
+    b.append(quoted(el("p", undefined, "note" + (quietNote ? " quiet" : "")), m.note.replace(/^[（(]|[）)]$/g, "")));
+  }
+  if (m.role === "assistant" && m.content && !m.live && !isLast) {
+    const row = el("div", undefined, "acts");
+    row.append(copyButton(m.content));
+    if (m.by && !who) row.append(el("span", m.by, "by"));
+    b.append(row);
+    // A touch screen has no hover: a tap on the reply shows its row.
+    b.addEventListener("click", (e) => { if (!e.target.closest("button, a, pre")) b.classList.toggle("tapped"); });
+  }
   return b;
 }
 // holdBack: while words arrive, a line that so far is only a list marker
@@ -961,9 +1059,23 @@ function thinking(m) {
 function fill(b, text) {
   const parts = text.split(/```/);
   parts.forEach((p, i) => {
-    if (i % 2) { const pre = el("pre"); pre.append(el("code", p.replace(/^[\w+-]*\n/, "").replace(/\n+$/, ""))); b.append(pre); }
+    if (i % 2) b.append(codeBlock(p));
     else if (p.trim()) prose(b, p.replace(/^\n+|\n+$/g, ""));
   });
+}
+// codeBlock: the code with a head naming its language and a Copy button.
+function codeBlock(p) {
+  const lang = (p.match(/^([\w+-]*)\n/) || [])[1] || "";
+  const code = p.replace(/^[\w+-]*\n/, "").replace(/\n+$/, "");
+  const box = el("div", undefined, "code"), head = el("div", undefined, "code-h"), pre = el("pre");
+  const cp = el("button", undefined); cp.type = "button";
+  const word = el("span", t("copyCode"));
+  cp.append(icon("i-copy s14"), word);
+  cp.addEventListener("click", () => copyText(code, () => { word.textContent = t("copied"); setTimeout(() => { word.textContent = t("copyCode"); }, 1200); }));
+  head.append(el("span", lang), cp);
+  pre.append(el("code", code));
+  box.append(head, pre);
+  return box;
 }
 // prose shows the light Markdown models write (headings, **bold**, `code`,
 // lists) as formatting: paragraphs split at blank lines, list lines become
@@ -1011,16 +1123,12 @@ function inline(p, line, strong) {
   put(line.slice(last));
 }
 
-// ---------- drawer list ----------
-// Each chat: its title, then who answered last and when.
-function when(ts) {
-  const d = new Date(ts), now = new Date(), loc = lang === "zh" ? "zh-CN" : "en-US";
-  if (d.toDateString() === now.toDateString()) return t("today") + " " + d.toLocaleTimeString(loc, { hour: "numeric", minute: "2-digit" });
-  return d.toLocaleDateString(loc, d.getFullYear() === now.getFullYear() ? { month: "short", day: "numeric" } : { year: "numeric", month: "short", day: "numeric" });
-}
-function chatMeta(c) {
-  const by = [...c.messages].reverse().find((m) => m.by);
-  return [by ? by.by : c.model ? modelName(c.model) : "", when(c.updated)].filter(Boolean).join(" · ");
+// ---------- the chat list ----------
+// Newest first, under Today, Yesterday, Previous 7 days and Earlier.
+function dayGroup(ts) {
+  const day = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const n = Math.round((day(new Date()) - day(new Date(ts))) / 864e5);
+  return n <= 0 ? 0 : n === 1 ? 1 : n < 7 ? 2 : 3;
 }
 // The search field filters by title and message text, here on the device.
 function matches(c, q) {
@@ -1030,18 +1138,24 @@ function renderList() {
   const ul = $("chat-list"); ul.textContent = "";
   const q = $("chat-search").value.trim().toLowerCase();
   const all = [S.cur, ...S.chats.filter((c) => c.id !== S.cur.id)].filter((c) => (c.messages.length || c === S.cur) && matches(c, q));
+  // A chat not yet begun counts as now.
+  const at = (c) => (c.messages.length ? c.updated : Infinity);
+  all.sort((a, b) => at(b) - at(a));
   if (!all.length) ul.append(el("li", t("noMatch"), "muted small no-match"));
+  let g = -1;
   for (const c of all) {
-    const li = el("li"); const a = el("button", undefined, c.id === S.cur.id ? "cur" : ""); a.type = "button";
-    a.append(el("span", c.title || t("newChat"), "title"));
-    if (c.messages.length) a.append(el("span", chatMeta(c), "meta"));
+    const cg = c.messages.length ? dayGroup(c.updated) : 0;
+    if (cg !== g) { g = cg; ul.append(el("li", t(["grpToday", "grpYesterday", "grpWeek", "grpOlder"][g]), "grp")); }
+    const li = el("li", undefined, "row" + (c.id === S.cur.id ? " cur" : ""));
+    const a = el("button", c.title || t("newChat")); a.type = "button"; a.title = c.title || "";
+    if (c.id === S.cur.id) a.setAttribute("aria-current", "true");
     a.addEventListener("click", () => {
       if (S.busy && c !== S.cur) { closeDrawer(); return toastText(t("waitReply")); }
       S.cur = c; if (S.models.length) pickModel(); renderLog(); renderList(); closeDrawer();
     });
     li.append(a);
     if (c.messages.length) {
-      const x = el("button", "", "chat-del"); x.type = "button"; x.setAttribute("aria-label", t("deleteChat")); x.title = t("deleteChat");
+      const x = iconButton("i-trash s16", t("deleteChat")); x.classList.add("chat-del");
       x.addEventListener("click", async () => {
         if (S.busy && c === S.cur) return toastText(t("waitReply"));
         if (!await ask(t("deleteChatQ", c.title || t("newChat")), t("delete"), true)) return;
@@ -1070,10 +1184,11 @@ input.addEventListener("input", () => { grow(); sendState(); });
 // The send button looks pressable only when there is something to send;
 // while the Mac has this device paused it rests (Stop still works).
 function sendState() {
-  $("send").classList.toggle("idle", !S.busy && (!!S.paused || (!input.value.trim() && !(S.pending && S.pending.length))));
+  $("send").classList.toggle("idle", !S.busy && (!!S.paused || !S.online || (!input.value.trim() && !(S.pending && S.pending.length))));
   $("send").disabled = !S.busy && !!S.paused;
 }
-function grow() { input.style.height = "auto"; input.style.height = Math.min(input.scrollHeight, 180) + "px"; }
+// The box grows with what is typed, up to 40% of the window, then scrolls.
+function grow() { input.style.height = "auto"; input.style.height = Math.min(input.scrollHeight, Math.round(innerHeight * 0.4)) + "px"; }
 input.addEventListener("keydown", (e) => {
   // Enter sends on a computer keyboard; on phones the send button does.
   // While a reply streams, Enter only says so: Stop is the one way to cancel.
@@ -1289,30 +1404,188 @@ function toastText(s) {
   clearTimeout(toastTimer); toastTimer = setTimeout(() => { n.hidden = true; }, 4000);
 }
 
-function busyUI(on) { $("send").classList.toggle("stop", on); $("send").setAttribute("aria-label", t(on ? "stop" : "send")); sendState(); }
+function busyUI(on) {
+  $("send").classList.toggle("stop", on); $("send").setAttribute("aria-label", t(on ? "stop" : "send"));
+  $("send").title = MOUSE_ONLY ? t(on ? "stop" : "send") + (on ? " (Esc)" : " (Enter)") : t(on ? "stop" : "send");
+  sendState(); paintPick();
+}
 
-// ---------- drawer ----------
+// ---------- the chat list: a drawer on phones, a sidebar on wide screens ----------
+const WIDE = matchMedia("(min-width: 1024px)");
+const overlay = () => !WIDE.matches;
 $("menu").addEventListener("click", () => { $("drawer").hidden = false; });
 $("drawer").addEventListener("click", (e) => { if (e.target.id === "drawer") closeDrawer(); });
+// closeDrawer: a drawer closes (and forgets its search); a sidebar stays.
 function closeDrawer() {
+  macMenu(false);
+  if (!overlay()) return;
   $("drawer").hidden = true;
   if ($("chat-search").value) { $("chat-search").value = ""; if (S.cur) renderList(); }
 }
+// setSide hides or shows the sidebar on a wide screen (remembered here).
+function setSide(off) { $("chat").classList.toggle("side-off", off); localStorageSet("side", off ? "off" : ""); }
+$("side-hide").addEventListener("click", () => setSide(true));
+$("side-show").addEventListener("click", () => setSide(false));
+
+// "Your Mac": the state, and a menu with this device, the language,
+// shortcuts, where chats are kept, and removing this device.
+function macMenu(open) {
+  $("mac-menu").hidden = !open; $("mac").setAttribute("aria-expanded", String(open));
+  $("lang-list").hidden = true; $("lang-btn").setAttribute("aria-expanded", "false");
+  if (open) paintLang();
+}
+$("mac").addEventListener("click", () => macMenu($("mac-menu").hidden));
+$("lang-btn").addEventListener("click", () => {
+  const open = $("lang-list").hidden;
+  $("lang-list").hidden = !open; $("lang-btn").setAttribute("aria-expanded", String(open));
+});
+function paintLang() {
+  const chosen = oneLang(localStorageGet("lang"));
+  $("lang-now").textContent = chosen ? (chosen === "zh" ? "中文" : "English") : t("langMac");
+  document.querySelectorAll("#lang-list [data-lang]").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.lang === chosen)));
+}
+// A language chosen here is kept on this device only; the page reloads in
+// it (what was typed stays).
+document.querySelectorAll("#lang-list [data-lang]").forEach((b) => b.addEventListener("click", () => {
+  if (S.busy) return toastText(t("waitReply"));
+  localStorageSet("lang", b.dataset.lang);
+  try { sessionStorage.setItem("omnillm.draft", $("input").value); } catch {}
+  location.reload();
+}));
+$("keys-btn").addEventListener("click", () => { macMenu(false); showKeys(); });
+document.addEventListener("click", (e) => {
+  if (!$("mac-menu").hidden && !e.target.closest(".drawer-foot")) macMenu(false);
+  if (!$("mmenu").hidden && !e.target.closest(".mwrap")) pickMenu(false);
+});
+
+// ---------- the model picker ----------
+// The chosen model's id stays in the hidden <select> (it holds the list,
+// grouped); the button shows it and opens a list that can show who is online.
+function paintPick() {
+  const sel = $("model"), o = sel.options[sel.selectedIndex];
+  const name = o ? o.textContent : t("noModelsOpt");
+  $("pick-name").textContent = name;
+  $("mpick").title = name;
+  $("mpick").setAttribute("aria-label", t("model") + " · " + name);
+  $("mpick").disabled = !!S.busy;
+  if (S.busy && !$("mmenu").hidden) pickMenu(false);
+}
+function pickMenu(open) {
+  const m = $("mmenu"), b = $("mpick");
+  if (open && b.disabled) return;
+  m.hidden = !open; b.setAttribute("aria-expanded", String(open));
+  if (!open) return;
+  m.textContent = "";
+  const sel = $("model"), live = S.online && !S.paused;
+  let n = 0;
+  for (const g of sel.querySelectorAll("optgroup")) {
+    if (n) m.append(el("hr"));
+    m.append(el("div", g.label, "mh"));
+    for (const o of g.querySelectorAll("option")) {
+      const it = el("div", undefined, "mi"); it.id = "mi-" + n++; it.dataset.v = o.value;
+      it.setAttribute("role", "option"); it.setAttribute("aria-selected", String(o.value === sel.value));
+      const dot = el("span", "", "live-dot " + (live ? "on" : "off")); dot.setAttribute("aria-hidden", "true");
+      it.append(dot, el("span", o.textContent, "nm"));
+      if (o.value === sel.value) it.append(icon("i-check s16"));
+      it.addEventListener("click", () => choosePick(o.value));
+      m.append(it);
+    }
+  }
+  if (!n) m.append(el("div", sel.options[0] ? sel.options[0].textContent : t("noModelsOpt"), "none"));
+  pickMove(m.querySelector('[aria-selected="true"]') || m.querySelector(".mi"));
+  m.focus({ preventScroll: true });
+}
+function pickMove(it) {
+  const m = $("mmenu");
+  m.querySelectorAll(".mi.act").forEach((x) => x.classList.remove("act"));
+  if (!it) { m.removeAttribute("aria-activedescendant"); return; }
+  it.classList.add("act"); m.setAttribute("aria-activedescendant", it.id);
+  // Scroll the list only (scrollIntoView would move the chat behind it too).
+  if (it.offsetTop < m.scrollTop) m.scrollTop = it.offsetTop - 6;
+  else if (it.offsetTop + it.offsetHeight > m.scrollTop + m.clientHeight) m.scrollTop = it.offsetTop + it.offsetHeight - m.clientHeight + 6;
+}
+function choosePick(v) {
+  const sel = $("model");
+  if (v && sel.value !== v) { sel.value = v; sel.dispatchEvent(new Event("change")); }
+  pickMenu(false); paintPick();
+  if (MOUSE_ONLY) input.focus();
+}
+$("mpick").addEventListener("click", () => pickMenu($("mmenu").hidden));
+$("mpick").addEventListener("keydown", (e) => { if (e.key === "ArrowUp" || e.key === "ArrowDown") { e.preventDefault(); pickMenu(true); } });
+$("mmenu").addEventListener("keydown", (e) => {
+  const items = [...$("mmenu").querySelectorAll(".mi")], cur = $("mmenu").querySelector(".mi.act"), i = items.indexOf(cur);
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); if (items.length) pickMove(items[(i + (e.key === "ArrowDown" ? 1 : items.length - 1)) % items.length]); }
+  else if (e.key === "Home" || e.key === "End") { e.preventDefault(); pickMove(e.key === "Home" ? items[0] : items[items.length - 1]); }
+  else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); if (cur) choosePick(cur.dataset.v); }
+  else if (e.key === "Tab") pickMenu(false);
+});
+
+// ---------- keyboard (computers) ----------
+// ⌘ on a Mac, Ctrl elsewhere. Keys the browser keeps (⌘N, ⌘T, ⌘W, ⌘⇧C)
+// are left alone.
+const KEYS = [["kNew", "⌘⇧O"], ["kSearch", "⌘K"], ["kSide", "⌘\\"], ["kStop", "Esc"], ["kCopyLast", "⌘⇧;"], ["kFocus", "/"], ["kSend", "Enter"], ["kLine", "⇧Enter"], ["shortcuts", "⌘/"]];
+function showKeys() {
+  const tb = $("keys-table"); tb.textContent = "";
+  for (const [k, key] of KEYS) { const tr = el("tr"); const td = el("td"); td.append(el("kbd", keyName(key))); tr.append(el("td", t(k)), td); tb.append(tr); }
+  $("keys").showModal(); $("keys-ok").focus();
+}
+$("keys-ok").addEventListener("click", () => $("keys").close());
+function copyLast() {
+  const m = S.cur && [...S.cur.messages].reverse().find((x) => x.role === "assistant" && x.content && !x.live && !x.prev);
+  if (m) copyText(m.content, () => toastText(t("copied")));
+}
+const typing = (n) => n && n.closest && n.closest("input, textarea, select, [contenteditable]");
+document.addEventListener("keydown", (e) => {
+  if ($("chat").hidden || S.quiet || e.isComposing || e.keyCode === 229) return;
+  const mod = MAC ? e.metaKey : e.ctrlKey;
+  if (e.key === "Escape") {
+    if (!$("mmenu").hidden) { e.preventDefault(); pickMenu(false); $("mpick").focus(); return; }
+    if (!$("mac-menu").hidden) { e.preventDefault(); macMenu(false); $("mac").focus(); return; }
+    if (overlay() && !$("drawer").hidden) { closeDrawer(); return; }
+    if (S.busy && !document.querySelector("dialog[open]") && e.target.id !== "chat-search") { e.preventDefault(); omnillm.cancel(S.busy); }
+    return;
+  }
+  if (document.querySelector("dialog[open]")) return;
+  const k = e.key.toLowerCase();
+  if (mod && e.shiftKey && k === "o") { e.preventDefault(); startNew(); }
+  else if (mod && !e.shiftKey && k === "k") { e.preventDefault(); if (overlay()) $("drawer").hidden = false; else setSide(false); $("chat-search").focus(); $("chat-search").select(); }
+  else if (mod && !e.shiftKey && e.key === "\\") { e.preventDefault(); if (!overlay()) setSide(!$("chat").classList.contains("side-off")); }
+  else if (mod && e.shiftKey && e.code === "Semicolon") { e.preventDefault(); copyLast(); }
+  else if (mod && !e.shiftKey && e.key === "/") { e.preventDefault(); showKeys(); }
+  else if (e.key === "/" && !mod && !e.altKey && !typing(e.target)) { e.preventDefault(); input.focus(); }
+});
+
+// ---------- pictures dropped onto the page ----------
+let dragDepth = 0;
+const hasFiles = (e) => e.dataTransfer && [...e.dataTransfer.types].includes("Files");
+$("chat").addEventListener("dragenter", (e) => { if (!hasFiles(e) || S.quiet) return; e.preventDefault(); dragDepth++; $("drop").hidden = false; });
+$("chat").addEventListener("dragover", (e) => { if (hasFiles(e)) e.preventDefault(); });
+$("chat").addEventListener("dragleave", () => { if (--dragDepth <= 0) { dragDepth = 0; $("drop").hidden = true; } });
+$("chat").addEventListener("drop", (e) => {
+  if (!hasFiles(e)) return;
+  e.preventDefault(); dragDepth = 0; $("drop").hidden = true;
+  const files = [...e.dataTransfer.files].filter((f) => f.type.startsWith("image/"));
+  if (files.length) addImages(files);
+});
+// A file dropped elsewhere must not open in place of the page.
+addEventListener("dragover", (e) => { if (hasFiles(e)) e.preventDefault(); });
+addEventListener("drop", (e) => { if (hasFiles(e)) e.preventDefault(); });
+
 $("chat-search").placeholder = t("searchChats"); $("chat-search").setAttribute("aria-label", t("searchChats"));
 $("chat-search").addEventListener("input", () => { if (S.cur) renderList(); });
 $("drawer-close").setAttribute("aria-label", t("close")); $("drawer-close").title = t("close");
 $("drawer-close").addEventListener("click", closeDrawer);
-$("install-tip").addEventListener("click", () => { ask(t("addHomeTip"), t("gotIt")); });
+$("install-tip").addEventListener("click", () => { macMenu(false); ask(t("addHomeTip"), t("gotIt")); });
 // Remove this device: on the Mac too (so it leaves the device list), then
 // here. If the Mac can't be reached it is still removed here, and the
 // welcome screen says to remove it on the Mac as well.
 $("forget").addEventListener("click", async () => {
   if (!await ask(t("forgetQ"), t("remove"), true) || !S.device) return; // removed on the Mac meanwhile
-  const btn = $("forget"); btn.disabled = true; btn.textContent = t("removing");
+  const btn = $("forget"), word = btn.querySelector(".nm"); btn.disabled = true; word.textContent = t("removing");
   if (S.busy) { try { omnillm.cancel(S.busy); } catch {} }
   let far = !navigator.onLine;
   if (!far) { try { await omnillm.leave(); } catch { far = true; } }
-  btn.disabled = false; btn.textContent = t("forget");
+  btn.disabled = false; word.textContent = t("forget");
   if (!S.device) return; // the Mac's removal got here first: unpaired() has run
   try { omnillm.close(); } catch {}
   S.openedState = null;
@@ -1347,7 +1620,7 @@ async function unpaired(note) {
   if (askDone) askDone(false); // an open question is about a pairing that is gone
   S.device = null; S.chats = []; S.cur = null; S.models = []; S.listed = false; S.paused = null; S.hello = null;
   await idb.del("device"); await idb.del("chats");
-  closeDrawer(); show("welcome");
+  closeDrawer(); $("chat-search").value = ""; show("welcome");
   $("welcome-err").textContent = "";
   welcomeNote(note);
 }

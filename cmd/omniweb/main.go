@@ -43,6 +43,7 @@ func main() {
 		"leave":      js.FuncOf(leave),
 		"pairCancel": js.FuncOf(pairCancel),
 		"name":       js.FuncOf(name),
+		"lang":       js.FuncOf(lang),
 	}
 	js.Global().Set("omnillm", js.ValueOf(api))
 	js.Global().Call("dispatchEvent", js.Global().Get("Event").New("omnillm-ready"))
@@ -276,6 +277,16 @@ func name(_ js.Value, _ []js.Value) any {
 		return ""
 	}
 	return d.Name()
+}
+
+// lang is the owner's language on the hub ("zh", "en", "" when not chosen),
+// as of the last models reply.
+func lang(_ js.Value, _ []js.Value) any {
+	d, err := current()
+	if err != nil {
+		return ""
+	}
+	return d.Lang()
 }
 
 // chat(id, model, messagesJSON, onDelta) → {in, out, finish}. onDelta is
