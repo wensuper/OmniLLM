@@ -560,3 +560,8 @@ p code, li code, .pair-how code { white-space: nowrap; }
 .hc-models li.off .hc-mark { background: var(--surface-2); }
 .hc-offtag { margin-left: auto; font-size: 11px; color: var(--muted); }
 .hc-note { margin: 10px 0 0; }
+/* Asking before a model becomes chat only: who loses it. */
+.co-list { list-style: none; margin: 8px 0 12px; padding: 0; display: grid; gap: 6px; }
+.co-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--r-s); }
+.co-name { font-weight: 600; overflow-wrap: anywhere; }
+.co-only { flex-basis: 100%; color: var(--danger, var(--warn)); font-size: 13px; }

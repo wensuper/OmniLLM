@@ -54,6 +54,9 @@ const T = {
     model: "模型", message: "消息", send: "发送", finish: "完成",
     todaySpend: "今天的花费", estimate: "按公布的价格估算", devices: "设备", models: "模型", apps: "应用", usage: "用量",
     addDevice: "添加设备", addProvider: "接入模型", addApp: "添加应用", add: "添加",
+    coTitle: "让“{0}”只能手动对话？", coBody: "打开后，下面这些就用不了“{0}”了：",
+    coApp: "应用", coDevice: "只给程序用的设备", coOnly: "它只有这一个能用的模型，会完全停下来",
+    coYes: "仍然打开", coHow: "以后要让它们再用上，把这个开关关掉就行。",
     name: "名字", lastSeen: "最近在线", budget: "每天额度", todayBudget: "今天 / 每天额度", where: "对话发往", humanOnly: "只能手动对话",
     showOnDevices: "在设备上显示", subAlways: "订阅模型始终只能手动对话", editModel: "编辑模型 · {0}",
     enabled: "开启", pausedChip: "已暂停", pausedToast: "已暂停“{0}”", resumedToast: "已开启“{0}”",
@@ -164,6 +167,9 @@ const T = {
     model: "Model", message: "Message", send: "Send", finish: "Done",
     todaySpend: "Spent today", estimate: "Estimated from published prices", devices: "Devices", models: "Models", apps: "Apps", usage: "Usage",
     addDevice: "Add device", addProvider: "Connect a model", addApp: "Add app", add: "Add",
+    coTitle: "Make “{0}” chat only?", coBody: "Once it’s on, these can no longer use “{0}”:",
+    coApp: "App", coDevice: "Programs-only device", coOnly: "its only usable model: it stops working entirely",
+    coYes: "Turn on anyway", coHow: "To let them use it again later, turn this switch off.",
     name: "Name", lastSeen: "Last seen", budget: "Daily limit", todayBudget: "Today / daily limit", where: "Messages go to", humanOnly: "Chat only",
     showOnDevices: "Show on devices", subAlways: "Subscription models are always chat-only", editModel: "Edit model · {0}",
     enabled: "On", pausedChip: "Paused", pausedToast: "Paused “{0}”", resumedToast: "Turned on “{0}”",
@@ -1488,10 +1494,61 @@ function modelDialog(m) {
   d.dlg.addEventListener("change", sync);
   d.save.addEventListener("click", async () => {
     d.save.disabled = true;
-    try { await api("models/set", { id: m.id, ...diff() }); d.close(); toast(t("saved")); await refresh(); } catch (e) { toast(e.message, true); sync(); }
+    const b = diff();
+    if (b.human_only === true && !(await confirmChatOnly(m))) { sync(); return; }
+    try { await api("models/set", { id: m.id, ...b }); d.close(); toast(t("saved")); await refresh(); } catch (e) { toast(e.message, true); sync(); }
   });
   sync();
   d.open(name);
+}
+
+// chatOnlyLosers: the apps and programs-only devices that use model m
+// now and could not once it is chat only, each with whether it is the
+// only model it has (then it stops working entirely).
+function chatOnlyLosers(m) {
+  const uses = (list, id) => !(list || []).length || list.includes(id);
+  const out = [];
+  for (const a of S.apps || []) {
+    if (!uses(a.Models, m.id)) continue;
+    const left = S.models.filter((x) => x.id !== m.id && usableByApp(x) && uses(a.Models, x.id));
+    out.push({ name: a.Name, kind: t("coApp"), only: left.length === 0 });
+  }
+  for (const d of S.devices || []) {
+    if (!d.BackgroundOnly || !uses(d.Models, m.id) || m.hidden) continue;
+    const left = S.models.filter((x) => x.id !== m.id && usableByDevice(d, x) && uses(d.Models, x.id));
+    out.push({ name: d.Name, kind: t("coDevice"), only: left.length === 0 });
+  }
+  return out;
+}
+
+// confirmChatOnly asks before model m becomes chat only when that cuts
+// someone off, naming them; true to go ahead. Nobody cut off: no question.
+function confirmChatOnly(m) {
+  const losers = chatOnlyLosers(m);
+  if (!losers.length) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (v) => { if (!done) { done = true; resolve(v); } };
+    const d = dialog(t("coTitle", modelName(m)));
+    d.body.append(el("p", t("coBody", modelName(m))));
+    const ul = el("ul", undefined, "co-list");
+    for (const x of losers) {
+      const li = el("li");
+      li.append(el("span", x.name, "co-name"), el("span", x.kind, "tag"));
+      if (x.only) li.append(el("span", t("coOnly"), "co-only"));
+      ul.append(li);
+    }
+    d.body.append(ul, el("p", t("coHow"), "muted small"));
+    d.save.textContent = t("coYes");
+    d.save.className = "danger";
+    d.save.addEventListener("click", () => { finish(true); d.close(); });
+    // Closed any other way (Cancel, ×, Escape, outside): nothing changes.
+    const close = d.close;
+    d.close = () => { close(); finish(false); };
+    d.open();
+    // Cancel was bound to the first close: tell it too.
+    d.dlg.querySelector(".dialog-foot .secondary")?.addEventListener("click", () => finish(false));
+  });
 }
 
 // modelName: a model as people see it here: the owner's own name as it
@@ -1562,6 +1619,9 @@ function renderModels() {
     // A subscription is chat-only always: a word, not a switch that can't move.
     if (isSub(m)) { const c = cell(tr, "", "sw"); c.append(el("span", t("always"), "muted small")); c.title = t("subAlways"); }
     else switchCell(tr, !!m.human_only, t("humanOnly") + " " + name, async (box) => {
+      // Turning it on cuts off apps and programs-only devices that use it:
+      // say who first, and only go on when the owner says so.
+      if (box.checked && !(await confirmChatOnly(m))) { box.checked = false; return; }
       try { await api("models/set", { id: m.id, human_only: box.checked }); toast(t("saved")); } catch (e) { box.checked = !box.checked; toast(e.message, true); }
     });
     switchCell(tr, !m.hidden, t("showOnDevices") + " " + name, async (box) => {
