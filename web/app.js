@@ -401,7 +401,7 @@ pasteReady();
 $("paste-go").addEventListener("click", () => {
   const v = $("paste-text").value.trim();
   if (!v) return;
-  pair(v);
+  pair(v, !/^omnillm\d-/.test(v)); // anything but bare pairing text (a pasted link) gets the “is this your Mac?” question
 });
 $("pair-retry").addEventListener("click", () => { show(S.device ? "chat" : "welcome"); });
 // Different numbers (someone else's pairing), or Cancel while connecting:
