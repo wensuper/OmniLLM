@@ -53,7 +53,7 @@ const T = {
     pauseHint: "关掉即暂停：这台设备马上停用，配对和设置都保留。", pauseHintApp: "关掉即暂停：这个应用马上停用，令牌和设置都保留。",
     limitHint: "只受{whole}每天总额度（{0}）限制。", limitHintNone: "{whole}也没有总额度。", allModels: "全部模型（以后接入的新模型也自动可用）",
     grpSub: "订阅", grpKey: "API Key", grpLocal: "{Here}", pickOne: "至少选一个模型。", appNoHuman: "应用用不了只能手动对话的模型",
-    hiddenTag: "不在设备上显示", appNoModels: "没有能用的模型", appNoModelsBody: "现在接入的模型应用都用不了。先接入 API Key 或{here}上的模型。",
+    hiddenTag: "不在设备上显示", appNoModels: "没有能用的模型", modelsCol: "模型", modelsAll: "全部 {0} 个", modelsSome: "部分 {0} / {1}", appNoModelsBody: "现在接入的模型应用都用不了。先接入 API Key 或{here}上的模型。",
     appNoModelsTip: "接入 API Key 或{here}上的模型后就能用", devNoModelsBody: "它能用的模型都已移除或不在设备上显示。打开“全部模型”，或在下面选几个。",
     devNoModelsBg: "这台设备只给程序和脚本用，可它能选的模型都设成了“只能手动对话”。在下面换一个模型，或在“模型”里关掉那个模型的“只能手动对话”。",
     removeDevice: "移除设备", removeApp: "移除应用",
@@ -145,7 +145,7 @@ const T = {
     pauseHint: "Turn off to pause: the device stops at once; its pairing and settings are kept.", pauseHintApp: "Turn off to pause: the app stops at once; its token and settings are kept.",
     limitHint: "Only the daily total for {here} ({0}) applies.", limitHintNone: "{Here} has no daily total either.", allModels: "All models (including ones added later)",
     grpSub: "Subscriptions", grpKey: "API key", grpLocal: "{Here}", pickOne: "Choose at least one model.", appNoHuman: "Apps can’t use chat-only models",
-    hiddenTag: "Hidden on devices", appNoModels: "No usable models", appNoModelsBody: "None of the connected models work for apps. Connect an API key or a model on {here} first.",
+    hiddenTag: "Hidden on devices", appNoModels: "No usable models", modelsCol: "Models", modelsAll: "All {0}", modelsSome: "{0} of {1}", appNoModelsBody: "None of the connected models work for apps. Connect an API key or a model on {here} first.",
     appNoModelsTip: "Works once you connect an API key or a model on {here}", devNoModelsBody: "All the models it could use were removed or hidden on devices. Turn on “All models” or choose some below.",
     devNoModelsBg: "This device is for programs and scripts only, but every model it may use is set to “Chat only”. Choose another model below, or turn off “Chat only” for that model under “Models”.",
     removeDevice: "Remove device", removeApp: "Remove app",
@@ -850,6 +850,24 @@ function nameCell(tr, name, paused, online, spent, seen) {
   return td;
 }
 
+// modelsCell: which models a device or app can use: all of them, or some
+// ("3 / 7": on its list, out of all it could use). A list that holds every
+// usable model is all too. The names are in the tooltip; on a phone-width
+// window the same words join the line under the name.
+function modelsCell(tr, nc, x, usable) {
+  const all = S.models.filter(usable);
+  const list = x.Models || [];
+  const on = list.length ? all.filter((m) => list.includes(m.id)) : all;
+  const td = cell(tr, "", "mdl");
+  if (!on.length) { td.append(el("span", "—", "muted")); return; }
+  const some = on.length < all.length;
+  const txt = some ? t("modelsSome", num(on.length), num(all.length)) : t("modelsAll", num(all.length));
+  td.append(el("span", txt, some ? "some-models" : ""));
+  td.title = on.map(modelName).join("\n");
+  const sub = nc.querySelector(".nm-sub");
+  if (sub) sub.append(el("span", txt, "nowrap part"));
+}
+
 // pauseSwitch: on = in use; turning it off pauses that device or app at
 // once (its next request is refused), and on again resumes it.
 function pauseSwitch(tr, label, path, id, paused) {
@@ -897,6 +915,7 @@ function renderDevices() {
     }
     seenText(cell(tr, "", "seen"), d.Online, d.LastSeen);
     cell(tr, spent, "spent");
+    modelsCell(tr, nc, d, (m) => usableByDevice(d, m));
     pauseSwitch(tr, d.Name, "devices/update", d.ID, d.Paused);
     const ed = el("button", t("edit"), "secondary small-btn");
     ed.type = "button";
@@ -1151,15 +1170,12 @@ function editDialog(kind, x) {
   const chosen = () => picks.filter(([, sw, ok]) => ok && sw.checked).map(([id]) => id);
   // "All models" is on whenever every model it can use is on: saved as
   // all (an empty list, so models added later come too), or every one
-  // picked by hand. While it is on, the models show checked and greyed:
-  // what "all" covers today.
+  // picked by hand. The models stay switchable: switching one off while
+  // "all" is on turns "all" off and keeps the rest on.
   const usablePicks = picks.filter(([, , ok]) => ok);
   const everyOn = () => usablePicks.length > 0 && usablePicks.every(([, sw]) => sw.checked);
   allSw.checked = !(x.Models || []).length || everyOn();
-  const showAll = () => {
-    for (const [, sw, ok] of usablePicks) { sw.disabled = allSw.checked; if (allSw.checked) sw.checked = true; }
-    list.classList.toggle("all-on", allSw.checked);
-  };
+  const showAll = () => { if (allSw.checked) for (const [, sw] of usablePicks) sw.checked = true; };
   showAll();
   const state = () => JSON.stringify([name.value.trim(), on.checked, nolim.checked, nolim.checked ? 0 : dollars(amt.value), allSw.checked ? [] : chosen()]);
   const start = state();
@@ -1172,14 +1188,12 @@ function editDialog(kind, x) {
     d.save.disabled = none || !name.value.trim() || !d.dirty();
   };
   allSw.addEventListener("change", () => {
-    // Turning "all" off keeps every model on, now each one switchable.
+    // Turning "all" on switches every model on; off keeps them as they are.
     showAll();
     sync();
   });
-  // Switching the last one on makes it "all" again.
-  for (const [, sw] of usablePicks) sw.addEventListener("change", () => {
-    if (!allSw.checked && everyOn()) { allSw.checked = true; showAll(); }
-  });
+  // One switched off is no longer "all"; the last one switched on is.
+  for (const [, sw] of usablePicks) sw.addEventListener("change", () => { allSw.checked = everyOn(); });
   d.dlg.addEventListener("input", sync);
   d.dlg.addEventListener("change", sync);
   // Models on its list that can't be switched here (kept off devices, or
@@ -1354,6 +1368,7 @@ function renderApps() {
       nc.firstChild.append(el("span", "", "brk narrow-only"), chip);
     }
     cell(tr, spent, "spent");
+    modelsCell(tr, nc, a, usableByApp);
     pauseSwitch(tr, a.Name, "apps/update", a.ID, a.Paused);
     const ed = el("button", t("edit"), "secondary small-btn");
     ed.type = "button";

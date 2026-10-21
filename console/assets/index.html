@@ -123,8 +123,8 @@
       <div class="row-head"><p class="muted" id="devices-count"></p><button type="button" class="primary" id="add-device" data-t="addDevice"></button></div>
       <div id="pair-dash"></div>
       <!-- Fixed column widths: editing a row never moves the others. -->
-      <table class="narrow-hide2 fixed devices-table"><colgroup><col><col class="c-seen"><col class="c-budget"><col class="c-sw"><col class="c-act"></colgroup>
-        <thead><tr><th data-t="name"></th><th data-t="lastSeen"></th><th data-t="todayBudget"></th><th data-t="enabled" class="sw"></th><th></th></tr></thead><tbody id="devices"></tbody></table>
+      <table class="narrow-hide2 fixed devices-table"><colgroup><col><col class="c-seen"><col class="c-budget"><col class="c-mdl"><col class="c-sw"><col class="c-act"></colgroup>
+        <thead><tr><th data-t="name"></th><th data-t="lastSeen"></th><th data-t="todayBudget"></th><th data-t="modelsCol"></th><th data-t="enabled" class="sw"></th><th></th></tr></thead><tbody id="devices"></tbody></table>
       <p class="empty" id="devices-empty" data-t="noDevices" hidden></p>
     </div>
 
@@ -143,8 +143,8 @@
         <div class="inline-row"><input id="app-name" maxlength="64" spellcheck="false"><div class="btns"><button type="button" class="secondary" id="app-add-cancel" data-t="cancel"></button><button type="submit" class="primary" id="app-add-ok" data-t="add"></button></div></div>
       </form>
       <div id="app-token" class="token-box" hidden></div>
-      <table class="fixed apps-table"><colgroup><col><col class="c-budget"><col class="c-sw"><col class="c-act"></colgroup>
-        <thead><tr><th data-t="name"></th><th data-t="todayBudget"></th><th data-t="enabled" class="sw"></th><th></th></tr></thead><tbody id="apps"></tbody></table>
+      <table class="fixed apps-table"><colgroup><col><col class="c-budget"><col class="c-mdl"><col class="c-sw"><col class="c-act"></colgroup>
+        <thead><tr><th data-t="name"></th><th data-t="todayBudget"></th><th data-t="modelsCol"></th><th data-t="enabled" class="sw"></th><th></th></tr></thead><tbody id="apps"></tbody></table>
       <p class="empty" id="apps-empty" data-t="noApps" hidden></p>
     </div>
 

@@ -192,6 +192,9 @@ td { padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: mi
 td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
 /* "Today $0.42 / $5.00" may wrap on a phone rather than push Remove off screen. */
 td.spent { font-variant-numeric: tabular-nums; }
+td.mdl { font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* Some of its models, not all: the one place in the row that says so. */
+td.mdl .some-models { color: var(--accent-text); font-weight: 600; }
 .tag { display: inline-block; font-size: 12px; font-weight: 500; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--ink-2); }
 .tag.local { background: var(--ok-soft); color: var(--ok-ink); box-shadow: inset 0 0 0 1px var(--ok-line); }
 .tag.sub { background: var(--accent-soft); color: var(--accent-text); box-shadow: inset 0 0 0 1px var(--agent-line); }
@@ -310,6 +313,7 @@ td.nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   table.fixed { table-layout: fixed; }
   col.c-seen { width: 150px; }
   col.c-budget { width: 210px; }
+  col.c-mdl { width: 130px; }
   col.c-sw { width: 64px; }
   col.c-act { width: 150px; }
   table.fixed td { overflow: hidden; text-overflow: ellipsis; }
@@ -376,8 +380,8 @@ button.danger-text:hover:not(:disabled) { background: none; text-decoration: und
   .devices-table, .apps-table, .devices-table > *, .apps-table > * { display: block; }
   .devices-table tr, .apps-table tr { display: grid; grid-template-columns: minmax(0, 1fr) 44px auto; align-items: center; column-gap: 12px; border-bottom: 1px solid var(--line); }
   .devices-table td, .devices-table th, .apps-table td, .apps-table th { border-bottom: 0; }
-  .devices-table .seen, .devices-table .spent, .apps-table .spent,
-  .devices-table th:nth-child(2), .devices-table th:nth-child(3), .apps-table th:nth-child(2) { display: none; }
+  .devices-table .seen, .devices-table .spent, .apps-table .spent, .devices-table .mdl, .apps-table .mdl,
+  .devices-table th:nth-child(2), .devices-table th:nth-child(3), .devices-table th:nth-child(4), .apps-table th:nth-child(2), .apps-table th:nth-child(3) { display: none; }
   .devices-table td.actions, .apps-table td.actions { padding-right: 0; }
   .devices-table .narrow-only, .apps-table .narrow-only { display: block; }
   .devices-table .nm-line .brk, .apps-table .nm-line .brk { flex-basis: 100%; height: 0; }
@@ -510,5 +514,3 @@ p code, li code, .pair-how code { white-space: nowrap; }
 @media (max-width: 600px) { .devices-table .nm-sub.narrow-only, .apps-table .nm-sub.narrow-only { display: flex; } }
 /* "All models" on: each model shows checked and greyed (what "all"
    covers today), not unavailable. */
-.model-pick.all-on .switch:disabled { opacity: .55; cursor: default; }
-.model-pick.all-on .pick-row { cursor: default; }
