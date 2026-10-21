@@ -142,8 +142,10 @@ func loginWord(k provider.Kind) string {
 // terminal, then the hub connects it.
 func loginCmd(args []string) {
 	if len(args) != 1 || loginKind(args[0]) == "" {
-		dieArgs(usageErr(t("用法：omnillm login claude（Claude 订阅）或 omnillm login chatgpt（ChatGPT 订阅）。",
+		// The one line that says it all; the whole command list would bury it.
+		fmt.Fprintln(os.Stderr, runnable(t("用法：omnillm login claude（Claude 订阅）或 omnillm login chatgpt（ChatGPT 订阅）。",
 			"Usage: omnillm login claude (Claude subscription) or omnillm login chatgpt (ChatGPT subscription).")))
+		os.Exit(2)
 	}
 	k := loginKind(args[0])
 	if role() == "device" {
