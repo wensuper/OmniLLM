@@ -78,7 +78,7 @@ func TestUsageTable(t *testing.T) {
 		t.Fatal(err)
 	}
 	lines := strings.Split(got, "\n")
-	want := []string{"Name", "iPhone", "This Mac", "Removed devices and apps (2)", "Total today"}
+	want := []string{"Name", "iPhone", upperFirst(thisMachine()), "Removed devices and apps (2)", "Total today"} // "This Mac" on a Mac, "This computer" elsewhere
 	if len(lines) != len(want) {
 		t.Fatal(got)
 	}

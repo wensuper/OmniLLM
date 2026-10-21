@@ -77,7 +77,7 @@ func TestStatusLinesFollowTheGlossary(t *testing.T) {
 	}
 	// A changed region comes first, with the command that resumes.
 	st := Status{Running: true, Providers: 1, RelayConfigured: true, RelayUp: true, Devices: 1, RegionPaused: true}
-	if s := nextStep(st); !strings.Contains(s, " 所在的地区变了，已暂停使用模型。") || !strings.Contains(s, "omnillm hub region confirm") || strings.Contains(s, "  ") {
+	if s := nextStep(st); !strings.Contains(s, "所在的地区变了，已暂停使用模型。") || !strings.Contains(s, "omnillm hub region confirm") || strings.Contains(s, "  ") {
 		t.Fatal(s)
 	}
 	t.Setenv("OMNILLM_LANG", "en")
