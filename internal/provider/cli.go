@@ -2,8 +2,10 @@ package provider
 
 // Subscription providers: the official Claude Code and Codex programs the
 // owner is already logged in to on the hub. The hub runs them as a plain
-// text model: no tools, no MCP servers, no settings, hooks or plugins, no
-// saved sessions, in an empty scratch folder with a minimal environment.
+// text model: no tools, no MCP servers, no settings, hooks or plugins, in
+// an empty folder with a minimal environment. A person's conversation keeps
+// the program's own session while it is used (chats.go); every other call
+// saves nothing.
 // The login stays inside the official program (its keychain entry or auth
 // file); the hub never reads it (design §5.4). Only people in a
 // conversation may use these models (§5.2): the hub forces HumanOnly.
@@ -283,6 +285,11 @@ type cliStream struct {
 	model  string    // the exact model, once the program says
 	told   bool      // model passed on
 
+	chat     *chatTurn       // a person's conversation (nil: nothing kept)
+	peek     []byte          // a first line read early, for Recv
+	reply    strings.Builder // the answer as passed on, for chat
+	finished bool            // the program ended the answer itself
+
 	waitOnce sync.Once
 	waitErr  error
 }
@@ -295,7 +302,7 @@ func (s *cliStream) wait() error {
 
 const cliMaxOutput = 4 << 20
 
-func (c *Client) streamCLI(ctx context.Context, model string, req omnillm.Request) (omnillm.Stream, error) {
+func (c *Client) streamCLI(ctx context.Context, model string, req omnillm.Request, chats *Chats, owner string) (omnillm.Stream, error) {
 	release, err := c.lim.Acquire(ctx, c.cfg.Name, req.Caller)
 	if err != nil {
 		c.note(err)
@@ -306,24 +313,50 @@ func (c *Client) streamCLI(ctx context.Context, model string, req omnillm.Reques
 		c.note(err)
 		return nil, err
 	}
-	return c.spawnCLI(ctx, model, req.Messages, release)
+	return c.spawnCLI(ctx, model, req.Messages, release, chats, owner)
 }
 
 // spawnCLI starts the program for one reply; release is called once when
-// it ends.
-func (c *Client) spawnCLI(ctx context.Context, model string, msgs []omnillm.Message, release egress.Release) (*cliStream, error) {
-	req := omnillm.Request{Messages: msgs}
+// it ends. With chats, the conversation keeps the program's session: a
+// follow-up of a kept one sends only its new message.
+func (c *Client) spawnCLI(ctx context.Context, model string, msgs []omnillm.Message, release egress.Release, chats *Chats, owner string) (*cliStream, error) {
 	scratch, err := os.MkdirTemp("", "omnillm-cli-")
 	if err != nil {
 		release(egress.ClientError, 0)
 		return nil, err
 	}
 	_ = os.Chmod(scratch, 0o700)
-	system, prompt := cliPrompt(c.cfg.Kind, req.Messages)
+	system, prompt := cliPrompt(c.cfg.Kind, msgs)
+	images := cliImages(msgs)
 	env := cliEnv(c.cfg.Path, scratch)
+	dir := scratch
+	var turn *chatTurn
+	if sys, turns := splitChat(msgs); chats != nil && len(turns) > 0 {
+		turn = &chatTurn{chats: chats, owner: owner, kind: c.cfg.Kind, alias: model, system: sys,
+			turns: turns, path: c.cfg.Path}
+		turn.og, turn.kg = chats.gens(owner, c.cfg.Kind)
+		if key, ok := followUpKey(owner, c.cfg.Kind, model, sys, turns); ok {
+			if r, ok := chats.take(key); ok {
+				turn.id, turn.resumed = r.ID, true
+				// The session already holds the conversation: only the
+				// new message goes in.
+				last := turns[len(turns)-1]
+				prompt, images = last.Content, last.Images
+			}
+		}
+		if !turn.resumed && c.cfg.Kind == ClaudeCode {
+			turn.id = newChatID()
+		}
+		if turn.id != "" {
+			chats.pending(ChatRecord{Kind: c.cfg.Kind, ID: turn.id, Owner: owner, Path: c.cfg.Path})
+		}
+	}
 	fail := func(err error) (*cliStream, error) {
 		os.RemoveAll(scratch)
 		release(egress.ClientError, 0)
+		if turn != nil {
+			turn.discard()
+		}
 		return nil, err
 	}
 	var args []string
@@ -337,17 +370,31 @@ func (c *Client) spawnCLI(ctx context.Context, model string, msgs []omnillm.Mess
 		args = []string{"-p", "--output-format", "stream-json", "--verbose", "--include-partial-messages",
 			"--tools", "", // no built-in tools
 			"--strict-mcp-config",   // no MCP servers
-			"--setting-sources", "", // no user/project settings, hooks or plugins
-			"--no-session-persistence", // nothing saved in the owner's history
-			"--system-prompt-file=" + sp}
+			"--setting-sources", ""} // no user/project settings, hooks or plugins
+		switch {
+		case turn == nil:
+			args = append(args, "--no-session-persistence") // nothing saved
+		case turn.resumed:
+			args = append(args, "--resume", turn.id)
+		default:
+			args = append(args, "--session-id", turn.id)
+		}
+		args = append(args, "--system-prompt-file="+sp)
+		if turn != nil {
+			// The hub's own empty folder, the same every turn: Claude Code
+			// finds a session by the folder it was started in.
+			if dir, err = prepareClaudeChatDir(); err != nil {
+				return fail(&omnillm.Error{Code: omnillm.CodeUpstream, Msg: omnillm.MsgUpstream, Detail: "claude folder: " + err.Error()})
+			}
+		}
 		if model != "" && model != "default" {
 			args = append(args, "--model", model)
 		}
-		if imgs := cliImages(req.Messages); len(imgs) > 0 {
+		if len(images) > 0 {
 			// Images go in as base64 in Claude Code's JSON input, not as
 			// files it would need a tool to read.
 			args = append(args, "--input-format", "stream-json")
-			prompt = claudeInput(imgs, prompt)
+			prompt = claudeInput(images, prompt)
 		}
 	} else {
 		home, err := prepareCodexHome()
@@ -357,14 +404,29 @@ func (c *Client) spawnCLI(ctx context.Context, model string, msgs []omnillm.Mess
 			return fail(&omnillm.Error{Code: omnillm.CodeUpstream, Msg: omnillm.MsgUpstream, Detail: "codex home: " + err.Error()})
 		}
 		env = append(env, "CODEX_HOME="+home)
-		args = append([]string{"-c", codexFileLogin, "exec", "--json", "--skip-git-repo-check", "--ephemeral", "--ignore-user-config", "--ignore-rules",
-			"--sandbox", "read-only", "--color", "never", "-C", scratch}, codexToolsOff...)
+		switch {
+		case turn != nil && turn.resumed:
+			// resume takes no --sandbox, --color or -C: the sandbox is set
+			// as a value, and the folder is the process's own.
+			args = append([]string{"-c", codexFileLogin, "exec", "resume", "--json", "--skip-git-repo-check", "--ignore-user-config", "--ignore-rules",
+				"-c", `sandbox_mode="read-only"`}, codexToolsOff...)
+			if strings.TrimSpace(prompt) == "" {
+				prompt = "(The user sent the attached image without any text.)"
+			}
+		default:
+			args = []string{"-c", codexFileLogin, "exec", "--json", "--skip-git-repo-check", "--ignore-user-config", "--ignore-rules",
+				"--sandbox", "read-only", "--color", "never", "-C", scratch}
+			if turn == nil {
+				args = append(args, "--ephemeral") // nothing saved
+			}
+			args = append(args, codexToolsOff...)
+		}
 		if model != "" && model != "default" {
 			args = append(args, "-m", model)
 		}
 		// Images as files in the private scratch folder, attached with -i
 		// (Codex reads them itself; its tools stay off).
-		for i, im := range cliImages(req.Messages) {
+		for i, im := range images {
 			f := filepath.Join(scratch, fmt.Sprintf("image-%d%s", i+1, imageExt[im.MIME]))
 			if err := os.WriteFile(f, im.Data, 0o600); err != nil {
 				return fail(err)
@@ -373,11 +435,14 @@ func (c *Client) spawnCLI(ctx context.Context, model string, msgs []omnillm.Mess
 			// could swallow the "-" that reads the prompt from stdin.
 			args = append(args, "--image="+f)
 		}
+		if turn != nil && turn.resumed {
+			args = append(args, turn.id)
+		}
 		args = append(args, "-")
 	}
 	cctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	cmd := exec.CommandContext(cctx, c.cfg.Path, args...)
-	cmd.Dir, cmd.Env = scratch, env
+	cmd.Dir, cmd.Env = dir, env
 	cmd.Stdin = strings.NewReader(prompt)
 	cmd.WaitDelay = 5 * time.Second
 	ownGroup(cmd) // a cancel stops its helpers too
@@ -394,14 +459,30 @@ func (c *Client) spawnCLI(ctx context.Context, model string, msgs []omnillm.Mess
 	sc := bufio.NewScanner(out)
 	sc.Buffer(make([]byte, 64<<10), 8<<20)
 	s := &cliStream{cmd: cmd, cancel: cancel, parent: ctx, release: release, kind: c.cfg.Kind, sc: sc,
-		stderr: stderr, scratch: scratch, owner: c, alias: model}
+		stderr: stderr, scratch: scratch, owner: c, alias: model, chat: turn}
 	// A reply nobody reads to the end or closes still frees its slot when
 	// the time limit stops the program.
 	go func() {
 		<-cctx.Done()
 		s.finishWith(egress.ClientError, &omnillm.Error{Code: omnillm.CodeUpstream, Msg: omnillm.MsgUpstream, Detail: "stopped"})
 	}()
+	if turn != nil && turn.id == "" {
+		// Codex names a new session on its first line. Read it now, so a
+		// turn stopped at once still knows which session to delete.
+		if sc.Scan() {
+			first := append([]byte(nil), sc.Bytes()...)
+			if text, _ := s.line(first); text != "" || s.chatID() == "" {
+				s.peek = first // not the session line: Recv reads it as usual
+			}
+		}
+	}
 	return s, nil
+}
+
+func (s *cliStream) chatID() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.chat.id
 }
 
 // limitedWriter keeps the first n bytes of the program's stderr. The exec
@@ -450,10 +531,20 @@ func (s *cliStream) Recv() (omnillm.Chunk, error) {
 		if m != "" {
 			return omnillm.Chunk{Model: m}, nil
 		}
-		if !s.sc.Scan() {
+		var b []byte
+		if s.peek != nil {
+			b, s.peek = s.peek, nil
+		} else if s.sc.Scan() {
+			b = s.sc.Bytes()
+		} else {
 			return omnillm.Chunk{}, s.end()
 		}
-		text, final := s.line(s.sc.Bytes())
+		text, final := s.line(b)
+		if text != "" && s.chat != nil {
+			s.mu.Lock()
+			s.reply.WriteString(text)
+			s.mu.Unlock()
+		}
 		if final {
 			if text != "" {
 				s.sent += len(text)
@@ -508,8 +599,9 @@ func (s *cliStream) line(b []byte) (text string, final bool) {
 			Status   string `json:"status"`
 			ResetsAt int64  `json:"resetsAt"`
 		} `json:"rate_limit_info"`
-		Message string `json:"message"`
-		Error   struct {
+		Message  string `json:"message"`
+		ThreadID string `json:"thread_id"` // Codex's thread.started
+		Error    struct {
 			Message string `json:"message"`
 		} `json:"error"`
 	}
@@ -554,6 +646,18 @@ func (s *cliStream) line(b []byte) (text string, final bool) {
 		s.mu.Unlock()
 		if !got && ev.Result != "" { // no partial messages: the whole reply
 			return ev.Result, true
+		}
+	case "thread.started": // Codex, first: the session id
+		if t := s.chat; t != nil && !t.resumed && validChatID(ev.ThreadID) {
+			s.mu.Lock()
+			fresh := t.id == ""
+			if fresh {
+				t.id = ev.ThreadID
+			}
+			s.mu.Unlock()
+			if fresh {
+				t.chats.pending(ChatRecord{Kind: t.kind, ID: t.id, Owner: t.owner, Path: t.path})
+			}
 		}
 	case "item.completed": // Codex
 		if ev.Item.Type == "agent_message" {
@@ -684,6 +788,9 @@ func (s *cliStream) end() error {
 		if s.FinishReason() == "" {
 			s.setFinish("stop")
 		}
+		s.mu.Lock()
+		s.finished = true
+		s.mu.Unlock()
 		s.finishWith(egress.OK, nil)
 		return io.EOF
 	}
@@ -705,9 +812,26 @@ func (s *cliStream) finishWith2(o egress.Outcome, wait time.Duration, err error)
 			s.owner.note(err)
 		}
 		s.cancel()
+		var turn *chatTurn
+		s.mu.Lock()
+		keep, reply := s.finished && err == nil, s.reply.String()
+		if s.chat != nil {
+			t := *s.chat // with the id as known now (Codex sets it while reading)
+			turn = &t
+		}
+		s.mu.Unlock()
 		go func() {
 			_ = s.wait()
 			os.RemoveAll(s.scratch)
+			// After the program has exited: its session file is complete,
+			// or no longer written to.
+			if turn != nil {
+				if keep {
+					turn.keep(reply)
+				} else {
+					turn.discard()
+				}
+			}
 		}()
 	})
 }

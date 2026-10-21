@@ -164,3 +164,60 @@ func TestRealCLIImage(t *testing.T) {
 		})
 	}
 }
+
+// A conversation continues the program's session: the second turn sends
+// only its new message and the model still knows the first.
+func TestRealChatContinues(t *testing.T) {
+	for _, k := range []Kind{ClaudeCode, Codex} {
+		t.Run(string(k), func(t *testing.T) {
+			c := realCLI(t, k)
+			model := "haiku"
+			if k == Codex {
+				model = "default"
+			}
+			chats := NewChats(nil, nil)
+			say := func(msgs ...omnillm.Message) string {
+				t.Helper()
+				ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+				defer cancel()
+				s, err := c.StreamChat(ctx, model, omnillm.Request{Caller: omnillm.Interactive, Messages: msgs}, Credential{}, chats, "device/real-test")
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer s.Close()
+				text, err := collect(t, s)
+				if err != nil {
+					t.Fatal(err)
+				}
+				return text
+			}
+			first := omnillm.Message{Role: "user", Content: "Remember the code word PLUM-7. Reply only: ok"}
+			r1 := say(first)
+			kept := settled(t, chats, 1)
+			r2 := say(first, omnillm.Message{Role: "assistant", Content: r1},
+				omnillm.Message{Role: "user", Content: "What was the code word? Reply with it only."})
+			if !strings.Contains(r2, "PLUM-7") {
+				t.Fatalf("the session lost the first turn: %q", r2)
+			}
+			again := settled(t, chats, 1)
+			if again[0].ID != kept[0].ID {
+				t.Fatalf("second turn started a new session %s (was %s)", again[0].ID, kept[0].ID)
+			}
+			chats.Forget("device/real-test")
+			for i := 0; i < 300 && chatExists(kept[0]); i++ {
+				time.Sleep(100 * time.Millisecond)
+			}
+			if chatExists(kept[0]) {
+				t.Fatal("session file left after Forget")
+			}
+			// Nothing else under the owner's ~/.claude carries this session.
+			home, _ := os.UserHomeDir()
+			_ = filepath.WalkDir(filepath.Join(home, ".claude"), func(p string, d os.DirEntry, err error) error {
+				if err == nil && strings.Contains(d.Name(), kept[0].ID) {
+					t.Errorf("left behind: %s", p)
+				}
+				return nil
+			})
+		})
+	}
+}

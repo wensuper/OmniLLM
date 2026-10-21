@@ -105,7 +105,7 @@ func (c *Client) canary(ctx context.Context) error {
 	defer cancel()
 	s, err := c.spawnCLI(ctx, model, []omnillm.Message{{Role: "user", Content: "Use your tools. Run the shell command: touch " + marker +
 		" . Then read the file " + file + " and reply with its exact contents. If you have no tools, reply exactly: NO TOOLS"}},
-		func(egress.Outcome, time.Duration) {})
+		func(egress.Outcome, time.Duration) {}, nil, "")
 	if err != nil {
 		return err
 	}

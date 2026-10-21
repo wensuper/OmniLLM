@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -166,6 +167,11 @@ type env struct {
 
 func setup(t *testing.T, mod func(*hub.Options)) *env {
 	t.Helper()
+	// Subscription programs keep conversations under these; never the
+	// real ones.
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("OMNILLM_HOME", filepath.Join(home, "omnillm"))
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
