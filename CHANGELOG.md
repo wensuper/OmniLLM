@@ -4,6 +4,17 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.35](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.35) - 2026-10-22
+
+### Changed
+
+- The web chat has a real desktop layout. On a wide window the chat list is a sidebar (grouped by Today, Yesterday, Previous 7 days and Earlier, with search), and the talk and the message box share one centred column instead of stretching across the screen. The sidebar can be hidden; on phones it is still a drawer.
+- Replies are no longer boxed in cards. The model's name heads the first reply and a line marks where the model changes; every other reply names its model in the row under it. Code blocks have a header with the language and *Copy*.
+- The model picker moved into the message box and shows which models your Mac can reach right now. Pictures can also be pasted or dragged into the window.
+- *Your Mac* at the bottom of the sidebar says whether it is online and opens a menu: this device's name, language, keyboard shortcuts, where chats are kept, and removing this device. Notices such as "can't reach your Mac" now sit right above the message box.
+- Keyboard shortcuts on computers: ⌘⇧O new chat, ⌘K search, ⌘\ hide the sidebar, Esc stop the answer, ⌘⇧; copy the last answer, / go to the message box, ⌘/ list them (Ctrl on Windows and Linux).
+- The page now speaks your Mac's language (the one chosen for the console and the menu bar) instead of the browser's; you can still pick one for this device in the *Your Mac* menu.
+
 ## [0.2.0-alpha.34](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.34) - 2026-10-22
 
 ### Changed

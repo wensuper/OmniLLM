@@ -824,7 +824,7 @@ func hubRun(dir, sock string, args []string) {
 			token = string(b)
 		}
 	}
-	h, err := hub.New(ctx, hub.Options{Secrets: sec, Store: st, RelayURL: *relayURL, RelayToken: token, WebAppURL: *webApp,
+	h, err := hub.New(ctx, hub.Options{Secrets: sec, Store: st, RelayURL: *relayURL, RelayToken: token, WebAppURL: *webApp, Lang: lang(),
 		Logf: func(f string, a ...any) { log.Printf(f, a...) }})
 	if err != nil {
 		die(err)

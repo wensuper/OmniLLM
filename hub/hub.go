@@ -46,6 +46,9 @@ type Options struct {
 	// WebAppURL is the web client phones and tablets open from the pairing
 	// QR code (default DefaultWebAppURL).
 	WebAppURL string
+	// Lang is the host's own language for people ("zh" or "en"), told to
+	// devices when the owner hasn't chosen one. Optional.
+	Lang string
 	// Logf receives redacted operational logs. Optional.
 	Logf func(format string, args ...any)
 	// Limits per provider (nil: defaults, 2 concurrent).
@@ -296,6 +299,19 @@ func (h *Hub) UILang(ctx context.Context) string {
 		return ""
 	}
 	return l
+}
+
+// DeviceLang is the language devices are told to speak: the owner's
+// choice, else the host's own (Options.Lang), else "" (each device follows
+// its own system).
+func (h *Hub) DeviceLang(ctx context.Context) string {
+	if l := h.UILang(ctx); l != "" {
+		return l
+	}
+	if l := h.opts.Lang; l == "zh" || l == "en" {
+		return l
+	}
+	return ""
 }
 
 // SetUILang keeps the owner's choice of language: "zh", "en", or "" to
