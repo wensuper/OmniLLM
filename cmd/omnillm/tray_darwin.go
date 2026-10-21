@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -35,32 +36,62 @@ func trayCmd() {
 		fmt.Fprintln(os.Stderr, t("OmniLLM 已经在菜单栏里了。", "OmniLLM is already in the menu bar."))
 		return
 	}
+	// The menu follows the system language, as NEXA's does; the login
+	// item's OMNILLM_LANG is only the shell's at install time.
+	if l := trayLang(); l != "" {
+		os.Setenv("OMNILLM_LANG", l)
+	}
 	systray.Run(trayReady, func() {})
 }
 
+// trayLang is the language the menu shows: OMNILLM_TRAY_LANG when set (for
+// tests), else the first of macOS's preferred languages ("" when unknown).
+func trayLang() string {
+	if v := os.Getenv("OMNILLM_TRAY_LANG"); v != "" {
+		return v
+	}
+	out, err := exec.Command("defaults", "read", "-g", "AppleLanguages").Output()
+	if err != nil {
+		return ""
+	}
+	// ( "en-SG", "zh-Hans-SG" ): the first entry wins.
+	for _, f := range strings.FieldsFunc(string(out), func(r rune) bool { return strings.ContainsRune("(),\"\n\t ", r) }) {
+		if strings.HasPrefix(strings.ToLower(f), "zh") {
+			return "zh"
+		}
+		return "en"
+	}
+	return ""
+}
+
+// The menu, laid out as NEXA's: one status line; the counts, each opening
+// its console page, with the actions under them; the version and
+// 检查更新…. There is no quit item: the icon stays in the menu bar (zc
+// 2026-10-21).
 func trayReady() {
 	systray.SetTemplateIcon(trayDown, trayDown)
 	systray.SetTooltip("OmniLLM · Your AI, Everywhere")
-	head := systray.AddMenuItem("OmniLLM", "")
+	head := systray.AddMenuItem("", "")
 	head.Disable()
-	relay := systray.AddMenuItem("", "")
-	relay.Disable()
-	counts := systray.AddMenuItem("", "")
-	counts.Disable()
-	// The version line, and 检查更新… under it while the version line
-	// offers nothing (trayversion.go); the check line keeps the menu open
-	// so its result shows where it was clicked.
-	ver := systray.AddMenuItem("", "")
-	ver.Disable()
-	check := systray.AddMenuItem("", "")
-	check.SetKeepOpen(true)
-	systray.AddSeparator()
-	open := systray.AddMenuItem(t("打开控制台", "Open the console"), "")
-	add := systray.AddMenuItem(t("添加设备…", "Add device…"), "")
+	// Shown only while the hub does not answer.
 	start := systray.AddMenuItem(t("启动 OmniLLM", "Start OmniLLM"), "")
 	start.Hide()
 	systray.AddSeparator()
-	quit := systray.AddMenuItem(t("隐藏菜单栏图标（下次登录时恢复）", "Hide the menu bar icon (back at next login)"), "")
+	devices := systray.AddMenuItem("", "")
+	sources := systray.AddMenuItem("", "")
+	// No separator here: while the hub is down the counts are hidden, and
+	// two separators would stand together.
+	add := systray.AddMenuItem(t("添加设备…", "Add a device…"), "")
+	open := systray.AddMenuItem(t("打开控制台…", "Open the console…"), "")
+	systray.AddSeparator()
+	// The version line: grey while this is the latest; 有新版本 X when a
+	// newer one is out, and one click installs it (trayversion.go).
+	ver := systray.AddMenuItem("", "")
+	ver.Disable()
+	// 检查更新… under it while the version line offers nothing; a click
+	// keeps the menu open so its result shows where it was clicked.
+	check := systray.AddMenuItem("", "")
+	check.SetKeepOpen(true)
 
 	startFailed := false // launchctl kickstart failed: say what to do instead
 	// Updates: checked a minute after start, then every day, and on a click.
@@ -68,16 +99,13 @@ func trayReady() {
 	up := updateState{Log: logPath}
 	show := func() {
 		st, ok := queryStatus()
+		head.SetTitle(statusLine(st, ok, up.Installing != "", startFailed))
 		if !ok {
 			systray.SetTemplateIcon(trayDown, trayDown)
-			head.SetTitle(t("OmniLLM 没有运行", "OmniLLM isn’t running"))
-			relay.SetTitle(t("设备暂时连不上", "Devices can’t connect now"))
-			if startFailed {
-				relay.SetTitle(t("没能启动。在终端运行 omnillm install。", "Couldn’t start it. Run omnillm install in Terminal."))
-			}
-			counts.Hide()
-			open.Disable()
+			devices.Hide()
+			sources.Hide()
 			add.Disable()
+			open.Disable()
 			// While an update installs, the hub is down on purpose and
 			// comes back by itself.
 			if up.Installing != "" {
@@ -89,22 +117,17 @@ func trayReady() {
 		}
 		startFailed = false
 		start.Hide()
-		open.Enable()
 		add.Enable()
-		counts.Show()
-		head.SetTitle(t("OmniLLM 在运行", "OmniLLM is running")) // the version has its own line
-		switch {
-		case !st.RelayConfigured:
+		open.Enable()
+		devices.SetTitle(devicesLine(st))
+		sources.SetTitle(sourcesLine(st))
+		devices.Show()
+		sources.Show()
+		if !st.RelayConfigured || st.RelayUp {
 			systray.SetTemplateIcon(trayUp, trayUp)
-			relay.SetTitle(t("只在这台 Mac 上用（没有设置远程连接）", "This Mac only (remote access not set up)"))
-		case st.RelayUp:
-			systray.SetTemplateIcon(trayUp, trayUp)
-			relay.SetTitle(t("● 手机和其他设备可以连上", "● Phones and other devices can connect"))
-		default:
+		} else {
 			systray.SetTemplateIcon(trayDown, trayDown)
-			relay.SetTitle(t("○ 远程连接断开，设备暂时连不上", "○ Remote access is down; devices can’t connect now"))
 		}
-		counts.SetTitle(countsLine(st))
 	}
 	show()
 
@@ -112,6 +135,7 @@ func trayReady() {
 	showUpdate := func() {
 		title, inst := versionLine(version, up)
 		ver.SetTitle(title)
+		ver.SetTooltip(versionTip(version, up))
 		installClick = inst
 		if inst {
 			ver.Enable()
@@ -214,6 +238,10 @@ func trayReady() {
 				show()
 			case <-open.ClickedCh:
 				trayOpen("")
+			case <-devices.ClickedCh:
+				trayOpen("&tab=devices")
+			case <-sources.ClickedCh:
+				trayOpen("&tab=models")
 			case <-add.ClickedCh:
 				trayOpen("&add")
 			case <-start.ClickedCh:
@@ -221,16 +249,13 @@ func trayReady() {
 				startFailed = err != nil
 				time.Sleep(2 * time.Second)
 				show()
-			case <-quit.ClickedCh:
-				systray.Quit()
-				return
 			}
 		}
 	}()
 }
 
 // trayOpen opens the console with a fresh one-time login; extra is added
-// to the link's fragment (&add opens "add device").
+// to the link's fragment (&add opens "add device", &tab=models a tab).
 func trayOpen(extra string) {
 	if url, err := loginURL(); err == nil {
 		_ = openLogin(url + extra)

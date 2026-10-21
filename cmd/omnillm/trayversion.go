@@ -245,18 +245,32 @@ const upToDateFor = time.Minute
 func versionLine(cur string, s updateState) (title string, install bool) {
 	switch {
 	case s.Installing != "":
-		return fmt.Sprintf(t("正在更新到 %s……", "Updating to %s…"), s.Installing), false
+		return fmt.Sprintf(t("正在更新到 %s…", "Updating to %s…"), bare(s.Installing)), false
 	case s.Failed && s.Latest != "":
-		if s.Log != "" {
-			return fmt.Sprintf(t("更新失败，点击重试（日志：%s）", "Update failed; click to retry (log: %s)"), tildePath(s.Log)), true
-		}
-		return t("更新失败，点击重试", "Update failed; click to retry"), true
+		return t("更新失败，点击重试", "Update failed · click to retry"), true
+	case s.Latest != "" && compareVersions(s.Latest, cur) > 0:
+		return fmt.Sprintf(t("有新版本 %s · 点击更新", "New version %s · click to update"), bare(s.Latest)), true
+	}
+	return fmt.Sprintf(t("版本 %s", "Version %s"), bare(cur)), false
+}
+
+// versionTip is the version line's tooltip: what a click costs, or where
+// the failed update's log is (kept out of the line itself, as in NEXA).
+func versionTip(cur string, s updateState) string {
+	switch {
+	case s.Installing != "":
+		return ""
+	case s.Failed && s.Latest != "" && s.Log != "":
+		return fmt.Sprintf(t("日志：%s", "Log: %s"), tildePath(s.Log))
 	case s.Latest != "" && compareVersions(s.Latest, cur) > 0:
 		// Installing restarts the hub, which ends replies in progress.
-		return fmt.Sprintf(t("有新版本 %s · 点击更新（正在进行的回答会中断）", "New version %s · click to update (replies in progress will stop)"), s.Latest), true
+		return t("更新时 OmniLLM 会重启，正在进行的回答会中断。", "OmniLLM restarts to update; replies in progress will stop.")
 	}
-	return fmt.Sprintf(t("版本 %s", "Version %s"), cur), false
+	return ""
 }
+
+// bare drops the tag's "v" for the menu ("v0.2.0-alpha.22" → "0.2.0-alpha.22").
+func bare(v string) string { return strings.TrimPrefix(v, "v") }
 
 // checkLine is the line under it: shown only while the version line offers
 // nothing (one way to update at a time); click says a click starts a check.
@@ -266,7 +280,7 @@ func checkLine(cur string, s updateState, now time.Time) (title string, click, s
 	}
 	switch {
 	case s.Checking:
-		return t("正在检查更新……", "Checking for updates…"), false, true
+		return t("正在检查更新…", "Checking for updates…"), false, true
 	case s.CheckFailed:
 		return t("检查失败，点击重试", "Check failed; click to retry"), true, true
 	case !s.CheckedAt.IsZero() && now.Sub(s.CheckedAt) < upToDateFor:
@@ -357,8 +371,38 @@ func noteLog(path, format string, a ...any) {
 	fmt.Fprintf(f, "omnillm tray: "+format+"\n", a...)
 }
 
-// countsLine is the menu's counts line: devices (how many online now) and
-// model sources.
-func countsLine(st Status) string {
-	return fmt.Sprintf(t("设备 %d 台（%d 台在线）· 模型来源 %d 个", "Devices: %d (%d online) · Model sources: %d"), st.Devices, st.Online, st.Providers)
+// statusLine is the menu's one status line at the top, NEXA's "在线 · 23 ms":
+// the state first, then what it means for the devices. ok says the hub
+// answered; updating, that an update has it down on purpose; startFailed,
+// that 启动 OmniLLM did not work.
+func statusLine(st Status, ok, updating, startFailed bool) string {
+	switch {
+	case !ok && updating:
+		return t("正在更新 · 马上回来", "Updating · back in a moment")
+	case !ok && startFailed:
+		return t("没能启动 · 在终端运行 omnillm install", "Couldn’t start · run omnillm install in Terminal")
+	case !ok:
+		return t("OmniLLM 没有运行", "OmniLLM isn’t running")
+	case !st.RelayConfigured:
+		return t("在运行 · 只在这台 Mac 上用", "Running · this Mac only")
+	case st.RelayUp:
+		return t("在线 · 手机和其他设备能连上", "Online · phones and other devices can connect")
+	}
+	return t("远程连接断开 · 设备暂时连不上", "Remote access down · devices can’t connect now")
+}
+
+// devicesLine and sourcesLine are the menu's two counts, NEXA's
+// "待我决策  3": each opens its page in the console.
+func devicesLine(st Status) string {
+	if st.Devices == 0 {
+		return t("设备  还没有添加", "Devices  none yet")
+	}
+	return fmt.Sprintf(t("设备  %d 台在线 / 共 %d 台", "Devices  %d of %d online"), st.Online, st.Devices)
+}
+
+func sourcesLine(st Status) string {
+	if st.Providers == 0 {
+		return t("模型来源  还没有接入", "Model sources  none yet")
+	}
+	return fmt.Sprintf(t("模型来源  %d", "Model sources  %d"), st.Providers)
 }
