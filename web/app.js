@@ -253,20 +253,34 @@ function deviceName() {
 // the person picks one with "Use here".
 const tabs = "BroadcastChannel" in window ? new BroadcastChannel("omnillm") : null;
 function claimTab() { if (tabs) tabs.postMessage("here"); }
+function takeOver() {
+  try { sessionStorage.setItem("omnillm.draft", $("input").value); } catch {}
+  location.reload();
+}
 if (tabs) tabs.onmessage = (e) => {
   // The tab in use went away: a quiet tab takes over by itself (reload reads
   // what that tab saved, then claims).
-  if (e.data === "gone" && S.quiet) { try { sessionStorage.setItem("omnillm.draft", $("input").value); } catch {} location.reload(); return; }
+  if (e.data === "gone" && S.quiet) { takeOver(); return; }
+  if (e.data === "who") { if (!S.quiet) tabs.postMessage("alive"); return; }
+  if (e.data === "alive") { S.alive = true; return; }
   if (e.data !== "here" || S.quiet) return;
   S.quiet = true;
   if (S.busy) { try { omnillm.cancel(S.busy); } catch {} }
   $("other-tab").hidden = false;
 };
+// "gone" can be lost when a tab closes (WebKit drops messages sent while the
+// page unloads), so a quiet tab in front also asks every few seconds and
+// whenever it comes back to the front; no tab in use answering → take over.
+function checkTab() {
+  if (!tabs || !S.quiet || document.hidden) return;
+  S.alive = false;
+  tabs.postMessage("who");
+  setTimeout(() => { if (S.quiet && !S.alive && !document.hidden) takeOver(); }, 600);
+}
+document.addEventListener("visibilitychange", checkTab);
+setInterval(checkTab, 3000);
 // Use here: reload, so this tab reads what the other one saved, and claim.
-$("use-here").addEventListener("click", () => {
-  try { sessionStorage.setItem("omnillm.draft", $("input").value); } catch {}
-  location.reload();
-});
+$("use-here").addEventListener("click", takeOver);
 claimTab();
 addEventListener("pagehide", () => { if (tabs && !S.quiet) tabs.postMessage("gone"); });
 
