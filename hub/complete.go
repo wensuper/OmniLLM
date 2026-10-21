@@ -22,6 +22,8 @@ type principal struct {
 	budget int64
 	// forceBackground: app tokens are always Background (principle 1).
 	forceBackground bool
+	// paused: the owner paused this device or app; the message saying so.
+	paused string
 }
 
 func (h *Hub) hostPrincipal() principal {
@@ -36,6 +38,11 @@ func (h *Hub) Complete(ctx context.Context, req omnillm.Request) (omnillm.Stream
 
 func (h *Hub) complete(ctx context.Context, p principal, req omnillm.Request) (omnillm.Stream, error) {
 	start := time.Now()
+	// Paused by the owner: refused before anything else, so nothing is
+	// sent and nothing is charged.
+	if p.paused != "" {
+		return nil, &omnillm.Error{Code: omnillm.CodeDevicePaused, Msg: p.paused}
+	}
 	if p.forceBackground {
 		req.Caller = omnillm.Background
 	}
@@ -52,6 +59,11 @@ func (h *Hub) complete(ctx context.Context, p principal, req omnillm.Request) (o
 	}
 	if len(p.models) > 0 && !slices.Contains(p.models, m.ID) {
 		return nil, &omnillm.Error{Code: omnillm.CodeModelNotAllowed, Msg: omnillm.MsgModelNotAllowed}
+	}
+	// A model the owner took off the devices' list is gone for them, as if
+	// removed: the device reloads its list and picks another.
+	if strings.HasPrefix(p.key, "device/") && h.modelPrefs(ctx)[m.ID].Hidden {
+		return nil, &omnillm.Error{Code: omnillm.CodeModelNotAllowed, Msg: omnillm.MsgUnknownModel}
 	}
 	if (m.HumanOnly || h.subscription(m.Provider)) && req.Caller != omnillm.Interactive {
 		return nil, &omnillm.Error{Code: omnillm.CodeModelNotAllowed, Msg: omnillm.MsgHumanOnly}
@@ -181,7 +193,7 @@ func (a *accounted) settle(outcome string) {
 		a.mu.Unlock()
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		a.h.settleCharge(ctx, a.p, a.reserved, u)
+		a.h.settleCharge(ctx, a.p, a.m.ID, a.reserved, u)
 		a.h.audit(ctx, a.p, a.m, a.caller, u, outcome)
 		// Timing only, never content: how long people wait is what to watch.
 		ttft := "-"
@@ -205,6 +217,10 @@ type spend struct {
 func (h *Hub) day() string { return h.opts.Now().Format("2006-01-02") }
 
 func usageKey(day, who string) string { return "usage/" + day + "/" + who }
+
+// modelUsageKey: the same day's use per model (model ids hold a "/" too,
+// so they are kept apart from the per-device lines).
+func modelUsageKey(day, model string) string { return "usagemodel/" + day + "/" + model }
 
 func (h *Hub) untilTomorrow() time.Duration {
 	now := h.opts.Now()
@@ -231,15 +247,25 @@ func (h *Hub) reserve(ctx context.Context, p principal, worst int64) error {
 		h.reserved = map[string]int64{}
 	}
 	if h.opts.GlobalBudget != NoLimit && total.MicroUSD+h.reserved["_total"]+worst > h.opts.GlobalBudget {
-		return &omnillm.Error{Code: omnillm.CodeBudgetExceeded, Msg: omnillm.MsgBudgetGlobal, RetryAfter: h.untilTomorrow()}
+		return h.overBudget(total.MicroUSD+h.reserved["_total"], h.opts.GlobalBudget, omnillm.MsgBudgetGlobal)
 	}
 	// NoLimit: only the hub's daily total applies to this device.
 	if p.budget != NoLimit && mine.MicroUSD+h.reserved[p.key]+worst > p.budget {
-		return &omnillm.Error{Code: omnillm.CodeBudgetExceeded, Msg: omnillm.MsgBudgetDevice, RetryAfter: h.untilTomorrow()}
+		return h.overBudget(mine.MicroUSD+h.reserved[p.key], p.budget, omnillm.MsgBudgetDevice)
 	}
 	h.reserved[p.key] += worst
 	h.reserved["_total"] += worst
 	return nil
+}
+
+// overBudget says why a call does not fit: the limit is used up (msg), or
+// something is left but this call's worst case would pass it, which a
+// shorter chat may still fit.
+func (h *Hub) overBudget(used, limit int64, msg string) error {
+	if used < limit {
+		msg = omnillm.MsgBudgetWouldExceed
+	}
+	return &omnillm.Error{Code: omnillm.CodeBudgetExceeded, Msg: msg, RetryAfter: h.untilTomorrow()}
 }
 
 func (h *Hub) unreserve(p principal, worst int64) {
@@ -259,19 +285,21 @@ func getSpend(ctx context.Context, st store.Store, k string, s *spend) error {
 
 // settleCharge releases a call's reservation and records what it really
 // cost in one step, so no concurrent reserve sees neither.
-func (h *Hub) settleCharge(ctx context.Context, p principal, worst int64, u omnillm.Usage) {
+func (h *Hub) settleCharge(ctx context.Context, p principal, model string, worst int64, u omnillm.Usage) {
 	h.accountMu.Lock()
 	defer h.accountMu.Unlock()
 	h.reserved[p.key] -= worst
 	h.reserved["_total"] -= worst
-	h.chargeLocked(ctx, p, u)
+	h.chargeLocked(ctx, p, model, u)
 }
 
-func (h *Hub) chargeLocked(ctx context.Context, p principal, u omnillm.Usage) {
+// chargeLocked records a call for whoever made it, for the day's total and
+// for the model it used.
+func (h *Hub) chargeLocked(ctx context.Context, p principal, model string, u omnillm.Usage) {
 	day := h.day()
-	for _, who := range []string{p.key, "_total"} {
+	for _, k := range []string{usageKey(day, p.key), usageKey(day, "_total"), modelUsageKey(day, model)} {
 		var s spend
-		if err := getSpend(ctx, h.opts.Store, usageKey(day, who), &s); err != nil {
+		if err := getSpend(ctx, h.opts.Store, k, &s); err != nil {
 			// Never overwrite a record we could not read.
 			h.opts.Logf("hub: usage record unreadable; this call is not recorded")
 			continue
@@ -280,7 +308,7 @@ func (h *Hub) chargeLocked(ctx context.Context, p principal, u omnillm.Usage) {
 		s.InputTokens += int64(u.InputTokens)
 		s.OutputTokens += int64(u.OutputTokens)
 		s.Calls++
-		if err := store.PutJSON(ctx, h.opts.Store, usageKey(day, who), s); err != nil {
+		if err := store.PutJSON(ctx, h.opts.Store, k, s); err != nil {
 			h.opts.Logf("hub: recording usage failed: %v", err)
 		}
 	}
@@ -301,22 +329,109 @@ type Spend struct {
 
 // Usage returns usage for day ("2006-01-02"; empty means today).
 func (h *Hub) Usage(ctx context.Context, day string) ([]Spend, error) {
-	if day == "" {
-		day = h.day()
+	return h.UsageBetween(ctx, day, day)
+}
+
+// Day is the date back days before today, on this Mac's clock, as Usage
+// takes it (0: today, 1: yesterday).
+func (h *Hub) Day(back int) string { return h.opts.Now().AddDate(0, 0, -back).Format("2006-01-02") }
+
+// maxUsageDays bounds how many days one usage question adds up.
+const maxUsageDays = 31
+
+// days lists the dates from first to last, both included (empty: today).
+func (h *Hub) days(first, last string) ([]string, error) {
+	if first == "" {
+		first = h.day()
 	}
-	keys, err := h.opts.Store.List(ctx, "usage/"+day+"/")
+	if last == "" {
+		last = h.day()
+	}
+	a, err1 := time.Parse("2006-01-02", first)
+	b, err2 := time.Parse("2006-01-02", last)
+	if err1 != nil || err2 != nil || b.Before(a) {
+		return nil, &omnillm.Error{Code: omnillm.CodeBadRequest, Msg: "bad_messages", Detail: "bad day range"}
+	}
+	var out []string
+	for d := a; !d.After(b) && len(out) < maxUsageDays; d = d.AddDate(0, 0, 1) {
+		out = append(out, d.Format("2006-01-02"))
+	}
+	return out, nil
+}
+
+// sumUsage adds up the records under prefix+day+"/" for every day.
+func (h *Hub) sumUsage(ctx context.Context, prefix string, days []string) ([]Spend, error) {
+	byWho := map[string]*Spend{}
+	var order []string
+	for _, day := range days {
+		p := prefix + day + "/"
+		keys, err := h.opts.Store.List(ctx, p)
+		if err != nil {
+			return nil, err
+		}
+		for _, k := range keys {
+			var s spend
+			if store.GetJSON(ctx, h.opts.Store, k, &s) != nil {
+				continue
+			}
+			who := k[len(p):]
+			o := byWho[who]
+			if o == nil {
+				o = &Spend{Who: who}
+				byWho[who] = o
+				order = append(order, who)
+			}
+			o.MicroUSD += s.MicroUSD
+			o.InputTokens += s.InputTokens
+			o.OutputTokens += s.OutputTokens
+			o.Calls += s.Calls
+		}
+	}
+	out := make([]Spend, 0, len(order))
+	for _, who := range order {
+		out = append(out, *byWho[who])
+	}
+	return out, nil
+}
+
+// UsageBetween adds up usage per device or app from day first to day last
+// (both included; empty means today), named as Usage names them.
+func (h *Hub) UsageBetween(ctx context.Context, first, last string) ([]Spend, error) {
+	days, err := h.days(first, last)
 	if err != nil {
 		return nil, err
 	}
-	var out []Spend
-	for _, k := range keys {
-		var s spend
-		if store.GetJSON(ctx, h.opts.Store, k, &s) == nil {
-			out = append(out, Spend{Who: k[len("usage/"+day+"/"):], MicroUSD: s.MicroUSD,
-				InputTokens: s.InputTokens, OutputTokens: s.OutputTokens, Calls: s.Calls})
-		}
+	out, err := h.sumUsage(ctx, "usage/", days)
+	if err != nil {
+		return nil, err
 	}
 	h.nameSpends(ctx, out)
+	return out, nil
+}
+
+// ModelUsageBetween adds up usage per model over the same days. Who is the
+// model id and Name its name for people; Removed: the model is gone now.
+func (h *Hub) ModelUsageBetween(ctx context.Context, first, last string) ([]Spend, error) {
+	days, err := h.days(first, last)
+	if err != nil {
+		return nil, err
+	}
+	out, err := h.sumUsage(ctx, "usagemodel/", days)
+	if err != nil {
+		return nil, err
+	}
+	names := map[string]string{}
+	ms, _ := h.OwnerModels(ctx)
+	for _, m := range ms {
+		names[m.ID] = m.DisplayName
+	}
+	for i := range out {
+		if n, ok := names[out[i].Who]; ok {
+			out[i].Name = n
+			continue
+		}
+		out[i].Removed = true
+	}
 	return out, nil
 }
 

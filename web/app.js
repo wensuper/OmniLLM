@@ -17,13 +17,14 @@ const T = {
     bootSlow: "载入停了 20 秒没有进展，停在“{0}”。点下面的按钮清掉缓存重新载入；网络慢的话也可以换个网络再试。",
     bootCrashed: "程序意外停止了。点下面的按钮清掉缓存重新载入。", bootError: "载入失败：", bootRetry: "重新载入",
     welcomeTitle: "在这台设备上用你的模型",
-    welcomeBody: "在你的 Mac（或装了 OmniLLM 的电脑）上打开 OmniLLM，点“添加设备”，再用这台设备扫屏幕上的二维码。",
+    welcomeBody: "在你的 Mac 上打开 OmniLLM，点“添加设备”，再用这台设备扫屏幕上的二维码。",
     scan: "扫描二维码", pasteInstead: "扫不了码？粘贴配对文字", pastePh: "把配对文字粘贴到这里（以 omnillm3- 开头）", add: "添加", cancel: "取消", back: "返回",
     scanHint: "把 Mac 屏幕上的二维码放进框里", camDenied: "没有拿到摄像头权限。可以改用下面的“粘贴配对文字”。",
     pairTitle: "添加这台设备", pairConnecting: "正在连接你的 Mac……",
     pairAsk: "要把这台设备添加到你的 Mac 吗？只有你刚在 Mac 上点了“添加设备”才继续。", pairVia: "经由 {0}",
     pairReplace: "这会替换这台设备现在的配对（{0}），之前的 Mac 就不能再从这里用了。",
     pairCheck: "在 Mac 上看到同样的数字，就在 Mac 上点“一致，添加”。", pairWait: "等你在 Mac 上确认……", pairMismatch: "数字不一样？取消", pairDone: "已添加。",
+    pairDropped: "连接断了。在 Mac 上点“换一个二维码”再扫。", connectedMac: "已连上你的 Mac",
     notCode: "这不是 OmniLLM 的配对二维码或配对文字。", needTLS: "你的 Mac 用的远程连接不支持手机网页（需要 wss:// 地址）。请在 Mac 上设置一个公开的远程连接。",
     chats: "对话", newChat: "新对话", placeholder: "输入消息", stop: "停止", send: "发送", menu: "菜单", model: "模型",
     addImage: "添加图片", removeImage: "移除图片", tooManyImages: "每条消息最多 4 张图片。", imageFailed: "这张图片打不开，换一张试试。", imageTooBig: "图片太大，换一张小一点的。", imageTitle: "图片",
@@ -32,30 +33,34 @@ const T = {
     noModels: "你的 Mac 上还没有可用的模型。在 Mac 的控制台“模型”里接入一个。", noModelsOpt: "没有可用的模型",
     modelGone: "原来的模型已从你的 Mac 上移除，换成了 {0}",
     grpSub: "订阅（不另花钱）", grpKey: "API Key", grpLocal: "本机",
-    forget: "移除这台设备", forgetQ: "移除后要在 Mac 上重新添加才能再用，这里的对话会删掉。", removing: "正在移除……",
-    forgetFar: "你的 Mac 现在连不上，记得在 Mac 的设备列表里也移除它。",
-    close: "关闭", deleteChat: "删除这个对话", deleteChatQ: "删除对话“{0}”？", chatsLocal: "对话只保存在这台设备上。",
+    forget: "移除这台设备", forgetQ: "这里的对话会删掉。以后要用，在 Mac 上重新添加。", removing: "正在移除……",
+    forgetFar: "已从这台设备上移除，对话已删除。你的 Mac 现在连不上，下次在 Mac 的“设备”里也把它移除。",
+    close: "关闭", deleteChat: "删除这个对话", deleteChatQ: "删除对话“{0}”？", chatsLocal: "对话只保存在这台设备上。", searchChats: "搜索对话", noMatch: "没有找到",
     addHome: "添加到主屏幕", addHomeTip: "点浏览器的“分享”按钮，选“添加到主屏幕”。从主屏幕打开时需要再扫一次码。",
     deviceLine: "这台设备：{0}", empty: "有什么可以帮你？", cut: "（回复太长被截断了。发“继续”让它接着写。）", stopped: "（已停止）",
-    today: "今天", copy: "复制", copied: "已复制", again: "重新回答", thinking: "正在思考", waited: "{0} 秒", slow: "比平常慢。可以点停止，换个模型再问。",
+    today: "今天", copy: "复制", copied: "已复制", again: "重新回答", againWith: "用 {0} 再答一次", thinking: "正在思考",
+    earlier: "之前的回答（{0}）· 展开", earlierOpen: "之前的回答（{0}）· 收起",
+    dropped: "（连接断了，回答没写完。连上后点“重试”。）",
+    longChat: "对话已经很长，每次都会整段发出。开个新对话会更快，用 API Key 时也更省。", paused: "已暂停", waited: "{0} 秒", slow: "比平常慢。可以点停止，换个模型再问。",
     switchedTo: "换成了 {0}", newContent: "↓ 新内容", waitReply: "等这条回答完成，或先点停止。",
     liveOn: "在线：你的 Mac 连得上，模型可以用", liveOff: "离线：现在连不上你的 Mac", liveWait: "正在连接你的 Mac……",
     volatile: "这个浏览器不能安全地保存配对，所以只在这个页面打开时有效；关掉后要在 Mac 上重新添加。换用 Safari 或 Chrome 可以一直保存。",
-    removedHere: "这台设备已从你的 Mac 上移除，这里的对话也已清除。要继续用，在 Mac 上点“添加设备”再扫一次。",
+    removedHere: "这台设备已从你的 Mac 上移除，这里的对话也已清除。",
     otherTab: "OmniLLM 已在另一个标签页打开。", useHere: "在这里用",
   },
   en: {
     loading: "Loading…", bootDownload: "Downloading…", bootStart: "Starting…", bootStorage: "Reading what this device saved…",
-    bootSlow: "Loading has made no progress for 20 seconds, stuck at \"{0}\". Tap below to clear the cache and load again; on a slow network, another network may help.",
+    bootSlow: "Loading has made no progress for 20 seconds, stuck at “{0}”. Tap below to clear the cache and load again; on a slow network, another network may help.",
     bootCrashed: "The program stopped unexpectedly. Tap below to clear the cache and load again.", bootError: "Loading failed: ", bootRetry: "Load again",
     welcomeTitle: "Use your models on this device",
-    welcomeBody: "On your Mac (or the computer running OmniLLM), open OmniLLM, choose Add device, and scan the QR code on its screen with this device.",
+    welcomeBody: "On your Mac, open OmniLLM, choose Add device, and scan the QR code on its screen with this device.",
     scan: "Scan QR code", pasteInstead: "Can't scan? Paste the pairing text", pastePh: "Paste the pairing text here (starts with omnillm3-)", add: "Add", cancel: "Cancel", back: "Back",
-    scanHint: "Point at the QR code on your Mac's screen", camDenied: "No camera access. Use \"paste the pairing text\" below instead.",
+    scanHint: "Point at the QR code on your Mac's screen", camDenied: "No camera access. Use “Paste the pairing text” below instead.",
     pairTitle: "Add this device", pairConnecting: "Connecting to your Mac…",
     pairAsk: "Add this device to your Mac? Continue only if you just chose Add device on your Mac.", pairVia: "Via {0}",
     pairReplace: "This replaces this device's current pairing ({0}); the previous Mac can no longer be used from here.",
     pairCheck: "If your Mac shows the same number, choose “Matches, add” there.", pairWait: "Waiting for you to confirm on your Mac…", pairMismatch: "Numbers don't match? Cancel", pairDone: "Added.",
+    pairDropped: "The connection dropped. Choose New QR code on your Mac and scan again.", connectedMac: "Connected to your Mac",
     notCode: "This is not an OmniLLM pairing QR code or pairing text.", needTLS: "Your Mac's remote access can't be used from a phone browser (it needs a wss:// address). Set up public remote access on your Mac.",
     chats: "Chats", newChat: "New chat", placeholder: "Message", stop: "Stop", send: "Send", menu: "Menu", model: "Model",
     addImage: "Add image", removeImage: "Remove image", tooManyImages: "Up to 4 images per message.", imageFailed: "This image can't be opened; try another one.", imageTooBig: "Image too large; try a smaller one.", imageTitle: "Image",
@@ -64,26 +69,36 @@ const T = {
     noModels: "Your Mac has no models yet. Connect one under Models in the console on your Mac.", noModelsOpt: "No models",
     modelGone: "The previous model was removed from your Mac; switched to {0}",
     grpSub: "Subscriptions (no extra cost)", grpKey: "API key", grpLocal: "On this Mac",
-    forget: "Remove this device", forgetQ: "To use it again you'll add it on your Mac again; chats here are deleted.", removing: "Removing…",
-    forgetFar: "Your Mac can't be reached now; remember to remove this device in the Mac's device list too.",
-    close: "Close", deleteChat: "Delete this chat", deleteChatQ: "Delete the chat \"{0}\"?", chatsLocal: "Chats are kept on this device only.",
-    addHome: "Add to Home Screen", addHomeTip: "Tap the browser's Share button and choose Add to Home Screen. Opened from the Home Screen, it asks for the code once more.",
+    forget: "Remove this device", forgetQ: "Chats here will be deleted. To use this device later, add it on your Mac again.", removing: "Removing…",
+    forgetFar: "Removed from this device and its chats deleted. Your Mac can't be reached now; remove it under Devices on your Mac later too.",
+    close: "Close", deleteChat: "Delete this chat", deleteChatQ: "Delete the chat “{0}”?", chatsLocal: "Chats are kept on this device only.", searchChats: "Search chats", noMatch: "No matching chats",
+    addHome: "Add to Home Screen", addHomeTip: "Tap the browser's Share button and choose Add to Home Screen. The first time it's opened from the Home Screen, you'll scan the QR code once more.",
     deviceLine: "This device: {0}", empty: "How can I help?", cut: "(The reply was cut off. Send “continue” to have it go on.)", stopped: "(stopped)",
-    today: "Today", copy: "Copy", copied: "Copied", again: "Answer again", thinking: "Thinking", waited: "{0}s", slow: "Slower than usual. You can tap Stop and try another model.",
+    today: "Today", copy: "Copy", copied: "Copied", again: "Answer again", againWith: "Answer again with {0}", thinking: "Thinking",
+    earlier: "Earlier answer ({0}) · Show", earlierOpen: "Earlier answer ({0}) · Hide",
+    dropped: "(Connection lost; the reply is incomplete. Tap Retry once reconnected.)",
+    longChat: "This chat is long and is sent in full each time. A new chat is faster, and cheaper with an API key.", paused: "Paused", waited: "{0}s", slow: "Slower than usual. You can tap Stop and try another model.",
     switchedTo: "Switched to {0}", newContent: "↓ New", waitReply: "Wait for this reply, or tap Stop first.",
     liveOn: "Online: your Mac answers; models are ready", liveOff: "Offline: your Mac can't be reached now", liveWait: "Connecting to your Mac…",
     volatile: "This browser can't keep the pairing safely, so it only lasts while this page is open; after closing it, add the device on your Mac again. Safari or Chrome keep it.",
-    removedHere: "This device was removed from your Mac and its chats here were cleared. To use it again, choose Add device on your Mac and scan again.",
+    removedHere: "This device was removed from your Mac and its chats here were cleared.",
     otherTab: "OmniLLM is open in another tab.", useHere: "Use here",
   },
 };
 const lang = (navigator.language || "en").toLowerCase().startsWith("zh") ? "zh" : "en";
 document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
 function t(k, ...a) { let s = (T[lang][k] ?? T.en[k] ?? k); a.forEach((v, i) => { s = s.replace("{" + i + "}", v); }); return s; }
-document.querySelectorAll("[data-t]").forEach((e) => { e.textContent = t(e.dataset.t); });
-document.querySelectorAll("[data-ta]").forEach((e) => { e.setAttribute("aria-label", t(e.dataset.ta)); });
 const $ = (id) => document.getElementById(id);
 function el(tag, text, cls) { const e = document.createElement(tag); if (text !== undefined) e.textContent = text; if (cls) e.className = cls; return e; }
+// quoted sets a text whose quoted UI names (“添加设备”) never break inside:
+// each “…” goes into a nowrap span. Still text nodes only.
+function quoted(e, s) {
+  e.textContent = "";
+  String(s).split(/(“[^”]*”)/).forEach((part, i) => { if (part) e.append(i % 2 ? el("span", part, "q") : part); });
+  return e;
+}
+document.querySelectorAll("[data-t]").forEach((e) => { quoted(e, t(e.dataset.t)); });
+document.querySelectorAll("[data-ta]").forEach((e) => { e.setAttribute("aria-label", t(e.dataset.ta)); });
 function show(id) { document.querySelectorAll(".screen").forEach((s) => { s.hidden = s.id !== id; }); }
 
 // ---------- storage: IndexedDB, encrypted with a key the page cannot export ----------
@@ -323,9 +338,11 @@ $("paste").addEventListener("toggle", () => {
 });
 // welcomeNote: a calm notice at the top of the welcome screen (removed,
 // or remove it on the Mac too); the paste box folded so it reads first.
+// While it shows, the welcome body (how to add a device) steps aside.
 function welcomeNote(key) {
   $("welcome-note").hidden = !key;
-  $("welcome-note").textContent = key ? t(key) : "";
+  quoted($("welcome-note"), key ? t(key) : "");
+  $("welcome-body").hidden = !!key;
   if (key) $("paste").open = false;
 }
 
@@ -336,14 +353,18 @@ $("paste-go").addEventListener("click", () => {
   pair(v);
 });
 $("pair-retry").addEventListener("click", () => { show(S.device ? "chat" : "welcome"); });
-// Different numbers: someone else's pairing; stop it and go back.
-$("pair-mismatch").addEventListener("click", () => {
+// Different numbers (someone else's pairing), or Cancel while connecting:
+// stop it and go back. A phone that already left its old pairing has none
+// to go back to.
+function stopPairing() {
   S.pairStopped = true;
   try { omnillm.pairCancel(); } catch {}
-  sasShown(false);
-  show(S.device ? "chat" : "welcome");
-});
-function sasShown(on) { $("sas").hidden = $("pair-wait").hidden = $("pair-mismatch").hidden = !on; }
+  sasShown(false); $("pair-stop").hidden = true;
+  show(S.device && !S.leftOld ? "chat" : "welcome");
+}
+$("pair-mismatch").addEventListener("click", stopPairing);
+$("pair-stop").addEventListener("click", stopPairing);
+function sasShown(on) { S.sasUp = on; $("sas").hidden = $("pair-wait").hidden = $("pair-mismatch").hidden = !on; }
 
 // pair connects this device. A link (fromLink) could have been sent by
 // anyone, so the person first sees which remote access it leads through
@@ -358,7 +379,7 @@ async function pair(text, fromLink) {
   try {
     show("pairing");
     $("pair-err").textContent = ""; $("pair-retry").hidden = true; sasShown(false); $("pair-status").textContent = "";
-    try { await omnillm.check(text); } catch (e) { $("pair-err").textContent = errText(e, text); $("pair-retry").hidden = false; return; }
+    try { await omnillm.check(text); } catch (e) { quoted($("pair-err"), errText(e, text)); $("pair-retry").hidden = false; return; }
     if (fromLink || S.device) {
       $("pair-host").textContent = t("pairVia", relayHost(text));
       $("pair-replace").hidden = !S.device;
@@ -390,29 +411,44 @@ function relayHost(code) {
   try { return new URL(relayURL(code)).host; } catch { return "?"; }
 }
 
+// A phone paired again first leaves its old pairing on that Mac (failure
+// ignored: the old Mac may be away), so the Mac doesn't keep a dead
+// device under the same name. Its chats stay on the phone.
 async function connectPair(text) {
   $("pair-status").textContent = t("pairConnecting");
-  S.pairStopped = false;
+  $("pair-stop").hidden = false;
+  S.pairStopped = false; S.leftOld = false;
+  const old = S.device;
   try {
     await omnillm.check(text);
+    if (old && !S.pairStopped) {
+      S.leftOld = true;
+      try { omnillm.close(); } catch {}
+      S.openedState = null;
+      try { await omnillm.leave(old.state); } catch {}
+    }
+    if (S.pairStopped) throw new Error("cancelled");
     const name = deviceName();
     const state = await omnillm.pair(text, name, (code) => {
-      $("pair-status").textContent = t("pairCheck");
+      $("pair-stop").hidden = true;
+      quoted($("pair-status"), t("pairCheck"));
       $("sas").textContent = code.slice(0, 3) + " " + code.slice(3);
       sasShown(true);
     });
-    if (S.device) { try { omnillm.close(); } catch {} }
     S.device = { state, name, added: Date.now() };
     await seal("device", S.device);
     $("pair-status").textContent = t("pairDone");
-    sasShown(false);
-    S.cur = null;
+    sasShown(false); $("pair-stop").hidden = true;
+    // A fresh, empty chat says once that the Mac is there.
+    S.cur = newChat(); S.hello = S.cur.id;
     setTimeout(openChat, 600);
   } catch (e) {
-    sasShown(false);
+    const dropped = S.sasUp && e && e.code === "hub_offline";
+    sasShown(false); $("pair-stop").hidden = true;
     $("pair-status").textContent = "";
+    if (S.leftOld && S.device === old) { S.device = null; await idb.del("device").catch(() => {}); }
     if (S.pairStopped) return; // cancelled here; already back where it started
-    $("pair-err").textContent = errText(e, text);
+    quoted($("pair-err"), dropped ? t("pairDropped") : errText(e, text));
     $("pair-retry").hidden = false;
   }
 }
@@ -497,6 +533,7 @@ function connect() {
       setOnline(true);
     } catch (e) {
       if (e && e.msg === "device_revoked") return unpaired("removedHere");
+      if (e && e.code === "device_paused") return setPaused(errText(e));
       setOnline(false, errText(e));
     } finally { S.dialing = false; }
   })();
@@ -507,6 +544,7 @@ async function recheck() {
   if (!S.device || S.quiet || S.busy || document.hidden || !navigator.onLine) return;
   try { await loadModels(); setOnline(true); } catch (e) {
     if (e && e.msg === "device_revoked") return unpaired("removedHere");
+    if (e && e.code === "device_paused") return setPaused(errText(e));
     if (e && e.code === "hub_offline") setOnline(false);
   }
 }
@@ -552,32 +590,41 @@ function pickModel() {
   S.cur.model = sel.value;
   return true;
 }
-$("model").addEventListener("change", () => { localStorageSet("model", $("model").value); if (S.cur) S.cur.model = $("model").value; });
+$("model").addEventListener("change", () => { localStorageSet("model", $("model").value); if (S.cur) S.cur.model = $("model").value; refreshActs(); });
 function localStorageGet(k) { try { return localStorage.getItem("omnillm." + k); } catch { return null; } }
 function localStorageSet(k, v) { try { localStorage.setItem("omnillm." + k, v); } catch {} }
 
 // liveDot: green when the Mac answered (even with no models: it is
-// there), grey when it can't be reached, pulsing grey while connecting.
+// there), amber while the Mac has paused this device, grey when it can't
+// be reached, pulsing grey while connecting.
 function liveDot(state) {
   const d = $("live-dot"); d.className = "live-dot " + state;
-  const label = t(state === "on" ? "liveOn" : state === "off" ? "liveOff" : "liveWait");
+  const label = t({ on: "liveOn", off: "liveOff", paused: "paused" }[state] || "liveWait");
   d.title = label; d.setAttribute("aria-label", label);
 }
+// Any answer from the Mac other than "paused" ends a pause.
 function setOnline(ok, why) {
   S.online = ok;
-  if (ok) S.kept = false; else S.why = why || t("offline");
-  paintBanner();
+  if (ok) { S.kept = false; S.paused = null; } else S.why = why || t("offline");
+  paintBanner(); sendState(); refreshActs();
 }
-// paintBanner: offline (why, and that the text is kept if a send was
-// blocked), or a Mac with no models; Retry only when this device has a
-// network (without one it can't help; the page retries by itself).
+// setPaused: the Mac answered but has paused this device (its sentence
+// says so). The typed text stays; Send rests until a check gets through.
+function setPaused(why) {
+  S.online = true; S.paused = why;
+  paintBanner(); sendState(); refreshActs();
+}
+// paintBanner: paused, offline (why, and that the text is kept if a send
+// was blocked), or a Mac with no models; Retry only when this device has
+// a network (without one it can't help; the page retries by itself).
 function paintBanner() {
-  liveDot(S.online ? "on" : "off");
-  const b = $("banner"), none = S.online && S.listed && !S.models.length;
-  b.textContent = ""; b.hidden = S.online && !none;
-  if (none) { b.append(el("span", t("noModels"))); return; }
+  liveDot(!S.online ? "off" : S.paused ? "paused" : "on");
+  const b = $("banner"), none = S.online && !S.paused && S.listed && !S.models.length;
+  b.textContent = ""; b.hidden = S.online && !none && !S.paused;
+  if (S.paused && S.online) { b.append(quoted(el("span"), S.paused)); return; }
+  if (none) { b.append(quoted(el("span"), t("noModels"))); return; }
   if (S.online) return;
-  b.append(el("span", S.why + (S.kept ? " " + t("kept") : "")));
+  b.append(quoted(el("span"), S.why + (S.kept ? " " + t("kept") : "")));
   if (navigator.onLine) { const r = el("button", t("retry"), "link"); r.type = "button"; r.addEventListener("click", connect); b.append(r); }
 }
 // The phone's own network: say so at once, reconnect when it is back
@@ -587,7 +634,12 @@ addEventListener("online", () => { if (S.device && !S.quiet) connect(); });
 document.addEventListener("visibilitychange", () => { if (!document.hidden && !S.online && S.device && !S.quiet) connect(); });
 // While offline (no network, or the Mac not answering), try again every
 // 10 s as long as the page is in view.
-setInterval(() => { if (S.device && !S.online && !S.quiet && !S.busy && !S.dialing && !document.hidden && !$("chat").hidden) connect(); }, 10000);
+// Paused: look again just as often (the models call); nothing is resent,
+// the person taps Send again once it clears.
+setInterval(() => {
+  if (!S.device || S.quiet || S.busy || S.dialing || document.hidden || $("chat").hidden) return;
+  if (!S.online) connect(); else if (S.paused) recheck();
+}, 10000);
 
 function newChat() {
   const c = { id: crypto.randomUUID(), title: "", model: $("model").value || localStorageGet("model") || "", messages: [], updated: Date.now() };
@@ -613,31 +665,73 @@ function renderLog(keep) {
   const log = $("log"), stay = keep && !nearBottom(), top = log.scrollTop;
   log.textContent = "";
   const msgs = S.cur.messages;
+  // Just paired: the first empty chat says once that the Mac is there.
+  if (!msgs.length && S.hello === S.cur.id) log.append(switchLine(t("connectedMac")));
   if (!msgs.length) log.append(el("p", t("empty"), "empty"));
   // A line where the chat changes model, so who answered what stays clear.
-  // Compared by model id (the name gains its version once known).
-  let last = "";
+  // Compared by model id (the name gains its version once known). An
+  // earlier answer (kept by "answer again") folds above the new one and
+  // doesn't count.
+  let last = "", userEl = null;
   msgs.forEach((m, i) => {
+    if (m.prev) { log.append(earlier(m)); return; }
     if (m.role === "assistant" && m.by) {
       const key = m.model || m.by;
-      if (last && key !== last) log.lastElementChild.before(switchLine(t("switchedTo", m.by)));
+      if (last && key !== last) {
+        const line = switchLine(t("switchedTo", m.by));
+        if (userEl && !(msgs[i - 1] && msgs[i - 1].prev)) userEl.before(line); else log.append(line);
+      }
       last = key;
     }
-    log.append(bubble(m, i === msgs.length - 1));
+    const b = bubble(m, i === msgs.length - 1);
+    if (m.role === "user") userEl = b;
+    log.append(b);
+    if (S.cur.long === i + 1) log.append(switchLine(t("longChat")));
   });
-  // Under the last turn, once it is over: copy, and answer again (with the
-  // model now selected, so it doubles as "ask another model"); a reply that
-  // failed or was stopped, or a question left without one, offers Retry.
-  const end = msgs[msgs.length - 1];
-  if (end && !end.live && !S.busy && (end.role === "user" || end.content || end.note)) {
-    const row = el("div", undefined, "acts");
-    if (end.role === "assistant" && end.content) row.append(copyButton(end, "act"), el("span", "·", "sep"));
-    const again = el("button", t(end.role === "user" || end.failed ? "retry" : "again"), "act"); again.type = "button";
-    again.addEventListener("click", answerAgain);
-    row.append(again); log.append(row);
-  }
+  const row = actsRow();
+  if (row) log.append(row);
   if (S.cur.gone) log.append(switchLine(S.cur.gone));
   if (stay) log.scrollTop = top; else toBottom();
+}
+// actsRow: under the last turn, once it is over: copy, and answer again
+// (with the model now selected, so it doubles as "ask another model"); a
+// reply that failed or was stopped, or a question left without one,
+// offers Retry. Answering needs the Mac: offline or paused, it rests.
+function actsRow() {
+  const msgs = S.cur ? S.cur.messages : [], end = msgs[msgs.length - 1];
+  if (!end || end.live || S.busy || !(end.role === "user" || end.content || end.note)) return null;
+  const row = el("div", undefined, "acts");
+  if (end.role === "assistant" && end.content) row.append(copyButton(end, "act copy-act"));
+  const retry = end.role === "user" || end.failed, pick = $("model").value;
+  const label = retry ? t("retry") : pick && end.model && pick !== end.model ? t("againWith", modelName(pick)) : t("again");
+  const again = el("button", label, "act again-act"); again.type = "button";
+  again.disabled = !S.online || !!S.paused;
+  again.addEventListener("click", answerAgain);
+  row.append(again);
+  return row;
+}
+// refreshActs redraws only that row (the picker or the connection changed).
+function refreshActs() {
+  const old = $("log").querySelector(":scope > .acts");
+  if (!old || !S.cur) return;
+  const row = actsRow();
+  if (row) old.replaceWith(row); else old.remove();
+}
+// earlier: a reply replaced by "answer again", folded to one line; it is
+// kept for the person, never sent to the model again.
+function earlier(m) {
+  const box = el("div", undefined, "earlier");
+  const open = S.opened && S.opened.has(m);
+  const tg = el("button", t(open ? "earlierOpen" : "earlier", m.by || modelName(m.model)), "earlier-toggle"); tg.type = "button";
+  tg.setAttribute("aria-expanded", String(!!open));
+  tg.addEventListener("click", () => {
+    S.opened ??= new WeakSet();
+    if (S.opened.has(m)) S.opened.delete(m); else S.opened.add(m);
+    box.replaceWith(earlier(m));
+  });
+  box.append(tg);
+  if (open) box.append(bubble(m, false));
+  return box;
 }
 function switchLine(text) { const line = el("div", undefined, "switch-line"); line.append(el("span", text)); return line; }
 function copyButton(m, cls) {
@@ -648,8 +742,9 @@ function copyButton(m, cls) {
 
 // bubble renders a message; fenced code becomes <pre>, the rest stays text.
 // A reply says first which model is writing it; until its first words
-// arrive it shows that model thinking (an orbiting core, as in the logo).
-// The last reply's Copy sits in the row under it instead.
+// arrive it shows "connecting to your Mac", then that model thinking (an
+// orbiting core, as in the logo). The last reply's Copy sits in the row
+// under it instead.
 function bubble(m, isLast) {
   const b = el("div", undefined, "msg " + m.role + (isLast ? " last" : ""));
   if (m.role === "assistant" && m.by) {
@@ -664,21 +759,37 @@ function bubble(m, isLast) {
   }
   const body = el("div", undefined, "body");
   b.append(body);
-  if (m.live && !m.content) body.append(thinking());
-  else fill(body, m.content);
-  if (m.live && m.content) { const last = body.lastElementChild; (last && last.tagName === "P" ? last : body).append(el("span", "", "caret")); }
-  if (m.note) b.append(el("p", m.note, "note"));
+  if (m.live && !m.content) body.append(thinking(m));
+  else fill(body, m.live ? holdBack(m.content) : m.content);
+  if (m.live && m.content) {
+    let last = body.lastElementChild;
+    if (last && (last.tagName === "UL" || last.tagName === "OL")) last = last.lastElementChild;
+    (last && (last.tagName === "P" || last.tagName === "LI") ? last : body).append(el("span", "", "caret"));
+  }
+  if (m.note) b.append(quoted(el("p", undefined, "note"), m.note));
   if (m.role === "assistant" && m.content && !m.live && !isLast) b.append(copyButton(m, "copy"));
   return b;
 }
-function thinking() {
+// holdBack: while words arrive, a line that so far is only a list marker
+// ("- ", "* ", "1. ") waits for its next character, so no bare "-" flashes
+// before it becomes a bullet. Inside an open code block nothing waits.
+function holdBack(text) {
+  if ((text.match(/```/g) || []).length % 2) return text;
+  return text.replace(/(^|\n)[ \t]*([-*+]|\d+[.)]?)[ \t]*$/, "$1");
+}
+function thinking(m) {
   const box = el("div", undefined, "thinking-box");
   const w = el("div", undefined, "thinking");
   const orb = el("span", "", "orb"); orb.setAttribute("aria-hidden", "true");
-  const dots = el("span", undefined, "dots"); dots.setAttribute("aria-hidden", "true");
-  dots.append(el("i"), el("i"), el("i"));
   const secs = el("span", "", "waited");
-  w.append(orb, el("span", t("thinking"), "think-text"), dots, secs);
+  // Until the Mac has the request, say that; then the model thinks.
+  w.append(orb, el("span", t(m.acked ? "thinking" : "pairConnecting"), "think-text"));
+  if (m.acked) {
+    const dots = el("span", undefined, "dots"); dots.setAttribute("aria-hidden", "true");
+    dots.append(el("i"), el("i"), el("i"));
+    w.append(dots);
+  }
+  w.append(secs);
   w.setAttribute("role", "status");
   // Past a minute, say what can be done about it.
   const slow = el("p", t("slow"), "slow"); slow.hidden = true;
@@ -698,23 +809,39 @@ function fill(b, text) {
   const parts = text.split(/```/);
   parts.forEach((p, i) => {
     if (i % 2) { const pre = el("pre"); pre.append(el("code", p.replace(/^[\w+-]*\n/, "").replace(/\n+$/, ""))); b.append(pre); }
-    else if (p.trim()) b.append(prose(p.replace(/^\n+|\n+$/g, "")));
+    else if (p.trim()) prose(b, p.replace(/^\n+|\n+$/g, ""));
   });
 }
 // prose shows the light Markdown models write (headings, **bold**, `code`,
-// list bullets) as formatting. Everything stays text nodes: nothing a model
-// writes is ever parsed as HTML.
-function prose(text) {
-  const p = el("p");
-  text.split("\n").forEach((line, i) => {
-    if (i) p.append("\n");
-    let strong = false;
+// lists) as formatting: paragraphs split at blank lines, list lines become
+// real <ul>/<ol>. Everything stays text nodes: nothing a model writes is
+// ever parsed as HTML.
+const LIST_ITEM = /^(\s*)([-*+]|\d+[.)])\s+(.*)$/;
+function prose(b, text) {
+  let p = null, list = null;
+  for (const line of text.split("\n")) {
+    if (!line.trim()) { p = null; list = null; continue; }
     const h = line.match(/^#{1,6}\s+(.*)$/);
-    if (h) { line = h[1]; strong = true; }
-    line = line.replace(/^(\s*)[-*+]\s+/, "$1• ");
-    inline(p, line, strong);
-  });
-  return p;
+    if (h) { p = null; list = null; const hp = el("p"); inline(hp, h[1], true); b.append(hp); continue; }
+    const li = line.match(LIST_ITEM);
+    if (li) {
+      const tag = /\d/.test(li[2]) ? "ol" : "ul";
+      if (!list || list.tagName.toLowerCase() !== tag) {
+        list = el(tag);
+        const n = parseInt(li[2], 10);
+        if (tag === "ol" && n > 1) list.start = n;
+        b.append(list);
+      }
+      p = null;
+      const item = el("li"); inline(item, li[3], false); list.append(item);
+      continue;
+    }
+    // An indented line under a list item continues that item.
+    if (list && /^\s/.test(line)) { const item = list.lastElementChild; item.append("\n"); inline(item, line.trim(), false); continue; }
+    list = null;
+    if (!p) { p = el("p"); b.append(p); } else p.append("\n");
+    inline(p, line, false);
+  }
 }
 function inline(p, line, strong) {
   // **bold**, __bold__, `code`, and *italic* that isn't part of a word
@@ -742,9 +869,15 @@ function chatMeta(c) {
   const by = [...c.messages].reverse().find((m) => m.by);
   return [by ? by.by : c.model ? modelName(c.model) : "", when(c.updated)].filter(Boolean).join(" · ");
 }
+// The search field filters by title and message text, here on the device.
+function matches(c, q) {
+  return !q || (c.title || "").toLowerCase().includes(q) || c.messages.some((m) => (m.content || "").toLowerCase().includes(q));
+}
 function renderList() {
   const ul = $("chat-list"); ul.textContent = "";
-  const all = [S.cur, ...S.chats.filter((c) => c.id !== S.cur.id)].filter((c) => c.messages.length || c === S.cur);
+  const q = $("chat-search").value.trim().toLowerCase();
+  const all = [S.cur, ...S.chats.filter((c) => c.id !== S.cur.id)].filter((c) => (c.messages.length || c === S.cur) && matches(c, q));
+  if (!all.length) ul.append(el("li", t("noMatch"), "muted small no-match"));
   for (const c of all) {
     const li = el("li"); const a = el("button", undefined, c.id === S.cur.id ? "cur" : ""); a.type = "button";
     a.append(el("span", c.title || t("newChat"), "title"));
@@ -781,12 +914,21 @@ async function saveChats() {
 // ---------- sending ----------
 const input = $("input");
 input.addEventListener("input", () => { grow(); sendState(); });
-// The send button looks pressable only when there is something to send.
-function sendState() { $("send").classList.toggle("idle", !S.busy && !input.value.trim() && !(S.pending && S.pending.length)); }
+// The send button looks pressable only when there is something to send;
+// while the Mac has this device paused it rests (Stop still works).
+function sendState() {
+  $("send").classList.toggle("idle", !S.busy && (!!S.paused || (!input.value.trim() && !(S.pending && S.pending.length))));
+  $("send").disabled = !S.busy && !!S.paused;
+}
 function grow() { input.style.height = "auto"; input.style.height = Math.min(input.scrollHeight, 180) + "px"; }
 input.addEventListener("keydown", (e) => {
   // Enter sends on a computer keyboard; on phones the send button does.
-  if (e.key === "Enter" && !e.shiftKey && !e.isComposing && matchMedia("(pointer: fine)").matches) { e.preventDefault(); $("composer").requestSubmit(); }
+  // While a reply streams, Enter only says so: Stop is the one way to cancel.
+  if (e.key === "Enter" && !e.shiftKey && !e.isComposing && matchMedia("(pointer: fine)").matches) {
+    e.preventDefault();
+    if (S.busy) return toastText(t("waitReply"));
+    $("composer").requestSubmit();
+  }
 });
 // chosenModel waits for the models if they are still loading; "" when
 // there is none (the banner says why).
@@ -805,6 +947,7 @@ $("composer").addEventListener("submit", async (e) => {
   const text = input.value.trim();
   const images = S.pending.map(({ mime, data }) => ({ mime, data }));
   if (!text && !images.length) return;
+  if (S.paused) return; // the banner says why; the text stays
   if (!navigator.onLine) { S.kept = true; setOnline(false, t("noNetwork")); return; } // keep the text
   const model = await chosenModel();
   if (!model || S.busy) return;
@@ -814,33 +957,52 @@ $("composer").addEventListener("submit", async (e) => {
   chat.messages.push(images.length ? { role: "user", content: text, images } : { role: "user", content: text });
   await run(chat, model, { text, images });
 });
-// answerAgain drops the last reply and asks the same question again with
-// the model selected now (Retry does the same after a failure).
+// answerAgain asks the same question again with the model selected now.
+// A finished reply is kept, folded above the new one (and not sent to the
+// model again); a failed or stopped one is dropped (Retry).
 async function answerAgain() {
   if (S.busy) return toastText(t("waitReply"));
+  if (!S.online || S.paused) return;
   if (!navigator.onLine) { setOnline(false, t("noNetwork")); return; }
   const model = await chosenModel();
   const chat = S.cur, ms = chat.messages;
   if (!model || S.busy) return;
-  if (ms.length && ms[ms.length - 1].role === "assistant") ms.pop();
-  if (!ms.length || ms[ms.length - 1].role !== "user") return;
-  await run(chat, model, null);
+  let old = null;
+  const end = ms[ms.length - 1];
+  if (end && end.role === "assistant") {
+    if (end.failed || !end.content) ms.pop(); else { end.prev = true; old = end; }
+  }
+  const asked = [...ms].reverse().find((m) => !m.prev);
+  if (!asked || asked.role !== "user") { if (old) delete old.prev; return; }
+  await run(chat, model, null, old);
 }
 
+// Past this a chat says once that a new one is faster (the whole chat goes
+// out with every message).
+const LONG_TURNS = 40, LONG_CHARS = 80000;
 // run asks for a reply to the chat as it stands. fresh is what was just
-// typed: if nothing came back it goes back into the box.
-async function run(chat, model, fresh) {
+// typed: if nothing came back it goes back into the box, joined with what
+// is there now. old is the reply "answer again" folded away: if the new
+// one brings nothing, it comes back.
+async function run(chat, model, fresh, old) {
   chat.model = model; delete chat.gone;
+  const sent = chat.messages.filter((m) => !m.prev);
+  if (chat.long == null && (sent.length > LONG_TURNS || sent.reduce((n, m) => n + (m.content || "").length, 0) > LONG_CHARS)) {
+    chat.long = chat.messages.length + 1; // the line goes under this reply
+  }
+  if (S.hello === chat.id) S.hello = null;
   const reply = { role: "assistant", content: "", by: modelName(model), model, live: true };
   S.sentAt = Date.now();
   chat.messages.push(reply);
   renderLog(); renderList();
-  const log = $("log"); let node = log.lastElementChild;
+  const log = $("log"); let node = log.querySelector(":scope > .msg.last");
   const id = crypto.randomUUID(); S.busy = id; busyUI(true);
   // Images go with the latest two turns that have them; older ones are
-  // named in the text, so a long chat with pictures keeps working.
-  const withImages = new Set(chat.messages.slice(0, -1).filter((m) => m.images && m.images.length).slice(-2));
-  const msgs = chat.messages.slice(0, -1).map((m) => {
+  // named in the text, so a long chat with pictures keeps working. Earlier
+  // answers stay on the phone.
+  const ask = chat.messages.slice(0, -1).filter((m) => !m.prev);
+  const withImages = new Set(ask.filter((m) => m.images && m.images.length).slice(-2));
+  const msgs = ask.map((m) => {
     if (!m.images || !m.images.length) return { role: m.role, content: m.content };
     if (withImages.has(m)) return { role: m.role, content: m.content, images: m.images };
     return { role: m.role, content: (m.content ? m.content + "\n" : "") + "[" + m.images.length + " earlier image(s)]" };
@@ -852,22 +1014,49 @@ async function run(chat, model, fresh) {
     const nb = bubble(reply, true); node.replaceWith(nb); node = nb;
     if (stick) toBottom(); else if (reply.content) $("jump").hidden = false;
   };
+  // quiet: the error is said elsewhere (the banner, or the "model
+  // removed" line), not again as a red note.
+  let quiet = false;
   try {
-    const r = await omnillm.chat(id, model, JSON.stringify(msgs), (d, exact) => {
+    const r = await omnillm.chat(id, model, JSON.stringify(msgs), (d, exact, acked) => {
+      if (acked) reply.acked = true; // the Mac has it: thinking from here
       if (exact) { reply.by = exact; S.versionSeen = true; } // "Claude Opus 5.5", as the hub reports it
-      reply.content += d; if (!raf) raf = requestAnimationFrame(flush);
+      reply.content += d || ""; if (!raf) raf = requestAnimationFrame(flush);
     });
     if (r.finish === "length") reply.note = t("cut");
     setOnline(true);
   } catch (err) {
     if (err && err.msg === "device_revoked") return unpaired("removedHere");
+    const code = err && err.code;
     reply.failed = true;
-    if (err && err.code === "cancelled") reply.note = t("stopped");
-    else {
+    if (code === "cancelled") reply.note = t("stopped");
+    else if (code === "hub_offline") {
+      // Nothing came: the banner says it. Cut off midway: the bubble says so.
+      if (reply.content) reply.note = t("dropped"); else quiet = true;
+      S.kept = !!fresh && !reply.content; setOnline(false);
+    } else if (code === "device_paused") {
+      quiet = !reply.content; reply.note = errText(err);
+      setPaused(errText(err));
+    } else {
       reply.note = errText(err);
-      if (err && err.code === "hub_offline") { S.kept = !!fresh && !reply.content; setOnline(false); }
+      // The model left the Mac (or this device may no longer use it): load
+      // the list again, which switches the chat and says so.
+      if (err && (err.msg === "unknown_model" || err.msg === "model_not_allowed" || code === "model_not_allowed")) {
+        await loadModels().catch(() => {});
+        if (chat.gone) quiet = true;
+      }
     }
-    if (!reply.content) { chat.messages.pop(); if (fresh && err && err.code !== "cancelled") { chat.messages.pop(); input.value = fresh.text; grow(); S.pending = fresh.images; renderPending(); } }
+    if (!reply.content) {
+      chat.messages.pop();
+      if (old) delete old.prev;
+      if (fresh && code !== "cancelled") {
+        chat.messages.pop();
+        // Back into the box, before whatever was typed meanwhile.
+        const now = input.value;
+        input.value = now.trim() ? fresh.text + "\n" + now : fresh.text; grow();
+        S.pending.push(...fresh.images); renderPending();
+      }
+    }
   } finally {
     delete reply.live;
     S.busy = null; busyUI(false);
@@ -878,7 +1067,7 @@ async function run(chat, model, fresh) {
     if (S.device) {
       const near = nearBottom();
       renderLog(true);
-      if (reply.note && !reply.content) { $("log").append(el("p", reply.note, "note err")); if (near) toBottom(); }
+      if (reply.note && !reply.content && !quiet) { $("log").append(quoted(el("p", undefined, "note err"), reply.note)); if (near) toBottom(); }
       await saveChats();
     }
   }
@@ -947,7 +1136,12 @@ function busyUI(on) { $("send").classList.toggle("stop", on); $("send").setAttri
 // ---------- drawer ----------
 $("menu").addEventListener("click", () => { $("drawer").hidden = false; });
 $("drawer").addEventListener("click", (e) => { if (e.target.id === "drawer") closeDrawer(); });
-function closeDrawer() { $("drawer").hidden = true; }
+function closeDrawer() {
+  $("drawer").hidden = true;
+  if ($("chat-search").value) { $("chat-search").value = ""; if (S.cur) renderList(); }
+}
+$("chat-search").placeholder = t("searchChats"); $("chat-search").setAttribute("aria-label", t("searchChats"));
+$("chat-search").addEventListener("input", () => { if (S.cur) renderList(); });
 $("drawer-close").setAttribute("aria-label", t("close")); $("drawer-close").title = t("close");
 $("drawer-close").addEventListener("click", closeDrawer);
 $("install-tip").addEventListener("click", () => { alert(t("addHomeTip")); });
@@ -967,7 +1161,7 @@ $("forget").addEventListener("click", async () => {
 });
 async function unpaired(note) {
   if (S.quiet) return; // the tab in use handles it
-  S.device = null; S.chats = []; S.cur = null; S.models = []; S.listed = false;
+  S.device = null; S.chats = []; S.cur = null; S.models = []; S.listed = false; S.paused = null; S.hello = null;
   await idb.del("device"); await idb.del("chats");
   closeDrawer(); show("welcome");
   $("welcome-err").textContent = "";

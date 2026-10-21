@@ -52,7 +52,7 @@ func DisplayName(k Kind) string {
 	case ClaudeCode:
 		return "Claude (subscription)"
 	case Codex:
-		return "ChatGPT Codex (subscription)"
+		return "ChatGPT (Codex)"
 	}
 	return string(k)
 }
@@ -265,6 +265,8 @@ type cliStream struct {
 	parent  context.Context
 	release egress.Release
 	kind    Kind
+	owner   *Client // told how the call ended (Problem)
+	alias   string  // the model asked for ("sonnet")
 	sc      *bufio.Scanner
 	stderr  *limitedWriter
 	scratch string
@@ -296,10 +298,12 @@ const cliMaxOutput = 4 << 20
 func (c *Client) streamCLI(ctx context.Context, model string, req omnillm.Request) (omnillm.Stream, error) {
 	release, err := c.lim.Acquire(ctx, c.cfg.Name, req.Caller)
 	if err != nil {
+		c.note(err)
 		return nil, err
 	}
 	if err := c.checkCLI(ctx); err != nil {
 		release(egress.ClientError, 0)
+		c.note(err)
 		return nil, err
 	}
 	return c.spawnCLI(ctx, model, req.Messages, release)
@@ -348,8 +352,9 @@ func (c *Client) spawnCLI(ctx context.Context, model string, msgs []omnillm.Mess
 	} else {
 		home, err := prepareCodexHome()
 		if err != nil {
-			return fail(&omnillm.Error{Code: omnillm.CodeCredentialProblem, Msg: omnillm.MsgCLILogin,
-				Args: []string{string(c.cfg.Kind)}, Detail: err.Error()})
+			// The hub's own Codex folder could not be made: not a login
+			// problem the owner could fix with codex login.
+			return fail(&omnillm.Error{Code: omnillm.CodeUpstream, Msg: omnillm.MsgUpstream, Detail: "codex home: " + err.Error()})
 		}
 		env = append(env, "CODEX_HOME="+home)
 		args = append([]string{"-c", codexFileLogin, "exec", "--json", "--skip-git-repo-check", "--ephemeral", "--ignore-user-config", "--ignore-rules",
@@ -389,7 +394,7 @@ func (c *Client) spawnCLI(ctx context.Context, model string, msgs []omnillm.Mess
 	sc := bufio.NewScanner(out)
 	sc.Buffer(make([]byte, 64<<10), 8<<20)
 	s := &cliStream{cmd: cmd, cancel: cancel, parent: ctx, release: release, kind: c.cfg.Kind, sc: sc,
-		stderr: stderr, scratch: scratch}
+		stderr: stderr, scratch: scratch, owner: c, alias: model}
 	// A reply nobody reads to the end or closes still frees its slot when
 	// the time limit stops the program.
 	go func() {
@@ -606,6 +611,11 @@ func (s *cliStream) classify(text string) (*omnillm.Error, egress.Outcome, time.
 	limit := s.limit
 	s.mu.Unlock()
 	switch {
+	case tooLong(lower):
+		// Before the limit check: "prompt is too long: 200429 tokens"
+		// holds a "429" too.
+		return &omnillm.Error{Code: omnillm.CodeBadRequest, Msg: omnillm.MsgContextTooLong, Args: []string{modelName(s.kind, s.alias)},
+			Detail: string(s.kind) + ": too long"}, egress.ClientError, 0
 	case !limit.IsZero() || strings.Contains(lower, "usage limit") || strings.Contains(lower, "rate limit") ||
 		strings.Contains(lower, "limit reached") || strings.Contains(lower, "429") || strings.Contains(lower, "too many requests"):
 		wait := 15 * time.Minute
@@ -614,7 +624,7 @@ func (s *cliStream) classify(text string) (*omnillm.Error, egress.Outcome, time.
 		}
 		wait = max(min(wait, 6*time.Hour), time.Minute)
 		return &omnillm.Error{Code: omnillm.CodeBusy, Msg: omnillm.MsgSubscriptionLimit,
-			Args: []string{name}, RetryAfter: wait, Detail: string(s.kind) + ": limit"}, egress.RateLimited, wait
+			Args: []string{name}, RetryAfter: wait, Detail: string(s.kind) + ": limit"}, egress.LimitReached, wait
 	case strings.Contains(lower, "login") || strings.Contains(lower, "log in") || strings.Contains(lower, "logged in") ||
 		strings.Contains(lower, "authenticat") || strings.Contains(lower, "401") || strings.Contains(lower, "unauthorized") ||
 		strings.Contains(lower, "oauth") || strings.Contains(lower, "token expired"):
@@ -681,8 +691,12 @@ func (s *cliStream) finishWith2(o egress.Outcome, wait time.Duration, err error)
 	s.once.Do(func() {
 		s.mu.Lock()
 		s.done, s.err = true, err
+		got := s.gotAny
 		s.mu.Unlock()
 		s.release(o, wait)
+		if s.owner != nil && (err != nil || (o == egress.OK && got)) {
+			s.owner.note(err)
+		}
 		s.cancel()
 		go func() {
 			_ = s.wait()

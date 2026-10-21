@@ -419,10 +419,21 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 		}
 		ps, _ = s.hub.Providers(ctx)
 	}
-	ms, _ := s.hub.Models(ctx)
+	ms, _ := s.hub.OwnerModels(ctx)
 	devs, _ := s.hub.Devices(ctx)
 	apps, _ := s.hub.Apps(ctx)
 	usage, _ := s.hub.Usage(ctx, "")
+	// The Usage tab's range: today, yesterday or the last 7 days, per
+	// device or app and per model.
+	first, last := s.hub.Day(0), s.hub.Day(0)
+	switch r.URL.Query().Get("range") {
+	case "yesterday":
+		first, last = s.hub.Day(1), s.hub.Day(1)
+	case "week":
+		first = s.hub.Day(6)
+	}
+	rangeUsage, _ := s.hub.UsageBetween(ctx, first, last)
+	modelUsage, _ := s.hub.ModelUsageBetween(ctx, first, last)
 	confirmed, seen, paused := s.hub.RegionStatus()
 	type dev struct {
 		ID, Name       string
@@ -431,25 +442,47 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 		BudgetMicroUSD int64
 		BackgroundOnly bool
 		Models         []string
+		Online, Paused bool
 	}
 	var ds []dev
 	for _, d := range devs {
-		ds = append(ds, dev{d.ID, d.Name, d.Created, d.LastSeen, d.Budget, d.BackgroundOnly, d.Models})
+		ds = append(ds, dev{d.ID, d.Name, d.Created, d.LastSeen, d.Budget, d.BackgroundOnly, orEmpty(d.Models), d.Online, d.Paused})
 	}
 	type app struct {
 		ID, Name       string
+		Created        time.Time
 		BudgetMicroUSD int64
+		Paused         bool
+		Models         []string
 	}
 	var as []app
 	for _, a := range apps {
-		as = append(as, app{a.ID, a.Name, a.Budget})
+		as = append(as, app{a.ID, a.Name, a.Created, a.Budget, a.Paused, orEmpty(a.Models)})
+	}
+	// Each model with its group for the edit dialog's model list:
+	// subscriptions, API keys, or this Mac.
+	kinds := map[string]provider.Kind{}
+	for _, p := range ps {
+		kinds[p.Name] = p.Kind
+	}
+	type modelRow struct {
+		hub.ModelView
+		Group string `json:"group"`
+	}
+	mrs := []modelRow{}
+	for _, m := range ms {
+		g := "key"
+		switch {
+		case kinds[m.Provider].Subscription():
+			g = "sub"
+		case m.Locality == omnillm.Local:
+			g = "local"
+		}
+		mrs = append(mrs, modelRow{m, g})
 	}
 	// Empty lists are [] (not null) for the page.
 	if ps == nil {
 		ps = []hub.ProviderInfo{}
-	}
-	if ms == nil {
-		ms = []omnillm.ModelInfo{}
 	}
 	if ds == nil {
 		ds = []dev{}
@@ -460,8 +493,15 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 	if usage == nil {
 		usage = []hub.Spend{}
 	}
+	if rangeUsage == nil {
+		rangeUsage = []hub.Spend{}
+	}
+	if modelUsage == nil {
+		modelUsage = []hub.Spend{}
+	}
 	writeJSON(w, map[string]any{
-		"providers": ps, "models": ms, "devices": ds, "apps": as, "usage": usage,
+		"providers": ps, "models": mrs, "devices": ds, "apps": as, "usage": usage,
+		"range_usage": rangeUsage, "model_usage": modelUsage,
 		"relay_up": s.hub.RelayUp(), "relay_configured": s.hub.RelayConfigured(),
 		"daily_total_micro_usd": s.hub.DailyTotal(),
 		"region":                map[string]any{"confirmed": confirmed, "seen": seen, "paused": paused},
@@ -534,13 +574,25 @@ func (s *Server) setModel(w http.ResponseWriter, r *http.Request) {
 		PriceIn     *float64 `json:"price_in"`
 		PriceOut    *float64 `json:"price_out"`
 		HumanOnly   *bool    `json:"human_only"`
+		// Name is the owner's own name for it ("" goes back to the
+		// source's); Shown: offered to devices.
+		Name  *string `json:"name"`
+		Shown *bool   `json:"shown"`
 	}
 	if !decode(w, r, &in) {
 		return
 	}
-	if err := s.hub.SetModel(r.Context(), in.ID, hub.ModelUpdate{DisplayName: in.DisplayName, PriceIn: in.PriceIn, PriceOut: in.PriceOut, HumanOnly: in.HumanOnly}); err != nil {
-		writeErr(w, r, 0, err)
-		return
+	if in.DisplayName != nil || in.PriceIn != nil || in.PriceOut != nil || in.HumanOnly != nil {
+		if err := s.hub.SetModel(r.Context(), in.ID, hub.ModelUpdate{DisplayName: in.DisplayName, PriceIn: in.PriceIn, PriceOut: in.PriceOut, HumanOnly: in.HumanOnly}); err != nil {
+			writeErr(w, r, 0, err)
+			return
+		}
+	}
+	if in.Name != nil || in.Shown != nil {
+		if err := s.hub.SetModelPref(r.Context(), in.ID, in.Name, in.Shown); err != nil {
+			writeErr(w, r, 0, err)
+			return
+		}
 	}
 	writeJSON(w, map[string]bool{"ok": true})
 }
@@ -557,13 +609,17 @@ func (s *Server) removeDevice(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]bool{"ok": true})
 }
 
-// updateBody renames a device or app or changes its daily limit; no_limit
-// leaves only the hub's daily total.
+// updateBody renames a device or app, changes its daily limit, or pauses
+// or resumes it; no_limit leaves only the hub's daily total.
 type updateBody struct {
 	ID        string   `json:"id"`
 	Name      *string  `json:"name"`
 	BudgetUSD *float64 `json:"budget_usd"`
 	NoLimit   bool     `json:"no_limit"`
+	Paused    *bool    `json:"paused"`
+	// Models it may use; [] is all (models added later too), absent
+	// leaves them as they are.
+	Models *[]string `json:"models"`
 }
 
 func (in updateBody) budget() *int64 {
@@ -584,12 +640,20 @@ func (s *Server) updateDevice(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &in) {
 		return
 	}
-	d, err := s.hub.UpdateDevice(r.Context(), in.ID, in.Name, in.budget())
+	d, err := s.hub.UpdateDevice(r.Context(), in.ID, in.Name, in.budget(), in.Paused, in.Models)
 	if err != nil {
 		writeErr(w, r, 0, err)
 		return
 	}
-	writeJSON(w, map[string]any{"name": d.Name, "budget_micro_usd": d.Budget})
+	writeJSON(w, map[string]any{"name": d.Name, "budget_micro_usd": d.Budget, "paused": d.Paused, "models": orEmpty(d.Models)})
+}
+
+// orEmpty: a model list for the page, [] (all models) rather than null.
+func orEmpty(xs []string) []string {
+	if xs == nil {
+		return []string{}
+	}
+	return xs
 }
 
 func (s *Server) setDailyTotal(w http.ResponseWriter, r *http.Request) {
@@ -614,12 +678,12 @@ func (s *Server) updateApp(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &in) {
 		return
 	}
-	a, err := s.hub.UpdateApp(r.Context(), in.ID, in.Name, in.budget())
+	a, err := s.hub.UpdateApp(r.Context(), in.ID, in.Name, in.budget(), in.Paused, in.Models)
 	if err != nil {
 		writeErr(w, r, 0, err)
 		return
 	}
-	writeJSON(w, map[string]any{"name": a.Name, "budget_micro_usd": a.Budget})
+	writeJSON(w, map[string]any{"name": a.Name, "budget_micro_usd": a.Budget, "paused": a.Paused, "models": orEmpty(a.Models)})
 }
 
 func (s *Server) addApp(w http.ResponseWriter, r *http.Request) {
@@ -702,10 +766,16 @@ type pairState struct {
 	sas     string
 	device  string
 	errMsg  error
-	decide  chan bool
+	decide  chan decision
 	expires time.Time
 	seen    time.Time // last time the page asked about it
 	cancel  func()
+}
+
+// decision is the owner's answer, with the name they gave the device.
+type decision struct {
+	yes  bool
+	name string
 }
 
 // pairIdle: a console pairing nobody has looked at for this long is
@@ -721,20 +791,20 @@ func (s *Server) pairStart(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &in) {
 		return
 	}
-	ps := &pairState{state: "waiting", decide: make(chan bool, 1)}
+	ps := &pairState{state: "waiting", decide: make(chan decision, 1)}
 	// The pairing outlives this request: it waits for the device and then
 	// for the owner's decision in the console.
 	ctx := context.WithoutCancel(r.Context())
 	p, err := s.hub.Pair(ctx, hub.PairOptions{Name: in.Name, Budget: int64(in.BudgetUSD * 1e6), BackgroundOnly: in.BackgroundOnly,
-		Confirm: func(ctx context.Context, req hub.PairRequest) (bool, error) {
+		ConfirmName: func(ctx context.Context, req hub.PairRequest) (bool, string, error) {
 			ps.mu.Lock()
 			ps.state, ps.name, ps.sas = "confirm", req.DeviceName, req.Code
 			ps.mu.Unlock()
 			select {
-			case yes := <-ps.decide:
-				return yes, nil
+			case d := <-ps.decide:
+				return d.yes, d.name, nil
 			case <-ctx.Done():
-				return false, ctx.Err()
+				return false, "", ctx.Err()
 			}
 		}})
 	if err != nil {
@@ -825,10 +895,13 @@ func (s *Server) pairGet(w http.ResponseWriter, r *http.Request) {
 
 // pairReason tells the page why a pairing ended, so it can say "refused"
 // or "expired" in its own words and offer a new QR code: denied (the owner
-// said no), expired (the code ran out or was cancelled), or failed.
+// said no), left (the device cancelled or lost its connection while the
+// owner was asked), expired (the code ran out or was cancelled), or failed.
 func pairReason(err error) string {
 	e := omnillm.AsError(err)
 	switch {
+	case errors.Is(err, hub.ErrPairingDeviceLeft):
+		return "left"
 	case e.Code == omnillm.CodePairingDenied:
 		return "denied"
 	case e.Msg == omnillm.MsgPairingExpired, errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):
@@ -839,8 +912,9 @@ func pairReason(err error) string {
 
 func (s *Server) pairDecide(w http.ResponseWriter, r *http.Request) {
 	var in struct {
-		ID  string `json:"id"`
-		Yes bool   `json:"yes"`
+		ID   string `json:"id"`
+		Yes  bool   `json:"yes"`
+		Name string `json:"name"` // the owner's name for the device; "" keeps its own
 	}
 	if !decode(w, r, &in) {
 		return
@@ -860,7 +934,7 @@ func (s *Server) pairDecide(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	select {
-	case ps.decide <- in.Yes:
+	case ps.decide <- decision{in.Yes, in.Name}:
 	default:
 	}
 	writeJSON(w, map[string]bool{"ok": true})

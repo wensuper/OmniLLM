@@ -32,7 +32,7 @@
     <!-- Brand: the name and the slogan (the brand's own words, never translated). -->
     <div class="hero"><img src="icon.svg" alt="" class="logo"><span class="hero-name">OmniLLM</span><span class="hero-sub">Your AI, Everywhere</span></div>
     <h1 data-t="welcomeTitle"></h1>
-    <p class="muted" data-t="welcomeBody"></p>
+    <p id="welcome-body" class="muted" data-t="welcomeBody"></p>
     <button id="scan" class="primary" data-t="scan"></button>
     <details id="paste" class="paste">
       <summary data-t="pasteInstead"></summary>
@@ -59,6 +59,7 @@
       <button id="pair-cancel" class="secondary" data-t="cancel"></button>
     </div>
     <p id="pair-status" class="muted" role="status"></p>
+    <button id="pair-stop" type="button" class="link small" data-t="cancel" hidden></button>
     <div id="sas" class="sas" hidden></div>
     <div id="pair-wait" class="pair-wait muted small" hidden><span class="spinner sm" aria-hidden="true"></span><span data-t="pairWait"></span></div>
     <button id="pair-mismatch" type="button" class="link small" data-t="pairMismatch" hidden></button>
@@ -88,6 +89,7 @@
   <aside id="drawer" class="drawer" hidden>
     <div class="drawer-panel">
       <div class="brand"><img class="brand-mark" src="icon.svg" alt="" width="32" height="32"><span class="brand-text"><span class="brand-name">OmniLLM</span><span class="brand-sub">Your AI, Everywhere</span></span><button id="drawer-close" type="button" class="close-x"></button></div>
+      <input id="chat-search" class="search" type="search" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
       <h2 data-t="chats"></h2>
       <ul id="chat-list"></ul>
       <div class="drawer-foot">

@@ -236,3 +236,92 @@ summary::before { content: ""; display: inline-block; width: 6px; height: 6px; m
 details[open] > summary::before { transform: translateY(-3px) rotate(45deg); }
 th { white-space: nowrap; }
 @media (max-width: 600px) { .spend-card { align-items: flex-start; flex-direction: column; } }
+/* Round 2: online dot, paused rows, source problems, switch columns. */
+.dot-ok { color: var(--ok); }
+tr.paused td:not(.sw):not(.actions) { color: var(--muted); }
+.tag.paused-tag { background: var(--surface-2); color: var(--muted); box-shadow: inset 0 0 0 1px var(--line); font-weight: 500; }
+.tag.warn-tag { background: var(--warn-soft); color: var(--warn); box-shadow: inset 0 0 0 1px var(--warn-line); margin-top: 4px; white-space: normal; }
+th.sw, td.sw { text-align: center; width: 1%; white-space: nowrap; }
+td.nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.devices-table td:not(.actions) { white-space: nowrap; }
+.row-head p { margin: 0; flex: 1 1 320px; }
+.tab > .row-head { margin-bottom: 4px; }
+.wiz-back { margin: 0 0 12px; }
+.safe-line { margin: 12px 0 0; font-size: 13px; }
+.confirm label { margin-top: 4px; }
+.confirm input { max-width: 320px; }
+/* Today / Yesterday / Last 7 days. */
+.seg { display: inline-flex; border: 1px solid var(--line-2); border-radius: var(--r-s); overflow: hidden; margin-bottom: 12px; }
+.seg button { border: 0; border-radius: 0; min-height: 30px; padding: 4px 12px; background: var(--surface); color: var(--ink-2); }
+.seg button + button { border-left: 1px solid var(--line-2); }
+.seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent-text); }
+/* Editing a row: the amount and "No limit" on one line, Save and Cancel
+   together; fixed column widths so nothing moves. */
+.budget-line { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.cap-fields { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.cap-label { color: var(--ink-2); }
+.cap-edit .btns { display: flex; gap: 6px; }
+@media (min-width: 601px) {
+  table.fixed { table-layout: fixed; }
+  col.c-seen { width: 150px; }
+  col.c-budget { width: 210px; }
+  col.c-sw { width: 64px; }
+  col.c-act { width: 150px; }
+  table.fixed td { overflow: hidden; text-overflow: ellipsis; }
+  table.fixed tr.editing td { overflow: visible; }
+}
+@media (max-width: 600px) {
+  .cap-edit { flex-direction: column; align-items: flex-start; }
+}
+/* Edit dialog for a device or an app: a panel over a scrim; a bottom
+   sheet on narrow screens. */
+:root { --scrim: rgba(14,20,32,.45); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --scrim: rgba(0,0,0,.6); } }
+:root[data-theme="dark"] { --scrim: rgba(0,0,0,.6); }
+.small { font-size: 12px; }
+.dialog-scrim { position: fixed; inset: 0; z-index: 10; background: var(--scrim); display: flex; align-items: center; justify-content: center; padding: 24px; }
+.dialog { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-l); box-shadow: var(--shadow-2); width: min(560px, 100%); max-height: calc(100vh - 48px); display: flex; flex-direction: column; }
+.dialog-head { position: relative; padding: 16px 52px 12px 20px; border-bottom: 1px solid var(--line); }
+.dialog-head h2 { margin: 0; overflow-wrap: anywhere; }
+.dialog-head .close-x { top: 10px; right: 10px; }
+.dialog-body { padding: 4px 20px 16px; overflow-y: auto; }
+.dlg-sec { padding-top: 12px; }
+.dlg-sec + .dlg-sec { border-top: 1px solid var(--line); margin-top: 12px; }
+.dlg-sec h3 { margin: 0 0 8px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.dlg-sec > label:first-of-type { margin-top: 0; }
+.dlg-sec p.small { margin: 6px 0 0; }
+.dlg-sec .money-in input { width: 100px; }
+.toggle.wrap { white-space: normal; }
+.model-pick { display: grid; gap: 12px; margin-top: 10px; }
+.pick-label { font-size: 12px; font-weight: 600; color: var(--muted); }
+.pick-group p.small { margin: 2px 0 4px; }
+.pick-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 0; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 14px; font-weight: 400; color: var(--ink); cursor: pointer; }
+.pick-name { min-width: 0; overflow-wrap: anywhere; }
+.dialog-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 20px; border-top: 1px solid var(--line); }
+.dialog-foot .btns { display: flex; gap: 8px; }
+.dialog-foot button.primary { margin-top: 0; }
+button.danger-text { background: none; border: 0; color: var(--danger); padding: 6px 0; }
+button.danger-text:hover:not(:disabled) { background: none; text-decoration: underline; text-underline-offset: 3px; }
+@media (max-width: 599px) {
+  .dialog-scrim { align-items: flex-end; padding: 0; }
+  .dialog { width: 100%; max-height: 92vh; border-radius: var(--r-l) var(--r-l) 0 0; border-bottom: 0; }
+  .dialog-foot { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+}
+/* A phone-width window: the amount and the name may wrap rather than push
+   the On switch and Edit off screen. */
+@media (max-width: 600px) {
+  .devices-table td.spent, .devices-table td.nm, .apps-table td.nm { white-space: normal; }
+  td.nm { overflow-wrap: anywhere; }
+}
+.tag { white-space: nowrap; }
+.tag.warn-tag { white-space: normal; border-radius: var(--r-s); }
+.narrow-only { display: none; }
+@media (max-width: 600px) {
+  .models-table th:nth-child(2), .models-table td:nth-child(2) { display: none; }
+  .models-table td.nm { white-space: normal; }
+  .models-table .narrow-only { display: inline; }
+  .models-table br.narrow-only { display: block; }
+  .models-table td.nm .tag { margin-top: 4px; }
+  .models-table th.sw { white-space: normal; }
+  .cap-label { flex-basis: 100%; }
+}

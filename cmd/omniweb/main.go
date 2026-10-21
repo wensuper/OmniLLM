@@ -180,8 +180,30 @@ func pairCancel(_ js.Value, _ []js.Value) any {
 
 // leave() removes this device on the hub before the page deletes the
 // pairing ("remove this device"); the page clears its data either way.
-func leave(_ js.Value, _ []js.Value) any {
+// leave(state) does the same for a saved pairing that isn't the open one
+// (a phone paired again leaves its old pairing first), on a device of its
+// own and with a shorter wait: an old Mac that is away must not hold up
+// the new pairing for long.
+func leave(_ js.Value, a []js.Value) any {
+	st := ""
+	if len(a) > 0 && a[0].Type() == js.TypeString {
+		st = a[0].String()
+	}
 	return promise(func() (any, error) {
+		if st != "" {
+			s, err := importState(st)
+			if err != nil {
+				return nil, err
+			}
+			d, err := device.Open(context.Background(), device.Options{Secrets: s, AckTimeout: 5 * time.Second})
+			if err != nil {
+				return nil, err
+			}
+			defer d.Close()
+			ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+			defer cancel()
+			return nil, d.Leave(ctx)
+		}
 		d, err := current()
 		if err != nil {
 			return nil, err
@@ -221,7 +243,9 @@ func models(_ js.Value, _ []js.Value) any {
 	})
 }
 
-// chat(id, model, messagesJSON, onDelta) → {in, out, finish}.
+// chat(id, model, messagesJSON, onDelta) → {in, out, finish}. onDelta is
+// (text), ("", model) once the exact model is known, or ("", "", true) once
+// the Mac has acknowledged the request.
 func chat(_ js.Value, a []js.Value) any {
 	id, model, msgsJSON, onDelta := a[0].String(), a[1].String(), a[2].String(), a[3]
 	return promise(func() (any, error) {
@@ -250,6 +274,9 @@ func chat(_ js.Value, a []js.Value) any {
 			if err != nil {
 				return nil, err
 			}
+			// The Mac has the request: the page turns "connecting to your
+			// Mac" into thinking.
+			onDelta.Invoke("", "", true)
 			got := false
 			for {
 				c, err := s.Recv()

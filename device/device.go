@@ -130,15 +130,27 @@ func Pair(ctx context.Context, opts Options, code, name string, show func(sas st
 	if show != nil {
 		show(e2e.SAS(sess.ChannelBinding()))
 	}
+	// From here the six digits are on screen and the owner may be deciding:
+	// a connection that drops now is said as such (scan a new code), not as
+	// an expired one; the code's own deadline still reads as expired.
 	hello, _ := proto.Marshal(proto.Envelope{T: proto.TPairHello, Name: name})
 	if err := sess.Send(ctx, hello); err != nil {
-		return Info{}, pairFailed()
+		if ctx.Err() != nil {
+			return Info{}, ctx.Err()
+		}
+		return Info{}, offline()
 	}
 	wctx, cancel := context.WithDeadline(ctx, time.Unix(pc.Expires, 0).Add(30*time.Second))
 	defer cancel()
 	b, err := sess.Recv(wctx)
 	if err != nil {
-		return Info{}, pairFailed()
+		switch {
+		case ctx.Err() != nil:
+			return Info{}, ctx.Err()
+		case wctx.Err() != nil:
+			return Info{}, pairFailed()
+		}
+		return Info{}, offline()
 	}
 	env, err := proto.Unmarshal(b)
 	if err != nil {
@@ -536,6 +548,16 @@ func (c *conn) next(ctx context.Context, w *waiter, timeout <-chan time.Time) (p
 	}
 }
 
+// dropUnlessCancelled closes a connection the hub didn't answer on, as
+// complete does, so the next request dials a new one instead of reusing a
+// dead socket; a caller that gave up itself leaves the connection alone.
+func (c *conn) dropUnlessCancelled(err error) {
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return
+	}
+	c.close()
+}
+
 // Models lists what this device may use. Every model is Remote from here.
 func (d *Device) Models(ctx context.Context) ([]omnillm.ModelInfo, error) {
 	var ms []omnillm.ModelInfo
@@ -588,12 +610,14 @@ func (d *Device) models(ctx context.Context) ([]omnillm.ModelInfo, error) {
 	id, w := c.register()
 	defer c.unregister(id)
 	if err := c.send(ctx, proto.Envelope{T: proto.TModelsList, ID: id}); err != nil {
+		c.close()
 		return nil, offline()
 	}
 	t := time.NewTimer(d.opts.AckTimeout + 5*time.Second)
 	defer t.Stop()
 	env, err := c.next(ctx, w, t.C)
 	if err != nil {
+		c.dropUnlessCancelled(err)
 		return nil, err
 	}
 	if env.T == proto.TChatError {
@@ -625,12 +649,14 @@ func (d *Device) leave(ctx context.Context) error {
 	id, w := c.register()
 	defer c.unregister(id)
 	if err := c.send(ctx, proto.Envelope{T: proto.TDeviceLeave, ID: id}); err != nil {
+		c.close()
 		return offline()
 	}
 	t := time.NewTimer(d.opts.AckTimeout + 5*time.Second)
 	defer t.Stop()
 	env, err := c.next(ctx, w, t.C)
 	if err != nil {
+		c.dropUnlessCancelled(err)
 		return err
 	}
 	switch env.T {

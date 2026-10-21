@@ -116,7 +116,7 @@ func usage() {
   omnillm status                     查看主机状态
   omnillm hub run                    启动主机（前台运行）
   omnillm hub provider add <openai|anthropic|ollama|openai-compatible> [--name N] [--base-url U]
-                                     接入模型提供方（Key 从标准输入读，不写在命令行里）
+                                     接入模型来源（API Key 从标准输入读，不写在命令行里）
   omnillm hub providers | models | devices | apps | usage | audit
   omnillm hub pair [--name N] [--models a,b] [--budget-usd 5] [--background-only]
   omnillm hub revoke <设备ID>        立即移除设备
@@ -129,16 +129,16 @@ func usage() {
   omnillm connect chat [--model ID]  在终端里和主机上的模型对话
   omnillm connect ask [--model ID] [--image 图片文件] "问题"
   omnillm connect models             列出能用的模型
-  omnillm connect forget             删除这台设备的配对
+  omnillm connect forget             移除这台设备（Mac 上也一并移除）
   omnillm relay --listen :443 --autocert relay.example.com --hub-token-hash HEX
   omnillm relay token                生成一枚主机登记令牌和它的哈希
-`, `usage:
+`, `Usage:
   omnillm install                    one step: run the hub as a background service, open the console
   omnillm open                       open the local console
   omnillm status                     show the hub's status
   omnillm hub run                    run the hub (foreground)
   omnillm hub provider add <openai|anthropic|ollama|openai-compatible> [--name N] [--base-url U]
-                                     connect a provider (the key is read from stdin, never argv)
+                                     connect a model source (the API key is read from stdin, never argv)
   omnillm hub providers | models | devices | apps | usage | audit
   omnillm hub pair [--name N] [--models a,b] [--budget-usd 5] [--background-only]
   omnillm hub revoke <device-id>     remove a device now
@@ -151,7 +151,7 @@ func usage() {
   omnillm connect chat [--model ID]  chat with the hub's models in this terminal
   omnillm connect ask [--model ID] [--image FILE] "question"
   omnillm connect models             list the models you can use
-  omnillm connect forget             delete this device's pairing
+  omnillm connect forget             remove this device (from your Mac too)
   omnillm relay --listen :443 --autocert relay.example.com --hub-token-hash HEX
   omnillm relay token                make a hub registration token and its hash
 `))
@@ -202,7 +202,7 @@ func openCmd() {
 		os.Exit(1)
 	}
 	if err := openLogin(url); err != nil {
-		fmt.Println(t("在这台电脑的浏览器里打开（2 分钟内有效，只能用一次）：", "Open this in a browser on this computer (valid 2 minutes, single use):"))
+		fmt.Printf(t("在%s的浏览器里打开（2 分钟内有效，只能用一次）：\n", "Open this in a browser on %s (valid 2 minutes, single use):\n"), thisMachine())
 		fmt.Println(url)
 		return
 	}
@@ -346,10 +346,12 @@ func hubCmd(args []string) {
 		}
 		call(sock, control.Request{Op: "provider.add", Args: map[string]string{"kind": kind, "name": *name, "base_url": *base}, Secret: key})
 	case "devices":
-		callOr(sock, control.Request{Op: args[0]}, t("还没有设备。", "No devices yet."))
+		printTable(sock, control.Request{Op: args[0]}, func(b []byte) (string, error) { return devicesTable(b, time.Now()) })
+	case "usage":
+		printTable(sock, control.Request{Op: args[0]}, usageTable)
 	case "apps":
 		callOr(sock, control.Request{Op: args[0]}, t("还没有应用。", "No apps yet."))
-	case "providers", "models", "usage", "audit":
+	case "providers", "models", "audit":
 		call(sock, control.Request{Op: args[0]})
 	case "pair":
 		fs := flag.NewFlagSet("pair", flag.ExitOnError)
@@ -422,6 +424,29 @@ func readLine(prompt string) string {
 }
 
 func call(sock string, req control.Request) { callOr(sock, req, "") }
+
+// printTable asks the hub for a list and prints it rendered for people.
+func printTable(sock string, req control.Request, render func([]byte) (string, error)) {
+	var data []byte
+	err := control.Call(sock, req, func(r control.Reply) (bool, bool) {
+		if r.Event == "ok" {
+			data = r.Data
+		}
+		return false, false
+	})
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	if len(bytes.TrimSpace(data)) == 0 {
+		data = []byte("null")
+	}
+	out, err := render(data)
+	if err != nil {
+		die(err)
+	}
+	fmt.Println(out)
+}
 
 // callOr is call, printing empty instead of an empty list.
 func callOr(sock string, req control.Request, empty string) {
@@ -506,7 +531,7 @@ func hubRun(dir, sock string, args []string) {
 		}
 	}
 	h, err := hub.New(ctx, hub.Options{Secrets: sec, Store: st, RelayURL: *relayURL, RelayToken: token, WebAppURL: *webApp,
-		Logf: func(f string, a ...any) { log.Printf(f, a...) }})
+		Lang: lang(), Logf: func(f string, a ...any) { log.Printf(f, a...) }})
 	if err != nil {
 		die(err)
 	}
@@ -560,12 +585,12 @@ func hubRun(dir, sock string, args []string) {
 			}
 		}()
 	}
-	log.Print(t("主机已启动。", "Hub running."))
+	log.Print(t("OmniLLM 已启动。", "OmniLLM is running."))
 	if *relayURL == "" {
-		log.Print(t("没有配置连接服务（--relay），其他设备暂时连不上。", "No relay configured (--relay); other devices cannot connect yet."))
+		log.Print(t("没有设置远程连接（--relay），其他设备暂时连不上。", "Remote access not set up (--relay); other devices can't connect yet."))
 	} else {
 		sum := sha256.Sum256([]byte(token))
-		log.Printf(t("连接服务登记令牌的哈希（自己部署连接服务时填进 --hub-token-hash）：%x", "Relay registration token hash (for your own relay's --hub-token-hash): %x"), sum)
+		log.Printf(t("远程连接登记令牌的哈希（自己部署 relay 时填进 --hub-token-hash）：%x", "Remote access registration token hash (for your own relay's --hub-token-hash): %x"), sum)
 	}
 	<-ctx.Done()
 	sctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -654,16 +679,11 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 			if err != nil {
 				return err
 			}
-			type row struct {
-				ID, Name string
-				Budget   string
-				Created  time.Time
-				LastSeen time.Time `json:",omitempty"`
-				Models   []string  `json:",omitempty"`
-			}
-			var rows []row
+			var rows []deviceRow
 			for _, d := range ds {
-				rows = append(rows, row{d.ID, d.Name, usd(d.Budget), d.Created, d.LastSeen, d.Models})
+				b := d.Budget
+				rows = append(rows, deviceRow{ID: d.ID, Name: d.Name, Budget: limitText(d.Budget), BudgetMicroUSD: &b, Paused: d.Paused,
+					Created: d.Created, LastSeen: d.LastSeen, Models: d.Models})
 			}
 			return c.Send(control.Reply{Event: "ok", Data: jsonData(rows)})
 		case "apps":
@@ -865,7 +885,7 @@ func connectCmd(args []string) {
 		for _, m := range ms {
 			note := ""
 			if m.HumanOnly {
-				note = t("（只在对话里用）", " (conversations only)")
+				note = t("（只能手动对话）", " (chat only)")
 			}
 			fmt.Printf("%-28s %s%s\n", m.ID, m.DisplayName, note)
 		}

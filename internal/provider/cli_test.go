@@ -191,3 +191,80 @@ func TestCLIPromptDefaultSystem(t *testing.T) {
 		t.Fatalf("own system text kept: %q", sys)
 	}
 }
+
+func TestCLIProblemIsKeptUntilASuccess(t *testing.T) {
+	dir := t.TempDir()
+	mode := filepath.Join(dir, "mode")
+	os.WriteFile(mode, []byte("login"), 0o600)
+	c, _ := fakeCLI(t, `if [ "$(cat `+mode+`)" = login ]; then echo '{"type":"result","is_error":true,"result":"Please run /login"}'; exit 1; fi
+`+okLines)
+	if p, _ := c.Problem(); p != "" {
+		t.Fatalf("problem before any call: %q", p)
+	}
+	s, _ := ask(c)
+	collect(t, s)
+	if p, _ := c.Problem(); p != ProblemLogin {
+		t.Fatalf("after a signed-out reply: %q", p)
+	}
+	os.WriteFile(mode, []byte("ok"), 0o600)
+	s, _ = ask(c)
+	if text, err := collect(t, s); err != nil || text != "pong" {
+		t.Fatal(text, err)
+	}
+	if p, _ := c.Problem(); p != "" {
+		t.Fatalf("a success did not clear the problem: %q", p)
+	}
+}
+
+func TestCLILimitIsAProblemWithItsReset(t *testing.T) {
+	reset := time.Now().Add(3 * time.Hour).Unix()
+	c, _ := fakeCLI(t, `echo '{"type":"rate_limit_event","rate_limit_info":{"status":"rejected","resetsAt":`+itoa(reset)+`}}'
+echo '{"type":"result","is_error":true,"result":"usage limit reached"}'; exit 1`)
+	s, _ := ask(c)
+	collect(t, s)
+	p, at := c.Problem()
+	if p != ProblemLimit || at.Before(time.Now().Add(2*time.Hour)) {
+		t.Fatalf("%q %v", p, at)
+	}
+	// Refused while cooling down: still the limit, in the same words.
+	_, err := ask(c)
+	if e := omnillm.AsError(err); e.Msg != omnillm.MsgSubscriptionLimit {
+		t.Fatalf("cooldown says %v", err)
+	}
+}
+
+func TestCLIPromptTooLong(t *testing.T) {
+	c, _ := fakeCLI(t, `echo '{"type":"result","is_error":true,"result":"Prompt is too long: 200429 tokens > 200000 maximum"}'; exit 1`)
+	s, _ := ask(c)
+	_, err := collect(t, s)
+	e := omnillm.AsError(err)
+	if e.Msg != omnillm.MsgContextTooLong {
+		t.Fatalf("%v", err)
+	}
+	if got := omnillm.Describe("en", err); got != "This chat is too long for Claude Haiku. Start a new chat and ask again." {
+		t.Fatal(got)
+	}
+	// Not a limit: the next call goes out.
+	if _, err := ask(c); err != nil {
+		t.Fatalf("too long paused the source: %v", err)
+	}
+}
+
+func TestCodexHomeFailureIsNotALogin(t *testing.T) {
+	t.Setenv("CODEX_HOME", t.TempDir()) // no auth.json there
+	p := filepath.Join(t.TempDir(), "codex")
+	os.WriteFile(p, []byte("#!/bin/sh\necho should-not-run\n"), 0o700)
+	c, err := New(Config{Name: "codex", Kind: Codex, Path: p}, nil, egress.New(nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.cli.passed, c.cli.checked = "test", time.Now()
+	_, err = c.Stream(context.Background(), "default", omnillm.Request{Caller: omnillm.Interactive,
+		Messages: []omnillm.Message{{Role: "user", Content: "hi"}}}, Credential{})
+	if e := omnillm.AsError(err); e.Msg != omnillm.MsgUpstream {
+		t.Fatalf("%v", err)
+	}
+	if p, _ := c.Problem(); p != "" {
+		t.Fatalf("problem %q", p)
+	}
+}

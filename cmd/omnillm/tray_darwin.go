@@ -3,6 +3,7 @@
 package main
 
 import (
+	"context"
 	_ "embed"
 	"fmt"
 	"os"
@@ -46,26 +47,38 @@ func trayReady() {
 	relay.Disable()
 	counts := systray.AddMenuItem("", "")
 	counts.Disable()
+	// The version line, and 检查更新… under it while the version line
+	// offers nothing (trayversion.go); the check line keeps the menu open
+	// so its result shows where it was clicked.
+	ver := systray.AddMenuItem("", "")
+	ver.Disable()
+	check := systray.AddMenuItem("", "")
+	check.SetKeepOpen(true)
 	systray.AddSeparator()
 	open := systray.AddMenuItem(t("打开控制台", "Open the console"), "")
-	add := systray.AddMenuItem(t("添加手机或电脑…", "Add a phone or computer…"), "")
+	add := systray.AddMenuItem(t("添加设备…", "Add device…"), "")
 	start := systray.AddMenuItem(t("启动 OmniLLM", "Start OmniLLM"), "")
 	start.Hide()
 	systray.AddSeparator()
 	quit := systray.AddMenuItem(t("隐藏菜单栏图标（下次登录时恢复）", "Hide the menu bar icon (back at next login)"), "")
 
+	startFailed := false // launchctl kickstart failed: say what to do instead
 	show := func() {
 		st, ok := queryStatus()
 		if !ok {
 			systray.SetTemplateIcon(trayDown, trayDown)
 			head.SetTitle(t("OmniLLM 没有运行", "OmniLLM isn't running"))
-			relay.SetTitle(t("手机和其他设备现在用不了", "Phones and other devices can't use it now"))
+			relay.SetTitle(t("设备暂时连不上", "Devices can't connect now"))
+			if startFailed {
+				relay.SetTitle(t("没能启动。在终端运行 omnillm install。", "Couldn't start it. Run omnillm install in Terminal."))
+			}
 			counts.Hide()
 			open.Disable()
 			add.Disable()
 			start.Show()
 			return
 		}
+		startFailed = false
 		start.Hide()
 		open.Enable()
 		add.Enable()
@@ -80,11 +93,66 @@ func trayReady() {
 			relay.SetTitle(t("● 手机和其他设备可以连上", "● Phones and other devices can connect"))
 		default:
 			systray.SetTemplateIcon(trayDown, trayDown)
-			relay.SetTitle(t("○ 远程连接断开，其他设备暂时连不上", "○ Remote access is down; other devices can't connect now"))
+			relay.SetTitle(t("○ 远程连接断开，设备暂时连不上", "○ Remote access is down; devices can't connect now"))
 		}
 		counts.SetTitle(fmt.Sprintf(t("设备 %d 台 · 模型来源 %d 个", "Devices: %d · Model sources: %d"), st.Devices, st.Providers))
 	}
 	show()
+
+	// Updates: checked a minute after start, then every day, and on a click.
+	var up updateState
+	checkClick, installClick := false, false
+	showUpdate := func() {
+		title, inst := versionLine(version, up)
+		ver.SetTitle(title)
+		installClick = inst
+		if inst {
+			ver.Enable()
+		} else {
+			ver.Disable()
+		}
+		ct, click, vis := checkLine(version, up, time.Now())
+		checkClick = click
+		if !vis {
+			check.Hide()
+			return
+		}
+		check.SetTitle(ct)
+		if click {
+			check.Enable()
+		} else {
+			check.Disable()
+		}
+		check.Show()
+	}
+	type checkResult struct {
+		latest string
+		err    error
+	}
+	checkDone := make(chan checkResult, 1)
+	installDone := make(chan error, 1)
+	startCheck := func() {
+		up.Checking = true
+		showUpdate()
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+			defer cancel()
+			v, err := latestRelease(ctx, updateClient())
+			checkDone <- checkResult{v, err}
+		}()
+	}
+	startInstall := func() {
+		up.Installing, up.Failed = up.Latest, false
+		showUpdate()
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
+			defer cancel()
+			installDone <- runInstaller(ctx, updateClient(), filepath.Join(dataDir("hub"), "update.log"))
+		}()
+	}
+	showUpdate()
+	firstCheck := time.NewTimer(time.Minute)
+	daily := time.NewTicker(24 * time.Hour)
 	go func() {
 		tick := time.NewTicker(5 * time.Second)
 		defer tick.Stop()
@@ -92,12 +160,38 @@ func trayReady() {
 			select {
 			case <-tick.C:
 				show()
+				showUpdate() // "✓ 已是最新版本" goes back after a minute
+			case <-firstCheck.C:
+				if !up.Checking && up.Installing == "" {
+					startCheck()
+				}
+			case <-daily.C:
+				if !up.Checking && up.Installing == "" {
+					startCheck()
+				}
+			case r := <-checkDone:
+				up = up.checked(version, r.latest, r.err, time.Now())
+				showUpdate()
+			case <-check.ClickedCh:
+				if checkClick && !up.Checking {
+					startCheck()
+				}
+			case <-ver.ClickedCh:
+				if installClick && up.Installing == "" {
+					startInstall()
+				}
+			case err := <-installDone:
+				// Success replaces this process (the installer starts the
+				// menu bar icon again); still here means it did not work.
+				up.Installing, up.Failed = "", err != nil
+				showUpdate()
 			case <-open.ClickedCh:
 				trayOpen("")
 			case <-add.ClickedCh:
 				trayOpen("&add")
 			case <-start.ClickedCh:
-				_ = exec.Command("launchctl", "kickstart", "gui/"+strconv.Itoa(os.Getuid())+"/"+launchdLabel).Run()
+				err := exec.Command("launchctl", "kickstart", "gui/"+strconv.Itoa(os.Getuid())+"/"+launchdLabel).Run()
+				startFailed = err != nil
 				time.Sleep(2 * time.Second)
 				show()
 			case <-quit.ClickedCh:

@@ -14,8 +14,8 @@
   <div class="brand"><img class="mark" src="icon.svg" alt="" width="32" height="32"><span class="brand-text"><span class="brand-name">OmniLLM</span><span class="brand-sub">Your AI, Everywhere</span></span></div>
   <div class="status" id="status" aria-live="polite"></div>
   <div class="tools">
-    <button type="button" class="ghost" id="lang" aria-label="Language">中文</button>
-    <button type="button" class="ghost" id="theme" aria-label="Theme">◐</button>
+    <button type="button" class="ghost" id="lang" aria-label="Language" data-aria="ariaLang">中文</button>
+    <button type="button" class="ghost" id="theme" aria-label="Theme" data-aria="ariaTheme">◐</button>
   </div>
 </header>
 
@@ -30,11 +30,14 @@
     <p data-t="loginBody"></p>
     <p class="muted" data-t="loginOr"></p>
     <div class="codebox"><pre class="cmd">omnillm open</pre><button type="button" class="secondary small-btn copy" data-copy="omnillm open" data-t="copy"></button></div>
+    <p class="muted small safe-line" data-t="loginSafe"></p>
   </section>
 
   <!-- First-run wizard -->
   <section id="wizard" class="panel" hidden>
-    <ol class="steps" aria-label="steps">
+    <!-- Shown when "Connect a model" was opened from the dashboard. -->
+    <p class="wiz-back" id="wiz-back-line" hidden><button type="button" class="link" id="wiz-back" data-t="back"></button></p>
+    <ol class="steps" aria-label="Steps" data-aria="ariaSteps">
       <li id="st1"><span data-t="step1"></span></li>
       <li id="st2"><span data-t="step2"></span></li>
       <li id="st3"><span data-t="step3"></span></li>
@@ -117,33 +120,41 @@
     </nav>
 
     <div class="tab" id="tab-devices">
-      <div class="row-head"><h2 data-t="devices"></h2><button type="button" class="primary" id="add-device" data-t="addDevice"></button></div>
+      <div class="row-head"><button type="button" class="primary" id="add-device" data-t="addDevice"></button></div>
       <div id="pair-dash"></div>
-      <table class="narrow-hide2"><thead><tr><th data-t="name"></th><th data-t="lastSeen"></th><th data-t="budget"></th><th></th></tr></thead><tbody id="devices"></tbody></table>
+      <!-- Fixed column widths: editing a row never moves the others. -->
+      <table class="narrow-hide2 fixed devices-table"><colgroup><col><col class="c-seen"><col class="c-budget"><col class="c-sw"><col class="c-act"></colgroup>
+        <thead><tr><th data-t="name"></th><th data-t="lastSeen"></th><th data-t="todayBudget"></th><th data-t="enabled" class="sw"></th><th></th></tr></thead><tbody id="devices"></tbody></table>
       <p class="empty" id="devices-empty" data-t="noDevices" hidden></p>
     </div>
 
     <div class="tab" id="tab-models" hidden>
-      <div class="row-head"><h2 data-t="models"></h2><button type="button" class="primary" id="add-provider" data-t="addProvider"></button></div>
-      <p class="muted" data-t="modelsBody"></p>
-      <table><thead><tr><th data-t="model"></th><th data-t="where"></th><th data-t="humanOnly"></th></tr></thead><tbody id="models"></tbody></table>
+      <div class="row-head"><p class="muted" data-t="modelsBody"></p><button type="button" class="primary" id="add-provider" data-t="addProvider"></button></div>
+      <table class="models-table"><thead><tr><th data-t="model"></th><th data-t="where"></th><th data-t="humanOnly" class="sw"></th><th data-t="showOnDevices" class="sw"></th><th></th></tr></thead><tbody id="models"></tbody></table>
       <h3 data-t="providers"></h3>
       <table><thead><tr><th data-t="source"></th><th data-t="keyLast4"></th><th></th></tr></thead><tbody id="providers"></tbody></table>
     </div>
 
     <div class="tab" id="tab-apps" hidden>
-      <div class="row-head"><h2 data-t="apps"></h2><button type="button" class="primary" id="add-app" data-t="addApp"></button></div>
-      <p class="muted" data-t="appsBody"></p>
+      <div class="row-head"><p class="muted" data-t="appsBody"></p><button type="button" class="primary" id="add-app" data-t="addApp"></button></div>
       <div id="app-token" class="secret" hidden></div>
-      <table><thead><tr><th data-t="name"></th><th data-t="budget"></th><th></th></tr></thead><tbody id="apps"></tbody></table>
+      <table class="fixed apps-table"><colgroup><col><col class="c-budget"><col class="c-sw"><col class="c-act"></colgroup>
+        <thead><tr><th data-t="name"></th><th data-t="todayBudget"></th><th data-t="enabled" class="sw"></th><th></th></tr></thead><tbody id="apps"></tbody></table>
       <p class="empty" id="apps-empty" data-t="noApps" hidden></p>
     </div>
 
     <div class="tab" id="tab-usage" hidden>
-      <h2 data-t="usage"></h2>
-      <p class="muted" data-t="usageBody"></p>
+      <!-- Today, yesterday or the last 7 days. -->
+      <div class="seg" id="usage-range" role="group">
+        <button type="button" data-range="today" data-t="rangeToday"></button><button type="button" data-range="yesterday" data-t="rangeYesterday"></button><button type="button" data-range="week" data-t="rangeWeek"></button>
+      </div>
+      <p class="muted" id="usage-body"></p>
       <table><thead><tr><th data-t="who"></th><th data-t="calls" class="num"></th><th data-t="spend" class="num"></th><th data-t="tokens" data-tip="tokensTip" class="num narrow-hide"></th></tr></thead><tbody id="usage"></tbody><tfoot id="usage-total"></tfoot></table>
-      <p class="empty" id="usage-empty" data-t="usageEmpty" hidden></p>
+      <p class="empty" id="usage-empty" hidden></p>
+      <div id="usage-models-box" hidden>
+        <h3 data-t="byModel"></h3>
+        <table><thead><tr><th data-t="model"></th><th data-t="calls" class="num"></th><th data-t="spend" class="num"></th><th data-t="tokens" data-tip="tokensTip" class="num narrow-hide"></th></tr></thead><tbody id="usage-models"></tbody></table>
+      </div>
     </div>
   </section>
 

@@ -2,6 +2,8 @@ package hub
 
 import (
 	"context"
+	"errors"
+	"io"
 	"strings"
 	"sync"
 	"time"
@@ -10,6 +12,7 @@ import (
 
 	"github.com/wensuper/OmniLLM/internal/egress"
 	"github.com/wensuper/OmniLLM/internal/provider"
+	"github.com/wensuper/OmniLLM/store"
 )
 
 // DefaultWebAppURL is where the project publishes the web client.
@@ -45,11 +48,22 @@ func subscriptionLimits(host func(string) egress.Limits) func(string) egress.Lim
 }
 
 func subscriptionModelName(k provider.Kind, id string) string {
-	if k == provider.Codex {
-		return "Codex (ChatGPT)"
+	if k == provider.Codex || id == "" {
+		return "ChatGPT (Codex)"
 	}
 	return "Claude " + strings.ToUpper(id[:1]) + id[1:]
 }
+
+func pick(lang, zh, en string) string {
+	if strings.HasPrefix(strings.ToLower(lang), "zh") {
+		return zh
+	}
+	return en
+}
+
+// removedKey marks a subscription the owner removed: auto-detection skips
+// it until it is added again on purpose.
+func removedKey(k provider.Kind) string { return "settings/removed/" + string(k) }
 
 // Per-device pace for subscription models: more than a person chats.
 const (
@@ -97,12 +111,155 @@ func (s *subscriptionPace) allow(who string, now time.Time) error {
 	return nil
 }
 
+// ---------- model versions before first use ----------
+
+// Claude Code takes family aliases ("sonnet") that follow Anthropic's
+// newest models, and only a reply says which model answered. So that a
+// model list shows "Claude Sonnet 4.5" before anyone has used it, the hub
+// asks each alias once with a minimal prompt when the subscription is
+// connected and at start, but only for an alias whose version no call has
+// reported in the last week, and never more than once per alias per week.
+// Cost: at most 3 tiny calls a week (a few tokens each), sent one after
+// another through the same pacing and limiter as everything else, behind
+// any person, and not charged to any device's daily limit.
+//
+// Codex's replies do not name their model (its JSON events carry no model
+// field), so Codex is not asked; its name stays "ChatGPT (Codex)".
+
+const probeEvery = 7 * 24 * time.Hour
+
+// probeDelay leaves the first minute after start to people; probeGap keeps
+// the probes from using up the subscription's burst allowance.
+var probeDelay, probeGap = 30 * time.Second, 20 * time.Second
+
+// probeLaterLocked starts the probe for c in the background, if the hub is
+// running (h.mu held). Start does it for sources added before it.
+func (h *Hub) probeLaterLocked(c *provider.Client) {
+	if h.ctx == nil || c.Config().Kind != provider.ClaudeCode {
+		return
+	}
+	if !h.probing.CompareAndSwap(false, true) {
+		return
+	}
+	ctx := h.ctx
+	h.wg.Add(1)
+	go func() {
+		defer h.wg.Done()
+		defer h.probing.Store(false)
+		h.probeModels(ctx, c)
+	}()
+}
+
+func sleepCtx(ctx context.Context, d time.Duration) bool {
+	t := time.NewTimer(d)
+	defer t.Stop()
+	select {
+	case <-t.C:
+		return true
+	case <-ctx.Done():
+		return false
+	}
+}
+
+// probeModels asks each alias that needs it, one at a time.
+func (h *Hub) probeModels(ctx context.Context, c *provider.Client) {
+	if !sleepCtx(ctx, probeDelay) {
+		return
+	}
+	// The no-tools check first (it is usually done by now); a program that
+	// fails it, or is signed out, is not asked anything.
+	if err := c.Prepare(ctx); err != nil {
+		return
+	}
+	ms, err := h.listModels(ctx)
+	if err != nil {
+		return
+	}
+	first := true
+	for _, m := range ms {
+		if m.Provider != c.Config().Name || !h.needsProbe(ctx, m.ID) {
+			continue
+		}
+		if !first && !sleepCtx(ctx, probeGap) {
+			return
+		}
+		first = false
+		if !h.probe(ctx, c, m) {
+			return
+		}
+	}
+}
+
+// needsProbe: the version is unknown or a week old, and the alias was not
+// asked in the last week.
+func (h *Hub) needsProbe(ctx context.Context, id string) bool {
+	now := h.opts.Now()
+	h.mu.Lock()
+	known, seen := h.resolved[id] != "", h.seen[id]
+	h.mu.Unlock()
+	if known && now.Sub(seen) < probeEvery {
+		return false
+	}
+	var asked time.Time
+	if store.GetJSON(ctx, h.opts.Store, "probed/"+id, &asked) == nil && now.Sub(asked) < probeEvery {
+		return false
+	}
+	return true
+}
+
+// probe sends the minimal prompt for one model and keeps the version the
+// reply names. It reports whether to go on with the next alias.
+func (h *Hub) probe(ctx context.Context, c *provider.Client, m Model) bool {
+	if err := h.checkRegion(ctx, m.Provider); err != nil {
+		return false
+	}
+	// Kept before the call, so a call that fails half-way still counts
+	// toward once a week.
+	var before time.Time
+	hadBefore := store.GetJSON(ctx, h.opts.Store, "probed/"+m.ID, &before) == nil
+	if err := store.PutJSON(ctx, h.opts.Store, "probed/"+m.ID, h.opts.Now()); err != nil {
+		return false
+	}
+	cctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	defer cancel()
+	// Background: behind every person in the limiter's queue. Sent to the
+	// provider directly, so no device's daily limit or pace is touched.
+	req := omnillm.Request{Model: m.ID, Caller: omnillm.Background, MaxTokens: 16, Messages: []omnillm.Message{
+		{Role: "system", Content: "Reply with: ok"}, {Role: "user", Content: "ok"}}}
+	s, err := c.Stream(cctx, m.Upstream, req, provider.Credential{})
+	if err != nil {
+		if errors.Is(err, omnillm.ErrBusy) {
+			// The limiter refused it: nothing was sent, so it does not count.
+			if hadBefore {
+				_ = store.PutJSON(ctx, h.opts.Store, "probed/"+m.ID, before)
+			} else {
+				_ = h.opts.Store.Delete(ctx, "probed/"+m.ID)
+			}
+		}
+		return false
+	}
+	defer s.Close()
+	for {
+		ch, err := s.Recv()
+		if ch.Model != "" {
+			h.noteModel(m.ID, ch.Model)
+		}
+		if err != nil {
+			return errors.Is(err, io.EOF)
+		}
+	}
+}
+
 // DetectSubscriptions lists the subscription programs installed and logged
 // in on this machine that are not connected yet.
 func (h *Hub) DetectSubscriptions(ctx context.Context) []provider.Config {
 	var out []provider.Config
 	for _, k := range []provider.Kind{provider.ClaudeCode, provider.Codex} {
 		if h.subscription(string(k)) {
+			continue
+		}
+		var removed bool
+		if store.GetJSON(ctx, h.opts.Store, removedKey(k), &removed) == nil && removed {
 			continue
 		}
 		cfg, err := provider.Default(k)

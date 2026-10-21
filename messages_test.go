@@ -39,7 +39,7 @@ func TestDescribeNeverPrintsMissing(t *testing.T) {
 
 func TestEveryCodeHasAStatus(t *testing.T) {
 	for _, c := range []Code{CodeBadRequest, CodeUnsupportedFormat, CodeInvalidToken, CodeModelNotAllowed, CodeBusy,
-		CodeBudgetExceeded, CodeHubOffline, CodeUpstream, CodeCredentialProblem, CodeRegionNotAllowed, CodeNotFound, CodeForbiddenOrigin} {
+		CodeBudgetExceeded, CodeHubOffline, CodeUpstream, CodeCredentialProblem, CodeRegionNotAllowed, CodeNotFound, CodeForbiddenOrigin, CodeDevicePaused} {
 		if HTTPStatus(c) == 500 {
 			t.Fatalf("%s maps to 500", c)
 		}
@@ -131,19 +131,19 @@ func TestWaitsAreInTheReadersLanguage(t *testing.T) {
 
 func TestSubscriptionNamesAndLoginSteps(t *testing.T) {
 	login := &Error{Code: CodeCredentialProblem, Msg: MsgCLILogin, Args: []string{"claude-code"}}
-	if got := Describe("zh", login); got != "你的 Mac 上的 Claude 订阅没有登录，或者登录已失效。登录方法：在 Mac 的终端运行 claude，然后输入 /login。登录后再试。" {
+	if got := Describe("zh", login); got != "你的 Mac 上的 Claude Code 没有登录或登录已过期。在 Mac 的终端运行 claude，输入 /login，然后再试。" {
 		t.Fatal(got)
 	}
-	if got := Describe("en", login); got != "Your Claude subscription isn't logged in on your Mac, or the login expired. To log in, in Terminal on your Mac run claude, then type /login. Then try again." {
+	if got := Describe("en", login); got != "Claude Code on your Mac is signed out. In Terminal on your Mac, run claude and type /login, then try again." {
 		t.Fatal(got)
 	}
 	codex := &Error{Code: CodeCredentialProblem, Msg: MsgCLILogin, Args: []string{"codex"}}
-	if got := Describe("en", codex); !strings.HasPrefix(got, "Your ChatGPT subscription") || !strings.Contains(got, "run codex login") {
+	if got := Describe("en", codex); got != "Codex on your Mac is signed out. In Terminal on your Mac, run codex login, then try again." {
 		t.Fatal(got)
 	}
 	// An older hub's display name and program still render well.
 	old := &Error{Code: CodeCredentialProblem, Msg: MsgCLILogin, Args: []string{"ChatGPT Codex (subscription)", "codex"}}
-	if got := Describe("zh", old); !strings.Contains(got, "ChatGPT 订阅") || !strings.Contains(got, "codex login") {
+	if got := Describe("zh", old); got != "你的 Mac 上的 Codex 没有登录或登录已过期。在 Mac 的终端运行 codex login，然后再试。" {
 		t.Fatal(got)
 	}
 	nf := &Error{Code: CodeBadRequest, Msg: MsgCLINotFound, Args: []string{"claude-code"}}
@@ -174,5 +174,24 @@ func TestMessagesUseTheGlossary(t *testing.T) {
 		if strings.Contains(v[0], " Key") && !strings.Contains(v[0], "API Key") {
 			t.Errorf("%s zh: Key without API", k)
 		}
+	}
+}
+
+func TestNewMessages(t *testing.T) {
+	ctx := &Error{Code: CodeBadRequest, Msg: MsgContextTooLong, Args: []string{"Claude Sonnet"}}
+	if got := Describe("zh", ctx); got != "这段对话太长，Claude Sonnet 装不下了。开一个新对话再问。" {
+		t.Fatal(got)
+	}
+	if got := Describe("en", ctx); got != "This chat is too long for Claude Sonnet. Start a new chat and ask again." {
+		t.Fatal(got)
+	}
+	if got := Describe("en", &Error{Code: CodeBudgetExceeded, Msg: MsgBudgetWouldExceed}); !strings.HasPrefix(got, "This message may exceed what's left of today's limit.") {
+		t.Fatal(got)
+	}
+	if got := Describe("zh", &Error{Code: CodeModelNotAllowed, Msg: MsgHumanOnly}); !strings.Contains(got, "只能手动对话") {
+		t.Fatal(got)
+	}
+	if got := Describe("en", &Error{Code: CodeBusy, Msg: MsgSubscriptionPace, RetryAfter: time.Minute}); !strings.HasSuffix(got, "so the account isn't flagged as automated.") {
+		t.Fatal(got)
 	}
 }

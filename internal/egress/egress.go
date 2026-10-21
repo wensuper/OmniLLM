@@ -52,8 +52,12 @@ type Outcome int
 const (
 	OK          Outcome = iota
 	RateLimited         // 429 / Retry-After
-	Failed              // 5xx, network error, timeout
-	ClientError         // 4xx other than 429: not the provider's fault
+	// LimitReached: a subscription's usage limit (Claude Code, Codex). Like
+	// RateLimited, but the wait runs to the reported reset (not capped by
+	// MaxCooldown) and calls refused meanwhile say it is the limit.
+	LimitReached
+	Failed      // 5xx, network error, timeout
+	ClientError // 4xx other than 429: not the provider's fault
 )
 
 // Limiter holds a lane per provider.
@@ -86,6 +90,7 @@ type lane struct {
 	tokens     float64
 	last       time.Time
 	cooldown   time.Time // until: Retry-After
+	coolMsg    string    // what a call refused during the cooldown says
 	failures   int
 	openUntil  time.Time // breaker
 }
@@ -141,8 +146,9 @@ func (l *Limiter) Acquire(ctx context.Context, provider string, caller omnillm.C
 	}
 	if now.Before(ln.cooldown) {
 		w := ln.cooldown.Sub(now)
+		msg := ln.coolKey()
 		l.mu.Unlock()
-		return nil, busy(provider, omnillm.MsgBusyUpstream, w)
+		return nil, busy(provider, msg, w)
 	}
 	if ln.inUse < ln.limits.MaxConcurrent && len(ln.people) == 0 && (caller == omnillm.Interactive || len(ln.background) == 0) {
 		pause, err := l.takeToken(ln, provider, now)
@@ -174,21 +180,21 @@ func (l *Limiter) Acquire(ctx context.Context, provider string, caller omnillm.C
 		now := l.now()
 		var err error
 		if w.fail {
-			wait := time.Second
+			wait, msg := time.Second, omnillm.MsgBusyUpstream
 			if now.Before(ln.openUntil) {
 				wait = ln.openUntil.Sub(now)
 			} else if now.Before(ln.cooldown) {
-				wait = ln.cooldown.Sub(now)
+				wait, msg = ln.cooldown.Sub(now), ln.coolKey()
 			}
 			l.mu.Unlock()
-			return nil, busy(provider, omnillm.MsgBusyUpstream, wait)
+			return nil, busy(provider, msg, wait)
 		}
 		var pause time.Duration
 		switch {
 		case now.Before(ln.openUntil):
 			err = busy(provider, omnillm.MsgBreakerOpen, ln.openUntil.Sub(now))
 		case now.Before(ln.cooldown):
-			err = busy(provider, omnillm.MsgBusyUpstream, ln.cooldown.Sub(now))
+			err = busy(provider, ln.coolKey(), ln.cooldown.Sub(now))
 		default:
 			pause, err = l.takeToken(ln, provider, now)
 		}
@@ -260,6 +266,14 @@ func (l *Limiter) paced(ctx context.Context, ln *lane, provider string, pause ti
 	}
 }
 
+// coolKey is the message for a call refused while the lane cools down.
+func (ln *lane) coolKey() string {
+	if ln.coolMsg == "" {
+		return omnillm.MsgBusyUpstream
+	}
+	return ln.coolMsg
+}
+
 func remove(ws []*waiter, w *waiter) []*waiter {
 	for i, x := range ws {
 		if x == w {
@@ -299,11 +313,14 @@ func (l *Limiter) releaser(provider string) Release {
 			switch o {
 			case OK, ClientError:
 				ln.failures = 0
-			case RateLimited:
+			case RateLimited, LimitReached:
 				if retryAfter <= 0 {
 					retryAfter = 30 * time.Second
 				}
-				if retryAfter > ln.limits.MaxCooldown {
+				ln.coolMsg = omnillm.MsgBusyUpstream
+				if o == LimitReached {
+					ln.coolMsg = omnillm.MsgSubscriptionLimit
+				} else if retryAfter > ln.limits.MaxCooldown {
 					retryAfter = ln.limits.MaxCooldown
 				}
 				ln.cooldown = now.Add(retryAfter)

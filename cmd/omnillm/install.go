@@ -164,18 +164,30 @@ func nextStep(st Status) string {
 		return t("下一步：这台机器没有浏览器。请在这台机器的终端里亲自运行 omnillm hub provider add anthropic（或 openai、openai-compatible），然后在提示时粘贴 API Key；API Key 不要发到聊天里。",
 			"Next: this machine has no browser. In this machine's terminal, run omnillm hub provider add anthropic (or openai, openai-compatible) yourself and paste the API key when asked; don't send the key in a chat.")
 	case st.Providers == 0:
-		return t("下一步：接入一个模型来源。用 Claude 订阅的，在这台电脑上安装 Claude Code，在终端运行 claude 并输入 /login 登录；用 ChatGPT 订阅的，安装 Codex 并运行 codex login。然后运行 omnillm status，会自动接上。也可以在控制台里粘贴 API Key（omnillm open），或安装 Ollama 用本机模型。",
-			"Next: connect a model source. With a Claude subscription, install Claude Code on this computer, run claude in Terminal and type /login; with a ChatGPT subscription, install Codex and run codex login. Then run omnillm status: it connects by itself. Or paste an API key in the console (omnillm open), or install Ollama for models that run on this computer.")
+		return fmt.Sprintf(t("下一步：接入一个模型来源。用 Claude 订阅的，在%s上安装 Claude Code，在终端运行 claude 并输入 /login 登录；用 ChatGPT 订阅的，安装 Codex 并运行 codex login。然后运行 omnillm status，会自动接上。也可以在控制台里粘贴 API Key（omnillm open），或安装 Ollama 用本机模型。",
+			"Next: connect a model source. With a Claude subscription, install Claude Code on %s, run claude in Terminal and type /login; with a ChatGPT subscription, install Codex and run codex login. Then run omnillm status: it connects by itself. Or paste an API key in the console (omnillm open), or install Ollama for models that run on %[1]s."), thisMachine())
 	case !st.RelayConfigured:
-		return t("已经可以在这台电脑上用。要让其他设备连进来，需要先设置远程连接。",
-			"Ready on this computer. To let other devices connect, set up remote access first.")
+		return fmt.Sprintf(t("已经可以在%s上用。要让其他设备连进来，需要先设置远程连接。",
+			"Ready on %s. To let other devices connect, set up remote access first."), thisMachine())
 	case !st.RelayUp:
-		return t("远程连接断开，手机和其他设备暂时连不上；OmniLLM 会自己重连。请检查这台电脑的网络。",
-			"Remote access is down, so phones and other devices can't connect right now; OmniLLM keeps retrying. Check this computer's network.")
+		return fmt.Sprintf(t("远程连接断开，设备暂时连不上；OmniLLM 会自己重连。请检查%s的网络。",
+			"Remote access is down, so devices can't connect now; OmniLLM keeps retrying. Check %s's network."), thisMachine())
 	case st.Devices == 0:
 		return t("下一步：在控制台的“设备”里点“添加设备”，添加手机或其他电脑。", "Next: under Devices in the console, choose Add device to add a phone or another computer.")
 	}
-	return t("一切正常。", "All set.")
+	if runtime.GOOS == "darwin" {
+		return t("一切正常。运行 omnillm open 打开控制台，或点菜单栏里的 OmniLLM 图标。",
+			"All set. Run omnillm open, or click the OmniLLM icon in the menu bar, to open the console.")
+	}
+	return t("一切正常。运行 omnillm open 打开控制台。", "All set. Run omnillm open to open the console.")
+}
+
+// thisMachine is how next-step texts name the machine OmniLLM runs on.
+func thisMachine() string {
+	if runtime.GOOS == "darwin" {
+		return t("这台 Mac", "this Mac")
+	}
+	return t("这台电脑", "this computer")
 }
 
 // installBinary copies this executable to ~/.local/bin/omnillm (0755), so

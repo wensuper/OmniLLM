@@ -296,7 +296,7 @@ func (ds *devSession) handle(ctx context.Context, env proto.Envelope, d Device) 
 	case proto.TPing:
 		_ = ds.send(ctx, proto.Envelope{T: proto.TPong})
 	case proto.TModelsList:
-		ms, err := ds.h.deviceModels(ctx, d)
+		ms, err := ds.h.modelsFor(ctx, d)
 		if err != nil {
 			ds.h.sendErr(ctx, ds.sess, env.ID, err)
 			return

@@ -232,6 +232,49 @@ type Client struct {
 	lim  *egress.Limiter
 	idle time.Duration // longest gap between stream lines (default 2 min)
 	cli  cliCheck      // subscription programs: the no-tools check
+
+	healthMu sync.Mutex
+	problem  string    // "", ProblemLogin or ProblemLimit
+	until    time.Time // when a limit resets
+}
+
+// Problems a subscription source can be in, for the console.
+const (
+	ProblemLogin = "login" // the program is signed out
+	ProblemLimit = "limit" // the subscription's usage limit is reached
+)
+
+// Problem reports what made the last call fail, if that is something the
+// owner can act on (a sign-in, a limit and when it resets). The next
+// successful call clears it; a limit also clears once its time is past.
+func (c *Client) Problem() (problem string, resets time.Time) {
+	c.healthMu.Lock()
+	defer c.healthMu.Unlock()
+	if c.problem == ProblemLimit && !time.Now().Before(c.until) {
+		return "", time.Time{}
+	}
+	return c.problem, c.until
+}
+
+// note records how a call ended: nil is a success; a login or limit error
+// sets the problem; anything else leaves it as it was.
+func (c *Client) note(err error) {
+	c.healthMu.Lock()
+	defer c.healthMu.Unlock()
+	if err == nil {
+		c.problem, c.until = "", time.Time{}
+		return
+	}
+	var e *omnillm.Error
+	if !errors.As(err, &e) {
+		return
+	}
+	switch e.Msg {
+	case omnillm.MsgCLILogin:
+		c.problem, c.until = ProblemLogin, time.Time{}
+	case omnillm.MsgSubscriptionLimit:
+		c.problem, c.until = ProblemLimit, time.Now().Add(e.RetryAfter)
+	}
 }
 
 // New makes a client. rt is the host's transport (nil: GuardedTransport).
@@ -440,7 +483,7 @@ func (c *Client) Stream(ctx context.Context, upstreamModel string, req omnillm.R
 		return nil, &omnillm.Error{Code: omnillm.CodeUpstream, Msg: omnillm.MsgUpstream, Detail: redact.String(err.Error())}
 	}
 	if resp.StatusCode != http.StatusOK {
-		e, outcome, wait := c.classify(resp, cred, req)
+		e, outcome, wait := c.classify(resp, cred, req, upstreamModel)
 		resp.Body.Close()
 		cancel()
 		release(outcome, wait)
@@ -457,7 +500,7 @@ func (c *Client) Stream(ctx context.Context, upstreamModel string, req omnillm.R
 // classify turns a non-200 response into a fixed error. The body is read
 // (bounded) only to recognise "unsupported response_format"; it is never
 // returned or logged.
-func (c *Client) classify(resp *http.Response, cred Credential, req omnillm.Request) (*omnillm.Error, egress.Outcome, time.Duration) {
+func (c *Client) classify(resp *http.Response, cred Credential, req omnillm.Request, model string) (*omnillm.Error, egress.Outcome, time.Duration) {
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 16<<10))
 	lower := strings.ToLower(string(body))
 	detail := fmt.Sprintf("%s: status %d", c.cfg.Name, resp.StatusCode)
@@ -478,6 +521,9 @@ func (c *Client) classify(resp *http.Response, cred Credential, req omnillm.Requ
 	case (resp.StatusCode == 400 || resp.StatusCode == 422) && (len(req.JSONSchema) > 0 || req.JSONObject) &&
 		(strings.Contains(lower, "response_format") || strings.Contains(lower, "json_schema") || strings.Contains(lower, "json_object") || strings.Contains(lower, "structured")):
 		return &omnillm.Error{Code: omnillm.CodeUnsupportedFormat, Msg: omnillm.MsgUnsupportedFormat, Detail: detail}, egress.ClientError, 0
+	case (resp.StatusCode == 400 || resp.StatusCode == 413 || resp.StatusCode == 422) && tooLong(lower):
+		return &omnillm.Error{Code: omnillm.CodeBadRequest, Msg: omnillm.MsgContextTooLong, Args: []string{modelName(c.cfg.Kind, model)},
+			Detail: detail}, egress.ClientError, 0
 	case (resp.StatusCode == 400 || resp.StatusCode == 422) && req.HasImages() &&
 		(strings.Contains(lower, "image") || strings.Contains(lower, "vision") || strings.Contains(lower, "multimodal")):
 		return &omnillm.Error{Code: omnillm.CodeBadRequest, Msg: omnillm.MsgNoVision, Detail: detail}, egress.ClientError, 0

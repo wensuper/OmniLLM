@@ -223,6 +223,7 @@ const (
 	CodePairingDenied     Code = "pairing_denied"
 	CodeToolNotAllowed    Code = "tool_not_allowed"
 	CodeForbiddenOrigin   Code = "forbidden_origin" // 403
+	CodeDevicePaused      Code = "device_paused"    // 403: the owner paused this device or app
 )
 
 // Error is the only error type that crosses the library boundary toward
@@ -270,6 +271,7 @@ var (
 	ErrPairingFailed     = &Error{Code: CodePairingFailed}
 	ErrPairingDenied     = &Error{Code: CodePairingDenied}
 	ErrToolNotAllowed    = &Error{Code: CodeToolNotAllowed}
+	ErrDevicePaused      = &Error{Code: CodeDevicePaused}
 )
 
 // AsError returns err as *Error, wrapping anything else as internal.
@@ -291,7 +293,7 @@ func HTTPStatus(c Code) int {
 		return 400
 	case CodeInvalidToken:
 		return 401
-	case CodeModelNotAllowed, CodeToolNotAllowed, CodeForbiddenOrigin:
+	case CodeModelNotAllowed, CodeToolNotAllowed, CodeForbiddenOrigin, CodeDevicePaused:
 		return 403
 	case CodeNotFound:
 		return 404

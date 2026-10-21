@@ -38,6 +38,12 @@ type Device struct {
 	// Background, whatever they claim; a device a person uses may say a
 	// person is waiting.
 	BackgroundOnly bool `json:"background_only,omitempty"`
+	// Paused by the owner: its requests are refused (it can still list
+	// its models, so its screen can say why) until turned on again.
+	Paused bool `json:"paused,omitempty"`
+	// Online: the device has a session open right now (Devices fills it
+	// in; it is never stored).
+	Online bool `json:"-"`
 }
 
 func (d Device) mailbox() (relayproto.ID, [32]byte, error) {
@@ -51,7 +57,11 @@ func (d Device) mailbox() (relayproto.ID, [32]byte, error) {
 }
 
 func (d Device) principal() principal {
-	return principal{key: "device/" + d.ID, models: d.Models, budget: d.Budget, forceBackground: d.BackgroundOnly}
+	p := principal{key: "device/" + d.ID, models: d.Models, budget: d.Budget, forceBackground: d.BackgroundOnly}
+	if d.Paused {
+		p.paused = omnillm.MsgDevicePaused
+	}
+	return p
 }
 
 // touch records when a device was last seen, under its own key, so it can
@@ -82,8 +92,16 @@ func (h *Hub) listDevices(ctx context.Context) ([]Device, error) {
 	return out, nil
 }
 
-// Devices lists paired devices.
-func (h *Hub) Devices(ctx context.Context) ([]Device, error) { return h.listDevices(ctx) }
+// Devices lists paired devices, each with whether it is online now.
+func (h *Hub) Devices(ctx context.Context) ([]Device, error) {
+	devs, err := h.listDevices(ctx)
+	h.mu.Lock()
+	for i := range devs {
+		devs[i].Online = findSession(h.devSessions, devs[i].ID) != nil
+	}
+	h.mu.Unlock()
+	return devs, err
+}
 
 func (h *Hub) deviceByMailbox(ctx context.Context, id relayproto.ID) (Device, bool) {
 	devs, _ := h.listDevices(ctx)
@@ -125,10 +143,11 @@ func (h *Hub) SetDevice(ctx context.Context, id string, models []string, budget 
 // total (Options.GlobalBudget) still applies.
 const NoLimit int64 = -1
 
-// UpdateDevice renames a device and/or changes its daily budget
-// (micro-USD, or NoLimit). A nil field is left as it is. A name another
-// device already has gets a number, as at pairing.
-func (h *Hub) UpdateDevice(ctx context.Context, id string, name *string, budget *int64) (Device, error) {
+// UpdateDevice renames a device, changes its daily budget (micro-USD, or
+// NoLimit), pauses or resumes it, and/or sets the models it may use (an
+// empty list: all, including models added later). A nil field is left as
+// it is. A name another device already has gets a number, as at pairing.
+func (h *Hub) UpdateDevice(ctx context.Context, id string, name *string, budget *int64, paused *bool, models *[]string) (Device, error) {
 	h.deviceMu.Lock()
 	defer h.deviceMu.Unlock()
 	d, err := h.getDevice(ctx, id)
@@ -148,6 +167,16 @@ func (h *Hub) UpdateDevice(ctx context.Context, id string, name *string, budget 
 			return d, err
 		}
 		d.Name = uniqueName(n, deviceNames(devs, d.ID))
+	}
+	if paused != nil {
+		d.Paused = *paused
+	}
+	if models != nil {
+		ms, err := h.checkModels(ctx, *models, false)
+		if err != nil {
+			return d, err
+		}
+		d.Models = ms
 	}
 	return d, store.PutJSON(ctx, h.opts.Store, "device/"+id, d)
 }
@@ -224,9 +253,18 @@ type PairOptions struct {
 	BackgroundOnly bool
 	// Confirm is called once the device has proved it holds the pairing
 	// code. The host shows the code and device name to the owner and
-	// returns their answer. Required.
+	// returns their answer. Required, unless ConfirmName is set.
 	Confirm func(ctx context.Context, r PairRequest) (bool, error)
+	// ConfirmName is Confirm for a host that also lets the owner name the
+	// device while confirming; "" keeps the name it asked with. Used
+	// instead of Confirm when set.
+	ConfirmName func(ctx context.Context, r PairRequest) (ok bool, name string, err error)
 }
+
+// ErrPairingDeviceLeft ends a pairing whose device side went away (it
+// cancelled or lost its connection) while the owner was being asked: not
+// a refusal, and the host can say so.
+var ErrPairingDeviceLeft = &omnillm.Error{Code: omnillm.CodePairingFailed, Msg: omnillm.MsgPairingFailed, Detail: "the device left"}
 
 // Pairing is a pending pairing.
 type Pairing struct {
@@ -282,7 +320,7 @@ type pairing struct {
 
 // Pair starts a pairing. The hub must be connected to its relay.
 func (h *Hub) Pair(ctx context.Context, opts PairOptions) (*Pairing, error) {
-	if opts.Confirm == nil {
+	if opts.Confirm == nil && opts.ConfirmName == nil {
 		return nil, errors.New("hub: PairOptions.Confirm is required")
 	}
 	h.mu.Lock()
@@ -459,13 +497,42 @@ func (h *Hub) finishPairing(ctx context.Context, p *pairing, sess *e2e.Session, 
 		case <-cctx.Done():
 		}
 	}()
-	ok, err := p.opts.Confirm(cctx, PairRequest{DeviceName: name, Code: code})
+	var (
+		ok    bool
+		given string
+		err   error
+	)
+	if p.opts.ConfirmName != nil {
+		ok, given, err = p.opts.ConfirmName(cctx, PairRequest{DeviceName: name, Code: code})
+	} else {
+		ok, err = p.opts.Confirm(cctx, PairRequest{DeviceName: name, Code: code})
+	}
+	expired := cctx.Err() == context.DeadlineExceeded
 	cancel()
+	if (err != nil || !ok) && ctx.Err() != nil && !expired {
+		// The device side ended while the owner was looking (it cancelled,
+		// or its connection dropped): not the owner's refusal.
+		h.endPairing(p, ErrPairingDeviceLeft)
+		return ErrPairingDeviceLeft
+	}
+	if err != nil && expired {
+		b, _ := proto.Marshal(proto.Envelope{T: proto.TPairDenied})
+		_ = sess.Send(ctx, b)
+		h.endPairing(p, &omnillm.Error{Code: omnillm.CodePairingFailed, Msg: omnillm.MsgPairingExpired})
+		return omnillm.ErrPairingFailed
+	}
 	if err != nil || !ok {
 		b, _ := proto.Marshal(proto.Envelope{T: proto.TPairDenied})
 		_ = sess.Send(ctx, b)
 		h.endPairing(p, &omnillm.Error{Code: omnillm.CodePairingDenied, Msg: omnillm.MsgPairingDenied})
 		return omnillm.ErrPairingDenied
+	}
+	if strings.TrimSpace(given) != "" {
+		// The owner's own name for it; still never a second "iPhone".
+		name = cleanName(given)
+		if devs, err := h.listDevices(ctx); err == nil {
+			name = uniqueName(name, deviceNames(devs, ""))
+		}
 	}
 	// The same device key may not be paired twice.
 	devs, _ := h.listDevices(ctx)
@@ -541,6 +608,133 @@ func (h *Hub) finishPairing(ctx context.Context, p *pairing, sess *e2e.Session, 
 	return nil
 }
 
+// checkModels is a device's or app's model list as the owner set it: every
+// id must exist, each once; nil (all models) for an empty list. Apps make
+// background calls only, so chat-only models are not theirs.
+func (h *Hub) checkModels(ctx context.Context, ids []string, forApp bool) ([]string, error) {
+	var out []string
+	for _, id := range ids {
+		m, err := h.getModel(ctx, id)
+		if err != nil {
+			return nil, &omnillm.Error{Code: omnillm.CodeBadRequest, Msg: omnillm.MsgUnknownModel}
+		}
+		if forApp && (m.HumanOnly || h.subscription(m.Provider)) {
+			return nil, &omnillm.Error{Code: omnillm.CodeModelNotAllowed, Msg: omnillm.MsgHumanOnly}
+		}
+		if !contains(out, id) {
+			out = append(out, id)
+		}
+	}
+	return out, nil
+}
+
+// modelsFor is the model list a device is answered with: refused while it
+// is paused (its screen keeps saying so, and sees when it is on again),
+// without the models the owner keeps off devices, with the owner's names.
+func (h *Hub) modelsFor(ctx context.Context, d Device) ([]omnillm.ModelInfo, error) {
+	if d.Paused {
+		return nil, &omnillm.Error{Code: omnillm.CodeDevicePaused, Msg: omnillm.MsgDevicePaused}
+	}
+	ms, err := h.deviceModels(ctx, d)
+	if err != nil {
+		return nil, err
+	}
+	return h.forDevices(ctx, ms), nil
+}
+
+// ---------- the owner's choices per model ----------
+
+// modelPref is the owner's choice for one model: their own name for it,
+// and whether devices are offered it at all. It is kept apart from the
+// model record, so re-adding a model source or a newly reported version
+// never undoes it.
+type modelPref struct {
+	Name   string `json:"name,omitempty"`
+	Hidden bool   `json:"hidden,omitempty"`
+}
+
+func (h *Hub) modelPrefs(ctx context.Context) map[string]modelPref {
+	keys, _ := h.opts.Store.List(ctx, "modelpref/")
+	out := make(map[string]modelPref, len(keys))
+	for _, k := range keys {
+		var mp modelPref
+		if store.GetJSON(ctx, h.opts.Store, k, &mp) == nil {
+			out[strings.TrimPrefix(k, "modelpref/")] = mp
+		}
+	}
+	return out
+}
+
+// SetModelPref renames a model for people ("" goes back to the name its
+// source gives it) and/or shows or hides it on devices. A nil field is
+// left as it is. A hidden model is not offered to devices, and a device
+// that still asks for it is told it is gone; the host and apps keep it.
+func (h *Hub) SetModelPref(ctx context.Context, id string, name *string, shown *bool) error {
+	if _, err := h.getModel(ctx, id); err != nil {
+		return err
+	}
+	h.deviceMu.Lock()
+	defer h.deviceMu.Unlock()
+	var mp modelPref
+	_ = store.GetJSON(ctx, h.opts.Store, "modelpref/"+id, &mp)
+	if name != nil {
+		mp.Name = ""
+		if strings.TrimSpace(*name) != "" {
+			mp.Name = cleanName(*name)
+		}
+	}
+	if shown != nil {
+		mp.Hidden = !*shown
+	}
+	if mp == (modelPref{}) {
+		return h.opts.Store.Delete(ctx, "modelpref/"+id)
+	}
+	return store.PutJSON(ctx, h.opts.Store, "modelpref/"+id, mp)
+}
+
+// ModelView is a model as the owner sees it: with the owner's name for
+// it, and whether it is kept off devices.
+type ModelView struct {
+	omnillm.ModelInfo
+	Hidden bool `json:"hidden,omitempty"`
+}
+
+// OwnerModels lists every model for the owner's own screens.
+func (h *Hub) OwnerModels(ctx context.Context) ([]ModelView, error) {
+	all, err := h.Models(ctx)
+	if err != nil {
+		return nil, err
+	}
+	prefs := h.modelPrefs(ctx)
+	out := make([]ModelView, 0, len(all))
+	for _, m := range all {
+		mp := prefs[m.ID]
+		if mp.Name != "" {
+			m.DisplayName = mp.Name
+		}
+		out = append(out, ModelView{ModelInfo: m, Hidden: mp.Hidden})
+	}
+	return out, nil
+}
+
+// forDevices is a model list as devices get it: the owner's names, and
+// without the models kept off devices.
+func (h *Hub) forDevices(ctx context.Context, ms []omnillm.ModelInfo) []omnillm.ModelInfo {
+	prefs := h.modelPrefs(ctx)
+	out := ms[:0:0]
+	for _, m := range ms {
+		mp := prefs[m.ID]
+		if mp.Hidden {
+			continue
+		}
+		if mp.Name != "" {
+			m.DisplayName = mp.Name
+		}
+		out = append(out, m)
+	}
+	return out
+}
+
 // ---------- app tokens (for programs that cannot embed the library) ----------
 
 // App is a program allowed to use the hub's local API with a token.
@@ -551,6 +745,8 @@ type App struct {
 	Models    []string  `json:"models,omitempty"`
 	Budget    int64     `json:"budget_micro_usd"`
 	Created   time.Time `json:"created"`
+	// Paused by the owner, as for a device.
+	Paused bool `json:"paused,omitempty"`
 }
 
 const appTokenPrefix = "omni_app_"
@@ -591,9 +787,10 @@ func (h *Hub) Apps(ctx context.Context) ([]App, error) {
 	return out, nil
 }
 
-// UpdateApp renames an app and/or changes its daily budget (micro-USD, or
-// NoLimit), as UpdateDevice does for devices.
-func (h *Hub) UpdateApp(ctx context.Context, id string, name *string, budget *int64) (App, error) {
+// UpdateApp renames an app, changes its daily budget (micro-USD, or
+// NoLimit), pauses or resumes it and/or sets its models, as UpdateDevice
+// does for devices. Apps never get chat-only models.
+func (h *Hub) UpdateApp(ctx context.Context, id string, name *string, budget *int64, paused *bool, models *[]string) (App, error) {
 	var a App
 	if id == "" || strings.ContainsAny(id, "/ ") {
 		return a, omnillm.ErrNotFound
@@ -612,6 +809,16 @@ func (h *Hub) UpdateApp(ctx context.Context, id string, name *string, budget *in
 	if name != nil {
 		apps, _ := h.Apps(ctx)
 		a.Name = uniqueName(cleanName(*name), appNames(apps, a.ID))
+	}
+	if paused != nil {
+		a.Paused = *paused
+	}
+	if models != nil {
+		ms, err := h.checkModels(ctx, *models, true)
+		if err != nil {
+			return a, err
+		}
+		a.Models = ms
 	}
 	return a, store.PutJSON(ctx, h.opts.Store, "app/"+id, a)
 }
@@ -648,7 +855,11 @@ func (h *Hub) appByToken(ctx context.Context, tok string) (App, error) {
 }
 
 func (a App) principal() principal {
-	return principal{key: "app/" + a.ID, models: a.Models, budget: a.Budget, forceBackground: true}
+	p := principal{key: "app/" + a.ID, models: a.Models, budget: a.Budget, forceBackground: true}
+	if a.Paused {
+		p.paused = omnillm.MsgAppPaused
+	}
+	return p
 }
 
 // CompleteAsApp runs a request for an app token (the local API). App calls
@@ -680,6 +891,13 @@ func (h *Hub) ModelsForApp(ctx context.Context, token string) ([]omnillm.ModelIn
 		}
 		if len(a.Models) == 0 || contains(a.Models, m.ID) {
 			out = append(out, m)
+		}
+	}
+	// The owner's names; hiding a model is about devices, not apps.
+	prefs := h.modelPrefs(ctx)
+	for i := range out {
+		if n := prefs[out[i].ID].Name; n != "" {
+			out[i].DisplayName = n
 		}
 	}
 	return out, nil

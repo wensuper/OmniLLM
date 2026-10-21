@@ -16,6 +16,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	omnillm "github.com/wensuper/OmniLLM"
@@ -59,6 +60,10 @@ type Options struct {
 	EgressRegion func(ctx context.Context) (string, error)
 	// RegionAllowed, when set, says whether a provider serves a country.
 	RegionAllowed func(provider, country string) bool
+	// Lang is the owner's language ("zh…" or anything else for English),
+	// for the few names the hub words itself, such as "Claude Sonnet
+	// (latest)" before a model's version is known.
+	Lang string
 	// Now is for tests.
 	Now func() time.Time
 }
@@ -68,9 +73,12 @@ type Hub struct {
 	opts Options
 	// resolved: model id -> its name with version, as last reported (mu).
 	resolved map[string]string
-	lim      *egress.Limiter
-	subs     subscriptionPace
-	key      e2e.KeyPair
+	// seen: model id -> when a call last reported its version (mu).
+	seen    map[string]time.Time
+	probing atomic.Bool // a model-version probe is running
+	lim     *egress.Limiter
+	subs    subscriptionPace
+	key     e2e.KeyPair
 
 	mu          sync.Mutex
 	clients     map[string]*provider.Client
@@ -205,6 +213,11 @@ func (h *Hub) Start(ctx context.Context) error {
 		go func() { defer h.wg.Done(); link.Run(h.ctx) }()
 		go func() { defer h.wg.Done(); h.dispatch(link) }()
 	}
+	h.mu.Lock()
+	for _, c := range h.clients {
+		h.probeLaterLocked(c)
+	}
+	h.mu.Unlock()
 	return nil
 }
 
@@ -276,6 +289,12 @@ type ProviderInfo struct {
 	// subscription (no key here; the login stays in that program).
 	Subscription bool   `json:"subscription,omitempty"`
 	DisplayName  string `json:"display_name"`
+	// Problem is what the owner should fix, as the last call showed it:
+	// "login" (the program is signed out) or "limit" (the subscription's
+	// usage limit; ResetsAt says when it resets, unix seconds). The next
+	// successful call clears it.
+	Problem  string `json:"problem,omitempty"`
+	ResetsAt int64  `json:"resets_at,omitempty"`
 }
 
 func providerKey(name string) string { return "provider/" + name + "/key" }
@@ -349,10 +368,19 @@ func (h *Hub) AddProvider(ctx context.Context, cfg provider.Config, apiKey strin
 	if err := store.PutJSON(ctx, h.opts.Store, "provider/"+cfg.Name, cfg); err != nil {
 		return nil, err
 	}
+	if cfg.Kind.Subscription() {
+		// Added on purpose: auto-detection may offer it again later.
+		_ = h.opts.Store.Delete(ctx, removedKey(cfg.Kind))
+	}
 	h.mu.Lock()
 	h.clients[cfg.Name] = c
 	h.mu.Unlock()
 	prepare(c)
+	defer func() {
+		h.mu.Lock()
+		h.probeLaterLocked(c)
+		h.mu.Unlock()
+	}()
 	var added []omnillm.ModelInfo
 	for _, id := range ids {
 		// Re-adding a provider (a new key) keeps each model's settings:
@@ -397,22 +425,33 @@ func (h *Hub) RemoveProvider(ctx context.Context, name string) error {
 	h.mu.Lock()
 	delete(h.clients, name)
 	h.mu.Unlock()
+	if k := provider.Kind(name); k.Subscription() {
+		// The owner removed it: auto-detection must not bring it back.
+		_ = store.PutJSON(ctx, h.opts.Store, removedKey(k), true)
+	}
 	return nil
 }
 
 // Providers lists connected providers without their keys.
 func (h *Hub) Providers(ctx context.Context) ([]ProviderInfo, error) {
 	h.mu.Lock()
-	var cfgs []provider.Config
+	var clients []*provider.Client
 	for _, c := range h.clients {
-		cfgs = append(cfgs, c.Config())
+		clients = append(clients, c)
 	}
 	h.mu.Unlock()
-	sort.Slice(cfgs, func(i, j int) bool { return cfgs[i].Name < cfgs[j].Name })
+	sort.Slice(clients, func(i, j int) bool { return clients[i].Config().Name < clients[j].Config().Name })
 	var out []ProviderInfo
-	for _, c := range cfgs {
+	for _, cl := range clients {
+		c := cl.Config()
 		pi := ProviderInfo{Name: c.Name, Kind: c.Kind, BaseURL: c.BaseURL, Local: c.Local(),
 			Subscription: c.Kind.Subscription(), DisplayName: c.Name}
+		if p, at := cl.Problem(); p != "" {
+			pi.Problem = p
+			if p == provider.ProblemLimit {
+				pi.ResetsAt = at.Unix()
+			}
+		}
 		if c.Kind.Subscription() {
 			pi.DisplayName = provider.DisplayName(c.Kind)
 		}
@@ -543,11 +582,15 @@ func (h *Hub) info(m Model) omnillm.ModelInfo {
 	if c != nil && c.Config().Local() {
 		loc = omnillm.Local
 	}
-	// Screens add their own word for "subscription" (in the person's
-	// language); names stored by v0.2.0-alpha.1 carried it in English.
-	name := strings.TrimSuffix(strings.TrimSuffix(m.DisplayName, " (subscription)"), " (ChatGPT subscription)")
-	if name != m.DisplayName && strings.HasPrefix(name, "Codex") {
-		name = "Codex (ChatGPT)"
+	name := m.DisplayName
+	switch provider.Kind(m.Provider) {
+	case provider.ClaudeCode:
+		// An alias follows the newest model; until a call (or the
+		// weekly probe) reports which one, say so.
+		name = subscriptionModelName(provider.ClaudeCode, m.Upstream) + pick(h.opts.Lang, "（最新版）", " (latest)")
+	case provider.Codex:
+		// Codex's replies do not name their model.
+		name = pick(h.opts.Lang, "ChatGPT（Codex）", "ChatGPT (Codex)")
 	}
 	// The version the provider last said it answered with ("Claude Opus"
 	// behind the alias "opus" is "Claude Opus 5.5" today).
@@ -564,15 +607,26 @@ func (h *Hub) info(m Model) omnillm.ModelInfo {
 // model list shows the version after a restart too.
 func (h *Hub) noteModel(id, exact string) {
 	name := provider.PrettyModel(exact)
+	now := h.opts.Now()
 	h.mu.Lock()
 	same := h.resolved[id] == name
 	if h.resolved == nil {
 		h.resolved = map[string]string{}
 	}
+	if h.seen == nil {
+		h.seen = map[string]time.Time{}
+	}
 	h.resolved[id] = name
+	// When it was last confirmed decides whether the weekly probe asks;
+	// kept at most once a day, not on every call.
+	keepSeen := !same || now.Sub(h.seen[id]) > 24*time.Hour
+	h.seen[id] = now
 	h.mu.Unlock()
 	if !same {
 		_ = store.PutJSON(context.Background(), h.opts.Store, "resolved/"+id, name)
+	}
+	if keepSeen {
+		_ = store.PutJSON(context.Background(), h.opts.Store, "seen/"+id, now)
 	}
 }
 
@@ -587,6 +641,16 @@ func (h *Hub) loadResolved(ctx context.Context) {
 		var n string
 		if store.GetJSON(ctx, h.opts.Store, k, &n) == nil {
 			h.resolved[strings.TrimPrefix(k, "resolved/")] = n
+		}
+	}
+	if h.seen == nil {
+		h.seen = map[string]time.Time{}
+	}
+	keys, _ = h.opts.Store.List(ctx, "seen/")
+	for _, k := range keys {
+		var t time.Time
+		if store.GetJSON(ctx, h.opts.Store, k, &t) == nil {
+			h.seen[strings.TrimPrefix(k, "seen/")] = t
 		}
 	}
 }

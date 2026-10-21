@@ -345,3 +345,22 @@ func TestIdleStreamFreesItsSlot(t *testing.T) {
 		t.Fatalf("stalled upstream: err=%v after %s", err, time.Since(start))
 	}
 }
+
+func TestContextTooLongIsNamed(t *testing.T) {
+	for _, body := range []string{
+		`{"error":{"message":"This model's maximum context length is 128000 tokens.","code":"context_length_exceeded"}}`,
+		`{"type":"error","error":{"type":"invalid_request_error","message":"prompt is too long: 210000 tokens > 200000 maximum"}}`,
+	} {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(400)
+			io.WriteString(w, body)
+		}))
+		c := client(t, OpenAI, srv.URL)
+		_, err := c.Stream(context.Background(), "gpt-4o", req("x"), Credential{Key: sentinelKey})
+		srv.Close()
+		e := omnillm.AsError(err)
+		if e.Msg != omnillm.MsgContextTooLong || omnillm.Describe("zh", err) != "这段对话太长，GPT-4o 装不下了。开一个新对话再问。" {
+			t.Fatalf("%v %q", err, omnillm.Describe("zh", err))
+		}
+	}
+}

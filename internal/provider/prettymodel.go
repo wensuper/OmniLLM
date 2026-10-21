@@ -29,3 +29,31 @@ func PrettyModel(id string) string {
 	}
 	return id
 }
+
+// modelName names the model a call went to, for a sentence such as "this
+// chat is too long for Claude Sonnet". Subscription aliases follow the
+// newest model, so they are named by family.
+func modelName(k Kind, upstream string) string {
+	switch {
+	case k == Codex:
+		return "ChatGPT"
+	case k == ClaudeCode && upstream != "" && upstream != "default":
+		return "Claude " + strings.ToUpper(upstream[:1]) + upstream[1:]
+	case upstream == "":
+		return string(k)
+	}
+	return PrettyModel(upstream)
+}
+
+// tooLong recognises a provider saying the conversation does not fit the
+// model's context: OpenAI's "maximum context length" and
+// "context_length_exceeded", Anthropic's and Claude Code's "prompt is too
+// long", Codex's "exceeds the context window".
+func tooLong(lower string) bool {
+	for _, w := range []string{"context_length", "context length", "context window", "maximum context", "too long", "too many tokens"} {
+		if strings.Contains(lower, w) {
+			return true
+		}
+	}
+	return false
+}

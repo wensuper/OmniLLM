@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	omnillm "github.com/wensuper/OmniLLM"
 	"github.com/wensuper/OmniLLM/device"
 	"github.com/wensuper/OmniLLM/hub"
 	"github.com/wensuper/OmniLLM/internal/provider"
@@ -393,7 +394,7 @@ func TestPairingThroughTheConsole(t *testing.T) {
 	if code, _ := r.api(t, "POST", "/console/api/pair/decide", `{"id":"nope","yes":true}`); code != 404 {
 		t.Fatal(code)
 	}
-	if code, _ := r.api(t, "POST", "/console/api/pair/decide", `{"id":"`+id+`","yes":true}`); code != 200 {
+	if code, _ := r.api(t, "POST", "/console/api/pair/decide", `{"id":"`+id+`","yes":true,"name":"Living room"}`); code != 200 {
 		t.Fatal(code)
 	}
 	if err := <-devErr; err != nil {
@@ -413,7 +414,32 @@ func TestPairingThroughTheConsole(t *testing.T) {
 	if devs, _ := status["devices"].([]any); len(devs) != 1 {
 		t.Fatalf("devices %v", status["devices"])
 	}
-	devID := status["devices"].([]any)[0].(map[string]any)["ID"].(string)
+	dev0 := status["devices"].([]any)[0].(map[string]any)
+	devID := dev0["ID"].(string)
+	// The name the owner typed while confirming.
+	if dev0["Name"] != "Living room" || dev0["Online"] != false {
+		t.Fatalf("device %v", dev0)
+	}
+	// Models it may use: one, an unknown one (refused), then all again.
+	if code, out := r.api(t, "POST", "/console/api/devices/update", `{"id":"`+devID+`","models":["fake/m1"]}`); code != 200 || fmt.Sprint(out["models"]) != "[fake/m1]" {
+		t.Fatal(code, out)
+	}
+	if code, _ := r.api(t, "POST", "/console/api/devices/update", `{"id":"`+devID+`","models":["fake/zzz"]}`); code == 200 {
+		t.Fatal("an unknown model was accepted")
+	}
+	if code, out := r.api(t, "POST", "/console/api/devices/update", `{"id":"`+devID+`","models":[],"paused":true}`); code != 200 || fmt.Sprint(out["models"]) != "[]" || out["paused"] != true {
+		t.Fatal(code, out)
+	}
+	_, status = r.api(t, "GET", "/console/api/status?range=week", "")
+	if d := status["devices"].([]any)[0].(map[string]any); d["Paused"] != true {
+		t.Fatalf("pause not in status: %v", d)
+	}
+	if ms := status["models"].([]any); len(ms) == 0 || ms[0].(map[string]any)["group"] != "key" {
+		t.Fatalf("models without their group: %v", ms)
+	}
+	if _, ok := status["model_usage"].([]any); !ok {
+		t.Fatalf("no model usage: %v", status["model_usage"])
+	}
 	// Rename it and change its daily limit: a number, no limit, and a bad one.
 	if code, out := r.api(t, "POST", "/console/api/devices/update", `{"id":"`+devID+`","name":"  Kid's iPad ","budget_usd":2.5}`); code != 200 || out["name"] != "Kid's iPad" || out["budget_micro_usd"] != 2.5e6 {
 		t.Fatal(code, out)
@@ -584,5 +610,15 @@ func TestEveryStringInBothLanguages(t *testing.T) {
 		if !zh[k[1]] || !en[k[1]] {
 			t.Errorf("%s is shown but has no text", k[1])
 		}
+	}
+}
+
+// A device that went away while the owner was asked is not "refused".
+func TestPairReasonDeviceLeft(t *testing.T) {
+	if got := pairReason(hub.ErrPairingDeviceLeft); got != "left" {
+		t.Fatalf("device left: %q", got)
+	}
+	if got := pairReason(&omnillm.Error{Code: omnillm.CodePairingDenied, Msg: omnillm.MsgPairingDenied}); got != "denied" {
+		t.Fatalf("denied: %q", got)
 	}
 }

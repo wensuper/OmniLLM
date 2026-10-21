@@ -3,6 +3,7 @@ package egress
 import (
 	"context"
 	"errors"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -230,5 +231,30 @@ func TestDoubleReleaseIsHarmless(t *testing.T) {
 	r(OK, 0)
 	if l.lanes["p"].inUse != 0 {
 		t.Fatalf("inUse %d", l.lanes["p"].inUse)
+	}
+}
+
+func TestSubscriptionLimitCooldownKeepsItsMessage(t *testing.T) {
+	l := fast()
+	rel, _ := l.Acquire(context.Background(), "claude-code", omnillm.Interactive)
+	rel(LimitReached, 3*time.Hour)
+	_, err := l.Acquire(context.Background(), "claude-code", omnillm.Interactive)
+	e := omnillm.AsError(err)
+	if e.Msg != omnillm.MsgSubscriptionLimit || len(e.Args) != 1 || e.Args[0] != "claude-code" {
+		t.Fatalf("got %+v", e)
+	}
+	// The reported reset is kept, not cut to MaxCooldown.
+	if e.RetryAfter < 2*time.Hour {
+		t.Fatalf("RetryAfter %s", e.RetryAfter)
+	}
+	if !strings.Contains(omnillm.Describe("en", err), "usage limit") {
+		t.Fatal(omnillm.Describe("en", err))
+	}
+	// A later plain 429 says so again.
+	l2 := fast()
+	r2, _ := l2.Acquire(context.Background(), "p", omnillm.Interactive)
+	r2(RateLimited, time.Minute)
+	if _, err := l2.Acquire(context.Background(), "p", omnillm.Interactive); omnillm.AsError(err).Msg != omnillm.MsgBusyUpstream {
+		t.Fatal(err)
 	}
 }
