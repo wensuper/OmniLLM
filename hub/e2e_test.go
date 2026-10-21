@@ -346,7 +346,9 @@ func TestPairingCodeIsSingleUse(t *testing.T) {
 	if _, err := device.Pair(ctx, device.Options{Secrets: secret.NewMemory()}, p.Code, "one", func(s string) { codes <- s }); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := device.Pair(ctx, device.Options{Secrets: secret.NewMemory()}, p.Code, "two", func(s string) { codes <- s }); err == nil {
+	tctx, tcancel := context.WithTimeout(ctx, 5*time.Second) // the device retries a missing mailbox for 20 s
+	defer tcancel()
+	if _, err := device.Pair(tctx, device.Options{Secrets: secret.NewMemory()}, p.Code, "two", func(s string) { codes <- s }); err == nil {
 		t.Fatal("a pairing code worked twice")
 	}
 	if devs, _ := e.hub.Devices(ctx); len(devs) != 1 {
@@ -403,7 +405,11 @@ func TestStolenMailboxSecretWithoutDeviceKey(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer d.Close()
-	if _, _, err := ask(ctx, d, "fake/m1", "hello", omnillm.Interactive); err == nil {
+	// Failing fast is not the point here (the device keeps retrying); 5 s
+	// is enough to see that nothing comes back.
+	actx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	if _, _, err := ask(actx, d, "fake/m1", "hello", omnillm.Interactive); err == nil {
 		t.Fatal("a device without its private key got an answer")
 	}
 	if e.fake.calls.Load() != 0 {

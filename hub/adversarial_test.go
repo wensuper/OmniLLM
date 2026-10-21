@@ -212,7 +212,9 @@ func TestPairingExpires(t *testing.T) {
 	if _, err := p.Wait(ctx); err == nil {
 		t.Fatal("pairing should expire")
 	}
-	if _, err := device.Pair(ctx, device.Options{Secrets: secret.NewMemory()}, p.Code, "late", nil); err == nil || asked.Load() {
+	lctx, cancel := context.WithTimeout(ctx, 5*time.Second) // the device retries a missing mailbox for 20 s
+	defer cancel()
+	if _, err := device.Pair(lctx, device.Options{Secrets: secret.NewMemory()}, p.Code, "late", nil); err == nil || asked.Load() {
 		t.Fatalf("expired code worked: %v asked=%v", err, asked.Load())
 	}
 }
@@ -274,7 +276,9 @@ func TestTamperingRelayGetsNothingThrough(t *testing.T) {
 	e.tap.mu.Unlock()
 	tamper.Store(true)
 	defer tamper.Store(false)
-	_, _, err := ask(ctx, d, "fake/m1", sentinelPrompt, omnillm.Interactive)
+	actx, cancel := context.WithTimeout(ctx, 5*time.Second) // the device keeps retrying; 5 s shows nothing gets through
+	defer cancel()
+	_, _, err := ask(actx, d, "fake/m1", sentinelPrompt, omnillm.Interactive)
 	if err == nil {
 		t.Fatal("a tampered request was answered")
 	}
