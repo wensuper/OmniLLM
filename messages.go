@@ -2,6 +2,7 @@ package omnillm
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -70,44 +71,147 @@ var texts = map[string][2]string{ // zh, en
 	msgBadCaller:         {"调用方类型不对。", "Unknown caller type."},
 	msgInternal:          {"出了点内部问题，请稍后再试；反复出现请告诉我们。", "Something went wrong inside. Try again later; tell us if it keeps happening."},
 	MsgUnsupportedFormat: {"这个模型不支持所要求的结构化输出格式，请改用普通文本。", "This model does not support the requested structured output. Use plain text instead."},
-	MsgInvalidToken:      {"令牌缺失、无效或已被移除。请在主机上重新添加这个应用。", "The token is missing, invalid or removed. Add this app again on the host."},
-	MsgModelNotAllowed:   {"这个设备或应用不允许使用这个模型。可以在主机上调整它能用的模型。", "This device or app may not use this model. You can change its models on the host."},
-	MsgHumanOnly:         {"这个模型只能人手动对话时使用，后台程序不能用，以免账号因自动化使用被封。", "This model is for people in a conversation only, not background programs, so the account is not banned for automated use."},
-	MsgUnknownModel:      {"主机上没有这个模型。可以在主机上查看已接入的模型。", "The host has no such model. Check the connected models on the host."},
-	MsgBusyQueue:         {"主机正忙，排队已满，请稍后自动重试。", "The host is busy and its queue is full. It will be retried shortly."},
-	MsgBusyUpstream:      {"%s 让我们稍等，大约 %s 后再试。", "%s asked us to wait. Try again in about %s."},
-	MsgBreakerOpen:       {"%s 最近连续出错，已暂停一会儿，大约 %s 后自动恢复。", "%s kept failing, so calls are paused. They resume in about %s."},
-	MsgBudgetDevice:      {"今天的额度用完了，明天恢复，或在主机上调高。", "Today's budget is used up. It resets tomorrow, or raise it on the host."},
-	MsgBudgetGlobal:      {"主机今天的总额度用完了，明天恢复，或在主机上调高。", "The host's total budget for today is used up. It resets tomorrow, or raise it on the host."},
-	MsgHubOffline:        {"主机现在连不上，可能在睡眠或断网。唤醒后会自动恢复。", "The host can't be reached right now. It may be asleep or offline, and will reconnect when it wakes."},
-	MsgUpstream:          {"模型服务出错了，请稍后再试。", "The model service returned an error. Try again later."},
-	MsgCredentialBad:     {"%s 的 Key（末 4 位 %s）不可用：可能已失效或余额不足。请在主机上更换。", "The %s key (ending %s) does not work: it may be revoked or out of credit. Replace it on the host."},
-	MsgCredentialMissing: {"主机上还没有接入 %s。请先在主机上添加它的 API Key。", "%s is not connected on the host yet. Add its API key on the host first."},
-	MsgRegionChanged:     {"主机所在地区变了，为防止账号被判异常，已暂停调用。请在主机上确认继续。", "The host's region changed. To keep the account safe, calls are paused. Confirm on the host to continue."},
-	MsgRegionUnsupported: {"%s 不支持主机现在所在的地区，所以没有发出请求。", "%s does not serve the host's current region, so nothing was sent."},
-	MsgDeviceRevoked:     {"这台设备已被移除。如需继续使用，请在主机上重新添加。", "This device was removed. Add it again on the host to keep using it."},
-	MsgPairingExpired:    {"这个配对码已过期或已用过，请在主机上重新生成。", "This pairing code has expired or was already used. Make a new one on the host."},
-	MsgPairingDenied:     {"主机上没有确认这台设备，配对已取消。", "The host did not confirm this device, so pairing was cancelled."},
-	MsgPairingFailed:     {"配对没有成功，请在主机上重新生成配对码再试。", "Pairing failed. Make a new pairing code on the host and try again."},
-	MsgPairingDamaged:    {"配对文字不完整或被改动了，请在主机上重新完整复制一次。", "The pairing text is incomplete or altered. Copy it again, in full, from the host."},
-	MsgNotPairing:        {"这不是 OmniLLM 的配对文字。请从主机控制台的“添加设备”里复制。", "This is not an OmniLLM pairing text. Copy it from Add device in the host's console."},
-	MsgToolNotAllowed:    {"这个工具不允许从别的设备调用。可以在主机上调整。", "This tool may not be called from another device. You can change that on the host."},
+	MsgInvalidToken:      {"令牌缺失、无效或已被移除。在你的 Mac 上重新添加这个应用。", "The token is missing, invalid or removed. Add this app again on your Mac."},
+	MsgModelNotAllowed:   {"这台设备或这个应用不允许用这个模型。可以在你的 Mac 上调整它能用的模型。", "This device or app may not use this model. You can change its models on your Mac."},
+	MsgHumanOnly:         {"这个模型只能人手动对话时用，后台程序不能用，以免账号因自动化使用被封。", "This model is for people in a conversation only, not background programs, so the account is not banned for automated use."},
+	MsgUnknownModel:      {"你的 Mac 上没有这个模型。可以在 Mac 的控制台“模型”里查看已接入的模型。", "Your Mac has no such model. See the connected models under Models in the console on your Mac."},
+	MsgBusyQueue:         {"你的 Mac 正忙，过几秒再发一次。", "Your Mac is busy; send again in a few seconds."},
+	MsgBusyUpstream:      {"%s 让我们稍等，%s后再试。", "%s asked us to wait. Try again in %s."},
+	MsgBreakerOpen:       {"%s 最近连续出错，已暂停一会儿，%s后自动恢复。", "%s kept failing, so calls are paused. They resume in %s."},
+	MsgBudgetDevice:      {"每天额度今天已经用完，明天恢复，或在你的 Mac 上调高。", "The daily limit is used up for today. It resets tomorrow, or raise it on your Mac."},
+	MsgBudgetGlobal:      {"整台 Mac 每天总额度今天已经用完，明天恢复，或在 Mac 上调高。", "Your Mac's daily total is used up for today. It resets tomorrow, or raise it on your Mac."},
+	MsgHubOffline:        {"你的 Mac 现在连不上，可能在睡眠或断网。唤醒后会自动恢复。", "Your Mac can't be reached right now. It may be asleep or offline, and will reconnect when it wakes."},
+	MsgUpstream:          {"模型来源出错了，请稍后再试。", "The model source returned an error. Try again later."},
+	MsgCredentialBad:     {"%s 的 API Key（末 4 位 %s）不可用：可能已失效或余额不足。请在你的 Mac 上更换。", "The %s API key (ending %s) doesn't work: it may be revoked or out of credit. Replace it on your Mac."},
+	MsgCredentialMissing: {"你的 Mac 上还没有接入 %s。在 Mac 的控制台“模型”里接入它。", "%s isn't connected on your Mac. Connect it under Models in the console on your Mac."},
+	MsgRegionChanged:     {"你的 Mac 所在地区变了，为防止账号被判异常，已暂停调用。请在 Mac 上确认继续。", "Your Mac's region changed. To keep the account safe, calls are paused. Confirm on your Mac to continue."},
+	MsgRegionUnsupported: {"%s 不支持你的 Mac 现在所在的地区，所以没有发出请求。", "%s doesn't serve the region your Mac is in now, so nothing was sent."},
+	MsgDeviceRevoked:     {"这台设备已从你的 Mac 上移除。要继续用，在 Mac 上点“添加设备”重新添加。", "This device was removed from your Mac. To use it again, choose Add device on your Mac."},
+	MsgPairingExpired:    {"这个二维码已过期或已用过。在 Mac 上重新点“添加设备”。", "This code expired or was already used. Choose Add device on your Mac again."},
+	MsgPairingDenied:     {"Mac 上没有确认。如果是你本人，在 Mac 上重新点“添加设备”。", "Your Mac didn't confirm. If this is you, choose Add device on your Mac again."},
+	MsgPairingFailed:     {"这个二维码已过期或已用过。在 Mac 上重新点“添加设备”。", "This code expired or was already used. Choose Add device on your Mac again."},
+	MsgPairingDamaged:    {"配对文字不完整或被改动了。在 Mac 上重新完整复制一次。", "The pairing text is incomplete or altered. Copy it again, in full, on your Mac."},
+	MsgNotPairing:        {"这不是 OmniLLM 的配对文字。在 Mac 控制台的“添加设备”里复制。", "This isn't an OmniLLM pairing text. Copy it from Add device in the console on your Mac."},
+	MsgToolNotAllowed:    {"这个工具不允许从别的设备调用。可以在你的 Mac 上调整。", "This tool may not be called from another device. You can change that on your Mac."},
 	MsgNotFound:          {"没有找到。", "Not found."},
 	MsgBadBudget:         {"每天额度要大于 0，或者选“不设上限”。", "The daily limit must be above 0, or choose No limit."},
 	MsgBrowserRefused:    {"本机接口不接受网页发来的请求。请用程序直接调用。", "This local interface does not accept requests from web pages. Call it from a program."},
 	MsgWrongHost:         {"请用 127.0.0.1 或 localhost 访问本机接口。", "Reach the local interface as 127.0.0.1 or localhost."},
-	MsgNoChatModel:       {"本地模型里没有能对话的模型（只有向量 / 重排模型）。可以先用 ollama pull 下载一个对话模型，比如 qwen3。", "The local model server has no chat model (only embedding / rerank models). Download one first, for example: ollama pull qwen3."},
+	MsgNoChatModel:       {"本机模型里没有能对话的模型（只有向量 / 重排模型）。可以先用 ollama pull 下载一个对话模型，比如 qwen3。", "The local models include no chat model (only embedding / rerank models). Download one first, for example: ollama pull qwen3."},
 	MsgLocalToken:        {"本机接口的令牌缺失或不对。令牌在这台设备 OmniLLM 数据文件夹里的 device/local.token 文件中（只有本用户能读）。", "The local token is missing or wrong. It is in device/local.token inside OmniLLM's data folder on this device (readable only by you)."},
-	MsgRelayUnavailable:  {"连接服务暂时不可用，稍后会自动重连。", "The connection service is unavailable. It will reconnect automatically."},
-	MsgCLILogin:          {"主机上的 %s 没有登录，或者登录已失效。请在主机上打开终端运行 %s，登录后再试。", "%s on the host is not logged in, or the login expired. On the host, open a terminal, run %s and log in, then try again."},
-	MsgCLINotFound:       {"主机上没有找到 %s（程序 %s）。先在主机上安装并登录它。", "%s (the %s program) is not installed on the host. Install it there and log in first."},
-	MsgCLIUnsafe:         {"主机上这个版本的 %s 关不掉工具（能运行命令或读文件），为了安全暂时不用它。请更新 OmniLLM。", "This version of %s on the host could not be kept from using tools (running commands or reading files), so OmniLLM won't use it for now. Update OmniLLM."},
+	MsgRelayUnavailable:  {"远程连接暂时不可用。检查你的 Mac 的网络后再试一次。", "Remote access is unavailable right now. Check your Mac's network, then try again."},
+	MsgCLILogin:          {"你的 Mac 上的 %s 没有登录，或者登录已失效。登录方法：%s。登录后再试。", "%s isn't logged in on your Mac, or the login expired. To log in, %s. Then try again."},
+	MsgCLINotFound:       {"要用 %s，你的 Mac 上需要先安装 %s 并登录。", "To use %s, install %s on your Mac and log in first."},
+	MsgCLIUnsafe:         {"你的 Mac 上这个版本的 %s 关不掉工具（能运行命令或读文件），为了安全暂时不用它。请更新 OmniLLM。", "This version of %s on your Mac could not be kept from using tools (running commands or reading files), so OmniLLM won't use it for now. Update OmniLLM."},
 	MsgBadImage:          {"图片不能用：只支持 PNG、JPEG、GIF、WebP，每张不超过 2 MB，每条消息最多 4 张。", "That image can't be used: PNG, JPEG, GIF or WebP only, up to 2 MB each and 4 per message."},
-	MsgNoVision:          {"这个模型看不了图片。换一个能看图的模型（比如 Claude 或 Codex），或者只发文字。", "This model can't read images. Pick one that can (Claude or Codex, for example), or send text only."},
-	MsgBusyPace:          {"为了让 %s 的用量看起来像一个人在用，请求要隔开一点。大约 %s 后再试。", "So %s's use looks like one person's, requests are spaced out. Try again in about %s."},
-	MsgSubscriptionPace:  {"这台设备用订阅模型太频繁了，超过了一个人聊天的速度。为了不让账号被当成自动化使用，约 %s 后再试，或者换一个用 API Key 的模型。", "This device is using the subscription models faster than a person chats. So the account doesn't look automated, try again in about %s, or pick a model that uses an API key."},
-	MsgSubscriptionLimit: {"%s 的订阅用量到了上限，大约 %s 后恢复。", "The %s subscription has reached its usage limit. It resets in about %s."},
+	MsgNoVision:          {"这个模型看不了图片。换一个能看图的模型，或者只发文字。", "This model can't read images. Pick another model, or send text only."},
+	MsgBusyPace:          {"为了让 %s 的用量看起来像一个人在用，请求要隔开一点。%s后再试。", "So %s's use looks like one person's, requests are spaced out. Try again in %s."},
+	MsgSubscriptionPace:  {"这台设备用订阅模型太频繁了，超过了一个人聊天的速度。为了不让账号被当成自动化使用，%s后再试，或者换一个用 API Key 或本机的模型。", "This device is using the subscription models faster than a person chats. So the account doesn't look automated, try again in %s, or pick a model that uses an API key or runs on your Mac."},
+	MsgSubscriptionLimit: {"%s 的用量到了上限，%s后恢复。现在可以换一个用 API Key 或本机的模型。", "%s has reached its usage limit. It resets in %s. Meanwhile, pick a model that uses an API key or runs on your Mac."},
 }
+
+// slot says what a placeholder holds, so Describe can render it in the
+// reader's language instead of passing on whatever the hub wrote.
+type slot int
+
+const (
+	slotPlain    slot = iota // shown as given
+	slotProvider             // a provider name or kind ("claude-code", "openai")
+	slotProgram              // the program a subscription runs ("Claude Code")
+	slotLogin                // how to log that program in again
+	slotWait                 // a wait, taken from RetryAfter
+)
+
+// slots lists the placeholders that need rendering, by position. Program
+// and login slots are worked out from the provider kind in Args; a wait
+// slot comes from RetryAfter (an older hub also wrote it, in English, into
+// Args at the same position, which is used only when RetryAfter is 0).
+var slots = map[string][]slot{
+	MsgBusyUpstream:      {slotProvider, slotWait},
+	MsgBreakerOpen:       {slotProvider, slotWait},
+	MsgBusyPace:          {slotProvider, slotWait},
+	MsgSubscriptionPace:  {slotWait},
+	MsgSubscriptionLimit: {slotProvider, slotWait},
+	MsgCredentialBad:     {slotProvider, slotPlain},
+	MsgCredentialMissing: {slotProvider},
+	MsgRegionUnsupported: {slotProvider},
+	MsgCLILogin:          {slotProvider, slotLogin},
+	MsgCLINotFound:       {slotProvider, slotProgram},
+	MsgCLIUnsafe:         {slotProgram},
+}
+
+// providerNames are how people know a provider, zh and en. Subscription
+// programs are named by the subscription the person pays for. The old
+// display names are here too, for errors from an older hub.
+var providerNames = map[string][2]string{
+	"claude-code":                  {"Claude 订阅", "your Claude subscription"},
+	"codex":                        {"ChatGPT 订阅", "your ChatGPT subscription"},
+	"Claude (subscription)":        {"Claude 订阅", "your Claude subscription"},
+	"ChatGPT Codex (subscription)": {"ChatGPT 订阅", "your ChatGPT subscription"},
+	"openai":                       {"OpenAI", "OpenAI"},
+	"anthropic":                    {"Anthropic", "Anthropic"},
+	"ollama":                       {"Ollama", "Ollama"},
+}
+
+// subscriptionOf finds which subscription program args are about:
+// "claude", "codex" or "".
+func subscriptionOf(args []string) string {
+	for _, a := range args {
+		switch a {
+		case "claude-code", "claude", "Claude (subscription)":
+			return "claude"
+		case "codex", "ChatGPT Codex (subscription)":
+			return "codex"
+		}
+	}
+	return ""
+}
+
+func isZh(lang string) bool { return strings.HasPrefix(strings.ToLower(lang), "zh") }
+
+func pick(lang, zh, en string) string {
+	if isZh(lang) {
+		return zh
+	}
+	return en
+}
+
+// render returns the value for one slot in lang.
+func (e *Error) render(lang string, s slot, i int) string {
+	raw := "?"
+	if i < len(e.Args) && e.Args[i] != "" {
+		raw = e.Args[i]
+	}
+	switch s {
+	case slotProvider:
+		if n, ok := providerNames[raw]; ok {
+			return pick(lang, n[0], n[1])
+		}
+	case slotProgram:
+		switch subscriptionOf(e.Args) {
+		case "claude":
+			return "Claude Code"
+		case "codex":
+			return "Codex"
+		}
+	case slotLogin:
+		switch subscriptionOf(e.Args) {
+		case "claude":
+			return pick(lang, "在 Mac 的终端运行 claude，然后输入 /login", "in Terminal on your Mac run claude, then type /login")
+		case "codex":
+			return pick(lang, "在 Mac 的终端运行 codex login", "in Terminal on your Mac run codex login")
+		}
+	case slotWait:
+		if e.RetryAfter > 0 {
+			return RoundDuration(lang, e.RetryAfter)
+		}
+	}
+	return raw
+}
+
+// hanSpace is a space between two Chinese characters, left when a
+// provider name such as "Claude 订阅" fills "%s 的".
+var hanSpace = regexp.MustCompile(`(\p{Han}) (\p{Han})`)
 
 // Text renders a message key in lang ("zh…" or anything else for English),
 // filling %s placeholders from args.
@@ -117,14 +221,18 @@ func Text(lang, key string, args ...any) string {
 		t = texts[msgInternal]
 		args = nil
 	}
-	s := t[1]
-	if strings.HasPrefix(strings.ToLower(lang), "zh") {
-		s = t[0]
+	s := pick(lang, t[0], t[1])
+	if len(args) == 0 {
+		return s
 	}
-	if len(args) > 0 {
-		return fmt.Sprintf(s, args...)
+	out := fmt.Sprintf(s, args...)
+	if isZh(lang) {
+		return hanSpace.ReplaceAllString(out, "$1$2")
 	}
-	return s
+	if strings.HasPrefix(s, "%s") && strings.HasPrefix(out, "your ") {
+		out = "Y" + out[1:] // "your Claude subscription …" opens a sentence
+	}
+	return out
 }
 
 // Describe is the person-facing sentence for err in lang.
@@ -137,22 +245,24 @@ func Describe(lang string, err error) string {
 	if key == "" {
 		key = defaultMsg(e.Code)
 	}
-	return Text(lang, key, e.args()...)
+	return Text(lang, key, e.args(lang, key)...)
 }
 
-// args returns the placeholder values, padded so a message never renders
-// "%!s(MISSING)".
-func (e *Error) args() []any {
-	n := strings.Count(texts[e.Msg][1], "%s")
+// args returns the placeholder values rendered for lang, padded so a
+// message never renders "%!s(MISSING)".
+func (e *Error) args(lang, key string) []any {
+	n := strings.Count(texts[key][1], "%s")
 	if n == 0 {
 		return nil
 	}
+	kinds := slots[key]
 	out := make([]any, n)
 	for i := range out {
-		out[i] = "?"
-		if i < len(e.Args) {
-			out[i] = e.Args[i]
+		s := slotPlain
+		if i < len(kinds) {
+			s = kinds[i]
 		}
+		out[i] = e.render(lang, s, i)
 	}
 	return out
 }
@@ -185,22 +295,26 @@ func defaultMsg(c Code) string {
 	return msgInternal
 }
 
-// RoundDuration renders a wait for people ("30 秒" / "30 seconds").
+// RoundDuration renders a wait for people, rounded to what a person plans
+// by ("约 30 秒" / "about 30 seconds", "约 20 分钟", "约 3 小时").
 func RoundDuration(lang string, d time.Duration) string {
-	zh := strings.HasPrefix(strings.ToLower(lang), "zh")
+	zh := isZh(lang)
 	s := int(d.Round(time.Second) / time.Second)
 	if s < 1 {
 		s = 1
 	}
-	if s < 120 {
-		if zh {
-			return fmt.Sprintf("%d 秒", s)
-		}
-		return fmt.Sprintf("%d seconds", s)
+	n, zu, en := s, "秒", "second"
+	switch {
+	case s >= 90*60:
+		n, zu, en = (s+1800)/3600, "小时", "hour"
+	case s >= 90:
+		n, zu, en = (s+59)/60, "分钟", "minute"
 	}
-	m := (s + 59) / 60
 	if zh {
-		return fmt.Sprintf("%d 分钟", m)
+		return fmt.Sprintf("约 %d %s", n, zu)
 	}
-	return fmt.Sprintf("%d minutes", m)
+	if n != 1 {
+		en += "s"
+	}
+	return fmt.Sprintf("about %d %s", n, en)
 }

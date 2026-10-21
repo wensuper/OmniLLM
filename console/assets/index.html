@@ -20,53 +20,71 @@
 </header>
 
 <main id="app">
+  <!-- The hub stopped while this page was open (its calls no longer answer). -->
+  <div id="hub-down" class="banner" role="alert" data-t="hubDown" hidden></div>
+
   <section id="loading" class="panel"><p data-t="loading"></p></section>
 
   <section id="login-needed" class="panel" hidden>
     <h1 data-t="loginTitle"></h1>
     <p data-t="loginBody"></p>
-    <pre class="cmd">omnillm open</pre>
+    <p class="muted" data-t="loginOr"></p>
+    <div class="codebox"><pre class="cmd">omnillm open</pre><button type="button" class="secondary small-btn copy" data-copy="omnillm open" data-t="copy"></button></div>
   </section>
 
   <!-- First-run wizard -->
   <section id="wizard" class="panel" hidden>
     <ol class="steps" aria-label="steps">
-      <li id="st1" data-t="step1"></li>
-      <li id="st2" data-t="step2"></li>
-      <li id="st3" data-t="step3"></li>
+      <li id="st1"><span data-t="step1"></span></li>
+      <li id="st2"><span data-t="step2"></span></li>
+      <li id="st3"><span data-t="step3"></span></li>
     </ol>
 
     <div id="w1">
       <h1 data-t="w1Title"></h1>
-      <p class="muted" data-t="w1Body"></p>
       <div id="ollama-box" class="choice" hidden>
         <h2 data-t="ollamaFound"></h2>
         <p class="muted" id="ollama-models"></p>
         <button type="button" id="ollama-use" class="primary" data-t="ollamaUse"></button>
       </div>
-      <form id="key-form" class="choice" autocomplete="off">
-        <h2 data-t="keyTitle"></h2>
-        <label for="kind" data-t="provider"></label>
-        <select id="kind">
-          <option value="anthropic">Anthropic (Claude)</option>
-          <option value="openai">OpenAI</option>
-          <option value="openai-compatible" data-t="otherCompatible"></option>
-        </select>
-        <div id="compat" hidden>
-          <label for="cname" data-t="cname"></label><input id="cname" maxlength="40" spellcheck="false">
-          <label for="curl" data-t="curl"></label><input id="curl" placeholder="https://" spellcheck="false">
-        </div>
-        <label for="key" data-t="key"></label>
-        <input id="key" type="password" autocomplete="off" spellcheck="false" required>
-        <p class="hint" data-t="keyHint"></p>
-        <button type="submit" class="primary" data-t="connect"></button>
-      </form>
+      <!-- Three ways in, each with its own steps; subscriptions are found by
+           themselves once logged in ("Check again"). -->
+      <div class="choice">
+        <h2 data-t="w1Claude"></h2>
+        <ol class="howto"><li data-t="w1Claude1"></li><li data-t="w1Claude2" data-rich></li></ol>
+      </div>
+      <div class="choice">
+        <h2 data-t="w1Codex"></h2>
+        <ol class="howto"><li data-t="w1Codex1"></li><li data-t="w1Codex2" data-rich></li></ol>
+      </div>
+      <details class="choice key-choice">
+        <summary data-t="w1Key"></summary>
+        <form id="key-form" autocomplete="off">
+          <label for="kind" data-t="source"></label>
+          <select id="kind">
+            <option value="anthropic">Anthropic (Claude)</option>
+            <option value="openai">OpenAI</option>
+            <option value="openai-compatible" data-t="otherCompatible"></option>
+          </select>
+          <div id="compat" hidden>
+            <label for="cname" data-t="cname"></label><input id="cname" maxlength="40" spellcheck="false">
+            <label for="curl" data-t="curl"></label><input id="curl" placeholder="https://" spellcheck="false">
+          </div>
+          <label for="key" data-t="key"></label>
+          <input id="key" type="password" autocomplete="off" spellcheck="false" required>
+          <p class="hint" data-t="keyHint"></p>
+          <button type="submit" class="primary" data-t="connect"></button>
+        </form>
+      </details>
+      <p class="muted free-line" data-t="w1Free"></p>
+      <button type="button" id="recheck" class="secondary" data-t="recheck"></button>
     </div>
 
     <div id="w2" hidden>
       <h1 data-t="w2Title"></h1>
       <div id="pair-area"></div>
-      <p class="muted"><button type="button" class="link" id="skip-pair" data-t="skipPair"></button></p>
+      <!-- Moved under the QR caption by startPair. -->
+      <p class="muted skip-line" id="skip-line"><button type="button" class="link" id="skip-pair" data-t="skipPair"></button></p>
     </div>
 
     <div id="w3" hidden>
@@ -110,7 +128,7 @@
       <p class="muted" data-t="modelsBody"></p>
       <table><thead><tr><th data-t="model"></th><th data-t="where"></th><th data-t="humanOnly"></th></tr></thead><tbody id="models"></tbody></table>
       <h3 data-t="providers"></h3>
-      <table><thead><tr><th data-t="provider"></th><th data-t="keyLast4"></th><th></th></tr></thead><tbody id="providers"></tbody></table>
+      <table><thead><tr><th data-t="source"></th><th data-t="keyLast4"></th><th></th></tr></thead><tbody id="providers"></tbody></table>
     </div>
 
     <div class="tab" id="tab-apps" hidden>
@@ -124,7 +142,7 @@
     <div class="tab" id="tab-usage" hidden>
       <h2 data-t="usage"></h2>
       <p class="muted" data-t="usageBody"></p>
-      <table><thead><tr><th data-t="who"></th><th data-t="calls" class="num"></th><th data-t="spend" class="num"></th><th data-t="tokens" class="num narrow-hide"></th></tr></thead><tbody id="usage"></tbody><tfoot id="usage-total"></tfoot></table>
+      <table><thead><tr><th data-t="who"></th><th data-t="calls" class="num"></th><th data-t="spend" class="num"></th><th data-t="tokens" data-tip="tokensTip" class="num narrow-hide"></th></tr></thead><tbody id="usage"></tbody><tfoot id="usage-total"></tfoot></table>
       <p class="empty" id="usage-empty" data-t="usageEmpty" hidden></p>
     </div>
   </section>

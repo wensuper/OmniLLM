@@ -77,11 +77,11 @@ func pickModel(ms []omnillm.ModelInfo, person bool) string {
 		}
 	}
 	if !person {
-		die(say(t("在脚本里（没有终端）只能用 API Key 或本地模型；主机上只有订阅模型，它们只给人在终端里对话用。",
-			"From a script (no terminal) only API-key or local models can be used; the hub has only subscription models, which are for a person typing in a terminal.")))
+		die(say(t("在脚本里（没有终端）只能用 API Key 或本机模型；你的 Mac 上只有订阅模型，它们只给人在终端里对话用。",
+			"From a script (no terminal) only API-key or local models can be used; your Mac has only subscription models, which are for a person typing in a terminal.")))
 	}
 	if len(ms) == 0 {
-		die(say(t("主机上还没有可用的模型。", "The hub has no models yet.")))
+		die(say(t("你的 Mac 上还没有可用的模型。", "Your Mac has no models yet.")))
 	}
 	return ms[0].ID
 }
@@ -94,7 +94,7 @@ func chatLoop(ctx context.Context, d *device.Device, model string) {
 		die(err)
 	}
 	if len(ms) == 0 {
-		die(say(t("主机上还没有可用的模型。", "The hub has no models yet.")))
+		die(say(t("你的 Mac 上还没有可用的模型。", "Your Mac has no models yet.")))
 	}
 	if model == "" {
 		model = pickModel(ms, atTerminal())

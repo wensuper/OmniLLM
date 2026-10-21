@@ -605,6 +605,43 @@ func (d *Device) models(ctx context.Context) ([]omnillm.ModelInfo, error) {
 	return env.Models, nil
 }
 
+// Leave removes this device on the hub (the person chose "remove this
+// device" here), so it doesn't linger in the owner's device list. A device
+// the hub had already removed counts as left. The caller still deletes the
+// saved pairing (Forget), whether or not the hub could be reached.
+func (d *Device) Leave(ctx context.Context) error {
+	err := d.whileOffline(ctx, func() error { return d.leave(ctx) })
+	if e := omnillm.AsError(err); e != nil && e.Msg == omnillm.MsgDeviceRevoked {
+		return nil
+	}
+	return err
+}
+
+func (d *Device) leave(ctx context.Context) error {
+	c, err := d.connect(ctx)
+	if err != nil {
+		return err
+	}
+	id, w := c.register()
+	defer c.unregister(id)
+	if err := c.send(ctx, proto.Envelope{T: proto.TDeviceLeave, ID: id}); err != nil {
+		return offline()
+	}
+	t := time.NewTimer(d.opts.AckTimeout + 5*time.Second)
+	defer t.Stop()
+	env, err := c.next(ctx, w, t.C)
+	if err != nil {
+		return err
+	}
+	switch env.T {
+	case proto.TDeviceLeft:
+		return nil
+	case proto.TChatError:
+		return wireErr(env)
+	}
+	return &omnillm.Error{Code: omnillm.CodeUpstream, Msg: omnillm.MsgUpstream}
+}
+
 // Complete sends a request to the hub and streams the reply.
 func (d *Device) Complete(ctx context.Context, req omnillm.Request) (omnillm.Stream, error) {
 	if err := req.Validate(); err != nil {

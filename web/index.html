@@ -28,15 +28,16 @@
   </section>
 
   <section id="welcome" class="screen center" hidden>
+    <p id="welcome-note" class="warn welcome-note" role="status" hidden></p>
     <!-- Brand: the name and the slogan (the brand's own words, never translated). -->
     <div class="hero"><img src="icon.svg" alt="" class="logo"><span class="hero-name">OmniLLM</span><span class="hero-sub">Your AI, Everywhere</span></div>
     <h1 data-t="welcomeTitle"></h1>
     <p class="muted" data-t="welcomeBody"></p>
     <button id="scan" class="primary" data-t="scan"></button>
-    <details class="paste">
+    <details id="paste" class="paste">
       <summary data-t="pasteInstead"></summary>
       <textarea id="paste-text" rows="3" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>
-      <button id="paste-go" class="secondary" data-t="connect"></button>
+      <button id="paste-go" class="secondary" data-t="add"></button>
     </details>
     <p id="welcome-err" class="err" role="alert"></p>
   </section>
@@ -52,32 +53,35 @@
     <h1 data-t="pairTitle"></h1>
     <div id="pair-ask" hidden>
       <p class="muted" data-t="pairAsk"></p>
-      <p id="pair-host" class="host"></p>
+      <p id="pair-host" class="muted small via"></p>
       <p id="pair-replace" class="warn" hidden></p>
-      <button id="pair-go" class="primary" data-t="connect"></button>
+      <button id="pair-go" class="primary" data-t="add"></button>
       <button id="pair-cancel" class="secondary" data-t="cancel"></button>
     </div>
     <p id="pair-status" class="muted" role="status"></p>
     <div id="sas" class="sas" hidden></div>
+    <div id="pair-wait" class="pair-wait muted small" hidden><span class="spinner sm" aria-hidden="true"></span><span data-t="pairWait"></span></div>
+    <button id="pair-mismatch" type="button" class="link small" data-t="pairMismatch" hidden></button>
     <p id="pair-err" class="err" role="alert"></p>
     <button id="pair-retry" class="secondary" data-t="back" hidden></button>
   </section>
 
   <section id="chat" class="screen chat" hidden>
     <header class="bar">
-      <button id="menu" class="icon" aria-label="Menu"><span></span></button>
+      <button id="menu" class="icon" data-ta="menu"><span></span></button>
       <!-- The dot: green while the Mac answers, grey while it can't be reached. -->
-      <div class="model-wrap"><span id="live-dot" class="live-dot" role="img"></span><select id="model" aria-label="Model"></select></div>
-      <button id="new" class="icon plus" aria-label="New chat"></button>
+      <div class="model-wrap"><span id="live-dot" class="live-dot" role="img"></span><select id="model" data-ta="model"></select></div>
+      <button id="new" class="icon plus" data-ta="newChat"></button>
     </header>
     <div id="banner" class="banner" role="status" hidden></div>
     <main id="log" class="log" aria-live="polite"></main>
+    <div class="jump-wrap"><button id="jump" type="button" class="jump" hidden></button></div>
     <div id="pending" class="pending" hidden></div>
     <form id="composer" class="composer">
       <button id="attach" class="attach" type="button" aria-label="Add image"></button>
       <input id="file" type="file" accept="image/png,image/jpeg,image/gif,image/webp,image/heic,image/heif" multiple hidden>
       <textarea id="input" rows="1" enterkeyhint="send" autocomplete="off"></textarea>
-      <button id="send" class="send" type="submit" aria-label="Send"></button>
+      <button id="send" class="send" type="submit" data-ta="send"></button>
     </form>
   </section>
 
@@ -87,12 +91,18 @@
       <h2 data-t="chats"></h2>
       <ul id="chat-list"></ul>
       <div class="drawer-foot">
+        <p class="muted small" data-t="chatsLocal"></p>
         <p id="device-line" class="muted small"></p>
         <button id="install-tip" class="link small" data-t="addHome" hidden></button>
         <button id="forget" class="link danger small" data-t="forget"></button>
       </div>
     </div>
   </aside>
+  <div id="toast" class="toast" role="status" hidden></div>
+  <section id="other-tab" class="other-tab" hidden>
+    <p data-t="otherTab"></p>
+    <button id="use-here" type="button" class="primary" data-t="useHere"></button>
+  </section>
 </div>
 <script src="wasm_exec.js"></script>
 <script src="app.js"></script>

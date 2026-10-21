@@ -197,6 +197,10 @@ type ModelInfo struct {
 	Locality    Locality `json:"locality"`
 	// HumanOnly models may not be used by Background callers.
 	HumanOnly bool `json:"human_only,omitempty"`
+	// OnHost: the model runs on the hub's own machine (a local model).
+	// For a device it is still Remote (the data leaves the device); this
+	// only lets a screen say "on your Mac".
+	OnHost bool `json:"on_host,omitempty"`
 }
 
 // Code is a stable error code. Local API status codes map 1:1 (design §6).
@@ -223,8 +227,11 @@ const (
 
 // Error is the only error type that crosses the library boundary toward
 // people or devices. Msg is a key into the message table, never upstream
-// text; Args fill its placeholders (provider names, last four characters,
-// waits). Detail is for the host's logs only, never sent to a device, and is
+// text; Args fill its placeholders (provider names or kinds, last four
+// characters). Describe renders them in the reader's language: a kind
+// becomes the name people know ("Claude 订阅" / "your Claude subscription")
+// and a wait comes from RetryAfter, so no Args hold language-specific text.
+// Detail is for the host's logs only, never sent to a device, and is
 // redacted before it is set.
 type Error struct {
 	Code       Code

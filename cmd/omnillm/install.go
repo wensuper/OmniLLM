@@ -102,7 +102,7 @@ func installCmd(args []string) {
 	}
 	st, ok := waitRunning(15 * time.Second)
 	if !ok {
-		die(say(t("主机没有启动起来。日志在 ", "The hub did not start. Its log is at ") + filepath.Join(dir, "hub.log")))
+		die(say(t("OmniLLM 没有启动起来。日志在 ", "OmniLLM did not start. Its log is at ") + filepath.Join(dir, "hub.log")))
 	}
 	if st.Providers == 0 {
 		// A local model needs no key and sends nothing off the machine.
@@ -112,7 +112,7 @@ func installCmd(args []string) {
 	st = waitRelay(st, 10*time.Second)
 	st.Service = service
 	st.Headless = headless()
-	fmt.Println(t("OmniLLM 已安装，主机在后台运行（开机自动启动）。", "OmniLLM is installed; the hub runs in the background and starts at login."))
+	fmt.Println(t("OmniLLM 已安装，在后台运行（登录时自动启动）。", "OmniLLM is installed and runs in the background; it starts at login."))
 	if !noOpen && !st.Headless {
 		if url, err := loginURL(); err == nil && openLogin(url) == nil {
 			fmt.Println(t("控制台已在浏览器里打开。", "The console is open in your browser."))
@@ -134,24 +134,46 @@ func headless() bool {
 	return os.Getenv("DISPLAY") == "" && os.Getenv("WAYLAND_DISPLAY") == ""
 }
 
+// notRunning is what a person sees when the background service is down.
+func notRunning() string {
+	return t("OmniLLM 没有运行。运行 omnillm install 重新启动（设置都在）。",
+		"OmniLLM isn't running. Run omnillm install to start it again (settings are kept).")
+}
+
+// runningLine is the first line of omnillm status.
+func runningLine(st Status) string {
+	if zh() {
+		return fmt.Sprintf("OmniLLM 在运行（%s）。模型来源 %d 个，设备 %d 台。", st.Version, st.Providers, st.Devices)
+	}
+	return fmt.Sprintf("OmniLLM is running (%s). %s, %s.", st.Version, plural(st.Providers, "model source"), plural(st.Devices, "device"))
+}
+
+// plural is "1 device" / "2 devices".
+func plural(n int, noun string) string {
+	if n != 1 {
+		noun += "s"
+	}
+	return fmt.Sprintf("%d %s", n, noun)
+}
+
 func nextStep(st Status) string {
 	switch {
 	case !st.Running:
-		return t("主机没有运行：运行 omnillm install。", "The hub is not running: run omnillm install.")
+		return notRunning()
 	case st.Providers == 0 && st.Headless:
-		return t("下一步：这台机器没有浏览器。请在这台机器的终端里亲自运行 omnillm hub provider add anthropic（或 openai、openai-compatible），然后在提示时粘贴 API Key；Key 不要发到聊天里。",
+		return t("下一步：这台机器没有浏览器。请在这台机器的终端里亲自运行 omnillm hub provider add anthropic（或 openai、openai-compatible），然后在提示时粘贴 API Key；API Key 不要发到聊天里。",
 			"Next: this machine has no browser. In this machine's terminal, run omnillm hub provider add anthropic (or openai, openai-compatible) yourself and paste the API key when asked; don't send the key in a chat.")
 	case st.Providers == 0:
-		return t("下一步：接入一个模型。用 Claude 或 ChatGPT 订阅的，在这台电脑上装好 Claude Code 或 Codex 并登录一次，再运行 omnillm status，会自动接上；也可以在控制台里粘贴 API Key（omnillm open），或安装 Ollama 用本地模型。",
-			"Next: connect a model. With a Claude or ChatGPT subscription, install Claude Code or Codex on this computer and log in once, then run omnillm status: it connects by itself. Or paste an API key in the console (omnillm open), or install Ollama for local models.")
+		return t("下一步：接入一个模型来源。用 Claude 订阅的，在这台电脑上安装 Claude Code，在终端运行 claude 并输入 /login 登录；用 ChatGPT 订阅的，安装 Codex 并运行 codex login。然后运行 omnillm status，会自动接上。也可以在控制台里粘贴 API Key（omnillm open），或安装 Ollama 用本机模型。",
+			"Next: connect a model source. With a Claude subscription, install Claude Code on this computer, run claude in Terminal and type /login; with a ChatGPT subscription, install Codex and run codex login. Then run omnillm status: it connects by itself. Or paste an API key in the console (omnillm open), or install Ollama for models that run on this computer.")
 	case !st.RelayConfigured:
-		return t("已经可以在这台电脑上使用。要让其他设备连进来，需要先配置连接服务。",
-			"Ready on this computer. To let other devices connect, a connection service must be set up first.")
+		return t("已经可以在这台电脑上用。要让其他设备连进来，需要先设置远程连接。",
+			"Ready on this computer. To let other devices connect, set up remote access first.")
 	case !st.RelayUp:
-		return t("连接服务现在连不上，手机和其他设备暂时用不了；主机会自己重连。请检查这台电脑的网络。",
-			"The connection service can't be reached right now, so phones and other devices can't connect; the hub keeps retrying. Check this computer's network.")
+		return t("远程连接断开，手机和其他设备暂时连不上；OmniLLM 会自己重连。请检查这台电脑的网络。",
+			"Remote access is down, so phones and other devices can't connect right now; OmniLLM keeps retrying. Check this computer's network.")
 	case st.Devices == 0:
-		return t("下一步：在控制台的“设备”里添加手机或其他电脑。", "Next: add a phone or another computer under Devices in the console.")
+		return t("下一步：在控制台的“设备”里点“添加设备”，添加手机或其他电脑。", "Next: under Devices in the console, choose Add device to add a phone or another computer.")
 	}
 	return t("一切正常。", "All set.")
 }
@@ -507,7 +529,7 @@ func statusCmd(args []string) {
 		fmt.Println(runnable(st.Next))
 		os.Exit(1)
 	}
-	fmt.Printf(t("主机在运行（%s）。模型提供方 %d 个，设备 %d 台。\n", "The hub is running (%s). Providers: %d, devices: %d.\n"), st.Version, st.Providers, st.Devices)
+	fmt.Println(runningLine(st))
 	fmt.Println(runnable(st.Next))
 }
 
@@ -546,10 +568,10 @@ func uninstallCmd(args []string) {
 		if os.Getenv("OMNILLM_HOME") == "" {
 			_ = os.Remove(filepath.Dir(dataDir("hub"))) // only if now empty
 		}
-		fmt.Println(t("数据和保存的 Key 已删除。提供方后台的 Key 本身没有作废，需要的话请到提供方后台作废。",
-			"Data and saved keys are deleted. The keys themselves are still valid at the providers; revoke them there if needed."))
+		fmt.Println(t("数据和保存的 API Key 已删除。API Key 本身在模型来源那边还有效，需要的话到它的网站上作废。",
+			"Data and saved API keys are deleted. The keys themselves still work at the model sources; revoke them there if needed."))
 	} else {
-		fmt.Println(t("数据和 Key 保留着；要一并删除，运行 omnillm uninstall --purge。", "Data and keys are kept; to delete them too, run omnillm uninstall --purge."))
+		fmt.Println(t("数据和 API Key 保留着；要一并删除，运行 omnillm uninstall --purge。", "Data and API keys are kept; to delete them too, run omnillm uninstall --purge."))
 	}
 }
 
@@ -583,7 +605,7 @@ func installDevice() {
 	}
 	tty, err := os.Open("/dev/tty")
 	if err != nil {
-		fmt.Println(runnable(t("下一步：运行 omnillm connect pair，粘贴主机给的配对文字。", "Next: run omnillm connect pair and paste the pairing text from the hub.")))
+		fmt.Println(runnable(t("下一步：在你的 Mac 上点“添加设备”，然后在这里运行 omnillm connect pair，粘贴配对文字。", "Next: choose Add device on your Mac, then run omnillm connect pair here and paste the pairing text.")))
 		return
 	}
 	tty.Close()

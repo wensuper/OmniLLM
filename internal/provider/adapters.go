@@ -243,7 +243,7 @@ func parseAnthropic(s *stream, event, data string) (string, bool, error) {
 func (c *Client) ListModels(ctx context.Context, cred Credential) ([]string, error) {
 	if c.cfg.Kind.Subscription() {
 		if !CLILoggedIn(ctx, c.cfg.Kind, c.cfg.Path) {
-			return nil, &omnillm.Error{Code: omnillm.CodeCredentialProblem, Msg: omnillm.MsgCLILogin, Args: []string{DisplayName(c.cfg.Kind), cliName(c.cfg.Kind)}}
+			return nil, &omnillm.Error{Code: omnillm.CodeCredentialProblem, Msg: omnillm.MsgCLILogin, Args: []string{string(c.cfg.Kind)}}
 		}
 		return append([]string(nil), cliModels[c.cfg.Kind]...), nil
 	}

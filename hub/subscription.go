@@ -91,8 +91,7 @@ func (s *subscriptionPace) allow(who string, now time.Time) error {
 	}
 	if wait > 0 {
 		s.calls[who] = list
-		return &omnillm.Error{Code: omnillm.CodeBusy, Msg: omnillm.MsgSubscriptionPace,
-			Args: []string{omnillm.RoundDuration("en", wait)}, RetryAfter: wait}
+		return &omnillm.Error{Code: omnillm.CodeBusy, Msg: omnillm.MsgSubscriptionPace, RetryAfter: wait}
 	}
 	s.calls[who] = append(list, now)
 	return nil

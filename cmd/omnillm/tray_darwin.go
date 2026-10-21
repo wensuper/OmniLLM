@@ -49,16 +49,16 @@ func trayReady() {
 	systray.AddSeparator()
 	open := systray.AddMenuItem(t("打开控制台", "Open the console"), "")
 	add := systray.AddMenuItem(t("添加手机或电脑…", "Add a phone or computer…"), "")
-	start := systray.AddMenuItem(t("启动主机", "Start the hub"), "")
+	start := systray.AddMenuItem(t("启动 OmniLLM", "Start OmniLLM"), "")
 	start.Hide()
 	systray.AddSeparator()
-	quit := systray.AddMenuItem(t("从菜单栏移除（下次登录时回来）", "Remove from the menu bar (back at next login)"), "")
+	quit := systray.AddMenuItem(t("隐藏菜单栏图标（下次登录时恢复）", "Hide the menu bar icon (back at next login)"), "")
 
 	show := func() {
 		st, ok := queryStatus()
 		if !ok {
 			systray.SetTemplateIcon(trayDown, trayDown)
-			head.SetTitle(t("OmniLLM · 主机没有运行", "OmniLLM · the hub is not running"))
+			head.SetTitle(t("OmniLLM 没有运行", "OmniLLM isn't running"))
 			relay.SetTitle(t("手机和其他设备现在用不了", "Phones and other devices can't use it now"))
 			counts.Hide()
 			open.Disable()
@@ -74,15 +74,15 @@ func trayReady() {
 		switch {
 		case !st.RelayConfigured:
 			systray.SetTemplateIcon(trayUp, trayUp)
-			relay.SetTitle(t("只在这台电脑上用（没有配置连接服务）", "This computer only (no connection service)"))
+			relay.SetTitle(t("只在这台 Mac 上用（没有设置远程连接）", "This Mac only (remote access not set up)"))
 		case st.RelayUp:
 			systray.SetTemplateIcon(trayUp, trayUp)
 			relay.SetTitle(t("● 手机和其他设备可以连上", "● Phones and other devices can connect"))
 		default:
 			systray.SetTemplateIcon(trayDown, trayDown)
-			relay.SetTitle(t("○ 连接服务未连上，手机暂时用不了", "○ Connection service offline; phones can't connect now"))
+			relay.SetTitle(t("○ 远程连接断开，其他设备暂时连不上", "○ Remote access is down; other devices can't connect now"))
 		}
-		counts.SetTitle(fmt.Sprintf(t("设备 %d 台 · 模型来源 %d 个", "%d devices · %d model sources"), st.Devices, st.Providers))
+		counts.SetTitle(fmt.Sprintf(t("设备 %d 台 · 模型来源 %d 个", "Devices: %d · Model sources: %d"), st.Devices, st.Providers))
 	}
 	show()
 	go func() {

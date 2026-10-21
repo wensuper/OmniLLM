@@ -81,7 +81,98 @@ func TestErrorsIs(t *testing.T) {
 }
 
 func TestRoundDuration(t *testing.T) {
-	if RoundDuration("en", 30*time.Second) != "30 seconds" || RoundDuration("zh", 5*time.Minute) != "5 分钟" || RoundDuration("en", 0) != "1 seconds" {
-		t.Fatal(RoundDuration("en", 30*time.Second), RoundDuration("zh", 5*time.Minute))
+	for _, c := range []struct {
+		lang string
+		d    time.Duration
+		want string
+	}{
+		{"en", 0, "about 1 second"},
+		{"en", 30 * time.Second, "about 30 seconds"},
+		{"zh", 30 * time.Second, "约 30 秒"},
+		{"en", 100 * time.Second, "about 2 minutes"},
+		{"zh", 20 * time.Minute, "约 20 分钟"},
+		{"en", time.Minute + 30*time.Second, "about 2 minutes"},
+		{"en", 89 * time.Minute, "about 89 minutes"},
+		{"zh", 6 * time.Hour, "约 6 小时"},
+		{"en", 3 * time.Hour, "about 3 hours"},
+		{"zh-CN", 2*time.Hour + 50*time.Minute, "约 3 小时"},
+	} {
+		if got := RoundDuration(c.lang, c.d); got != c.want {
+			t.Errorf("RoundDuration(%q, %v) = %q, want %q", c.lang, c.d, got, c.want)
+		}
+	}
+}
+
+func TestWaitsAreInTheReadersLanguage(t *testing.T) {
+	e := &Error{Code: CodeBusy, Msg: MsgSubscriptionLimit, Args: []string{"claude-code"}, RetryAfter: 6 * time.Hour}
+	if got := Describe("zh", e); got != "Claude 订阅的用量到了上限，约 6 小时后恢复。现在可以换一个用 API Key 或本机的模型。" {
+		t.Fatal(got)
+	}
+	if got := Describe("en", e); got != "Your Claude subscription has reached its usage limit. It resets in about 6 hours. Meanwhile, pick a model that uses an API key or runs on your Mac." {
+		t.Fatal(got)
+	}
+	// An older hub wrote the wait in English into Args; RetryAfter wins.
+	old := &Error{Code: CodeBusy, Msg: MsgSubscriptionLimit, Args: []string{"Claude (subscription)", "360 minutes"}, RetryAfter: 6 * time.Hour}
+	if got := Describe("zh", old); strings.Contains(got, "minutes") || !strings.Contains(got, "约 6 小时") || !strings.HasPrefix(got, "Claude 订阅") {
+		t.Fatal(got)
+	}
+	pace := &Error{Code: CodeBusy, Msg: MsgSubscriptionPace, RetryAfter: 20 * time.Minute}
+	if got := Describe("zh", pace); !strings.Contains(got, "约 20 分钟后再试") {
+		t.Fatal(got)
+	}
+	up := &Error{Code: CodeBusy, Msg: MsgBusyUpstream, Args: []string{"openai"}, RetryAfter: 30 * time.Second}
+	if got := Describe("en", up); got != "OpenAI asked us to wait. Try again in about 30 seconds." {
+		t.Fatal(got)
+	}
+	if got := Describe("zh", &Error{Code: CodeBusy, Msg: MsgBusyPace, Args: []string{"codex"}, RetryAfter: time.Minute}); !strings.Contains(got, "为了让 ChatGPT 订阅的用量") || !strings.Contains(got, "约 60 秒后再试") {
+		t.Fatal(got)
+	}
+}
+
+func TestSubscriptionNamesAndLoginSteps(t *testing.T) {
+	login := &Error{Code: CodeCredentialProblem, Msg: MsgCLILogin, Args: []string{"claude-code"}}
+	if got := Describe("zh", login); got != "你的 Mac 上的 Claude 订阅没有登录，或者登录已失效。登录方法：在 Mac 的终端运行 claude，然后输入 /login。登录后再试。" {
+		t.Fatal(got)
+	}
+	if got := Describe("en", login); got != "Your Claude subscription isn't logged in on your Mac, or the login expired. To log in, in Terminal on your Mac run claude, then type /login. Then try again." {
+		t.Fatal(got)
+	}
+	codex := &Error{Code: CodeCredentialProblem, Msg: MsgCLILogin, Args: []string{"codex"}}
+	if got := Describe("en", codex); !strings.HasPrefix(got, "Your ChatGPT subscription") || !strings.Contains(got, "run codex login") {
+		t.Fatal(got)
+	}
+	// An older hub's display name and program still render well.
+	old := &Error{Code: CodeCredentialProblem, Msg: MsgCLILogin, Args: []string{"ChatGPT Codex (subscription)", "codex"}}
+	if got := Describe("zh", old); !strings.Contains(got, "ChatGPT 订阅") || !strings.Contains(got, "codex login") {
+		t.Fatal(got)
+	}
+	nf := &Error{Code: CodeBadRequest, Msg: MsgCLINotFound, Args: []string{"claude-code"}}
+	if got := Describe("zh", nf); got != "要用 Claude 订阅，你的 Mac 上需要先安装 Claude Code 并登录。" {
+		t.Fatal(got)
+	}
+	if got := Describe("en", &Error{Code: CodeUpstream, Msg: MsgCLIUnsafe, Args: []string{"codex"}}); !strings.Contains(got, "This version of Codex on your Mac") {
+		t.Fatal(got)
+	}
+	// Other names pass through unchanged.
+	if got := Describe("en", &Error{Code: CodeCredentialProblem, Msg: MsgCredentialMissing, Args: []string{"my-proxy"}}); !strings.HasPrefix(got, "my-proxy isn't connected on your Mac.") {
+		t.Fatal(got)
+	}
+}
+
+func TestMessagesUseTheGlossary(t *testing.T) {
+	for k, v := range texts {
+		for _, bad := range []string{"主机", "连接服务", "Codex"} {
+			if strings.Contains(v[0], bad) {
+				t.Errorf("%s zh: %q", k, bad)
+			}
+		}
+		for _, bad := range []string{"the host", "The host", "budget", "Codex"} {
+			if strings.Contains(v[1], bad) {
+				t.Errorf("%s en: %q", k, bad)
+			}
+		}
+		if strings.Contains(v[0], " Key") && !strings.Contains(v[0], "API Key") {
+			t.Errorf("%s zh: Key without API", k)
+		}
 	}
 }

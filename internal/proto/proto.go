@@ -20,21 +20,23 @@ import (
 // Message types. New types may be added; unknown types are ignored by both
 // ends (additive protocol).
 const (
-	TPairHello  = "pair.hello"  // device→hub: {name}
-	TPairOK     = "pair.ok"     // hub→device: {device_id}
-	TPairDenied = "pair.denied" // hub→device
-	TModelsList = "models.list" // device→hub
-	TModels     = "models"      // hub→device: {models}
-	TChatStart  = "chat.start"  // device→hub: {id, req}
-	TChatAck    = "chat.ack"    // hub→device: {id}, sent on receipt
-	TChatDelta  = "chat.delta"  // hub→device: {id, text}
-	TChatEnd    = "chat.end"    // hub→device: {id, usage, finish}
-	TChatError  = "chat.error"  // hub→device: {id, error}
-	TChatCancel = "chat.cancel" // device→hub: {id}
-	TToolCall   = "tool.call"   // hub→device: {id, tool, args}
-	TToolResult = "tool.result" // device→hub: {id, result | error}
-	TPing       = "ping"        // either way
-	TPong       = "pong"
+	TPairHello   = "pair.hello"   // device→hub: {name}
+	TPairOK      = "pair.ok"      // hub→device: {device_id}
+	TPairDenied  = "pair.denied"  // hub→device
+	TModelsList  = "models.list"  // device→hub
+	TModels      = "models"       // hub→device: {models}
+	TChatStart   = "chat.start"   // device→hub: {id, req}
+	TChatAck     = "chat.ack"     // hub→device: {id}, sent on receipt
+	TChatDelta   = "chat.delta"   // hub→device: {id, text}
+	TChatEnd     = "chat.end"     // hub→device: {id, usage, finish}
+	TChatError   = "chat.error"   // hub→device: {id, error}
+	TChatCancel  = "chat.cancel"  // device→hub: {id}
+	TToolCall    = "tool.call"    // hub→device: {id, tool, args}
+	TToolResult  = "tool.result"  // device→hub: {id, result | error}
+	TDeviceLeave = "device.leave" // device→hub: {id}, the device removes itself
+	TDeviceLeft  = "device.left"  // hub→device: {id}, removed (then the session ends)
+	TPing        = "ping"         // either way
+	TPong        = "pong"
 )
 
 // Envelope is the outer shape of every message.
@@ -51,11 +53,11 @@ type Envelope struct {
 	Finish   string              `json:"finish,omitempty"`
 	// Model in chat.delta names the model answering, for people, with its
 	// version ("Claude Opus 5.5"); sent once, when the provider says.
-	Model string `json:"model,omitempty"`
-	Err      *WireError          `json:"error,omitempty"`
-	Tool     string              `json:"tool,omitempty"`
-	Args     json.RawMessage     `json:"args,omitempty"`
-	Result   json.RawMessage     `json:"result,omitempty"`
+	Model  string          `json:"model,omitempty"`
+	Err    *WireError      `json:"error,omitempty"`
+	Tool   string          `json:"tool,omitempty"`
+	Args   json.RawMessage `json:"args,omitempty"`
+	Result json.RawMessage `json:"result,omitempty"`
 	// Secret is the replacement mailbox secret in pair.ok. It is only ever
 	// marshalled inside the end-to-end session. #nosec G117
 	Secret []byte `json:"secret,omitempty"`

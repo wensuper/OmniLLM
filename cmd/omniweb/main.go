@@ -27,17 +27,21 @@ var (
 	mu      sync.Mutex
 	dev     *device.Device
 	cancels = map[string]context.CancelFunc{}
+	// pairStop cancels the pairing under way ("numbers don't match").
+	pairStop context.CancelFunc
 )
 
 func main() {
 	api := map[string]any{
-		"pair":   js.FuncOf(pair),
-		"open":   js.FuncOf(open),
-		"models": js.FuncOf(models),
-		"chat":   js.FuncOf(chat),
-		"cancel": js.FuncOf(cancel),
-		"close":  js.FuncOf(closeDev),
-		"check":  js.FuncOf(check),
+		"pair":       js.FuncOf(pair),
+		"open":       js.FuncOf(open),
+		"models":     js.FuncOf(models),
+		"chat":       js.FuncOf(chat),
+		"cancel":     js.FuncOf(cancel),
+		"close":      js.FuncOf(closeDev),
+		"check":      js.FuncOf(check),
+		"leave":      js.FuncOf(leave),
+		"pairCancel": js.FuncOf(pairCancel),
 	}
 	js.Global().Set("omnillm", js.ValueOf(api))
 	js.Global().Call("dispatchEvent", js.Global().Get("Event").New("omnillm-ready"))
@@ -129,6 +133,9 @@ func pair(_ js.Value, a []js.Value) any {
 	return promise(func() (any, error) {
 		s := secret.NewMemory()
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+		mu.Lock()
+		pairStop = cancel
+		mu.Unlock()
 		defer cancel()
 		_, err := device.Pair(ctx, device.Options{Secrets: s}, text, name, func(code string) { onCode.Invoke(code) })
 		if err != nil {
@@ -160,6 +167,31 @@ func open(_ js.Value, a []js.Value) any {
 	})
 }
 
+// pairCancel stops the pairing under way: the person saw a different
+// number on the Mac.
+func pairCancel(_ js.Value, _ []js.Value) any {
+	mu.Lock()
+	if pairStop != nil {
+		pairStop()
+	}
+	mu.Unlock()
+	return nil
+}
+
+// leave() removes this device on the hub before the page deletes the
+// pairing ("remove this device"); the page clears its data either way.
+func leave(_ js.Value, _ []js.Value) any {
+	return promise(func() (any, error) {
+		d, err := current()
+		if err != nil {
+			return nil, err
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		defer cancel()
+		return nil, d.Leave(ctx)
+	})
+}
+
 func current() (*device.Device, error) {
 	mu.Lock()
 	defer mu.Unlock()
@@ -183,7 +215,7 @@ func models(_ js.Value, _ []js.Value) any {
 		}
 		out := []any{}
 		for _, m := range ms {
-			out = append(out, map[string]any{"id": m.ID, "name": m.DisplayName, "provider": m.Provider, "humanOnly": m.HumanOnly})
+			out = append(out, map[string]any{"id": m.ID, "name": m.DisplayName, "provider": m.Provider, "humanOnly": m.HumanOnly, "onHost": m.OnHost})
 		}
 		return out, nil
 	})

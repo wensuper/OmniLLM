@@ -67,7 +67,7 @@ func (c *Client) checkCLI(ctx context.Context) error {
 }
 
 func (c *Client) unsafe() error {
-	return &omnillm.Error{Code: omnillm.CodeUpstream, Msg: omnillm.MsgCLIUnsafe, Args: []string{DisplayName(c.cfg.Kind)}}
+	return &omnillm.Error{Code: omnillm.CodeUpstream, Msg: omnillm.MsgCLIUnsafe, Args: []string{string(c.cfg.Kind)}}
 }
 
 func cliVersion(ctx context.Context, path string) string {

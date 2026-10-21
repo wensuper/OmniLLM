@@ -304,6 +304,18 @@ func (ds *devSession) handle(ctx context.Context, env proto.Envelope, d Device) 
 		_ = ds.send(ctx, proto.Envelope{T: proto.TModels, ID: env.ID, Models: ms})
 	case proto.TChatStart:
 		ds.startChat(ctx, env, d)
+	case proto.TDeviceLeave:
+		// The person removed this device on the device itself ("remove
+		// this device"): the same as the owner removing it on the hub, so
+		// it doesn't linger in the device list. The answer goes out before
+		// the session is closed.
+		dev, err := ds.h.revokeRecord(ctx, d.ID)
+		if err != nil {
+			ds.h.sendErr(ctx, ds.sess, env.ID, err)
+			return
+		}
+		_ = ds.send(ctx, proto.Envelope{T: proto.TDeviceLeft, ID: env.ID})
+		ds.h.dropDevice(ctx, dev)
 	case proto.TChatCancel:
 		ds.mu.Lock()
 		if c := ds.cancels[env.ID]; c != nil {
@@ -339,6 +351,7 @@ func (h *Hub) deviceModels(ctx context.Context, d Device) ([]omnillm.ModelInfo, 
 		if m.HumanOnly && d.BackgroundOnly {
 			continue
 		}
+		m.OnHost = m.Locality == omnillm.Local
 		m.Locality = omnillm.Remote
 		out = append(out, m)
 	}

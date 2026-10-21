@@ -155,21 +155,34 @@ func (h *Hub) UpdateDevice(ctx context.Context, id string, name *string, budget 
 // Revoke removes a device at once: its key is deleted, its mailbox released
 // and any open session closed.
 func (h *Hub) Revoke(ctx context.Context, id string) error {
+	d, err := h.revokeRecord(ctx, id)
+	if err != nil {
+		return err
+	}
+	h.dropDevice(ctx, d)
+	return nil
+}
+
+// revokeRecord replaces the device's record with its tombstone. Split from
+// dropDevice so a device removing itself hears "removed" before its
+// session is closed.
+func (h *Hub) revokeRecord(ctx context.Context, id string) (Device, error) {
 	h.deviceMu.Lock()
+	defer h.deviceMu.Unlock()
 	d, err := h.getDevice(ctx, id)
 	if err != nil {
-		h.deviceMu.Unlock()
-		return err
+		return d, err
 	}
 	// The tombstone first: the device is never without both records.
 	if err = h.putTombstone(ctx, d); err == nil {
 		err = h.opts.Store.Delete(ctx, "device/"+id)
 	}
 	_ = h.opts.Store.Delete(ctx, "devicelast/"+id)
-	h.deviceMu.Unlock()
-	if err != nil {
-		return err
-	}
+	return d, err
+}
+
+// dropDevice ends a removed device's open session.
+func (h *Hub) dropDevice(ctx context.Context, d Device) {
 	// The mailbox stays claimed (revoked.go): when the device comes back
 	// it is told it was removed. Its open session ends now.
 	mid, _, err := d.mailbox()
@@ -190,7 +203,6 @@ func (h *Hub) Revoke(ctx context.Context, id string) error {
 		}
 	}
 	h.opts.Logf("hub: device %s removed", d.ID)
-	return nil
 }
 
 // ---------- pairing ----------

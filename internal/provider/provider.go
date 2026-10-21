@@ -58,7 +58,7 @@ func Default(kind Kind) (Config, error) {
 	case ClaudeCode, Codex:
 		p := FindCLI(kind)
 		if p == "" {
-			return Config{}, &omnillm.Error{Code: omnillm.CodeBadRequest, Msg: omnillm.MsgCLINotFound, Args: []string{DisplayName(kind), cliName(kind)}}
+			return Config{}, &omnillm.Error{Code: omnillm.CodeBadRequest, Msg: omnillm.MsgCLINotFound, Args: []string{string(kind)}}
 		}
 		return Config{Name: string(kind), Kind: kind, Path: p}, nil
 	}
@@ -471,7 +471,7 @@ func (c *Client) classify(resp *http.Response, cred Credential, req omnillm.Requ
 			wait = time.Hour
 		}
 		return &omnillm.Error{Code: omnillm.CodeBusy, Msg: omnillm.MsgBusyUpstream,
-			Args: []string{c.cfg.Name, omnillm.RoundDuration("en", wait)}, RetryAfter: wait, Detail: detail}, egress.RateLimited, wait
+			Args: []string{c.cfg.Name}, RetryAfter: wait, Detail: detail}, egress.RateLimited, wait
 	case resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusPaymentRequired:
 		return &omnillm.Error{Code: omnillm.CodeCredentialProblem, Msg: omnillm.MsgCredentialBad,
 			Args: []string{c.cfg.Name, redact.Last4(cred.Key)}, Detail: detail}, egress.ClientError, 0

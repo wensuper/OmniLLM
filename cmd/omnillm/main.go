@@ -89,7 +89,7 @@ func sayf(format string, a ...any) error { return sayErr(fmt.Sprintf(format, a..
 func hubSay(err error) error {
 	if e := omnillm.AsError(err); e.Code == omnillm.CodeInternal {
 		log.Printf("hub: control: %v", err)
-		return say(omnillm.Describe(lang(), err) + t("（原因写在主机日志里）", " (the cause is in the hub's log)"))
+		return say(omnillm.Describe(lang(), err) + t("（原因写在 OmniLLM 的日志里）", " (the cause is in OmniLLM's log)"))
 	}
 	return say(omnillm.Describe(lang(), err))
 }
@@ -198,7 +198,7 @@ func openCmd() {
 		return false, false
 	})
 	if err != nil || !strings.HasPrefix(url, "http://127.0.0.1:") {
-		fmt.Fprintln(os.Stderr, t("主机没有在运行。先运行 omnillm install（或 omnillm hub run）。", "The hub is not running. Run omnillm install (or omnillm hub run) first."))
+		fmt.Fprintln(os.Stderr, notRunning())
 		os.Exit(1)
 	}
 	if err := openLogin(url); err != nil {
@@ -345,7 +345,11 @@ func hubCmd(args []string) {
 			key = readSecret(t("粘贴 API Key（不会显示）：", "Paste the API key (not shown): "))
 		}
 		call(sock, control.Request{Op: "provider.add", Args: map[string]string{"kind": kind, "name": *name, "base_url": *base}, Secret: key})
-	case "providers", "models", "devices", "apps", "usage", "audit":
+	case "devices":
+		callOr(sock, control.Request{Op: args[0]}, t("还没有设备。", "No devices yet."))
+	case "apps":
+		callOr(sock, control.Request{Op: args[0]}, t("还没有应用。", "No apps yet."))
+	case "providers", "models", "usage", "audit":
 		call(sock, control.Request{Op: args[0]})
 	case "pair":
 		fs := flag.NewFlagSet("pair", flag.ExitOnError)
@@ -417,14 +421,19 @@ func readLine(prompt string) string {
 	return strings.TrimSpace(line)
 }
 
-func call(sock string, req control.Request) {
+func call(sock string, req control.Request) { callOr(sock, req, "") }
+
+// callOr is call, printing empty instead of an empty list.
+func callOr(sock string, req control.Request, empty string) {
 	err := control.Call(sock, req, func(r control.Reply) (bool, bool) {
 		switch r.Event {
 		case "info", "ok", "done":
 			if r.Text != "" {
 				fmt.Println(r.Text)
 			}
-			if len(r.Data) > 0 {
+			if d := string(bytes.TrimSpace(r.Data)); empty != "" && (d == "null" || d == "[]") {
+				fmt.Println(empty)
+			} else if len(r.Data) > 0 {
 				var out bytes.Buffer
 				if json.Indent(&out, r.Data, "", "  ") == nil {
 					fmt.Println(out.String())
@@ -615,7 +624,7 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 				cfg, err = provider.Config{Kind: provider.OpenAICompatible, NeedsKey: true}, nil
 			}
 			if err != nil {
-				return say(t("不认识这个提供方类型。", "Unknown provider kind."))
+				return say(t("不认识这种模型来源。", "Unknown model source kind."))
 			}
 			if a["name"] != "" {
 				cfg.Name = a["name"]
@@ -692,7 +701,7 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 			}
 			return c.Send(control.Reply{Event: "ok", Text: fmt.Sprintf(t(
 				"已为“%s”创建令牌（只显示这一次，请保存好）：\n%s\n这个应用只能做后台调用，每天额度 %s。",
-				"Token for \"%s\" (shown once, keep it safe):\n%s\nThis app makes background calls only; daily budget %s."), app.Name, tok, usd(app.Budget))})
+				"Token for \"%s\" (shown once, keep it safe):\n%s\nThis app makes background calls only; daily limit %s."), app.Name, tok, usd(app.Budget))})
 		case "app.rm":
 			if err := h.RevokeApp(ctx, a["id"]); err != nil {
 				return err
@@ -770,7 +779,7 @@ func pairOp(ctx context.Context, h *hub.Hub, c *control.Conn, a map[string]strin
 	if err != nil {
 		return hubSay(err)
 	}
-	return c.Send(control.Reply{Event: "done", Text: fmt.Sprintf(t("已添加设备“%s”（%s），每天额度 %s。", "Added \"%s\" (%s), daily budget %s."), d.Name, d.ID, usd(d.Budget))})
+	return c.Send(control.Reply{Event: "done", Text: fmt.Sprintf(t("已添加设备“%s”（%s），每天额度 %s。", "Added \"%s\" (%s), daily limit %s."), d.Name, d.ID, usd(d.Budget))})
 }
 
 // ---------------- connect (device) ----------------
@@ -793,20 +802,20 @@ func connectCmd(args []string) {
 			die(sayf(t("读不出这台设备保存的配对（%s）。如果它已经配对过，请用配对时的同一个用户运行；确实要重新配对，先运行 omnillm connect forget。", "Can't read this device's saved pairing (%s). If it is already paired, run as the same user it was paired as; to pair again, run omnillm connect forget first."), dir))
 		}
 		if paired {
-			die(say(t("这台设备已经配对过（"+dir+"）。要换一台主机或重新配对，先运行 omnillm connect forget。", "This device is already paired ("+dir+"). To pair again (or with another hub), run omnillm connect forget first.")))
+			die(say(t("这台设备已经配对过（"+dir+"）。要换一台 Mac 或重新配对，先运行 omnillm connect forget。", "This device is already paired ("+dir+"). To pair again (or with another Mac), run omnillm connect forget first.")))
 		}
-		code := readSecret(t("粘贴主机给的配对文字：", "Paste the pairing text from the host: "))
+		code := readSecret(t("粘贴你的 Mac 上“添加设备”给的配对文字：", "Paste the pairing text from Add device on your Mac: "))
 		host, _ := os.Hostname()
 		info, err := device.Pair(ctx, device.Options{Secrets: sec}, code, host, func(sas string) {
 			if len(sas) == 6 {
 				sas = sas[:3] + " " + sas[3:]
 			}
-			fmt.Printf(t("\n请核对：主机上显示的数字应该是 %s，一致就在主机上点确认。\n", "\nCheck: the host should show %s. If it matches, confirm on the host.\n"), sas)
+			fmt.Printf(t("\n请核对：你的 Mac 上显示的数字应该是 %s，一致就在 Mac 上点“一致，添加”。\n", "\nCheck: your Mac should show %s. If it does, choose “Matches, add” there.\n"), sas)
 		})
 		if err != nil {
 			die(err)
 		}
-		fmt.Printf(t("配对成功（这台设备在主机上叫“%s”）。\n", "Paired (the host lists this device as \"%s\").\n"), info.Name)
+		fmt.Printf(t("已添加到你的 Mac（这台设备在 Mac 上叫“%s”）。\n", "Added to your Mac (it lists this device as \"%s\").\n"), info.Name)
 	case "run":
 		fs := flag.NewFlagSet("connect run", flag.ExitOnError)
 		listen := fs.String("listen", "127.0.0.1:8766", "")
@@ -829,10 +838,23 @@ func connectCmd(args []string) {
 			die(err)
 		}
 	case "forget":
+		// Leave on the Mac first, so it disappears from its device list;
+		// when the Mac can't be reached the pairing is still deleted here.
+		left := false
+		if d, err := device.Open(ctx, device.Options{Secrets: sec}); err == nil {
+			lctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+			left = d.Leave(lctx) == nil
+			cancel()
+			d.Close()
+		}
 		if err := device.Forget(ctx, sec); err != nil {
 			die(err)
 		}
-		fmt.Println(t("这台设备的配对已删除。主机上的设备列表里它还在，可以在主机上移除。", "This device's pairing is deleted. It still shows in the hub's device list; remove it there too."))
+		if left {
+			fmt.Println(t("这台设备已从你的 Mac 上移除，这里的配对也删了。", "This device was removed from your Mac and its pairing here is deleted."))
+		} else {
+			fmt.Println(t("这台设备的配对已删除。你的 Mac 现在连不上，记得在 Mac 的设备列表里也移除它。", "This device's pairing is deleted. Your Mac can't be reached now; remove it from the Mac's device list too."))
+		}
 	case "models":
 		d := openDevice(ctx, sec, dir)
 		defer d.Close()

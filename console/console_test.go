@@ -454,6 +454,18 @@ func TestDeniedPairingFromConsole(t *testing.T) {
 	if err := <-done; err == nil {
 		t.Fatal("a refused device paired")
 	}
+	// The page learns it was refused (not that it failed), to say so and
+	// offer a new QR code.
+	var st map[string]any
+	for i := 0; i < 100; i++ {
+		if _, st = r.api(t, "GET", "/console/api/pair/state?id="+id, ""); st["state"] == "failed" {
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	if st["state"] != "failed" || st["reason"] != "denied" {
+		t.Fatalf("refused pairing shows %v", st)
+	}
 	if devs, _ := r.h.Devices(context.Background()); len(devs) != 0 {
 		t.Fatal("refused device saved")
 	}
@@ -533,5 +545,44 @@ func TestClosingAddDeviceEndsThePairing(t *testing.T) {
 	defer cancel()
 	if _, err := device.Pair(ctx, device.Options{Secrets: secret.NewMemory()}, out["code"].(string), "Late", func(string) {}); err == nil {
 		t.Fatal("a closed pairing still paired a device")
+	}
+}
+
+// Every string the page shows exists in Chinese and in English.
+func TestEveryStringInBothLanguages(t *testing.T) {
+	js, _ := assets.ReadFile("assets/app.js")
+	html, _ := assets.ReadFile("assets/index.html")
+	src := string(js)
+	zhAt, enAt := strings.Index(src, "\n  zh: {"), strings.Index(src, "\n  en: {")
+	end := strings.Index(src[enAt:], "\n  },") + enAt
+	if zhAt < 0 || enAt < zhAt || end < enAt {
+		t.Fatal("string table not found")
+	}
+	keyRe := regexp.MustCompile(`(?:^|[\s,{])([A-Za-z0-9]+): "`)
+	keys := func(block string) map[string]bool {
+		m := map[string]bool{}
+		for _, k := range keyRe.FindAllStringSubmatch(block, -1) {
+			m[k[1]] = true
+		}
+		return m
+	}
+	zh, en := keys(src[zhAt:enAt]), keys(src[enAt:end])
+	for k := range zh {
+		if !en[k] {
+			t.Errorf("%s has no English", k)
+		}
+	}
+	for k := range en {
+		if !zh[k] {
+			t.Errorf("%s has no Chinese", k)
+		}
+	}
+	// Keys used by the page itself: data-t / data-tip in the HTML, t("…") in the script.
+	used := regexp.MustCompile(`data-(?:t|tip)="([A-Za-z0-9]+)"`).FindAllStringSubmatch(string(html), -1)
+	used = append(used, regexp.MustCompile(`\bt\("([A-Za-z0-9]+)"`).FindAllStringSubmatch(src, -1)...)
+	for _, k := range used {
+		if !zh[k[1]] || !en[k[1]] {
+			t.Errorf("%s is shown but has no text", k[1])
+		}
 	}
 }

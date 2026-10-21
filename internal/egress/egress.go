@@ -120,10 +120,9 @@ func (ln *lane) refill(now time.Time) {
 }
 
 func busy(provider, key string, wait time.Duration) error {
-	return &omnillm.Error{Code: omnillm.CodeBusy, Msg: key, Args: []string{provider, waitText(wait)}, RetryAfter: wait}
+	// The wait is rendered from RetryAfter in the reader's language.
+	return &omnillm.Error{Code: omnillm.CodeBusy, Msg: key, Args: []string{provider}, RetryAfter: wait}
 }
-
-func waitText(d time.Duration) string { return omnillm.RoundDuration("en", d) }
 
 // Release ends a slot with the call's outcome. retryAfter applies to
 // RateLimited.

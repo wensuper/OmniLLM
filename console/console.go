@@ -387,8 +387,8 @@ func writeErr(w http.ResponseWriter, r *http.Request, status int, err error) {
 	e := omnillm.AsError(err)
 	msg := omnillm.Describe(lang(r), e)
 	if e.Msg == msgLoginExpired {
-		msg = map[string]string{"zh": "登录链接已失效。请在主机上运行 omnillm open 重新打开。",
-			"en": "This login link has expired. Run omnillm open on the host to open the console again."}[lang(r)]
+		msg = map[string]string{"zh": "登录已失效。点菜单栏里的 OmniLLM 图标，选“打开控制台”，或者在终端运行 omnillm open。",
+			"en": "This login has expired. Click the OmniLLM icon in the menu bar and choose Open the console, or run omnillm open in Terminal."}[lang(r)]
 	}
 	if status == 0 {
 		status = omnillm.HTTPStatus(e.Code)
@@ -818,8 +818,23 @@ func (s *Server) pairGet(w http.ResponseWriter, r *http.Request) {
 	out := map[string]any{"state": ps.state, "device_name": ps.name, "code": ps.sas, "device_id": ps.device}
 	if ps.errMsg != nil {
 		out["message"] = omnillm.Describe(lang(r), ps.errMsg)
+		out["reason"] = pairReason(ps.errMsg)
 	}
 	writeJSON(w, out)
+}
+
+// pairReason tells the page why a pairing ended, so it can say "refused"
+// or "expired" in its own words and offer a new QR code: denied (the owner
+// said no), expired (the code ran out or was cancelled), or failed.
+func pairReason(err error) string {
+	e := omnillm.AsError(err)
+	switch {
+	case e.Code == omnillm.CodePairingDenied:
+		return "denied"
+	case e.Msg == omnillm.MsgPairingExpired, errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):
+		return "expired"
+	}
+	return "failed"
 }
 
 func (s *Server) pairDecide(w http.ResponseWriter, r *http.Request) {

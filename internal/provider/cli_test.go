@@ -101,6 +101,10 @@ echo '{"type":"result","is_error":true,"result":"Claude AI usage limit reached"}
 	if !errors.As(err, &e) || e.Msg != omnillm.MsgSubscriptionLimit || e.RetryAfter < time.Hour {
 		t.Fatalf("%v %+v", err, e)
 	}
+	// The wait is written in the reader's language, not fixed in English.
+	if zh := omnillm.Describe("zh", err); !strings.Contains(zh, "Claude 订阅") || !strings.Contains(zh, "约 2 小时") || strings.Contains(zh, "minutes") {
+		t.Fatal(zh)
+	}
 	// The provider is paused: the next call does not run the program.
 	if _, err := ask(c); err == nil {
 		t.Fatal("a call went out while the subscription limit is reached")

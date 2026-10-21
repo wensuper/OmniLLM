@@ -96,25 +96,42 @@ button.primary:disabled { background: var(--surface-3); border-color: var(--line
 .steps { display: flex; gap: 8px; list-style: none; padding: 0; margin: 0 0 24px; counter-reset: s; }
 .steps li { counter-increment: s; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--muted); font-size: 13px; padding-top: 8px; border-top: 3px solid var(--line); }
 .steps li::before { content: counter(s) " · "; }
-.steps li.now { color: var(--ink); border-top-color: var(--accent); font-weight: 600; }
+/* The current step is ink, not purple: purple is only for what can be pressed. */
+.steps li.now { color: var(--ink); border-top-color: var(--ink); font-weight: 600; }
 .steps li.done { color: var(--ok); border-top-color: var(--ok); }
 
 .choice { border: 1px solid var(--line); border-radius: var(--r-l); padding: 16px; margin-top: 16px; }
 details.choice summary { cursor: pointer; color: var(--muted); }
 details.choice p { margin-top: 8px; }
+.choice h2 { margin-bottom: 4px; }
+/* "I have an API key" reads as a heading like the other two ways in. */
+details.key-choice > summary { color: var(--ink); font-size: 16px; font-weight: 600; }
+.howto { margin: 0; padding-left: 20px; color: var(--ink-2); }
+.howto li + li { margin-top: 2px; }
+.free-line { margin: 16px 0 0; }
+#recheck { margin-top: 12px; }
+code { font-family: var(--mono); font-size: .92em; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-xs); padding: 0 4px; }
 
 .pair { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 24px; align-items: start; margin-top: 12px; }
 .pair img { width: 100%; max-width: 300px; background: #fff; border-radius: var(--r-l); border: 1px solid var(--line); image-rendering: pixelated; padding: 10px; box-sizing: border-box; }
 .pair-qr p { margin: 8px 0 0; }
 .pair-more { margin-top: 8px; }
 .pair-more summary { cursor: pointer; color: var(--accent-text); font-weight: 500; padding: 4px 0; }
-.pair-more .code { margin: 6px 0; }
+.pair-more .codebox { margin: 6px 0 12px; }
+/* A command or pairing text with its Copy button in the corner. */
+.codebox { position: relative; }
+div.codebox > .code, div.codebox > .cmd { padding-right: 72px; margin: 0; }
+.codebox .copy { position: absolute; top: 6px; right: 6px; }
+.skip-line { margin: 12px 0 0; }
 .small-btn { padding: 4px 10px; min-height: 28px; font-size: 12px; }
 .pair .code { font-family: var(--mono); font-size: 12px; word-break: break-all; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-s); padding: 10px; user-select: all; }
 .sas { font-family: var(--mono); font-size: 34px; font-weight: 600; letter-spacing: .18em; margin: 8px 0; color: var(--ink); }
 .confirm { background: var(--warn-soft); border: 1px solid var(--warn-line); border-left: 3px solid var(--warn-hi); border-radius: 0 var(--r-l) var(--r-l) 0; padding: 16px; margin-top: 12px; }
 .confirm .actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .confirm .actions button { margin-top: 8px; }
+.err-text { color: var(--danger); }
+/* The hub stopped: a notice, not an alarm (starting it again is one click). */
+.banner { background: var(--warn-soft); border: 1px solid var(--warn-line); border-left: 3px solid var(--warn-hi); border-radius: 0 var(--r-l) var(--r-l) 0; padding: 12px 16px; margin-bottom: 16px; color: var(--ink); }
 .cmd { font-family: var(--mono); background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-s); padding: 10px 12px; overflow-x: auto; }
 
 .reply { white-space: pre-wrap; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-s); padding: 12px; margin-top: 12px; }
@@ -137,6 +154,8 @@ table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 8px
 th { text-align: left; color: var(--muted); font-weight: 500; font-size: 13px; padding: 8px; border-bottom: 1px solid var(--line); }
 td { padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; overflow-wrap: anywhere; }
 td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* "Today $0.42 / $5.00" may wrap on a phone rather than push Remove off screen. */
+td.spent { font-variant-numeric: tabular-nums; }
 .tag { display: inline-block; font-size: 12px; font-weight: 500; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--ink-2); }
 .tag.local { background: var(--ok-soft); color: var(--ok-ink); box-shadow: inset 0 0 0 1px var(--ok-line); }
 .tag.sub { background: var(--accent-soft); color: var(--accent-text); box-shadow: inset 0 0 0 1px var(--agent-line); }
@@ -156,8 +175,16 @@ td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
 @media (prefers-reduced-motion: no-preference) {
   .toast { transition: opacity .2s; }
 }
-/* Narrow screens: the status line needs the room more than the slogan. */
-@media (max-width: 480px) { .top .brand-sub { display: none; } }
+/* Narrow screens: the slogan goes, the status line keeps only its dot (the
+   sentence is its label and tooltip), and the wizard names only the
+   current step; the others show their number. */
+@media (max-width: 480px) {
+  .top .brand-sub, .status .status-text { display: none; }
+  .steps li:not(.now) > span { display: none; }
+  .steps li:not(.now)::before { content: counter(s); }
+  .steps li { flex: 0 0 15%; }
+  .steps li.now { flex: 1; }
+}
 /* Switch, as in NEXA: purple when on; an off switch still reads as a control. */
 input.switch { min-height: 0; padding: 0; }
 .switch { appearance: none; -webkit-appearance: none; width: 32px; height: 18px; border-radius: 999px; background: var(--surface-3); border: 1px solid var(--line-strong); position: relative; cursor: pointer; flex: none; margin: 0; vertical-align: middle; transition: background .15s, border-color .15s; }
@@ -165,6 +192,7 @@ input.switch { min-height: 0; padding: 0; }
 .switch:checked, .switch:checked:hover { background: var(--accent); border-color: var(--accent); }
 .switch:checked::after { left: 16px; background: var(--accent-ink); }
 .switch:focus-visible { outline: 0; box-shadow: var(--focus); }
+.switch:disabled { opacity: .45; cursor: not-allowed; }
 .toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); white-space: nowrap; cursor: pointer; }
 /* The add-device panel closes with the x in its corner. */
 .pair-panel { position: relative; border: 1px solid var(--line); border-radius: var(--r-l); padding: 16px; margin-top: 12px; background: var(--surface); }

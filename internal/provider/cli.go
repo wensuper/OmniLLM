@@ -349,7 +349,7 @@ func (c *Client) spawnCLI(ctx context.Context, model string, msgs []omnillm.Mess
 		home, err := prepareCodexHome()
 		if err != nil {
 			return fail(&omnillm.Error{Code: omnillm.CodeCredentialProblem, Msg: omnillm.MsgCLILogin,
-				Args: []string{DisplayName(c.cfg.Kind), cliName(c.cfg.Kind)}, Detail: err.Error()})
+				Args: []string{string(c.cfg.Kind)}, Detail: err.Error()})
 		}
 		env = append(env, "CODEX_HOME="+home)
 		args = append([]string{"-c", codexFileLogin, "exec", "--json", "--skip-git-repo-check", "--ephemeral", "--ignore-user-config", "--ignore-rules",
@@ -600,7 +600,8 @@ func (s *cliStream) fail(text string) {
 
 func (s *cliStream) classify(text string) (*omnillm.Error, egress.Outcome, time.Duration) {
 	lower := strings.ToLower(text + " " + s.stderr.String())
-	name := DisplayName(s.kind)
+	// Args carry the kind; Describe names it in the reader's language.
+	name := string(s.kind)
 	s.mu.Lock()
 	limit := s.limit
 	s.mu.Unlock()
@@ -613,12 +614,12 @@ func (s *cliStream) classify(text string) (*omnillm.Error, egress.Outcome, time.
 		}
 		wait = max(min(wait, 6*time.Hour), time.Minute)
 		return &omnillm.Error{Code: omnillm.CodeBusy, Msg: omnillm.MsgSubscriptionLimit,
-			Args: []string{name, omnillm.RoundDuration("en", wait)}, RetryAfter: wait, Detail: string(s.kind) + ": limit"}, egress.RateLimited, wait
+			Args: []string{name}, RetryAfter: wait, Detail: string(s.kind) + ": limit"}, egress.RateLimited, wait
 	case strings.Contains(lower, "login") || strings.Contains(lower, "log in") || strings.Contains(lower, "logged in") ||
 		strings.Contains(lower, "authenticat") || strings.Contains(lower, "401") || strings.Contains(lower, "unauthorized") ||
 		strings.Contains(lower, "oauth") || strings.Contains(lower, "token expired"):
 		return &omnillm.Error{Code: omnillm.CodeCredentialProblem, Msg: omnillm.MsgCLILogin,
-			Args: []string{name, cliName(s.kind)}, Detail: string(s.kind) + ": login"}, egress.ClientError, 0
+			Args: []string{name}, Detail: string(s.kind) + ": login"}, egress.ClientError, 0
 	}
 	return &omnillm.Error{Code: omnillm.CodeUpstream, Msg: omnillm.MsgUpstream, Detail: string(s.kind) + ": " + redact.String(tail(text))}, egress.Failed, 0
 }
