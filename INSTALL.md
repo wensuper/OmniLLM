@@ -83,12 +83,12 @@ Then stop. Don't change any OmniLLM settings unless the person asks.
 | Symptom | What to do |
 |---|---|
 | You aren't allowed to run the installer (your permission settings or sandbox refuse it) | Tell the person that nothing was installed, and that they can allow this one command or run the install command from the README themselves (`curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh`). Don't work around the refusal. |
-| `checksum mismatch` or `signature check failed` | Stop. Tell the person the download didn't verify and should not be installed. Don't retry with checks disabled. |
-| `do not run as root` (Chinese: `不要用 root`) | Run the installer as the normal user, without sudo. |
+| `doesn’t match the published one` or `signature check failed` (Chinese: `和发布的不一致`, `签名核对没有通过`) | Stop. Tell the person the download didn't verify and should not be installed. Don't retry with checks disabled. |
+| `Don’t run this as root` (Chinese: `不要用 root`) | Run the installer as the normal user, without sudo. |
 | `OmniLLM did not start` (Chinese: `OmniLLM 没有启动起来`) | Show the last 30 lines of the log: macOS `~/Library/Application Support/OmniLLM/hub/hub.log`, Linux `~/.config/OmniLLM/hub/hub.log`. The service is named `dev.omnillm.hub` (launchd) or `omnillm-hub` (systemd user service: `systemctl --user status omnillm-hub`). |
 | hub.log says `The data folder path is too long` (Chinese: `数据文件夹的路径太长`) | Set `OMNILLM_HOME=~/.omnillm` for the install command and run it again. |
 | `didn’t start, so OmniLLM went back to` (Chinese: `没能启动，已自动换回`) | An update didn't start and the previous version is running again. Nothing to do; the person may report it as an issue. |
-| `could not reach GitHub` (Chinese: `连不上 GitHub`), or `download failed` (Chinese: `下载没有完成`) | Ask the person to check the network, then run Step 2 again. |
+| `Couldn’t reach GitHub` (Chinese: `连不上 GitHub`), or `The download didn’t finish` (Chinese: `下载没有完成`) | Ask the person to check the network, then run Step 2 again. |
 | The console says the login link expired | Run `~/.local/bin/omnillm open` again; each link works once, for 2 minutes. |
 | No browser on this machine (a server) | See the `headless` row in Step 3. The console listens only on this machine's `127.0.0.1`. |
 

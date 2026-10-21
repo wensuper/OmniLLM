@@ -21,10 +21,11 @@ const T = {
     e2eChip: "端到端加密", noHub: "还没有 OmniLLM？先装好",
     getHubTitle: "先在你的电脑上装好 OmniLLM", getHubBody: "打开终端（Mac：按 ⌘+空格，输入“终端”后回车），粘贴下面这一行再按回车。大约一分钟装好，然后回到这里扫码。", getHubLongPress: "请长按上面这一行复制。", getHubBodyPaste: "打开终端（Mac：按 ⌘+空格，输入“终端”后回车），粘贴下面这一行再按回车。大约一分钟装好，然后回到这里。",
     step3Paste: "在电脑的“添加设备”里展开“电脑或服务器（没有摄像头）”，复制配对文字粘贴到下面",
-    getHubShare: "把这一步发到电脑", getHubCopy: "复制命令", getHubGuide: "查看完整的安装说明", getHubCopied: "已复制。在电脑的终端里粘贴运行。",
+    getHubShare: "发到我的电脑", getHubCopy: "复制命令", getHubGuide: "查看完整的安装说明", getHubCopied: "已复制。把它发到电脑上，在终端里粘贴运行。",
+    getHubHang: "如果卡住不动，多半是连不上 GitHub，换个网络再试。", pasteOpen: "粘贴配对文字",
     getHubSend: "在电脑上安装 OmniLLM：在终端里运行这一行",
     scan: "扫描二维码", pasteInstead: "扫不了码？粘贴配对文字", pastePh: "粘贴配对文字（以 omnillm3- 开头）", add: "添加", cancel: "取消", back: "返回", delete: "删除", remove: "移除", gotIt: "知道了",
-    scanHint: "把 Mac 屏幕上的二维码放进框里", camDenied: "没有拿到摄像头权限。在浏览器设置里允许这个网站用摄像头后再试，或者用“粘贴配对文字”。",
+    scanHint: "把电脑屏幕上的二维码放进框里", camDenied: "没有拿到摄像头权限。在浏览器设置里允许这个网站用摄像头后再试，或者用“粘贴配对文字”。",
     pairTitle: "添加这台设备", pairConnecting: "正在连接你的 Mac……",
     pairAsk: "要把这台设备添加到你的 Mac 吗？只有你刚在 Mac 上点了“添加设备”才继续。", pairVia: "经由 {0}",
     pairReplace: "这会替换这台设备现在的配对（{0}），之前的 Mac 就不能再从这里用了。",
@@ -62,10 +63,11 @@ const T = {
     e2eChip: "End-to-end encrypted", noHub: "No OmniLLM yet? Set it up first",
     getHubTitle: "First, set up OmniLLM on your computer", getHubBody: "Open a terminal (Mac: press ⌘-Space, type “Terminal”, press Return), paste this line and press Return. It takes about a minute; then come back here and scan.", getHubLongPress: "Touch and hold the line above to copy it.", getHubBodyPaste: "Open a terminal (Mac: press ⌘-Space, type “Terminal”, press Return), paste this line and press Return. It takes about a minute; then come back here.",
     step3Paste: "In “Add device” on your computer, open “Computer or server (no camera)” and copy the pairing text into the box below",
-    getHubShare: "Send this to my computer", getHubCopy: "Copy command", getHubGuide: "Full setup guide", getHubCopied: "Copied. Paste it into a terminal on your computer.",
+    getHubShare: "Send this to my computer", getHubCopy: "Copy command", getHubGuide: "Full setup guide", getHubCopied: "Copied. Get it to your computer and paste it into a terminal there.",
+    getHubHang: "If it hangs, GitHub is probably unreachable; try another network.", pasteOpen: "Paste the pairing text",
     getHubSend: "Install OmniLLM on your computer: run this line in a terminal",
     scan: "Scan QR code", pasteInstead: "Can’t scan? Paste the pairing text", pastePh: "Paste the pairing text (starts with omnillm3-)", add: "Add", cancel: "Cancel", back: "Back", delete: "Delete", remove: "Remove", gotIt: "Got it",
-    scanHint: "Point at the QR code on your Mac’s screen", camDenied: "No camera access. Allow the camera for this site in your browser settings and try again, or use “Paste the pairing text”.",
+    scanHint: "Point at the QR code on your computer’s screen", camDenied: "No camera access. Allow the camera for this site in your browser settings and try again, or use “Paste the pairing text”.",
     pairTitle: "Add this device", pairConnecting: "Connecting to your Mac…",
     pairAsk: "Add this device to your Mac? Continue only if you just chose “Add device” on your Mac.", pairVia: "Via {0}",
     pairReplace: "This replaces this device’s current pairing ({0}); the previous Mac can no longer be used from here.",
@@ -355,12 +357,24 @@ $("paste").addEventListener("toggle", () => {
 });
 // A computer (mouse, no camera pointed at a screen) pastes the pairing
 // text; scanning stays for phones and tablets.
-if (matchMedia("(pointer: fine)").matches && !matchMedia("(any-pointer: coarse)").matches) {
+const MOUSE_ONLY = matchMedia("(pointer: fine)").matches && !matchMedia("(any-pointer: coarse)").matches;
+if (MOUSE_ONLY) {
   $("paste").open = true;
   $("scan").hidden = true;
-  quoted(document.querySelector('[data-t="step3"]'), t("step3Paste"));
+  quoted(document.querySelector("#paste summary"), t("pasteOpen"));
   quoted(document.querySelector('[data-t="getHubBody"]'), t("getHubBodyPaste"));
 }
+// Step 3 says what to do with the box that is open.
+const step3 = () => quoted(document.querySelector('[data-t="step3"]'), t($("paste").open ? "step3Paste" : "step3"));
+step3();
+$("paste").addEventListener("toggle", () => {
+  step3();
+  // Opened by a tap: bring the box into view and type into it.
+  if ($("paste").open && !MOUSE_ONLY) {
+    $("paste-text").scrollIntoView({ block: "center" });
+    $("paste-text").focus({ preventScroll: true });
+  }
+});
 // No hub yet: how to set one up, without leaving the page. The phone
 // can't run the command, so the first choice sends it to the computer.
 const INSTALL_CMD = "curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh";
@@ -386,11 +400,14 @@ $("get-copy").addEventListener("click", () => {
 // welcomeNote: a calm notice at the top of the welcome screen (removed,
 // or remove it on the Mac too); the paste box folded so it reads first.
 // While it shows, the welcome body (how to add a device) steps aside.
+// The three steps stay (they are how to add it again); the notice sits
+// right under the top bar, and "No OmniLLM yet?" makes no sense then.
 function welcomeNote(key) {
   $("welcome-note").hidden = !key;
   quoted($("welcome-note"), key ? t(key) : "");
-  $("welcome-body").hidden = !!key;
-  if (key) $("paste").open = false;
+  $("no-hub").hidden = !!key;
+  if (key) { $("get-hub").hidden = true; $("no-hub").setAttribute("aria-expanded", "false"); }
+  if (key && !MOUSE_ONLY) $("paste").open = false;
 }
 
 // ---------- pairing ----------
