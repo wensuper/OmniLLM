@@ -311,11 +311,12 @@ td.nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cap-edit .btns { display: flex; gap: 6px; }
 @media (min-width: 601px) {
   table.fixed { table-layout: fixed; }
-  col.c-seen { width: 150px; }
-  col.c-budget { width: 210px; }
-  col.c-mdl { width: 130px; }
+  /* Narrow enough for what they hold; the name takes the rest. */
+  col.c-seen { width: 124px; }
+  col.c-budget { width: 150px; }
+  col.c-mdl { width: 108px; }
   col.c-sw { width: 64px; }
-  col.c-act { width: 150px; }
+  col.c-act { width: 88px; }
   table.fixed td { overflow: hidden; text-overflow: ellipsis; }
   table.fixed tr.editing td { overflow: visible; }
 }

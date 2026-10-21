@@ -833,7 +833,9 @@ function seenText(td, online, iso) {
 function nameCell(tr, name, paused, online, spent, seen) {
   const td = cell(tr, "", "nm");
   const line = el("div", undefined, "nm-line");
-  line.append(el("span", name, "nm-text"));
+  const nm = el("span", name, "nm-text");
+  nm.title = name; // the whole name on hover when it is cut short
+  line.append(nm);
   if (paused) line.append(el("span", t("pausedChip"), "tag paused-tag"));
   td.append(line);
   if (spent) {
