@@ -151,6 +151,13 @@ The installer adds `~/.local/bin` to your PATH (in `~/.bashrc`, `~/.zshrc`, and 
 
 **Programs on the hub Mac**: in the console, under *Apps*, click *Add app* and give it a name. You get a token for that app alone, shown next to the address to enter (`http://127.0.0.1:8765/v1`) and settings you can copy as is. Each app has its own limit and can be paused or removed at any time. Only programs on this Mac can reach this interface, and every request must carry the token.
 
+Most programs and SDKs that speak the OpenAI API read these two environment variables:
+
+```bash
+export OPENAI_BASE_URL=http://127.0.0.1:8765/v1
+export OPENAI_API_KEY=<the app’s token>
+```
+
 **Programs on other devices** (scripts, editor plugins, other AI apps) can use the hub’s models through an OpenAI-compatible local interface on the device:
 
 ```bash
