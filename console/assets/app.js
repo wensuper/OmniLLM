@@ -638,7 +638,7 @@ async function startPair(area, onDone, closable) {
   right.append(state);
   const more = el("details", undefined, "pair-more");
   more.append(el("summary", t("pairComputer")));
-  const install = "curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh -o omnillm-install.sh && sh omnillm-install.sh --device";
+  const install = "curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh -s -- --device";
   more.append(rich(el("p"), t("pairComputerNew")), codeBox(install),
     howText(p.web), codeBox(p.code));
   right.append(more);
@@ -1490,7 +1490,9 @@ document.querySelectorAll("button[data-copy]").forEach((b) => copyBtn(b.dataset.
 async function boot() {
   applyLang();
   applyTheme(store("omnillm.theme"));
-  const tab = store("omnillm.tab") || "devices";
+  // The menu bar's counts open their tab with &tab=devices / &tab=models.
+  const ht = /[#&]tab=(\w+)/.exec(location.hash);
+  const tab = (ht && ht[1]) || store("omnillm.tab") || "devices";
   const tb = document.querySelector('.tabs button[data-tab="' + tab + '"]') || document.querySelector(".tabs button");
   tb.click();
   const m = /(?:^|[#&])login=([0-9a-f]{64})/.exec(location.hash);

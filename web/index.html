@@ -27,19 +27,67 @@
     <button id="boot-retry" type="button" class="primary" data-t="bootRetry" hidden></button>
   </section>
 
-  <section id="welcome" class="screen center" hidden>
-    <p id="welcome-note" class="warn welcome-note" role="status" hidden></p>
-    <!-- Brand: the name and the slogan (the brand's own words, never translated). -->
-    <div class="hero"><img src="icon.svg" alt="" class="logo"><span class="hero-name">OmniLLM</span><span class="hero-sub">Your AI, Everywhere</span></div>
-    <h1 data-t="welcomeTitle"></h1>
-    <p id="welcome-body" class="muted" data-t="welcomeBody"></p>
-    <button id="scan" class="primary" data-t="scan"></button>
-    <details id="paste" class="paste">
-      <summary data-t="pasteInstead"></summary>
-      <textarea id="paste-text" rows="3" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>
-      <button id="paste-go" class="secondary" data-t="add"></button>
-    </details>
-    <p id="welcome-err" class="err" role="alert"></p>
+  <section id="welcome" class="screen welcome" hidden>
+    <div class="wl">
+      <div class="wl-top">
+        <!-- Brand: the name and the slogan (the brand's own words, never translated). -->
+        <div class="wl-brand"><img src="icon.svg" alt="" width="28" height="28"><span>OmniLLM</span></div>
+        <span class="wl-chip"><span class="wl-chip-lock" aria-hidden="true"></span><span data-t="e2eChip"></span></span>
+      </div>
+      <div class="wl-main">
+        <div class="wl-copy">
+          <p id="welcome-note" class="warn welcome-note" role="status" hidden></p>
+          <p class="wl-eyebrow">Your AI, Everywhere</p>
+          <h1 class="wl-title"><span data-t="welcomeTitle1"></span><span class="wl-grad" data-t="welcomeTitle2"></span></h1>
+          <ol id="welcome-body" class="wl-steps" role="list">
+            <li><span class="wl-n" aria-hidden="true">01</span><span data-t="step1"></span></li>
+            <li><span class="wl-n" aria-hidden="true">02</span><span data-t="step2"></span></li>
+            <li><span class="wl-n" aria-hidden="true">03</span><span data-t="step3"></span></li>
+          </ol>
+          <div class="wl-actions">
+            <button id="scan" class="primary wl-scan" data-t="scan"></button>
+            <details id="paste" class="paste">
+              <summary data-t="pasteInstead"></summary>
+              <textarea id="paste-text" rows="3" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>
+              <button id="paste-go" class="secondary" data-t="add"></button>
+            </details>
+            <p id="welcome-err" class="err" role="alert"></p>
+            <button id="no-hub" type="button" class="wl-link" data-t="noHub" aria-expanded="false" aria-controls="get-hub"></button>
+            <div id="get-hub" class="wl-get" hidden>
+              <p class="wl-get-title" data-t="getHubTitle"></p>
+              <p class="muted small" data-t="getHubBody"></p>
+              <code class="wl-cmd">curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh</code>
+              <div class="wl-get-actions">
+                <button id="get-share" type="button" class="secondary" data-t="getHubShare"></button>
+                <button id="get-copy" type="button" class="secondary" data-t="getHubCopy"></button>
+              </div>
+              <a class="wl-guide" href="https://github.com/wensuper/OmniLLM#quick-start" target="_blank" rel="noopener" data-t="getHubGuide"></a>
+            </div>
+          </div>
+        </div>
+        <!-- Picture only: the Mac in the middle, this device and others around it, an encrypted line between. -->
+        <svg class="wl-orbit" viewBox="0 0 320 320" aria-hidden="true">
+          <defs>
+            <linearGradient id="wl-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" class="wl-s1"/><stop offset="1" class="wl-s2"/></linearGradient>
+            <radialGradient id="wl-core"><stop offset="0" class="wl-c1"/><stop offset="1" class="wl-c2"/></radialGradient>
+          </defs>
+          <circle cx="160" cy="160" r="150" class="wl-ring wl-ring-3"/>
+          <circle cx="160" cy="160" r="118" class="wl-ring wl-ring-2"/>
+          <circle cx="160" cy="160" r="82" class="wl-ring wl-ring-1"/>
+          <circle cx="160" cy="160" r="72" fill="url(#wl-core)"/>
+          <g class="wl-spin">
+            <path d="M160 160L160 42" class="wl-beam"/>
+            <path d="M160 160L262 219" class="wl-beam wl-beam-2"/>
+            <path d="M160 160L58 219" class="wl-beam wl-beam-3"/>
+            <g class="wl-node wl-node-me" transform="translate(160 42)"><circle r="17"/><rect x="-5" y="-8" width="10" height="16" rx="2"/></g>
+            <g class="wl-node" transform="translate(262 219)"><circle r="14"/><rect x="-7" y="-5" width="14" height="10" rx="1.5"/></g>
+            <g class="wl-node" transform="translate(58 219)"><circle r="14"/><rect x="-6" y="-7" width="12" height="14" rx="1.5"/></g>
+          </g>
+          <image href="icon.svg" x="128" y="128" width="64" height="64"/>
+          <g class="wl-lock" transform="translate(206 128)"><rect x="-13" y="-13" width="26" height="26" rx="8"/><path d="M-4.5 -1v-3a4.5 4.5 0 0 1 9 0v3M-6 -1h12v8h-12z"/></g>
+        </svg>
+      </div>
+    </div>
   </section>
 
   <section id="scanner" class="screen" hidden>

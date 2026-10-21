@@ -192,38 +192,76 @@ func latestRelease(ctx context.Context, c *http.Client) (string, error) {
 	return tag, nil
 }
 
-// runInstaller downloads the official installer into a private temporary
-// folder and runs it as a person would (sh install.sh), with its output in
-// logPath. It checks checksums and the signature itself and starts the hub
-// and the menu bar icon again, so this process is replaced when it works.
-// It runs in its own session, so the installer outlives this process.
-func runInstaller(ctx context.Context, c *http.Client, logPath string) error {
+// runInstaller downloads the official installer into dir and runs it as a
+// person would (sh install.sh ARGS), with its output in logw. It checks
+// checksums and the signature itself and starts the hub (and the menu bar
+// icon) again. detached: the installer runs in its own session, and under
+// systemd in its own unit, so it outlives this process when it restarts
+// the service this process belongs to (systemd would stop every process in
+// the service, and the service's /tmp is private, hence dir).
+func runInstaller(ctx context.Context, c *http.Client, dir string, args []string, logw io.Writer, detached bool) error {
 	script, err := get(ctx, c, installerURL, 1<<20)
 	if err != nil {
 		return err
 	}
-	dir, err := os.MkdirTemp("", "omnillm-update-")
-	if err != nil {
+	work := filepath.Join(dir, "update-installer")
+	_ = os.RemoveAll(work)
+	if err := os.MkdirAll(work, 0o700); err != nil {
 		return err
 	}
-	defer os.RemoveAll(dir)
-	_ = os.Chmod(dir, 0o700)
-	p := filepath.Join(dir, "install.sh")
+	p := filepath.Join(work, "install.sh")
 	if err := os.WriteFile(p, script, 0o600); err != nil {
 		return err
 	}
-	logf, err := os.OpenFile(logPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
-	if err != nil {
-		return err
+	fmt.Fprintf(logw, "omnillm %s: update started %s\n", version, time.Now().Format(time.RFC3339))
+	if detached && os.Getenv("INVOCATION_ID") != "" {
+		if _, err := exec.LookPath("systemd-run"); err == nil {
+			return runInUnit(ctx, dir, work, p, args)
+		}
 	}
-	defer logf.Close()
-	fmt.Fprintf(logf, "omnillm %s: update started %s\n", version, time.Now().Format(time.RFC3339))
-	cmd := exec.CommandContext(ctx, "/bin/sh", p)
-	cmd.Dir = dir
+	defer os.RemoveAll(work)
+	cmd := exec.CommandContext(ctx, "/bin/sh", append([]string{p}, args...)...)
+	cmd.Dir = work
 	cmd.Env = append(os.Environ(), "OMNILLM_NO_BROWSER=1")
-	cmd.Stdout, cmd.Stderr = logf, logf
-	detach(cmd)
+	cmd.Stdout, cmd.Stderr = logw, logw
+	if detached {
+		detach(cmd)
+	}
 	return cmd.Run()
+}
+
+// errHandedOff: the installer runs on in its own systemd unit, which now
+// holds the update lock and leaves its exit status in update.status.
+var errHandedOff = errors.New("update: installer handed to its own unit")
+
+// runInUnit runs the installer in a transient systemd user unit, so the
+// service restart it does cannot stop it. The unit gets only what tells
+// the installer where the data is and which language to speak, never a
+// secret (the command line of systemd-run is visible to the machine);
+// the self-hosted relay and web addresses come back from the service file
+// (keepServiceSettings). It writes its exit status and frees the lock
+// when it ends, and gives up after 15 minutes.
+func runInUnit(ctx context.Context, dir, work, script string, args []string) error {
+	unit := fmt.Sprintf("omnillm-update-%d-%d", time.Now().Unix(), os.Getpid())
+	run := []string{"--user", "--collect", "--quiet", "--unit", unit, "--property=RuntimeMaxSec=900",
+		"--setenv=OMNILLM_NO_BROWSER=1"}
+	for _, k := range []string{"OMNILLM_HOME", "OMNILLM_LANG", "LANG", "LC_ALL"} {
+		if v := os.Getenv(k); v != "" {
+			run = append(run, "--setenv="+k+"="+v)
+		}
+	}
+	// $1 log, $2 status file, $3 lock, $4 work folder, $5 script, then
+	// the installer's own arguments: no path is pasted into the shell code.
+	const wrap = `log=$1 st=$2 lock=$3 work=$4 s=$5; shift 5; /bin/sh "$s" "$@" >>"$log" 2>&1; echo $? >"$st"; rm -rf "$work"; rm -f "$lock"`
+	run = append(run, "/bin/sh", "-c", wrap, "omnillm-update",
+		filepath.Join(dir, "update.log"), filepath.Join(dir, "update.status"), filepath.Join(dir, "update.lock"), work, script)
+	run = append(run, args...)
+	if out, err := exec.CommandContext(ctx, "systemd-run", run...).CombinedOutput(); err != nil {
+		return fmt.Errorf("systemd-run: %v: %s", err, strings.TrimSpace(string(out)))
+	}
+	// The unit owns the lock from here (holderAlive asks systemd).
+	_ = os.WriteFile(filepath.Join(dir, "update.lock"), []byte("unit:"+unit+"\n"), 0o600)
+	return errHandedOff
 }
 
 // updateState is what the menu knows about updates.
@@ -241,21 +279,33 @@ type updateState struct {
 // 检查更新… again.
 const upToDateFor = time.Minute
 
-// versionLine is the version line's title and whether a click installs.
+// versionLine is the version line's title and whether a click installs,
+// in NEXA's words: what the click costs and where the log is are in the
+// tooltip (versionTip), not in the line.
 func versionLine(cur string, s updateState) (title string, install bool) {
 	switch {
 	case s.Installing != "":
-		return fmt.Sprintf(t("正在更新到 %s……", "Updating to %s…"), s.Installing), false
+		return fmt.Sprintf(t("正在更新到 %s…", "Updating to %s…"), plain(s.Installing)), false
 	case s.Failed && s.Latest != "":
-		if s.Log != "" {
-			return fmt.Sprintf(t("更新失败，点击重试（日志：%s）", "Update failed; click to retry (log: %s)"), tildePath(s.Log)), true
-		}
-		return t("更新失败，点击重试", "Update failed; click to retry"), true
+		return fmt.Sprintf(t("更新到 %s 没有成功，点击再试", "Updating to %s didn’t work · click to try again"), plain(s.Latest)), true
+	case s.Latest != "" && compareVersions(s.Latest, cur) > 0:
+		return fmt.Sprintf(t("有新版本 %s · 点击更新", "New version %s · click to update"), plain(s.Latest)), true
+	}
+	return fmt.Sprintf(t("版本 %s", "Version %s"), plain(cur)), false
+}
+
+// versionTip is the version line's tooltip.
+func versionTip(cur string, s updateState) string {
+	switch {
+	case s.Installing != "":
+		return ""
+	case s.Failed && s.Latest != "" && s.Log != "":
+		return fmt.Sprintf(t("日志：%s", "Log: %s"), tildePath(s.Log))
 	case s.Latest != "" && compareVersions(s.Latest, cur) > 0:
 		// Installing restarts the hub, which ends replies in progress.
-		return fmt.Sprintf(t("有新版本 %s · 点击更新（正在进行的回答会中断）", "New version %s · click to update (replies in progress will stop)"), s.Latest), true
+		return t("更新时 OmniLLM 会重启，正在进行的回答会中断。", "OmniLLM restarts to update; a reply in progress is cut off.")
 	}
-	return fmt.Sprintf(t("版本 %s", "Version %s"), cur), false
+	return ""
 }
 
 // checkLine is the line under it: shown only while the version line offers
@@ -266,13 +316,26 @@ func checkLine(cur string, s updateState, now time.Time) (title string, click, s
 	}
 	switch {
 	case s.Checking:
-		return t("正在检查更新……", "Checking for updates…"), false, true
+		return t("正在检查更新…", "Checking for updates…"), false, true
 	case s.CheckFailed:
 		return t("检查失败，点击重试", "Check failed; click to retry"), true, true
 	case !s.CheckedAt.IsZero() && now.Sub(s.CheckedAt) < upToDateFor:
 		return t("✓ 已是最新版本", "✓ Up to date"), false, true
 	}
 	return t("检查更新…", "Check for updates…"), true, true
+}
+
+// fromHub folds in what the hub's own updater knows (update.json): a
+// version it rolled back is not offered again, and an automatic update
+// that didn't work shows as one to try again.
+func (s updateState) fromHub(cur string, u updateFile) updateState {
+	if sameVersion(s.Latest, u.Skip) {
+		s.Latest = ""
+	}
+	if v := u.newer(cur); v != "" && sameVersion(u.Error, v) && s.Installing == "" {
+		s.Latest, s.Failed = v, true
+	}
+	return s
 }
 
 // checked folds a finished check into the state.
@@ -357,8 +420,38 @@ func noteLog(path, format string, a ...any) {
 	fmt.Fprintf(f, "omnillm tray: "+format+"\n", a...)
 }
 
-// countsLine is the menu's counts line: devices (how many online now) and
-// model sources.
-func countsLine(st Status) string {
-	return fmt.Sprintf(t("设备 %d 台（%d 台在线）· 模型来源 %d 个", "Devices: %d (%d online) · Model sources: %d"), st.Devices, st.Online, st.Providers)
+// statusLine is the menu's one status line at the top, NEXA's "在线 · 23 ms":
+// the state first, then what it means for the devices. ok says the hub
+// answered; updating, that an update has it down on purpose; startFailed,
+// that 启动 OmniLLM did not work.
+func statusLine(st Status, ok, updating, startFailed bool) string {
+	switch {
+	case !ok && updating:
+		return t("正在更新 · 马上回来", "Updating · back in a moment")
+	case !ok && startFailed:
+		return t("没能启动 · 在终端运行 omnillm install", "Couldn’t start · run omnillm install in Terminal")
+	case !ok:
+		return t("OmniLLM 没有运行", "OmniLLM isn’t running")
+	case !st.RelayConfigured:
+		return t("在运行 · 只在这台 Mac 上用", "Running · this Mac only")
+	case st.RelayUp:
+		return t("在线 · 手机和其他设备能连上", "Online · phones and other devices can connect")
+	}
+	return t("远程连接断开 · 设备暂时连不上", "Remote access down · devices can’t connect now")
+}
+
+// devicesLine and sourcesLine are the menu's two counts, NEXA's
+// "待我决策  3": each opens its page in the console.
+func devicesLine(st Status) string {
+	if st.Devices == 0 {
+		return t("设备  还没有添加", "Devices  none yet")
+	}
+	return fmt.Sprintf(t("设备  %d 台在线 / 共 %d 台", "Devices  %d of %d online"), st.Online, st.Devices)
+}
+
+func sourcesLine(st Status) string {
+	if st.Providers == 0 {
+		return t("模型来源  还没有接入", "Model sources  none yet")
+	}
+	return fmt.Sprintf(t("模型来源  %d", "Model sources  %d"), st.Providers)
 }

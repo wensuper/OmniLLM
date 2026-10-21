@@ -16,16 +16,21 @@ const T = {
     loading: "正在载入……", bootDownload: "正在下载……", bootStart: "正在启动……", bootStorage: "正在打开……",
     bootSlow: "载入停了 20 秒没有进展，停在“{0}”。点下面的按钮清掉缓存重新载入；网络慢的话也可以换个网络再试。",
     bootCrashed: "程序意外停止了。点下面的按钮清掉缓存重新载入。", bootError: "载入失败：", bootRetry: "重新载入",
-    welcomeTitle: "在这台设备上用你的模型",
-    welcomeBody: "在你的 Mac 上打开 OmniLLM，点“添加设备”，再用这台设备扫屏幕上的二维码。",
+    welcomeTitle1: "你电脑上的 AI，", welcomeTitle2: "现在也在这台设备上",
+    step1: "打开电脑上的 OmniLLM 控制台（Mac：菜单栏图标）", step2: "点“添加设备”", step3: "扫电脑屏幕上的二维码",
+    e2eChip: "端到端加密", noHub: "还没有 OmniLLM？先装好",
+    getHubTitle: "先在你的电脑上装好 OmniLLM", getHubBody: "打开终端（Mac：按 ⌘+空格，输入“终端”后回车），粘贴下面这一行再按回车。大约一分钟装好，然后回到这里扫码。", getHubLongPress: "请长按上面这一行复制。", getHubBodyPaste: "打开终端（Mac：按 ⌘+空格，输入“终端”后回车），粘贴下面这一行再按回车。大约一分钟装好，然后回到这里。",
+    step3Paste: "在电脑的“添加设备”里展开“电脑或服务器（没有摄像头）”，复制配对文字粘贴到下面",
+    getHubShare: "把这一步发到电脑", getHubCopy: "复制命令", getHubGuide: "查看完整的安装说明", getHubCopied: "已复制。在电脑的终端里粘贴运行。",
+    getHubSend: "在电脑上安装 OmniLLM：在终端里运行这一行",
     scan: "扫描二维码", pasteInstead: "扫不了码？粘贴配对文字", pastePh: "粘贴配对文字（以 omnillm3- 开头）", add: "添加", cancel: "取消", back: "返回", delete: "删除", remove: "移除", gotIt: "知道了",
-    scanHint: "把 Mac 屏幕上的二维码放进框里", camDenied: "没有拿到摄像头权限。可以改用下面的“粘贴配对文字”。",
+    scanHint: "把 Mac 屏幕上的二维码放进框里", camDenied: "没有拿到摄像头权限。在浏览器设置里允许这个网站用摄像头后再试，或者用“粘贴配对文字”。",
     pairTitle: "添加这台设备", pairConnecting: "正在连接你的 Mac……",
     pairAsk: "要把这台设备添加到你的 Mac 吗？只有你刚在 Mac 上点了“添加设备”才继续。", pairVia: "经由 {0}",
     pairReplace: "这会替换这台设备现在的配对（{0}），之前的 Mac 就不能再从这里用了。",
     pairCheck: "在 Mac 上看到同样的数字，就在 Mac 上点“一致，添加”。", pairWait: "等你在 Mac 上确认……", pairMismatch: "数字不一样？取消", pairDone: "已添加。",
     pairDropped: "连接断了。在 Mac 上点“换一个二维码”再扫。", connectedMac: "已连上你的 Mac",
-    notCode: "这不是 OmniLLM 的配对二维码或配对文字。", needTLS: "你的 Mac 用的远程连接不支持手机网页（需要 wss:// 地址）。请在 Mac 上设置一个公开的远程连接。",
+    notCode: "这不是 OmniLLM 的配对二维码或配对文字。请从电脑上“添加设备”里重新复制。", needTLS: "你的 Mac 用的远程连接不支持手机网页（需要 wss:// 地址）。请在 Mac 上设置一个公开的远程连接。",
     chats: "对话", newChat: "新对话", placeholder: "输入消息", stop: "停止", send: "发送", menu: "菜单", model: "模型",
     addImage: "添加图片", removeImage: "移除图片", tooManyImages: "每条消息最多 4 张图片。", imageFailed: "这张图片打不开，换一张试试。", imageTooBig: "图片太大，换一张小一点的。", imageTitle: "图片",
     offline: "连不上你的 Mac：它可能睡眠了或者没联网。醒来后会自动恢复。", retry: "重试",
@@ -52,16 +57,21 @@ const T = {
     loading: "Loading…", bootDownload: "Downloading…", bootStart: "Starting…", bootStorage: "Opening…",
     bootSlow: "Loading has made no progress for 20 seconds, stuck at “{0}”. Tap below to clear the cache and load again; on a slow network, another network may help.",
     bootCrashed: "The program stopped unexpectedly. Tap below to clear the cache and load again.", bootError: "Loading failed: ", bootRetry: "Load again",
-    welcomeTitle: "Use your models on this device",
-    welcomeBody: "On your Mac, open OmniLLM, choose “Add device”, and scan the QR code on its screen with this device.",
+    welcomeTitle1: "The AI on your computer, ", welcomeTitle2: "now on this device",
+    step1: "Open the OmniLLM console on your computer (on a Mac: the menu bar icon)", step2: "Choose “Add device”", step3: "Scan the QR code on your computer’s screen",
+    e2eChip: "End-to-end encrypted", noHub: "No OmniLLM yet? Set it up first",
+    getHubTitle: "First, set up OmniLLM on your computer", getHubBody: "Open a terminal (Mac: press ⌘-Space, type “Terminal”, press Return), paste this line and press Return. It takes about a minute; then come back here and scan.", getHubLongPress: "Touch and hold the line above to copy it.", getHubBodyPaste: "Open a terminal (Mac: press ⌘-Space, type “Terminal”, press Return), paste this line and press Return. It takes about a minute; then come back here.",
+    step3Paste: "In “Add device” on your computer, open “Computer or server (no camera)” and copy the pairing text into the box below",
+    getHubShare: "Send this to my computer", getHubCopy: "Copy command", getHubGuide: "Full setup guide", getHubCopied: "Copied. Paste it into a terminal on your computer.",
+    getHubSend: "Install OmniLLM on your computer: run this line in a terminal",
     scan: "Scan QR code", pasteInstead: "Can’t scan? Paste the pairing text", pastePh: "Paste the pairing text (starts with omnillm3-)", add: "Add", cancel: "Cancel", back: "Back", delete: "Delete", remove: "Remove", gotIt: "Got it",
-    scanHint: "Point at the QR code on your Mac’s screen", camDenied: "No camera access. Use “Paste the pairing text” below instead.",
+    scanHint: "Point at the QR code on your Mac’s screen", camDenied: "No camera access. Allow the camera for this site in your browser settings and try again, or use “Paste the pairing text”.",
     pairTitle: "Add this device", pairConnecting: "Connecting to your Mac…",
     pairAsk: "Add this device to your Mac? Continue only if you just chose “Add device” on your Mac.", pairVia: "Via {0}",
     pairReplace: "This replaces this device’s current pairing ({0}); the previous Mac can no longer be used from here.",
     pairCheck: "If your Mac shows the same number, choose “Matches, add” there.", pairWait: "Waiting for you to confirm on your Mac…", pairMismatch: "Numbers don’t match? Cancel", pairDone: "Added.",
     pairDropped: "The connection dropped. Choose “New QR code” on your Mac and scan again.", connectedMac: "Connected to your Mac",
-    notCode: "This is not an OmniLLM pairing QR code or pairing text.", needTLS: "Your Mac’s remote access can’t be used from a phone browser (it needs a wss:// address). Set up public remote access on your Mac.",
+    notCode: "This is not an OmniLLM pairing QR code or pairing text. Copy it again from “Add device” on your computer.", needTLS: "Your Mac’s remote access can’t be used from a phone browser (it needs a wss:// address). Set up public remote access on your Mac.",
     chats: "Chats", newChat: "New chat", placeholder: "Message", stop: "Stop", send: "Send", menu: "Menu", model: "Model",
     addImage: "Add image", removeImage: "Remove image", tooManyImages: "Up to 4 images per message.", imageFailed: "This image can’t be opened; try another one.", imageTooBig: "Image too large; try a smaller one.", imageTitle: "Image",
     offline: "Can’t reach your Mac: it may be asleep or offline. It reconnects when your Mac wakes.", retry: "Retry",
@@ -337,13 +347,41 @@ addEventListener("hashchange", () => {
 // With the paste box open, its Add button is the one to press. It waits
 // until the box holds pairing text (it starts with omnillm3-).
 $("paste-text").placeholder = t("pastePh");
-function pasteReady() { $("paste-go").disabled = !$("paste-text").value.trim().match(/^omnillm\d-/); }
-$("paste-text").addEventListener("input", pasteReady);
-pasteReady();
 $("paste").addEventListener("toggle", () => {
   const open = $("paste").open;
   $("paste-go").className = open ? "primary" : "secondary";
-  $("scan").className = open ? "secondary" : "primary";
+  $("scan").classList.toggle("primary", !open);
+  $("scan").classList.toggle("secondary", open);
+});
+// A computer (mouse, no camera pointed at a screen) pastes the pairing
+// text; scanning stays for phones and tablets.
+if (matchMedia("(pointer: fine)").matches && !matchMedia("(any-pointer: coarse)").matches) {
+  $("paste").open = true;
+  $("scan").hidden = true;
+  quoted(document.querySelector('[data-t="step3"]'), t("step3Paste"));
+  quoted(document.querySelector('[data-t="getHubBody"]'), t("getHubBodyPaste"));
+}
+// No hub yet: how to set one up, without leaving the page. The phone
+// can't run the command, so the first choice sends it to the computer.
+const INSTALL_CMD = "curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh";
+const GUIDE_URL = "https://github.com/wensuper/OmniLLM#quick-start";
+$("no-hub").addEventListener("click", () => {
+  const open = $("get-hub").hidden;
+  $("get-hub").hidden = !open;
+  $("no-hub").setAttribute("aria-expanded", String(open));
+  // Instant: a smooth scroll is skipped by some browsers, and then the tap looks dead.
+  if (open) $("get-hub").scrollIntoView({ block: "nearest" });
+});
+// Where the phone can share, sending it to the computer is the way.
+$("get-share").hidden = !navigator.share;
+if (navigator.share) $("get-share").className = "primary";
+$("get-share").addEventListener("click", () => {
+  navigator.share({ title: "OmniLLM", text: t("getHubSend") + "\n" + INSTALL_CMD, url: GUIDE_URL }).catch(() => {});
+});
+$("get-copy").addEventListener("click", () => {
+  const fail = () => { getSelection().selectAllChildren(document.querySelector(".wl-cmd")); toastText(t("getHubLongPress")); };
+  if (!navigator.clipboard) return fail();
+  navigator.clipboard.writeText(INSTALL_CMD).then(() => toastText(t("getHubCopied")), fail);
 });
 // welcomeNote: a calm notice at the top of the welcome screen (removed,
 // or remove it on the Mac too); the paste box folded so it reads first.
@@ -356,6 +394,10 @@ function welcomeNote(key) {
 }
 
 // ---------- pairing ----------
+// Add waits for something to add.
+const pasteReady = () => { $("paste-go").disabled = !/^omnillm\d-/.test($("paste-text").value.trim()); $("welcome-err").textContent = ""; }; // only pairing text can be added
+$("paste-text").addEventListener("input", pasteReady);
+pasteReady();
 $("paste-go").addEventListener("click", () => {
   const v = $("paste-text").value.trim();
   if (!/^omnillm\d-/.test(v)) return;

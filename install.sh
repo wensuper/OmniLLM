@@ -1,8 +1,12 @@
 #!/bin/sh
-# OmniLLM installer (macOS, Linux). No sudo, no questions.
+# OmniLLM installer (macOS, Linux). No sudo, no questions. Installs, or
+# updates what is installed (settings are kept).
 #
-#   curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh -o omnillm-install.sh
-#   sh omnillm-install.sh
+#   curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh -s -- --device   # a server that only uses a hub
+#
+# Everything runs from main at the very end, so a download cut off halfway
+# runs nothing.
 #
 # 1. Downloads the latest release for this computer and checks its SHA-256
 #    against checksums.txt; if cosign is installed, also checks that
@@ -11,6 +15,8 @@
 # 2. Runs "omnillm install": copies itself to ~/.local/bin, starts the hub
 #    as a background service for this user, opens the local console.
 set -eu
+
+main() {
 
 REPO="wensuper/OmniLLM"
 # Fixed on purpose: no environment variable can point this at another
@@ -24,7 +30,7 @@ say() { printf '%s\n' "$*"; }
 fail() { printf 'omnillm-install: %s\n' "$*" >&2; exit 1; }
 
 if [ "$(id -u)" = "0" ]; then
-  fail "$(t "不要用 root 运行（do not run as root）：OmniLLM 只为当前用户安装，去掉 sudo 再运行。" "do not run as root; OmniLLM installs for the current user only")"
+  fail "$(t "不要用 root 或 sudo 运行：OmniLLM 只为当前用户安装，去掉 sudo 再运行一次。" "do not run as root; OmniLLM installs for the current user only")"
 fi
 
 os=$(uname -s | tr '[:upper:]' '[:lower:]')
@@ -40,7 +46,8 @@ case "$arch" in
 esac
 
 work=$(mktemp -d "${TMPDIR:-/tmp}/omnillm.XXXXXX")
-trap 'rm -rf "$work"' EXIT INT TERM
+trap 'rm -rf "$work"' EXIT
+trap 'exit 130' INT TERM
 
 # newest prints the highest of the version tags on stdin (vMAJOR.MINOR.PATCH
 # with an optional -pre.release.N); anything else is ignored.
@@ -82,27 +89,27 @@ if [ "$code" = "404" ]; then
   # alpha.5), so pick the highest version: numbers compare as numbers.
   tag=$(printf '%s' "$api" | grep -o '"tag_name": *"[^"]*"' | sed 's/.*"\([^"]*\)"$/\1/' | newest)
   if [ -n "$tag" ]; then
-    printf '%s' "$tag" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$' || fail "unexpected release name: refusing"
+    printf '%s' "$tag" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$' || fail "$(t "GitHub 上的版本名不对，不安装" "unexpected release name: refusing")"
     BASE="https://github.com/$REPO/releases/download/$tag"
-    say "$(t "使用预发布版 ${tag}。" "Using pre-release $tag.")"
+    say "$(t "最新版本是 ${tag#v}（预发布版）。" "The newest version is ${tag#v} (a pre-release).")"
     code=$(curl -sSL --proto '=https' --tlsv1.2 -o "$work/checksums.txt" -w '%{http_code}' "$BASE/checksums.txt" 2>/dev/null || true)
-    [ "$code" = "200" ] || fail "release $tag has no checksums.txt (HTTP ${code:-none}); refusing"
+    [ "$code" = "200" ] || fail "$(t "版本 ${tag} 缺少校验文件，不安装（HTTP ${code:-none}）" "release $tag has no checksums.txt (HTTP ${code:-none}); refusing")"
   fi
 fi
 if [ "$code" = "200" ]; then
-  say "$(t "正在下载 $asset ……" "Downloading $asset ...")"
-  curl -fsSL --proto '=https' --tlsv1.2 -o "$work/$asset" "$BASE/$asset" || fail "download failed: $asset"
+  say "$(t "正在下载 OmniLLM（${os} ${arch}）……" "Downloading OmniLLM ($os $arch)…")"
+  curl -fsSL --proto '=https' --tlsv1.2 -o "$work/$asset" "$BASE/$asset" || fail "$(t "下载没有完成，请检查网络后再运行一次" "download failed: $asset")"
   want=$(grep "  $asset\$" "$work/checksums.txt" | cut -d' ' -f1)
-  [ -n "$want" ] || fail "checksums.txt has no entry for $asset"
+  [ -n "$want" ] || fail "$(t "校验文件里没有这个系统的程序，不安装" "checksums.txt has no entry for $asset")"
   got=$(sha256 "$work/$asset")
-  [ "$want" = "$got" ] || fail "$(t "$asset 的校验和对不上（checksum mismatch），不安装" "checksum mismatch for $asset: refusing to install")"
-  say "$(t "校验和核对通过。" "Checksum OK.")"
+  [ "$want" = "$got" ] || fail "$(t "下载的文件和发布的不一致（checksum mismatch），不安装" "checksum mismatch for $asset: refusing to install")"
+  say "$(t "下载已核对无误。" "Checksum OK.")"
   if command -v cosign >/dev/null 2>&1; then
     if curl -fsSL --proto '=https' --tlsv1.2 -o "$work/checksums.txt.sigstore.json" "$BASE/checksums.txt.sigstore.json" 2>/dev/null; then
       sigargs="--bundle $work/checksums.txt.sigstore.json"
     else
-      curl -fsSL --proto '=https' --tlsv1.2 -o "$work/checksums.txt.pem" "$BASE/checksums.txt.pem" || fail "missing signature certificate"
-      curl -fsSL --proto '=https' --tlsv1.2 -o "$work/checksums.txt.sig" "$BASE/checksums.txt.sig" || fail "missing signature"
+      curl -fsSL --proto '=https' --tlsv1.2 -o "$work/checksums.txt.pem" "$BASE/checksums.txt.pem" || fail "$(t "缺少签名证书，不安装" "missing signature certificate")"
+      curl -fsSL --proto '=https' --tlsv1.2 -o "$work/checksums.txt.sig" "$BASE/checksums.txt.sig" || fail "$(t "缺少签名，不安装" "missing signature")"
       sigargs="--certificate $work/checksums.txt.pem --signature $work/checksums.txt.sig"
     fi
     # shellcheck disable=SC2086
@@ -110,18 +117,31 @@ if [ "$code" = "200" ]; then
       --certificate-identity-regexp "^https://github\\.com/wensuper/OmniLLM/\\.github/workflows/release\\.yml@refs/tags/v[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.]+)?\$" \
       --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
       "$work/checksums.txt" >/dev/null 2>&1 || fail "$(t "签名核对没有通过（signature check failed），不安装" "signature check failed: refusing to install")"
-    say "$(t "签名核对通过（由 $REPO 的发布流程构建）。" "Signature OK (built by $REPO's release workflow).")"
-  else
-    say "$(t "没有找到 cosign：只核对了校验和（checked the checksum only）。" "cosign not found: checked the checksum only.")"
+    say "$(t "签名也核对通过（由 $REPO 的发布流程构建）。" "Signature OK (built by $REPO’s release workflow).")"
   fi
-  tar -xzf "$work/$asset" -C "$work" omnillm || fail "archive is damaged"
+  tar -xzf "$work/$asset" -C "$work" omnillm || fail "$(t "下载的压缩包损坏了，请再运行一次" "archive is damaged")"
   bin="$work/omnillm"
 else
-  say "No release published yet: building from source (not signature-checked)."
-  command -v go >/dev/null 2>&1 || fail "no release yet and Go is not installed. Install Go 1.27.2+ from https://go.dev/dl/ and run this again."
-  GOBIN="$work" GOFLAGS=-trimpath go install "github.com/$REPO/cmd/omnillm@latest" || fail "build failed"
+  say "$(t "还没有发布的版本：从源代码编译（没有签名可核对）。" "No release published yet: building from source (not signature-checked).")"
+  command -v go >/dev/null 2>&1 || fail "$(t "还没有发布的版本，这台电脑上也没有 Go。从 https://go.dev/dl/ 装 Go 1.27.2 或更新的版本后再运行一次。" "no release yet and Go is not installed. Install Go 1.27.2+ from https://go.dev/dl/ and run this again.")"
+  GOBIN="$work" GOFLAGS=-trimpath go install "github.com/$REPO/cmd/omnillm@latest" || fail "$(t "编译失败" "build failed")"
   bin="$work/omnillm"
 fi
 
 chmod 0755 "$bin"
+new=$("$bin" version 2>/dev/null) || fail "$(t "下载的程序在这台电脑上运行不了，不安装" "the downloaded program does not run on this computer; refusing to install")"
+new=${new#omnillm }
+old=""
+if [ -x "$HOME/.local/bin/omnillm" ]; then
+  old=$("$HOME/.local/bin/omnillm" version 2>/dev/null) || old=""
+  old=${old#omnillm }
+fi
+if [ -n "$old" ] && [ "$old" = "$new" ]; then
+  say "$(t "已经是这个版本（${new}），重新安装一遍，设置都保留。" "Already on $new; installing it again (settings are kept).")"
+elif [ -n "$old" ]; then
+  say "$(t "已装的是 ${old}，换成 ${new}，设置都保留。" "Replacing $old with $new (settings are kept).")"
+fi
 "$bin" install "$@"
+}
+
+main "$@"

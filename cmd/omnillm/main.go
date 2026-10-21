@@ -374,6 +374,8 @@ func main() {
 		uninstallCmd(os.Args[2:])
 	case "status":
 		statusCmd(os.Args[2:])
+	case "update", "upgrade":
+		updateCmd(os.Args[2:])
 	case "tray":
 		trayCmd()
 	case "version":
@@ -869,6 +871,7 @@ func hubRun(dir, sock string, args []string) {
 			}
 		}()
 	}
+	go autoUpdate(ctx, h, dir)
 	log.Print(t("OmniLLM 已启动。", "OmniLLM is running."))
 	if *relayURL == "" {
 		log.Print(t("没有设置远程连接（--relay），其他设备暂时连不上。", "Remote access not set up (--relay); other devices can’t connect yet."))
@@ -1399,6 +1402,7 @@ func connectCmd(args []string) {
 		}
 		// Ctrl-C stops a reply, not the chat: only SIGTERM ends it.
 		stop()
+		deviceUpdateHint(dir)
 		cctx, cstop := signal.NotifyContext(context.Background(), syscall.SIGTERM)
 		defer cstop()
 		d := openDevice(cctx, sec, dir)
@@ -1423,6 +1427,7 @@ func connectCmd(args []string) {
 			}
 			images = append(images, im)
 		}
+		deviceUpdateHint(dir)
 		d := openDevice(ctx, sec, dir)
 		defer d.Close()
 		if *model == "" {

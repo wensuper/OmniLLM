@@ -17,6 +17,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	omnillm "github.com/wensuper/OmniLLM"
@@ -89,6 +90,7 @@ type Hub struct {
 	deviceMu    sync.Mutex       // serializes device record writes
 	reserved    map[string]int64 // worst-case cost of calls in flight (accountMu)
 	accountMu   sync.Mutex
+	inFlight    atomic.Int64 // calls whose reply is still coming (Busy)
 	region      regionState
 
 	ctx    context.Context

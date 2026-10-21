@@ -22,17 +22,17 @@
 
 ## 第 1 步：在主机上安装
 
-**方法一：交给你的 AI 助手（推荐）。** 把这一句发给 Claude Code、Codex、Cursor 等：
+**方法一：自己运行。** 在终端里（普通用户，不要 sudo）：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh
+```
+
+**方法二：交给你的 AI 助手。** 把这一句发给 Claude Code、Codex、Cursor 等：
 
 > 请阅读并按照 https://raw.githubusercontent.com/wensuper/OmniLLM/main/INSTALL.md 在这台电脑上安装 OmniLLM。
 
-它会下载、核对签名、安装，然后告诉你下一步。它不会、也不应该让你把任何 Key 贴进聊天。
-
-**方法二：自己运行。** 在终端里（普通用户，不要 sudo）：
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh -o omnillm-install.sh && sh omnillm-install.sh
-```
+它会先读一遍安装脚本，再下载、核对、安装，然后告诉你下一步。它不会、也不应该让你把任何 Key 贴进聊天。
 
 安装脚本会做这些事，不会改动别的东西：
 
@@ -41,6 +41,8 @@ curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh -o
 3. 注册一个只属于当前用户的后台服务（macOS 用 launchd，Linux 用 systemd 用户服务），开机登录后自动运行。
 4. 打开本机控制台（只在这台电脑的浏览器里打开，地址是 `127.0.0.1`）。
 
+以后有新版本，主机会在没人用的时候自己更新，不用再运行这条命令（见[日常使用 · 更新](usage.md#更新和卸载)）。想先看一眼脚本再运行：把 `| sh` 换成 `-o omnillm-install.sh`，看完再 `sh omnillm-install.sh`。
+
 控制台关掉了，随时用这条命令再打开：
 
 ```bash
@@ -48,6 +50,18 @@ curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh -o
 ```
 
 ## 第 2 步：接上模型
+
+能用的模型来源：
+
+| 来源 | 主机上需要 | 手机、平板、终端对话 | 脚本、后台程序 |
+|---|---|---|---|
+| Claude 订阅（Pro / Max） | 装好并登录 [Claude Code](https://claude.com/claude-code) | ✅ 文字 + 图片 | ❌ 订阅只给人用 |
+| ChatGPT 订阅（Plus / Pro） | 装好并登录 [Codex](https://github.com/openai/codex) | ✅ 文字 + 图片 | ❌ 订阅只给人用 |
+| Anthropic / OpenAI API Key | 在控制台粘贴 Key | ✅ | ✅ |
+| 兼容 OpenAI 接口的服务 | 在控制台填地址和 Key | ✅ | ✅ |
+| 本地模型（Ollama） | 装好 Ollama，自动接上 | ✅ | ✅ |
+
+只有网页版订阅、又不想在主机上装 Claude Code 或 Codex 的话，订阅用不了：OmniLLM 不抓取网页的登录信息，那样违反服务条款，也最容易被封号。
 
 ### 用订阅（Claude 或 ChatGPT）
 
@@ -82,7 +96,7 @@ curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh -o
 
 1. 在控制台里点「设备」→「添加设备」。屏幕上出现一个大二维码。
 2. 用手机**相机**扫码，打开链接。网页会说明它要连到哪个连接服务，点「连接」。
-3. 电脑和手机上会显示同一个 6 位数。**核对一致**，再在电脑上点「确认」。
+3. 电脑和手机上会显示同一个 6 位数。**核对一致**，再在电脑上点「一致，添加」。
 4. 手机上出现对话界面，发一句试试。
 
 几点说明：
@@ -100,14 +114,16 @@ curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh -o
 2. 在那台机器上运行页面上给出的这一行：
 
    ```bash
-   curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh -o omnillm-install.sh && sh omnillm-install.sh --device
+   curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh -s -- --device
    ```
 
-   装完它会提示你粘贴配对文字。
+   装完它会提示你粘贴配对文字（通过 AI 助手或脚本安装时没有提示，之后运行 `omnillm connect pair` 再粘贴）。
 3. 从控制台复制配对文字（以 `omnillm3-` 开头），粘贴过去。配对文字由你自己搬运，比如通过 SSH 粘贴；不要发给别人，也不要贴进聊天。
-4. 和手机一样，核对两边的 6 位数，在主机上点「确认」。
+4. 和手机一样，核对两边的 6 位数，在主机上点「一致，添加」。
 
 已经装过程序的机器，直接运行 `~/.local/bin/omnillm connect pair`，再粘贴配对文字。
+
+服务器上没有后台服务，不会自己更新；有新版本时，`omnillm connect` 会提一句，运行 `omnillm update` 就行。
 
 配好以后，在那台机器的终端里：
 
@@ -142,6 +158,6 @@ omnillm connect run          # 在 http://127.0.0.1:8766/v1 提供接口，令�
 ~/.local/bin/omnillm status
 ```
 
-它会说主机是否在运行、接了几个模型、配了几台设备，还有哪一步没做。显示 “All set.” 就全部好了。
+它会说主机是否在运行、接了几个模型、配了几台设备，还有哪一步没做。显示“一切正常”（英文是 All set）就全部好了。
 
 下一步：[日常使用和常见问题](usage.md) · [安全说明](security.md)

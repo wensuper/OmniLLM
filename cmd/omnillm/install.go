@@ -25,6 +25,8 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/term"
+
 	"github.com/wensuper/OmniLLM/device"
 	"github.com/wensuper/OmniLLM/hub"
 	"github.com/wensuper/OmniLLM/internal/control"
@@ -65,6 +67,10 @@ type Status struct {
 	// out, at the usage limit), as the console's problem chips show them.
 	Problems []SourceProblem `json:"problems,omitempty"`
 	Next     string          `json:"next"` // the one thing to do next, for a person
+	// Update: a newer release this hub has not installed yet;
+	// UpdateFailed: installing it automatically didn't work.
+	Update       string `json:"update,omitempty"`
+	UpdateFailed bool   `json:"update_failed,omitempty"`
 }
 
 // SourceProblem is a model source that needs the owner: Problem is
@@ -90,20 +96,28 @@ func attention(ps []SourceProblem, now time.Time) string {
 }
 
 func installCmd(args []string) {
-	noOpen, deviceOnly := false, false
+	noOpen, deviceOnly, hubOnly := false, false, false
 	for _, a := range args {
 		switch a {
 		case "--no-open":
 			noOpen = true
 		case "--device":
 			deviceOnly = true
+		case "--hub":
+			hubOnly = true
 		}
 	}
 	if os.Geteuid() == 0 {
 		// Root would leave root-owned files in the person's home folder.
 		die(say(t("不要用 root 或 sudo 运行：OmniLLM 只为当前用户安装。", "Don’t run this as root or with sudo: OmniLLM installs for the current user only.")))
 	}
-	if deviceOnly {
+	// Running the installer again on a machine set up as a device only
+	// (a server) updates that, rather than turning it into a hub.
+	if deviceOnly || (!hubOnly && role() == "device") {
+		if !deviceOnly {
+			fmt.Println(runnable(t("这台机器用的是另一台电脑上的 OmniLLM，所以按设备更新。想让这台机器自己当主机，运行 omnillm install --hub。",
+				"This machine uses OmniLLM on another computer, so it was updated as a device. To make this machine the hub, run omnillm install --hub.")))
+		}
 		installDevice()
 		return
 	}
@@ -114,6 +128,8 @@ func installCmd(args []string) {
 	if err != nil {
 		die(err)
 	}
+	keepServiceSettings(home)
+	prev := keepPrevious(home)
 	bin, err := installBinary(home)
 	if err != nil {
 		die(err)
@@ -138,9 +154,42 @@ func installCmd(args []string) {
 	if err != nil {
 		die(err)
 	}
-	st, ok := waitRunning(15 * time.Second)
+	wait := 15 * time.Second
+	if prev != "" {
+		wait = 45 * time.Second // an update: a cold start must not look like a broken one
+	}
+	st, ok := waitRunning(wait)
+	if !ok && prev != "" {
+		// An update that does not start: go back to the version that
+		// ran, and never install this one again on its own.
+		if err := os.Rename(bin+".prev", bin); err == nil {
+			if _, err := installService(home, bin, dir, env); err == nil {
+				if _, ok := waitRunning(45 * time.Second); ok {
+					u := readUpdate(dir)
+					u.Skip = version
+					u.failed(version)
+					writeUpdate(dir, u)
+					die(sayf(t("新版本 %s 没能启动，已自动换回 %s，一切照常。以后不会再自动装 %[1]s。\n（想帮忙排查：日志在 %s）", "Version %s didn’t start, so OmniLLM went back to %s; everything works as before, and %[1]s won’t be installed automatically again.\n(To help find out why: the log is at %s)"),
+						version, prev, filepath.Join(dir, "hub.log")))
+				}
+			}
+		}
+	}
 	if !ok {
 		die(say(t("OmniLLM 没有启动起来。日志在 ", "OmniLLM didn’t start. Its log is at ") + filepath.Join(dir, "hub.log")))
+	}
+	upgraded := prev != "" && compareVersions(version, prev) > 0
+	if u := readUpdate(dir); u.Error != "" || sameVersion(u.Skip, version) || (upgraded && u.newer(version) != "") {
+		u.Error = ""
+		if sameVersion(u.Skip, version) {
+			u.Skip = "" // installed on purpose: it runs
+		}
+		if upgraded && u.newer(version) != "" {
+			// Updated, yet the release still looks newer (its program
+			// names another version): don't reinstall it every round.
+			u.failed(u.Latest)
+		}
+		writeUpdate(dir, u)
 	}
 	if st.Providers == 0 {
 		// A local model needs no key and sends nothing off the machine.
@@ -150,7 +199,16 @@ func installCmd(args []string) {
 	st = waitRelay(st, 10*time.Second)
 	st.Service = service
 	st.Headless = headless()
-	fmt.Println(t("OmniLLM 已安装，在后台运行（登录时自动启动）。", "OmniLLM is installed and runs in the background; it starts at login."))
+	switch {
+	case prev != "" && compareVersions(version, prev) < 0:
+		fmt.Printf(t("OmniLLM 已从 %s 换回 %s，在后台运行，设置都在。\n", "OmniLLM went from %s back to %s and runs in the background; your settings are kept.\n"), prev, version)
+	case prev != "":
+		fmt.Printf(t("OmniLLM 已从 %s 更新到 %s，在后台运行，设置都在。\n", "OmniLLM is updated from %s to %s and runs in the background; your settings are kept.\n"), prev, version)
+	case readUpdate(dir).Manual:
+		fmt.Println(runnable(t("OmniLLM 已安装，在后台运行（登录时自动启动）。自动更新是关着的：要打开，运行 omnillm update --auto on。", "OmniLLM is installed and runs in the background; it starts at login. Automatic updates are off; to turn them on, run omnillm update --auto on.")))
+	default:
+		fmt.Println(t("OmniLLM 已安装，在后台运行（登录时自动启动），以后会自己更新。", "OmniLLM is installed and runs in the background; it starts at login and updates itself."))
+	}
 	if !noOpen && !st.Headless {
 		if url, err := loginURL(); err == nil && openLogin(url) == nil {
 			fmt.Println(t("控制台已在浏览器里打开。", "The console is open in your browser."))
@@ -161,7 +219,11 @@ func installCmd(args []string) {
 	st.Next = nextStep(st)
 	fmt.Println(runnable(st.Next))
 	b, _ := json.Marshal(st)
-	fmt.Println("OMNILLM_STATUS " + string(b))
+	// For an AI agent running the install (INSTALL.md): its output is not
+	// a terminal. A person at a terminal has just read the same in words.
+	if !term.IsTerminal(int(os.Stdout.Fd())) {
+		fmt.Println("OMNILLM_STATUS " + string(b))
+	}
 }
 
 // headless reports a machine without a display (a server, an SSH session).
@@ -266,6 +328,33 @@ func thisMachineIn(l string) string {
 		return tl(l, "这台 Mac", "this Mac")
 	}
 	return tl(l, "这台电脑", "this computer")
+}
+
+// keepPrevious keeps the installed program as omnillm.prev before a
+// different version replaces it, so an update that does not start can go
+// back. It returns that version, "" when there is nothing to go back to.
+func keepPrevious(home string) string {
+	dst := filepath.Join(home, ".local", "bin", "omnillm")
+	self, err := os.Executable()
+	if err != nil {
+		return ""
+	}
+	if self, _ = filepath.EvalSymlinks(self); self == dst || !exists(dst) {
+		return ""
+	}
+	out, err := exec.Command(dst, "version").Output()
+	if err != nil {
+		return ""
+	}
+	v := strings.TrimPrefix(strings.TrimSpace(string(out)), "omnillm ")
+	if v == version {
+		return ""
+	}
+	in, err := os.ReadFile(dst)
+	if err != nil || os.WriteFile(dst+".prev.new", in, 0o755) != nil || os.Rename(dst+".prev.new", dst+".prev") != nil {
+		return ""
+	}
+	return v
 }
 
 // installBinary copies this executable to ~/.local/bin/omnillm (0755), so
@@ -466,8 +555,9 @@ func plistEnv(path string) map[string]string {
 	return out
 }
 
-// installTray adds the menu bar icon as a login item. It comes back at
-// login; quitting it from its menu keeps it away until then.
+// installTray adds the menu bar icon as a login item. Its menu has no
+// quit item: it stays in the menu bar, and launchd starts it again at login
+// and after a crash.
 func installTray(home, bin, dir string) error {
 	plist := filepath.Join(home, "Library", "LaunchAgents", trayLabel+".plist")
 	body := `<?xml version="1.0" encoding="UTF-8"?>
@@ -528,6 +618,54 @@ func bootstrapAgent(plist, label string) error {
 // specifiers and $VARIABLES even inside quotes.
 func systemdQuote(v string) string {
 	return strings.NewReplacer("%", "%%", "$", "$$").Replace(strconv.Quote(v))
+}
+
+// serviceSettings are the settings "omnillm install" writes into the
+// service from the environment. Installing again (an update, from a
+// terminal that has none of them set) keeps what the service has.
+var serviceSettings = []string{"OMNILLM_RELAY", "OMNILLM_WEB_APP"}
+
+// keepServiceSettings sets each of serviceSettings that is not in the
+// environment from the installed service's file.
+func keepServiceSettings(home string) {
+	var body string
+	switch runtime.GOOS {
+	case "darwin":
+		b, _ := os.ReadFile(filepath.Join(home, "Library", "LaunchAgents", launchdLabel+".plist"))
+		body = string(b)
+	case "linux":
+		b, _ := os.ReadFile(filepath.Join(home, ".config", "systemd", "user", systemdUnit))
+		body = string(b)
+	}
+	for k, v := range savedSettings(body) {
+		if os.Getenv(k) == "" {
+			os.Setenv(k, v)
+		}
+	}
+}
+
+// savedSettings reads serviceSettings back from a launchd plist or a
+// systemd unit as installLaunchd and installSystemd write them.
+func savedSettings(body string) map[string]string {
+	out := map[string]string{}
+	for _, k := range serviceSettings {
+		if i := strings.Index(body, "<key>"+k+"</key><string>"); i >= 0 {
+			rest := body[i+len("<key>"+k+"</key><string>"):]
+			if j := strings.Index(rest, "</string>"); j >= 0 {
+				r := strings.NewReplacer("&quot;", `"`, "&lt;", "<", "&gt;", ">", "&amp;", "&")
+				out[k] = r.Replace(rest[:j])
+			}
+			continue
+		}
+		for _, line := range strings.Split(body, "\n") {
+			if q, ok := strings.CutPrefix(line, "Environment="+k+"="); ok {
+				if v, err := strconv.Unquote(strings.NewReplacer("%%", "%", "$$", "$").Replace(q)); err == nil {
+					out[k] = v
+				}
+			}
+		}
+	}
+	return out
 }
 
 // relayFromEnv passes OMNILLM_RELAY to the service only if it is a valid
@@ -669,11 +807,41 @@ func loginURL() (string, error) {
 }
 
 func statusCmd(args []string) {
+	if role() == "device" {
+		st := Status{Next: runnable(t("这台机器用的是另一台电脑上的 OmniLLM，不在这里运行主机。对话：omnillm connect chat。",
+			"This machine uses OmniLLM on another computer; no hub runs here. To chat: omnillm connect chat."))}
+		u := readUpdate(dataDir("device"))
+		st.Update = plain(u.newer(version))
+		if len(args) > 0 && args[0] == "--json" {
+			b, _ := json.Marshal(st)
+			fmt.Println(string(b))
+			return
+		}
+		fmt.Println(st.Next)
+		if st.Update != "" {
+			fmt.Println(runnable(fmt.Sprintf(t("有新版本 %s。运行 omnillm update 更新。", "Version %s is out. Run omnillm update to install it."), st.Update)))
+		}
+		return
+	}
+	if role() == "" && !exists(dataDir("hub")) {
+		st := Status{Next: t("这台电脑上还没有安装 OmniLLM。安装方法见 https://github.com/wensuper/OmniLLM#quick-start",
+			"OmniLLM isn’t installed on this computer yet. See https://github.com/wensuper/OmniLLM#quick-start")}
+		if len(args) > 0 && args[0] == "--json" {
+			b, _ := json.Marshal(st)
+			fmt.Println(string(b))
+		} else {
+			fmt.Println(st.Next)
+		}
+		os.Exit(1)
+	}
 	st, ok := queryStatus()
 	st.Running = ok
 	st = waitRelay(st, 5*time.Second)
 	st.Headless = headless()
 	st.Next = nextStep(st)
+	hu := readUpdate(dataDir("hub"))
+	st.Update = plain(hu.newer(version))
+	st.UpdateFailed = st.Update != "" && sameVersion(hu.Error, st.Update)
 	for _, a := range args {
 		if a == "--json" {
 			b, _ := json.Marshal(st)
@@ -683,10 +851,16 @@ func statusCmd(args []string) {
 	}
 	if !ok {
 		fmt.Println(runnable(st.Next))
+		if l := statusUpdateLine(hu); l != "" {
+			fmt.Println(l)
+		}
 		os.Exit(1)
 	}
 	fmt.Println(runningLine(st))
 	fmt.Println(runnable(st.Next))
+	if l := statusUpdateLine(hu); l != "" {
+		fmt.Println(l)
+	}
 }
 
 func uninstallCmd(args []string) {
@@ -762,13 +936,14 @@ func installDevice() {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		die(err)
 	}
+	_ = os.WriteFile(filepath.Join(dir, deviceMark), nil, 0o600)
 	if device.Paired(context.Background(), secrets(dir, "omnillm-device")) {
 		fmt.Println(runnable(t("这台机器已经配对过，可以直接用：omnillm connect chat", "This machine is already paired. Ready: omnillm connect chat")))
 		return
 	}
 	tty, err := os.Open("/dev/tty")
 	if err != nil {
-		fmt.Println(runnable(t("下一步：在你的 Mac 上点“添加设备”，然后在这里运行 omnillm connect pair，粘贴配对文字。", "Next: choose “Add device” on your Mac, then run omnillm connect pair here and paste the pairing text.")))
+		fmt.Println(runnable(t("下一步：在主机的控制台里点“添加设备”，展开“电脑或服务器（没有摄像头）”复制配对文字，然后在这里运行 omnillm connect pair 粘贴。", "Next: in your hub’s console choose “Add device”, open “Computer or server (no camera)” and copy the pairing text, then run omnillm connect pair here and paste it.")))
 		return
 	}
 	tty.Close()
