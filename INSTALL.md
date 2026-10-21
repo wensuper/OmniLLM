@@ -27,7 +27,7 @@ OmniLLM makes this computer the **hub**, the only place that talks to model prov
 ```
 
 - If it prints JSON with `"running": true`, it is installed. Then run `~/.local/bin/omnillm version`:
-  - 0.2.0-alpha.21 or earlier: that version can't update itself. Do Step 2 (it updates and keeps every setting), whether or not the person asked.
+  - 0.2.0-alpha.22 or earlier: that version can't update itself. Do Step 2 (it updates and keeps every setting), whether or not the person asked.
   - newer: if the person asked to update, run `~/.local/bin/omnillm update` and report what it prints (it says when it is already up to date). If the JSON has `"update"`, tell them that version is available and installs by itself while nobody is using OmniLLM; if it also has `"update_failed": true`, run `~/.local/bin/omnillm update` and report the result. Then go to Step 3.
 - If `next` says this machine uses OmniLLM on another computer, it is a device, not a hub: run `~/.local/bin/omnillm update` if the person asked to update, tell them `omnillm connect chat` is how to chat, and stop.
 - If the command is missing, or `"running": false`, continue to Step 2.
