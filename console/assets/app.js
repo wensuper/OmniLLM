@@ -435,7 +435,8 @@ setInterval(async () => {
 // something is being edited or a device is being added, so nothing typed
 // or on screen is thrown away.
 function busy() {
-  return !!(curPair || pairTimer || document.querySelector("tr.editing, tr.asking, .cap-edit, .pair-panel, .dialog-scrim"));
+  // A hover card being read counts too: the redraw would take it away.
+  return !!(curPair || pairTimer || hcOpen || document.querySelector("tr.editing, tr.asking, .cap-edit, .pair-panel, .dialog-scrim"));
 }
 setInterval(async () => {
   if (!S || signedOut || document.hidden || $("dash").hidden || busy()) return;
