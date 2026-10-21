@@ -110,7 +110,7 @@ func (h *Hub) complete(ctx context.Context, p principal, req omnillm.Request) (o
 		}
 		cred.Key = string(k)
 	}
-	s, err := c.Stream(ctx, m.Upstream, req, cred)
+	s, err := c.StreamChat(ctx, m.Upstream, req, cred, h.chats, p.key)
 	cred.Key = ""
 	if err != nil {
 		h.unreserve(p, worst)

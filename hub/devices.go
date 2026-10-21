@@ -218,8 +218,10 @@ func (h *Hub) revokeRecord(ctx context.Context, id string) (Device, error) {
 	return d, err
 }
 
-// dropDevice ends a removed device's open session.
+// dropDevice ends a removed device's open session and removes its kept
+// conversations.
 func (h *Hub) dropDevice(ctx context.Context, d Device) {
+	h.chats.Forget("device/" + d.ID)
 	// The mailbox stays claimed (revoked.go): when the device comes back
 	// it is told it was removed. Its open session ends now.
 	mid, _, err := d.mailbox()

@@ -452,12 +452,22 @@ func (s *stream) Close() error {
 	return nil
 }
 
+// StreamChat is Stream for a person's conversation: a subscription program
+// continues its kept session when the request follows one (chats.go).
+// owner names who asks ("device/<id>", "host").
+func (c *Client) StreamChat(ctx context.Context, upstreamModel string, req omnillm.Request, cred Credential, chats *Chats, owner string) (omnillm.Stream, error) {
+	if c.cfg.Kind.Subscription() && chats != nil && req.Caller == omnillm.Interactive {
+		return c.streamCLI(ctx, upstreamModel, req, chats, owner)
+	}
+	return c.Stream(ctx, upstreamModel, req, cred)
+}
+
 // Stream sends req (already validated, model already mapped to upstream
 // name) and returns the reply stream. The egress slot is held until the
 // stream ends.
 func (c *Client) Stream(ctx context.Context, upstreamModel string, req omnillm.Request, cred Credential) (omnillm.Stream, error) {
 	if c.cfg.Kind.Subscription() {
-		return c.streamCLI(ctx, upstreamModel, req)
+		return c.streamCLI(ctx, upstreamModel, req, nil, "")
 	}
 	if c.cfg.NeedsKey && cred.Key == "" {
 		return nil, &omnillm.Error{Code: omnillm.CodeCredentialProblem, Msg: omnillm.MsgCredentialMissing, Args: []string{c.cfg.Name}}

@@ -76,6 +76,9 @@ type Hub struct {
 	lim     *egress.Limiter
 	subs    subscriptionPace
 	key     e2e.KeyPair
+	// chats: kept sessions of people's conversations with subscription
+	// programs (provider/chats.go).
+	chats *provider.Chats
 
 	mu          sync.Mutex
 	clients     map[string]*provider.Client
@@ -135,6 +138,7 @@ func New(ctx context.Context, opts Options) (*Hub, error) {
 		return nil, err
 	}
 	h.loadResolved(ctx)
+	h.loadChats(ctx)
 	// The owner's own daily total, if they set one in the console.
 	var total int64
 	if err := store.GetJSON(ctx, h.opts.Store, dailyTotalKey, &total); err == nil && (total > 0 || total == NoLimit) {
@@ -218,6 +222,8 @@ func (h *Hub) Start(ctx context.Context) error {
 		h.probeLaterLocked(c)
 	}
 	h.mu.Unlock()
+	h.wg.Add(1)
+	go func() { defer h.wg.Done(); h.sweepChats(h.ctx) }()
 	return nil
 }
 
@@ -442,6 +448,7 @@ func (h *Hub) RemoveProvider(ctx context.Context, name string) error {
 	delete(h.clients, name)
 	h.mu.Unlock()
 	if k := provider.Kind(name); k.Subscription() {
+		h.chats.ForgetKind(k)
 		// The owner removed it: auto-detection must not bring it back.
 		_ = store.PutJSON(ctx, h.opts.Store, removedKey(k), true)
 	}
