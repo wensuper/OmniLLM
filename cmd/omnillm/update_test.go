@@ -25,6 +25,9 @@ func TestAutoAction(t *testing.T) {
 		{"no service to come back", "0.2.0-alpha.21", newer, time.Hour, false, "wait"},
 		{"dev build never replaces itself", "0.1.0-dev", newer, time.Hour, true, "wait"},
 		{"older release is not an update", "0.2.0", newer, time.Hour, true, "wait"},
+		{"failed an hour ago", "0.2.0-alpha.21", updateFile{Latest: "v0.2.0-alpha.30", Error: "0.2.0-alpha.30", ErrorAt: time.Now().Add(-time.Hour)}, time.Hour, true, "wait"},
+		{"failed two days ago: try again", "0.2.0-alpha.21", updateFile{Latest: "v0.2.0-alpha.30", Error: "v0.2.0-alpha.30", ErrorAt: time.Now().Add(-48 * time.Hour)}, time.Hour, true, "install"},
+		{"an older failure doesn't hold back a newer release", "0.2.0-alpha.21", updateFile{Latest: "v0.2.0-alpha.31", Error: "v0.2.0-alpha.30", ErrorAt: time.Now()}, time.Hour, true, "install"},
 	}
 	for _, c := range cases {
 		if got := autoAction(c.cur, c.u, c.quiet, c.service); got != c.want {
@@ -97,6 +100,12 @@ func TestRoleFromDataDirs(t *testing.T) {
 	if err := mkdir(home + "/omni/device"); err != nil {
 		t.Fatal(err)
 	}
+	if r := role(); r != "" {
+		t.Fatalf("a device folder alone (the program run from elsewhere) is no setup: %q", r)
+	}
+	if err := writeFile(home+"/omni/device/"+deviceMark, ""); err != nil {
+		t.Fatal(err)
+	}
 	if r := role(); r != "device" {
 		t.Fatalf("device only: %q", r)
 	}
@@ -114,3 +123,51 @@ func TestRoleFromDataDirs(t *testing.T) {
 func mkdir(p string) error { return os.MkdirAll(p, 0o700) }
 
 func writeFile(p, s string) error { return os.WriteFile(p, []byte(s), 0o600) }
+
+func TestSavedSettingsRoundTrip(t *testing.T) {
+	relay, web := "wss://relay.example.com/x?a=1&b=2", "https://web.example.com"
+	plist := "<key>OMNILLM_RELAY</key><string>" + xmlEscape(relay) + "</string><key>OMNILLM_WEB_APP</key><string>" + xmlEscape(web) + "</string>"
+	unit := "[Service]\nEnvironment=OMNILLM_RELAY=" + systemdQuote(relay) + "\nEnvironment=OMNILLM_WEB_APP=" + systemdQuote(web) + "\n"
+	for name, body := range map[string]string{"launchd": plist, "systemd": unit} {
+		got := savedSettings(body)
+		if got["OMNILLM_RELAY"] != relay || got["OMNILLM_WEB_APP"] != web {
+			t.Errorf("%s: %v", name, got)
+		}
+	}
+	if got := savedSettings("[Service]\nExecStart=x\n"); len(got) != 0 {
+		t.Errorf("nothing saved: %v", got)
+	}
+}
+
+func TestUpdateLockLeftByAGoneProcess(t *testing.T) {
+	dir := t.TempDir()
+	// A pid that cannot be running.
+	if err := writeFile(dir+"/update.lock", "999999999\n"); err != nil {
+		t.Fatal(err)
+	}
+	r, ok := updateLock(dir)
+	if !ok {
+		t.Fatal("a lock whose holder is gone still blocks updates")
+	}
+	r()
+}
+
+func TestNoteHandedOff(t *testing.T) {
+	dir := t.TempDir()
+	old := version
+	version = "0.2.0-alpha.21"
+	defer func() { version = old }()
+	writeUpdate(dir, updateFile{Latest: "v0.2.0-alpha.22"})
+	noteHandedOff(dir) // nothing left behind: nothing changes
+	if u := readUpdate(dir); u.Error != "" {
+		t.Fatalf("no status file, yet error %q", u.Error)
+	}
+	_ = writeFile(dir+"/update.status", "1\n")
+	noteHandedOff(dir)
+	if u := readUpdate(dir); !sameVersion(u.Error, "0.2.0-alpha.22") {
+		t.Fatalf("failed installer not recorded: %+v", u)
+	}
+	if exists(dir + "/update.status") {
+		t.Fatal("status file read twice")
+	}
+}

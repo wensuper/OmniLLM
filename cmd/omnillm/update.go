@@ -23,7 +23,9 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/wensuper/OmniLLM/hub"
@@ -51,9 +53,15 @@ type updateFile struct {
 	Manual bool `json:"manual,omitempty"`
 	// Skip is a version that did not start and was rolled back.
 	Skip string `json:"skip,omitempty"`
-	// Error is the last automatic update's failure, for omnillm status.
-	Error string `json:"error,omitempty"`
+	// Error is the version the last automatic update failed to install,
+	// for omnillm status; ErrorAt is when. The hub tries that version
+	// again only a day later (a newer release is tried at once).
+	Error   string    `json:"error,omitempty"`
+	ErrorAt time.Time `json:"error_at,omitempty"`
 }
+
+// failed records that installing v did not work.
+func (u *updateFile) failed(v string) { u.Error, u.ErrorAt = v, time.Now() }
 
 func updatePath(dir string) string { return filepath.Join(dir, "update.json") }
 
@@ -88,6 +96,9 @@ func sameVersion(a, b string) bool {
 	return a != "" && b != "" && strings.TrimPrefix(a, "v") == strings.TrimPrefix(b, "v")
 }
 
+// plain is a version as people see it ("0.2.0", not the tag "v0.2.0").
+func plain(v string) string { return strings.TrimPrefix(v, "v") }
+
 // devBuild: a build made by hand (no release version). It may check, but
 // it never replaces itself with a release on its own.
 func devBuild(v string) bool {
@@ -102,11 +113,22 @@ func role() string {
 	if exists(filepath.Join(dataDir("hub"), "state.json")) || serviceInstalled() {
 		return "hub"
 	}
-	if exists(dataDir("device")) {
+	// A device-only machine: set up by "install --device" (it leaves a
+	// mark), or, from before the mark, a device folder next to the
+	// installed program. A folder alone can come from running the
+	// program from somewhere else, which sets up nothing.
+	d := dataDir("device")
+	if exists(filepath.Join(d, deviceMark)) {
+		return "device"
+	}
+	if home, err := os.UserHomeDir(); err == nil && exists(d) && exists(filepath.Join(home, ".local", "bin", "omnillm")) {
 		return "device"
 	}
 	return ""
 }
+
+// deviceMark is left in the device folder by "omnillm install --device".
+const deviceMark = "installed-as-device"
 
 func exists(p string) bool { _, err := os.Stat(p); return err == nil }
 
@@ -138,20 +160,43 @@ func installerArgs(r string) []string {
 // longest install is left over from a crash and taken over.
 func updateLock(dir string) (release func(), ok bool) {
 	p := filepath.Join(dir, "update.lock")
+	// The lock appears with its holder already in it (written aside, then
+	// linked into place), so nobody ever reads an empty one as stale.
+	tmp := fmt.Sprintf("%s.%d", p, os.Getpid())
+	if err := os.WriteFile(tmp, []byte(strconv.Itoa(os.Getpid())+"\n"), 0o600); err != nil {
+		return nil, false
+	}
+	defer os.Remove(tmp)
 	for i := 0; i < 2; i++ {
-		f, err := os.OpenFile(p, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
-		if err == nil {
-			fmt.Fprintf(f, "%d\n", os.Getpid())
-			f.Close()
+		if err := os.Link(tmp, p); err == nil {
 			return func() { _ = os.Remove(p) }, true
 		}
 		st, serr := os.Stat(p)
-		if serr != nil || time.Since(st.ModTime()) < 20*time.Minute {
+		if serr != nil || (holderAlive(p) && time.Since(st.ModTime()) < 20*time.Minute) {
 			return nil, false
 		}
 		_ = os.Remove(p)
 	}
 	return nil, false
+}
+
+// holderAlive: the process that took the lock still runs. A hub that
+// updated itself is gone (the installer replaced it) and so is its lock.
+func holderAlive(lock string) bool {
+	b, err := os.ReadFile(lock)
+	if err != nil {
+		return false
+	}
+	if unit, ok := strings.CutPrefix(strings.TrimSpace(string(b)), "unit:"); ok {
+		// Handed to an installer running in its own systemd unit.
+		return exec.Command("systemctl", "--user", "is-active", "--quiet", unit).Run() == nil
+	}
+	pid, err := strconv.Atoi(strings.TrimSpace(string(b)))
+	if err != nil || pid <= 0 {
+		return false
+	}
+	p, err := os.FindProcess(pid)
+	return err == nil && p.Signal(syscall.Signal(0)) == nil
 }
 
 // update installs the newest release over this one. log receives the
@@ -163,8 +208,11 @@ func update(ctx context.Context, dir, r string, logw io.Writer, detached bool) e
 	if !ok {
 		return say(t("另一个更新正在进行，请过几分钟再看。", "Another update is already running; check again in a few minutes."))
 	}
-	defer release()
-	return runInstaller(ctx, updateClient(), dir, installerArgs(r), logw, detached)
+	err := runInstaller(ctx, updateClient(), dir, installerArgs(r), logw, detached)
+	if !errors.Is(err, errHandedOff) {
+		release()
+	}
+	return err
 }
 
 // ---------------- omnillm update ----------------
@@ -217,10 +265,10 @@ func updateCmd(args []string) {
 		return
 	}
 	if *check {
-		fmt.Println(runnable(fmt.Sprintf(t("有新版本 %s。运行 omnillm update 更新。", "Version %s is out. Run omnillm update to install it."), latest)))
+		fmt.Println(runnable(fmt.Sprintf(t("有新版本 %s。运行 omnillm update 更新。", "Version %s is out. Run omnillm update to install it."), plain(latest))))
 		return
 	}
-	fmt.Printf(t("正在更新到 %s：下载、核对签名、安装……\n", "Updating to %s: downloading, verifying, installing…\n"), latest)
+	fmt.Printf(t("正在更新到 %s：下载、核对、安装……\n", "Updating to %s: downloading, verifying, installing…\n"), plain(latest))
 	logPath := filepath.Join(dir, "update.log")
 	logf, err := os.OpenFile(logPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
 	if err != nil {
@@ -278,6 +326,8 @@ func autoAction(cur string, u updateFile, quiet time.Duration, service bool) str
 		return "wait"
 	case u.newer(cur) == "":
 		return "wait"
+	case sameVersion(u.Error, u.Latest) && time.Since(u.ErrorAt) < 24*time.Hour:
+		return "wait"
 	case quiet < autoQuiet:
 		return "busy"
 	}
@@ -323,6 +373,7 @@ func autoUpdate(ctx context.Context, h *hub.Hub, dir string) {
 		case <-time.After(wait):
 		}
 		wait = autoEvery
+		noteHandedOff(dir)
 		u := readUpdate(dir)
 		if time.Since(u.CheckedAt) > autoEvery-time.Minute {
 			cctx, cancel := context.WithTimeout(ctx, time.Minute)
@@ -350,15 +401,42 @@ func autoUpdate(ctx context.Context, h *hub.Hub, dir string) {
 			err = update(ictx, dir, "hub", logf, true)
 			cancel()
 			logf.Close()
-			// Success restarts the service, which ends this process
-			// before we get here; still running means it did not work.
-			if err != nil {
+			switch {
+			case errors.Is(err, errHandedOff):
+				// The installer runs in its own unit and restarts us; if
+				// it fails, the next round reads its result.
+				wait = autoRetry
+			case err != nil:
+				// Success restarts the service, which ends this process
+				// before we get here; still running means it did not work.
 				log.Printf("hub: automatic update to %s failed: %v", u.Latest, err)
 				u = readUpdate(dir)
-				u.Error = u.Latest
+				u.failed(u.Latest)
 				writeUpdate(dir, u)
 			}
 		}
+	}
+}
+
+// noteHandedOff reads what an installer handed to its own systemd unit left
+// behind (its exit status), once it has ended. Success restarted this hub
+// into the new version, which clears any failure; a failure is recorded so
+// omnillm status says so and the hub waits a day before trying it again.
+func noteHandedOff(dir string) {
+	p := filepath.Join(dir, "update.status")
+	b, err := os.ReadFile(p)
+	if err != nil {
+		return
+	}
+	_ = os.Remove(p)
+	if strings.TrimSpace(string(b)) == "0" {
+		return
+	}
+	u := readUpdate(dir)
+	if v := u.newer(version); v != "" {
+		log.Printf("hub: automatic update to %s failed (exit %s); see update.log", v, strings.TrimSpace(string(b)))
+		u.failed(v)
+		writeUpdate(dir, u)
 	}
 }
 
@@ -373,7 +451,7 @@ func deviceUpdateHint(dir string) {
 	}
 	u := readUpdate(dir)
 	if v := u.newer(version); v != "" {
-		fmt.Fprintln(os.Stderr, runnable(fmt.Sprintf(t("（有新版本 %s：运行 omnillm update 更新。）", "(Version %s is out: run omnillm update to install it.)"), v)))
+		fmt.Fprintln(os.Stderr, runnable(fmt.Sprintf(t("（有新版本 %s：运行 omnillm update 更新。）", "(Version %s is out: run omnillm update to install it.)"), plain(v))))
 	}
 	if time.Since(u.CheckedAt) < hintEvery {
 		return
@@ -392,7 +470,7 @@ func deviceUpdateHint(dir string) {
 // statusUpdateLine is omnillm status's line about updates, "" when there
 // is nothing to say.
 func statusUpdateLine(u updateFile) string {
-	v := u.newer(version)
+	v := plain(u.newer(version))
 	switch {
 	case v == "":
 		return ""

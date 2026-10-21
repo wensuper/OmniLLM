@@ -216,23 +216,7 @@ func runInstaller(ctx context.Context, c *http.Client, dir string, args []string
 	fmt.Fprintf(logw, "omnillm %s: update started %s\n", version, time.Now().Format(time.RFC3339))
 	if detached && os.Getenv("INVOCATION_ID") != "" {
 		if _, err := exec.LookPath("systemd-run"); err == nil {
-			// A transient unit inherits nothing: hand over the settings
-			// the installer writes into the service again.
-			run := []string{"--user", "--collect", "--quiet", "--unit", "omnillm-update-" + strconv.FormatInt(time.Now().Unix(), 10),
-				"--setenv=OMNILLM_NO_BROWSER=1"}
-			for _, kv := range os.Environ() {
-				if strings.HasPrefix(kv, "OMNILLM_") || strings.HasPrefix(kv, "LANG=") || strings.HasPrefix(kv, "LC_ALL=") {
-					run = append(run, "--setenv="+kv)
-				}
-			}
-			log := filepath.Join(dir, "update.log")
-			run = append(run, "/bin/sh", "-c", `exec /bin/sh "$0" "$@" >>"`+log+`" 2>&1`, p)
-			run = append(run, args...)
-			out, err := exec.CommandContext(ctx, "systemd-run", run...).CombinedOutput()
-			if err != nil {
-				return fmt.Errorf("systemd-run: %v: %s", err, strings.TrimSpace(string(out)))
-			}
-			return nil
+			return runInUnit(ctx, dir, work, p, args)
 		}
 	}
 	defer os.RemoveAll(work)
@@ -244,6 +228,40 @@ func runInstaller(ctx context.Context, c *http.Client, dir string, args []string
 		detach(cmd)
 	}
 	return cmd.Run()
+}
+
+// errHandedOff: the installer runs on in its own systemd unit, which now
+// holds the update lock and leaves its exit status in update.status.
+var errHandedOff = errors.New("update: installer handed to its own unit")
+
+// runInUnit runs the installer in a transient systemd user unit, so the
+// service restart it does cannot stop it. The unit gets only what tells
+// the installer where the data is and which language to speak, never a
+// secret (the command line of systemd-run is visible to the machine);
+// the self-hosted relay and web addresses come back from the service file
+// (keepServiceSettings). It writes its exit status and frees the lock
+// when it ends, and gives up after 15 minutes.
+func runInUnit(ctx context.Context, dir, work, script string, args []string) error {
+	unit := fmt.Sprintf("omnillm-update-%d-%d", time.Now().Unix(), os.Getpid())
+	run := []string{"--user", "--collect", "--quiet", "--unit", unit, "--property=RuntimeMaxSec=900",
+		"--setenv=OMNILLM_NO_BROWSER=1"}
+	for _, k := range []string{"OMNILLM_HOME", "OMNILLM_LANG", "LANG", "LC_ALL"} {
+		if v := os.Getenv(k); v != "" {
+			run = append(run, "--setenv="+k+"="+v)
+		}
+	}
+	// $1 log, $2 status file, $3 lock, $4 work folder, $5 script, then
+	// the installer's own arguments: no path is pasted into the shell code.
+	const wrap = `log=$1 st=$2 lock=$3 work=$4 s=$5; shift 5; /bin/sh "$s" "$@" >>"$log" 2>&1; echo $? >"$st"; rm -rf "$work"; rm -f "$lock"`
+	run = append(run, "/bin/sh", "-c", wrap, "omnillm-update",
+		filepath.Join(dir, "update.log"), filepath.Join(dir, "update.status"), filepath.Join(dir, "update.lock"), work, script)
+	run = append(run, args...)
+	if out, err := exec.CommandContext(ctx, "systemd-run", run...).CombinedOutput(); err != nil {
+		return fmt.Errorf("systemd-run: %v: %s", err, strings.TrimSpace(string(out)))
+	}
+	// The unit owns the lock from here (holderAlive asks systemd).
+	_ = os.WriteFile(filepath.Join(dir, "update.lock"), []byte("unit:"+unit+"\n"), 0o600)
+	return errHandedOff
 }
 
 // updateState is what the menu knows about updates.

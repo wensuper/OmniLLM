@@ -46,7 +46,8 @@ case "$arch" in
 esac
 
 work=$(mktemp -d "${TMPDIR:-/tmp}/omnillm.XXXXXX")
-trap 'rm -rf "$work"' EXIT INT TERM
+trap 'rm -rf "$work"' EXIT
+trap 'exit 130' INT TERM
 
 # newest prints the highest of the version tags on stdin (vMAJOR.MINOR.PATCH
 # with an optional -pre.release.N); anything else is ignored.
@@ -130,13 +131,17 @@ else
 fi
 
 chmod 0755 "$bin"
-new=$("$bin" version 2>/dev/null | sed 's/^omnillm //') || new=""
+new=$("$bin" version 2>/dev/null) || fail "$(t "下载的程序在这台电脑上运行不了，不安装" "the downloaded program does not run on this computer; refusing to install")"
+new=${new#omnillm }
 old=""
-[ -x "$HOME/.local/bin/omnillm" ] && old=$("$HOME/.local/bin/omnillm" version 2>/dev/null | sed 's/^omnillm //') || true
+if [ -x "$HOME/.local/bin/omnillm" ]; then
+  old=$("$HOME/.local/bin/omnillm" version 2>/dev/null) || old=""
+  old=${old#omnillm }
+fi
 if [ -n "$old" ] && [ "$old" = "$new" ]; then
-  say "$(t "已经是最新版本 ${new}，重新安装一遍（设置都保留）。" "Already on the newest version ($new); installing it again (settings are kept).")"
+  say "$(t "已经是这个版本（${new}），重新安装一遍，设置都保留。" "Already on $new; installing it again (settings are kept).")"
 elif [ -n "$old" ]; then
-  say "$(t "正在从 ${old} 更新到 ${new}（设置都保留）。" "Updating from $old to $new (settings are kept).")"
+  say "$(t "已装的是 ${old}，换成 ${new}，设置都保留。" "Replacing $old with $new (settings are kept).")"
 fi
 "$bin" install "$@"
 }
