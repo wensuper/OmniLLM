@@ -413,8 +413,21 @@ func TestPairingThroughTheConsole(t *testing.T) {
 	if devs, _ := status["devices"].([]any); len(devs) != 1 {
 		t.Fatalf("devices %v", status["devices"])
 	}
-	// Remove it from the console.
 	devID := status["devices"].([]any)[0].(map[string]any)["ID"].(string)
+	// Rename it and change its daily limit: a number, no limit, and a bad one.
+	if code, out := r.api(t, "POST", "/console/api/devices/update", `{"id":"`+devID+`","name":"  Kid's iPad ","budget_usd":2.5}`); code != 200 || out["name"] != "Kid's iPad" || out["budget_micro_usd"] != 2.5e6 {
+		t.Fatal(code, out)
+	}
+	if code, out := r.api(t, "POST", "/console/api/devices/update", `{"id":"`+devID+`","no_limit":true}`); code != 200 || out["budget_micro_usd"] != float64(-1) || out["name"] != "Kid's iPad" {
+		t.Fatal(code, out)
+	}
+	if code, _ := r.api(t, "POST", "/console/api/devices/update", `{"id":"`+devID+`","budget_usd":0}`); code == 200 {
+		t.Fatal("a zero limit was accepted")
+	}
+	if code, _ := r.api(t, "POST", "/console/api/devices/update", `{"id":"nope","name":"x"}`); code == 200 {
+		t.Fatal("an unknown device was updated")
+	}
+	// Remove it from the console.
 	if code, _ := r.api(t, "POST", "/console/api/devices/remove", `{"id":"`+devID+`"}`); code != 200 {
 		t.Fatal(code)
 	}
@@ -504,4 +517,21 @@ func TestRepeatedPairStartsDoNotFillSlots(t *testing.T) {
 		time.Sleep(50 * time.Millisecond)
 	}
 	t.Fatalf("the replaced pairing is still %v", st["state"])
+}
+
+func TestClosingAddDeviceEndsThePairing(t *testing.T) {
+	r := newRig(t, true)
+	r.login(t)
+	code, out := r.api(t, "POST", "/console/api/pair/start", `{}`)
+	if code != 200 {
+		t.Fatal(code, out)
+	}
+	if code, _ := r.api(t, "POST", "/console/api/pair/cancel", `{"id":"`+out["id"].(string)+`"}`); code != 200 {
+		t.Fatal(code)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if _, err := device.Pair(ctx, device.Options{Secrets: secret.NewMemory()}, out["code"].(string), "Late", func(string) {}); err == nil {
+		t.Fatal("a closed pairing still paired a device")
+	}
 }

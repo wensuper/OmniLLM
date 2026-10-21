@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"slices"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -226,10 +227,11 @@ func (h *Hub) reserve(ctx context.Context, p principal, worst int64) error {
 	if h.reserved == nil {
 		h.reserved = map[string]int64{}
 	}
-	if total.MicroUSD+h.reserved["_total"]+worst > h.opts.GlobalBudget {
+	if h.opts.GlobalBudget != NoLimit && total.MicroUSD+h.reserved["_total"]+worst > h.opts.GlobalBudget {
 		return &omnillm.Error{Code: omnillm.CodeBudgetExceeded, Msg: omnillm.MsgBudgetGlobal, RetryAfter: h.untilTomorrow()}
 	}
-	if mine.MicroUSD+h.reserved[p.key]+worst > p.budget {
+	// NoLimit: only the hub's daily total applies to this device.
+	if p.budget != NoLimit && mine.MicroUSD+h.reserved[p.key]+worst > p.budget {
 		return &omnillm.Error{Code: omnillm.CodeBudgetExceeded, Msg: omnillm.MsgBudgetDevice, RetryAfter: h.untilTomorrow()}
 	}
 	h.reserved[p.key] += worst
@@ -283,7 +285,11 @@ func (h *Hub) chargeLocked(ctx context.Context, p principal, u omnillm.Usage) {
 
 // Spend is one row of today's usage.
 type Spend struct {
-	Who          string `json:"who"` // host, device/<id>, app/<id>, _total
+	Who string `json:"who"` // host, device/<id>, app/<id>, _total
+	// Name is the device's or app's name for people (empty for host and
+	// _total); Removed: that device or app is gone now.
+	Name         string `json:"name,omitempty"`
+	Removed      bool   `json:"removed,omitempty"`
 	MicroUSD     int64  `json:"micro_usd"`
 	InputTokens  int64  `json:"input_tokens"`
 	OutputTokens int64  `json:"output_tokens"`
@@ -307,7 +313,37 @@ func (h *Hub) Usage(ctx context.Context, day string) ([]Spend, error) {
 				InputTokens: s.InputTokens, OutputTokens: s.OutputTokens, Calls: s.Calls})
 		}
 	}
+	h.nameSpends(ctx, out)
 	return out, nil
+}
+
+// nameSpends fills in who each line is, for people: a device or app by its
+// name, one removed since by the name it had.
+func (h *Hub) nameSpends(ctx context.Context, out []Spend) {
+	names := map[string]string{}
+	devs, _ := h.listDevices(ctx)
+	for _, d := range devs {
+		names["device/"+d.ID] = d.Name
+	}
+	apps, _ := h.Apps(ctx)
+	for _, a := range apps {
+		names["app/"+a.ID] = a.Name
+	}
+	gone := map[string]string{}
+	for _, t := range h.tombstones(ctx) {
+		gone["device/"+t.Device.ID] = t.Device.Name
+	}
+	for i := range out {
+		w := out[i].Who
+		if n, ok := names[w]; ok {
+			out[i].Name = n
+			continue
+		}
+		if strings.HasPrefix(w, "device/") || strings.HasPrefix(w, "app/") {
+			out[i].Removed = true
+			out[i].Name = gone[w]
+		}
+	}
 }
 
 // ---------- audit: metadata only, never content ----------

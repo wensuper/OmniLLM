@@ -30,7 +30,9 @@ import (
 
 const (
 	launchdLabel = "dev.omnillm.hub"
-	systemdUnit  = "omnillm-hub.service"
+	// trayLabel is the menu bar icon's login item (macOS only).
+	trayLabel   = "dev.omnillm.tray"
+	systemdUnit = "omnillm-hub.service"
 )
 
 // Status is what "omnillm status --json" prints for people and agents.
@@ -239,7 +241,17 @@ func ensureMasterKey(kf string) error {
 func installService(home, bin, dir string, env map[string]string) (string, error) {
 	switch runtime.GOOS {
 	case "darwin":
-		return "launchd", installLaunchd(home, bin, dir, env)
+		if err := installLaunchd(home, bin, dir, env); err != nil {
+			return "launchd", err
+		}
+		// The menu bar icon, only where someone sees a menu bar. A failure
+		// here leaves the hub working, so it is reported, not fatal.
+		if !headless() {
+			if err := installTray(home, bin, dir); err != nil {
+				fmt.Fprintln(os.Stderr, t("菜单栏图标没装上：", "The menu bar icon was not set up: ")+err.Error())
+			}
+		}
+		return "launchd", nil
 	default:
 		if _, err := exec.LookPath("systemctl"); err == nil {
 			if err := installSystemd(home, bin, dir, env); err == nil {
@@ -285,12 +297,50 @@ func installLaunchd(home, bin, dir string, env map[string]string) error {
 	if err := os.WriteFile(plist, []byte(body), 0o644); err != nil {
 		return err
 	}
+	return bootstrapAgent(plist, launchdLabel)
+}
+
+// installTray adds the menu bar icon as a login item. It comes back at
+// login; quitting it from its menu keeps it away until then.
+func installTray(home, bin, dir string) error {
+	plist := filepath.Join(home, "Library", "LaunchAgents", trayLabel+".plist")
+	body := `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>Label</key><string>` + trayLabel + `</string>
+<key>ProgramArguments</key><array><string>` + xmlEscape(bin) + `</string><string>tray</string></array>
+<key>EnvironmentVariables</key><dict><key>OMNILLM_LANG</key><string>` + xmlEscape(lang()) + `</string>` + homeEnvXML() + `</dict>
+<key>LimitLoadToSessionType</key><string>Aqua</string>
+<key>RunAtLoad</key><true/>
+<key>KeepAlive</key><dict><key>SuccessfulExit</key><false/></dict>
+<key>ProcessType</key><string>Interactive</string>
+<key>StandardOutPath</key><string>` + xmlEscape(filepath.Join(dir, "tray.log")) + `</string>
+<key>StandardErrorPath</key><string>` + xmlEscape(filepath.Join(dir, "tray.log")) + `</string>
+</dict></plist>
+`
+	if err := os.WriteFile(plist, []byte(body), 0o644); err != nil {
+		return err
+	}
+	return bootstrapAgent(plist, trayLabel)
+}
+
+// homeEnvXML passes OMNILLM_HOME on, so a tray for a separate data
+// directory talks to that hub.
+func homeEnvXML() string {
+	if h := os.Getenv("OMNILLM_HOME"); h != "" {
+		return "<key>OMNILLM_HOME</key><string>" + xmlEscape(h) + "</string>"
+	}
+	return ""
+}
+
+// bootstrapAgent (re)loads a launch agent in this user's GUI session.
+func bootstrapAgent(plist, label string) error {
 	domain := "gui/" + strconv.Itoa(os.Getuid())
-	_ = exec.Command("launchctl", "bootout", domain+"/"+launchdLabel).Run()
+	_ = exec.Command("launchctl", "bootout", domain+"/"+label).Run()
 	// bootout returns before the old service is gone; bootstrapping
 	// meanwhile fails ("Input/output error") and an upgrade would leave no
 	// service at all. Wait for it to go, then retry a few times.
-	for i := 0; i < 50 && exec.Command("launchctl", "print", domain+"/"+launchdLabel).Run() == nil; i++ {
+	for i := 0; i < 50 && exec.Command("launchctl", "print", domain+"/"+label).Run() == nil; i++ {
 		time.Sleep(100 * time.Millisecond)
 	}
 	var out []byte
@@ -471,9 +521,10 @@ func uninstallCmd(args []string) {
 	home, _ := os.UserHomeDir()
 	switch runtime.GOOS {
 	case "darwin":
-		plist := filepath.Join(home, "Library", "LaunchAgents", launchdLabel+".plist")
-		_ = exec.Command("launchctl", "bootout", "gui/"+strconv.Itoa(os.Getuid())+"/"+launchdLabel).Run()
-		_ = os.Remove(plist)
+		for _, l := range []string{trayLabel, launchdLabel} {
+			_ = exec.Command("launchctl", "bootout", "gui/"+strconv.Itoa(os.Getuid())+"/"+l).Run()
+			_ = os.Remove(filepath.Join(home, "Library", "LaunchAgents", l+".plist"))
+		}
 	case "linux":
 		_ = exec.Command("systemctl", "--user", "disable", "--now", systemdUnit).Run()
 		_ = os.Remove(filepath.Join(home, ".config", "systemd", "user", systemdUnit))

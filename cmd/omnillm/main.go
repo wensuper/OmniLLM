@@ -9,6 +9,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"crypto/tls"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -177,6 +178,8 @@ func main() {
 		uninstallCmd(os.Args[2:])
 	case "status":
 		statusCmd(os.Args[2:])
+	case "tray":
+		trayCmd()
 	case "version":
 		fmt.Println("omnillm " + version)
 	default:
@@ -215,6 +218,7 @@ func openLogin(url string) error {
 	}
 	page := filepath.Join(dataDir("hub"), "open.html")
 	body := `<!doctype html><meta charset="utf-8"><meta name="referrer" content="no-referrer">` +
+		`<link rel="icon" href="data:image/svg+xml;base64,` + base64.StdEncoding.EncodeToString(console.Icon()) + `">` +
 		`<meta http-equiv="refresh" content="0;url=` + html.EscapeString(url) + `"><title>OmniLLM</title>`
 	if err := secret.WriteFileAtomic(page, []byte(body)); err != nil {
 		return err

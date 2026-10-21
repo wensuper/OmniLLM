@@ -43,6 +43,7 @@ const (
 	MsgNotPairing        = "not_pairing"
 	MsgToolNotAllowed    = "tool_not_allowed"
 	MsgNotFound          = "not_found"
+	MsgBadBudget         = "bad_budget"
 	MsgRelayUnavailable  = "relay_unavailable"
 	MsgBrowserRefused    = "browser_refused"
 	MsgWrongHost         = "wrong_host"
@@ -92,6 +93,7 @@ var texts = map[string][2]string{ // zh, en
 	MsgNotPairing:        {"这不是 OmniLLM 的配对文字。请从主机控制台的“添加设备”里复制。", "This is not an OmniLLM pairing text. Copy it from Add device in the host's console."},
 	MsgToolNotAllowed:    {"这个工具不允许从别的设备调用。可以在主机上调整。", "This tool may not be called from another device. You can change that on the host."},
 	MsgNotFound:          {"没有找到。", "Not found."},
+	MsgBadBudget:         {"每天额度要大于 0，或者选“不设上限”。", "The daily limit must be above 0, or choose No limit."},
 	MsgBrowserRefused:    {"本机接口不接受网页发来的请求。请用程序直接调用。", "This local interface does not accept requests from web pages. Call it from a program."},
 	MsgWrongHost:         {"请用 127.0.0.1 或 localhost 访问本机接口。", "Reach the local interface as 127.0.0.1 or localhost."},
 	MsgNoChatModel:       {"本地模型里没有能对话的模型（只有向量 / 重排模型）。可以先用 ollama pull 下载一个对话模型，比如 qwen3。", "The local model server has no chat model (only embedding / rerank models). Download one first, for example: ollama pull qwen3."},

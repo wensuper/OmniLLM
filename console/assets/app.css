@@ -81,7 +81,7 @@ input:hover, select:hover { border-color: var(--line-strong); }
 input:focus-visible, select:focus-visible, button:focus-visible, summary:focus-visible { outline: 0; box-shadow: var(--focus); border-color: var(--accent); }
 button { font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; border-radius: var(--r-s); padding: 6px 14px; min-height: 32px; border: 1px solid var(--line-2); background: var(--surface); color: var(--ink); transition: background .15s, border-color .15s, box-shadow .15s; }
 button:hover:not(:disabled) { background: var(--surface-2); border-color: var(--line-strong); }
-button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); margin-top: 16px; min-height: 36px; padding: 8px 16px; box-shadow: var(--glow); }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); margin-top: 16px; min-height: 36px; padding: 8px 16px; }
 button.primary:hover:not(:disabled) { background: var(--accent-2); border-color: var(--accent-2); }
 button.secondary { background: var(--surface); color: var(--ink); border-color: var(--line-2); }
 button.ghost { background: transparent; border-color: transparent; color: var(--ink-2); padding: 6px 10px; }
@@ -158,3 +158,53 @@ td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
 }
 /* Narrow screens: the status line needs the room more than the slogan. */
 @media (max-width: 480px) { .top .brand-sub { display: none; } }
+/* Switch, as in NEXA: purple when on; an off switch still reads as a control. */
+input.switch { min-height: 0; padding: 0; }
+.switch { appearance: none; -webkit-appearance: none; width: 32px; height: 18px; border-radius: 999px; background: var(--surface-3); border: 1px solid var(--line-strong); position: relative; cursor: pointer; flex: none; margin: 0; vertical-align: middle; transition: background .15s, border-color .15s; }
+.switch::after { content: ""; position: absolute; left: 2px; top: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--muted); transition: left .15s, background .15s; }
+.switch:checked, .switch:checked:hover { background: var(--accent); border-color: var(--accent); }
+.switch:checked::after { left: 16px; background: var(--accent-ink); }
+.switch:focus-visible { outline: 0; box-shadow: var(--focus); }
+.toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); white-space: nowrap; cursor: pointer; }
+/* The add-device panel closes with the x in its corner. */
+.pair-panel { position: relative; border: 1px solid var(--line); border-radius: var(--r-l); padding: 16px; margin-top: 12px; background: var(--surface); }
+.pair-panel .pair { margin-top: 0; }
+.close-x { position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; min-height: 0; padding: 0; border: 0; border-radius: var(--r-s); background: transparent; color: var(--muted); cursor: pointer; z-index: 1; }
+.close-x::before, .close-x::after { content: ""; position: absolute; left: 9px; top: 15px; width: 14px; height: 1.6px; background: currentColor; border-radius: 1px; transform: rotate(45deg); }
+.close-x::after { transform: rotate(-45deg); }
+.close-x:hover { background: var(--surface-2); color: var(--ink); }
+.close-x:focus-visible { outline: 0; box-shadow: var(--focus); }
+td.actions { white-space: nowrap; text-align: right; }
+td.actions button + button { margin-left: 6px; }
+tr.editing td { vertical-align: top; }
+tr.editing input:not(.switch) { width: 100%; min-width: 0; box-sizing: border-box; border: 1px solid var(--line-2); border-radius: var(--r-s); background: var(--surface); color: var(--ink); padding: 6px 8px; font: inherit; }
+tr.editing input:not(.switch):focus { outline: 0; box-shadow: var(--focus); border-color: var(--accent); }
+tr.editing input:disabled { opacity: .45; }
+.budget-edit { display: grid; gap: 8px; }
+.money-in { display: flex; align-items: center; gap: 4px; max-width: 120px; }
+.budget-edit .small { margin: 0; white-space: normal; font-size: 12px; }
+td.actions button.primary { margin-top: 0; box-shadow: none; }
+#tab-usage th.num, #tab-usage td.num { text-align: right; }
+tfoot tr.total td { font-weight: 600; border-bottom: 0; border-top: 1px solid var(--line-2); }
+td.muted { color: var(--muted); }
+/* Today's spend and the hub's daily total. */
+.spend-card { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+.cap { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; }
+.cap-edit { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.cap-edit .money-in input { width: 90px; }
+.cap-edit button.primary { margin-top: 0; }
+td:first-child { overflow-wrap: normal; word-break: keep-all; }
+@media (max-width: 600px) {
+  .narrow-hide { display: none; }
+  .pair-panel { padding-top: 44px; }
+  tr.editing td { display: block; border-bottom: 0; padding: 6px 8px; }
+  tr.editing { display: block; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+  tr.editing td.actions { text-align: left; }
+}
+/* Disclosure: a chevron instead of the browser's triangle. */
+summary { list-style: none; }
+summary::-webkit-details-marker { display: none; }
+summary::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 8px; border-right: 1.6px solid currentColor; border-bottom: 1.6px solid currentColor; transform: translateY(-2px) rotate(-45deg); transition: transform .15s; }
+details[open] > summary::before { transform: translateY(-3px) rotate(45deg); }
+th { white-space: nowrap; }
+@media (max-width: 600px) { .spend-card { align-items: flex-start; flex-direction: column; } }

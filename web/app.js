@@ -15,8 +15,8 @@ const T = {
     bootSlow: "载入停了 20 秒没有进展，停在“{0}”。点下面的按钮清掉缓存重新载入；网络慢的话也可以换个网络再试。",
     bootCrashed: "程序意外停止了。点下面的按钮清掉缓存重新载入。", bootError: "载入失败：", bootRetry: "重新载入",
     welcomeTitle: "在这台设备上用你的模型",
-    welcomeBody: "在你的主机（Mac 或电脑）上打开 OmniLLM 控制台，点“添加设备”，然后用这台设备扫描屏幕上的二维码。",
-    scan: "扫描二维码", pasteInstead: "或者粘贴配对文字", connect: "连接", cancel: "取消", back: "返回",
+    welcomeBody: "在你的 Mac（或装了 OmniLLM 的电脑）上打开 OmniLLM，点“添加设备”，再用这台设备扫屏幕上的二维码。",
+    scan: "扫描二维码", pasteInstead: "扫不了码？粘贴配对文字", connect: "连接", cancel: "取消", back: "返回",
     scanHint: "把主机屏幕上的二维码放进框里", camDenied: "没有拿到摄像头权限。可以改用下面的“粘贴配对文字”。",
     pairTitle: "添加这台设备", pairConnecting: "正在连接你的主机……",
     pairAsk: "把这台设备连到经过下面这个连接服务的主机上？只在你自己刚在主机上点了“添加设备”时继续。",
@@ -27,7 +27,7 @@ const T = {
     addImage: "添加图片", removeImage: "移除图片", tooManyImages: "每条消息最多 4 张图片。", imageFailed: "这张图片打不开，换一张试试。", imageTitle: "图片",
     offline: "连不上主机：它可能睡眠了或者没联网。醒来后会自动恢复。", retry: "重试",
     noNetwork: "这台设备没有联网。联网后会自动连上，刚才输入的内容还在。", loadingModels: "正在连接主机……",
-    noModels: "主机上还没有可用的模型。", forget: "取消这台设备的配对", forgetQ: "这台设备将不能再使用主机上的模型。主机的设备列表里它还在，请也在主机上移除它。确定吗？",
+    noModels: "主机上还没有可用的模型。", forget: "断开这台设备", forgetQ: "断开后，这台设备不能再用你 Mac 上的模型；对话记录也会从这台设备上删掉。Mac 的设备列表里它还在，记得在那里也移除。确定吗？", close: "关闭", deleteChat: "删除这个对话", deleteChatQ: "删除对话“{0}”？",
     addHome: "添加到主屏幕", addHomeTip: "点浏览器的“分享”按钮，选“添加到主屏幕”。从主屏幕打开时需要再扫一次码。",
     deviceLine: "这台设备：{0}", sub: "订阅", empty: "有什么可以帮你？", cut: "（回复被截断）", stopped: "（已停止）",
     today: "今天", copy: "复制", copied: "已复制",
@@ -39,8 +39,8 @@ const T = {
     bootSlow: "Loading has made no progress for 20 seconds, stuck at \"{0}\". Tap below to clear the cache and load again; on a slow network, another network may help.",
     bootCrashed: "The program stopped unexpectedly. Tap below to clear the cache and load again.", bootError: "Loading failed: ", bootRetry: "Load again",
     welcomeTitle: "Use your models on this device",
-    welcomeBody: "On your hub (your Mac or computer), open the OmniLLM console, choose Add device, and scan the QR code on its screen with this device.",
-    scan: "Scan QR code", pasteInstead: "Or paste the pairing text", connect: "Connect", cancel: "Cancel", back: "Back",
+    welcomeBody: "On your Mac (or the computer running OmniLLM), open OmniLLM, choose Add device, and scan the QR code on its screen with this device.",
+    scan: "Scan QR code", pasteInstead: "Can't scan? Paste the pairing text", connect: "Connect", cancel: "Cancel", back: "Back",
     scanHint: "Point at the QR code on your hub's screen", camDenied: "No camera access. Use \"paste the pairing text\" below instead.",
     pairTitle: "Add this device", pairConnecting: "Connecting to your hub…",
     pairAsk: "Connect this device to the hub reached through the connection service below? Continue only if you just chose Add device on your own hub.",
@@ -51,7 +51,7 @@ const T = {
     addImage: "Add image", removeImage: "Remove image", tooManyImages: "Up to 4 images per message.", imageFailed: "This image can't be opened; try another one.", imageTitle: "Image",
     offline: "Can't reach your hub: it may be asleep or offline. This recovers by itself when it wakes.", retry: "Retry",
     noNetwork: "This device is offline. It reconnects by itself when the network is back; what you typed is kept.", loadingModels: "Connecting to your hub…",
-    noModels: "The hub has no models yet.", forget: "Unpair this device", forgetQ: "This device will no longer be able to use the hub's models. It still shows in the hub's device list; remove it there too. Continue?",
+    noModels: "The hub has no models yet.", forget: "Disconnect this device", forgetQ: "This device will no longer use your Mac's models, and its chats are deleted from it. It still shows in the Mac's device list; remove it there too. Continue?", close: "Close", deleteChat: "Delete this chat", deleteChatQ: "Delete the chat \"{0}\"?",
     addHome: "Add to Home Screen", addHomeTip: "Tap the browser's Share button and choose Add to Home Screen. Opened from the Home Screen, it asks for the code once more.",
     deviceLine: "This device: {0}", sub: "subscription", empty: "How can I help?", cut: "(reply cut off)", stopped: "(stopped)",
     today: "Today", copy: "Copy", copied: "Copied",
@@ -389,7 +389,7 @@ async function openChat() {
   $("device-line").textContent = t("deviceLine", S.device.name);
   $("install-tip").hidden = isStandalone;
   if (!S.cur) S.cur = S.chats[0] || newChat();
-  renderList(); renderLog();
+  renderList(); renderLog(); sendState();
   await connect();
 }
 
@@ -537,7 +537,20 @@ function renderList() {
   for (const c of all) {
     const li = el("li"); const a = el("button", c.title || t("newChat"), c.id === S.cur.id ? "cur" : ""); a.type = "button";
     a.addEventListener("click", () => { if (S.busy) return; S.cur = c; if (c.model) $("model").value = c.model; renderLog(); renderList(); closeDrawer(); });
-    li.append(a); ul.append(li);
+    li.append(a);
+    if (c.messages.length) {
+      const x = el("button", "", "chat-del"); x.type = "button"; x.setAttribute("aria-label", t("deleteChat")); x.title = t("deleteChat");
+      x.addEventListener("click", async () => {
+        if (S.busy && c === S.cur) return;
+        if (!confirm(t("deleteChatQ", c.title || t("newChat")))) return;
+        S.chats = S.chats.filter((o) => o.id !== c.id);
+        if (c === S.cur) { S.cur = S.chats[0] || newChat(); renderLog(); }
+        await seal("chats", S.chats).catch(() => {});
+        renderList();
+      });
+      li.append(x);
+    }
+    ul.append(li);
   }
 }
 
@@ -549,7 +562,9 @@ async function saveChats() {
 }
 
 const input = $("input");
-input.addEventListener("input", grow);
+input.addEventListener("input", () => { grow(); sendState(); });
+// The send button looks pressable only when there is something to send.
+function sendState() { $("send").classList.toggle("idle", !S.busy && !input.value.trim() && !(S.pending && S.pending.length)); }
 function grow() { input.style.height = "auto"; input.style.height = Math.min(input.scrollHeight, 180) + "px"; }
 input.addEventListener("keydown", (e) => {
   // Enter sends on a computer keyboard; on phones the send button does.
@@ -650,6 +665,7 @@ function b64(blob) {
   return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1]); r.onerror = rej; r.readAsDataURL(blob); });
 }
 function renderPending() {
+  sendState();
   const box = $("pending"); box.textContent = "";
   box.hidden = !S.pending.length;
   S.pending.forEach((p, i) => {
@@ -662,12 +678,14 @@ function renderPending() {
 function clearPending() { S.pending = []; renderPending(); }
 function toastText(s) { setOnline(S.online); const n = el("p", s, "note err"); $("log").append(n); $("log").scrollTop = $("log").scrollHeight; setTimeout(() => n.remove(), 4000); }
 
-function busyUI(on) { $("send").classList.toggle("stop", on); $("send").setAttribute("aria-label", on ? t("stop") : "Send"); }
+function busyUI(on) { $("send").classList.toggle("stop", on); $("send").setAttribute("aria-label", on ? t("stop") : "Send"); sendState(); }
 
 // ---------- drawer ----------
 $("menu").addEventListener("click", () => { $("drawer").hidden = false; });
 $("drawer").addEventListener("click", (e) => { if (e.target.id === "drawer") closeDrawer(); });
 function closeDrawer() { $("drawer").hidden = true; }
+$("drawer-close").setAttribute("aria-label", t("close")); $("drawer-close").title = t("close");
+$("drawer-close").addEventListener("click", closeDrawer);
 $("install-tip").addEventListener("click", () => { alert(t("addHomeTip")); });
 $("forget").addEventListener("click", async () => {
   if (!confirm(t("forgetQ"))) return;

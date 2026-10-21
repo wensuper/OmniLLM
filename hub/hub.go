@@ -127,6 +127,11 @@ func New(ctx context.Context, opts Options) (*Hub, error) {
 	if err := h.loadRegion(ctx); err != nil {
 		return nil, err
 	}
+	// The owner's own daily total, if they set one in the console.
+	var total int64
+	if err := store.GetJSON(ctx, h.opts.Store, dailyTotalKey, &total); err == nil && (total > 0 || total == NoLimit) {
+		h.opts.GlobalBudget = total
+	}
 	return h, nil
 }
 
@@ -220,6 +225,31 @@ func (h *Hub) Stop(ctx context.Context) error {
 	case <-ctx.Done():
 		return ctx.Err()
 	}
+}
+
+const dailyTotalKey = "settings/daily_total"
+
+// DailyTotal is the hub's daily limit for everything together, micro-USD
+// (or NoLimit).
+func (h *Hub) DailyTotal() int64 {
+	h.accountMu.Lock()
+	defer h.accountMu.Unlock()
+	return h.opts.GlobalBudget
+}
+
+// SetDailyTotal changes and keeps the hub's daily total (micro-USD, or
+// NoLimit: then only each device's and app's own limit applies).
+func (h *Hub) SetDailyTotal(ctx context.Context, v int64) error {
+	if v != NoLimit && v <= 0 {
+		return &omnillm.Error{Code: omnillm.CodeBadRequest, Msg: omnillm.MsgBadBudget}
+	}
+	if err := store.PutJSON(ctx, h.opts.Store, dailyTotalKey, v); err != nil {
+		return err
+	}
+	h.accountMu.Lock()
+	h.opts.GlobalBudget = v
+	h.accountMu.Unlock()
+	return nil
 }
 
 // RelayUp reports whether devices can reach the hub right now.

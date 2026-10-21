@@ -121,6 +121,37 @@ func (h *Hub) SetDevice(ctx context.Context, id string, models []string, budget 
 	return store.PutJSON(ctx, h.opts.Store, "device/"+id, d)
 }
 
+// NoLimit as a device's Budget: no daily limit of its own; the hub's daily
+// total (Options.GlobalBudget) still applies.
+const NoLimit int64 = -1
+
+// UpdateDevice renames a device and/or changes its daily budget
+// (micro-USD, or NoLimit). A nil field is left as it is. A name another
+// device already has gets a number, as at pairing.
+func (h *Hub) UpdateDevice(ctx context.Context, id string, name *string, budget *int64) (Device, error) {
+	h.deviceMu.Lock()
+	defer h.deviceMu.Unlock()
+	d, err := h.getDevice(ctx, id)
+	if err != nil {
+		return d, err
+	}
+	if budget != nil {
+		if *budget != NoLimit && *budget <= 0 {
+			return d, &omnillm.Error{Code: omnillm.CodeBadRequest, Msg: omnillm.MsgBadBudget}
+		}
+		d.Budget = *budget
+	}
+	if name != nil {
+		n := cleanName(*name)
+		devs, err := h.listDevices(ctx)
+		if err != nil {
+			return d, err
+		}
+		d.Name = uniqueName(n, deviceNames(devs, d.ID))
+	}
+	return d, store.PutJSON(ctx, h.opts.Store, "device/"+id, d)
+}
+
 // Revoke removes a device at once: its key is deleted, its mailbox released
 // and any open session closed.
 func (h *Hub) Revoke(ctx context.Context, id string) error {
@@ -335,11 +366,11 @@ func (h *Hub) endPairing(p *pairing, err error) {
 
 // cleanName keeps a device name printable and short.
 // uniqueName returns name, or name with the lowest number from 2 up that
-// no device in devs already has (case does not count).
-func uniqueName(name string, devs []Device) string {
-	taken := make(map[string]bool, len(devs))
-	for _, d := range devs {
-		taken[strings.ToLower(d.Name)] = true
+// none of names already is (case does not count).
+func uniqueName(name string, names []string) string {
+	taken := make(map[string]bool, len(names))
+	for _, n := range names {
+		taken[strings.ToLower(n)] = true
 	}
 	if !taken[strings.ToLower(name)] {
 		return name
@@ -350,6 +381,28 @@ func uniqueName(name string, devs []Device) string {
 			return n
 		}
 	}
+}
+
+// deviceNames lists the devices' names, leaving out the one with id skip.
+func deviceNames(devs []Device, skip string) []string {
+	var out []string
+	for _, d := range devs {
+		if d.ID != skip {
+			out = append(out, d.Name)
+		}
+	}
+	return out
+}
+
+// appNames lists the apps' names, leaving out the one with id skip.
+func appNames(apps []App, skip string) []string {
+	var out []string
+	for _, a := range apps {
+		if a.ID != skip {
+			out = append(out, a.Name)
+		}
+	}
+	return out
 }
 
 func cleanName(s string) string {
@@ -383,7 +436,7 @@ func (h *Hub) finishPairing(ctx context.Context, p *pairing, sess *e2e.Session, 
 	// Two phones both called "iPhone" can't be told apart in the device
 	// list (and the wrong one gets removed): the second is "iPhone 2".
 	if devs, err := h.listDevices(ctx); err == nil {
-		name = uniqueName(name, devs)
+		name = uniqueName(name, deviceNames(devs, ""))
 	}
 	code := e2e.SAS(sess.ChannelBinding())
 	cctx, cancel := context.WithDeadline(ctx, p.expires)
@@ -502,7 +555,8 @@ func (h *Hub) AddApp(ctx context.Context, name string, models []string, budget i
 		budget = h.opts.DefaultBudget
 	}
 	tok := appTokenPrefix + hex.EncodeToString(e2e.RandomBytes(32))
-	a := App{ID: newDeviceID(), Name: cleanName(name), TokenHash: tokenHash(tok), Models: models, Budget: budget, Created: h.opts.Now().UTC()}
+	apps, _ := h.Apps(ctx)
+	a := App{ID: newDeviceID(), Name: uniqueName(cleanName(name), appNames(apps, "")), TokenHash: tokenHash(tok), Models: models, Budget: budget, Created: h.opts.Now().UTC()}
 	if err := store.PutJSON(ctx, h.opts.Store, "app/"+a.ID, a); err != nil {
 		return App{}, "", err
 	}
@@ -523,6 +577,31 @@ func (h *Hub) Apps(ctx context.Context) ([]App, error) {
 		}
 	}
 	return out, nil
+}
+
+// UpdateApp renames an app and/or changes its daily budget (micro-USD, or
+// NoLimit), as UpdateDevice does for devices.
+func (h *Hub) UpdateApp(ctx context.Context, id string, name *string, budget *int64) (App, error) {
+	var a App
+	if id == "" || strings.ContainsAny(id, "/ ") {
+		return a, omnillm.ErrNotFound
+	}
+	h.deviceMu.Lock()
+	defer h.deviceMu.Unlock()
+	if err := store.GetJSON(ctx, h.opts.Store, "app/"+id, &a); err != nil {
+		return a, &omnillm.Error{Code: omnillm.CodeNotFound, Msg: omnillm.MsgNotFound}
+	}
+	if budget != nil {
+		if *budget != NoLimit && *budget <= 0 {
+			return a, &omnillm.Error{Code: omnillm.CodeBadRequest, Msg: omnillm.MsgBadBudget}
+		}
+		a.Budget = *budget
+	}
+	if name != nil {
+		apps, _ := h.Apps(ctx)
+		a.Name = uniqueName(cleanName(*name), appNames(apps, a.ID))
+	}
+	return a, store.PutJSON(ctx, h.opts.Store, "app/"+id, a)
 }
 
 // RevokeApp deletes an app token.

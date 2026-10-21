@@ -14,6 +14,7 @@ require (
 )
 
 require (
+	fyne.io/systray v1.12.2 // indirect
 	github.com/danieljoos/wincred v1.2.3 // indirect
 	github.com/godbus/dbus/v5 v5.2.2 // indirect
 	golang.org/x/net v0.61.0 // indirect

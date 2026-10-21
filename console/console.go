@@ -20,6 +20,7 @@ import (
 	"errors"
 	"io"
 	"io/fs"
+	"math"
 	"net"
 	"net/http"
 	"strconv"
@@ -36,6 +37,10 @@ import (
 
 //go:embed assets
 var assets embed.FS
+
+// Icon is the OmniLLM mark (SVG), for pages outside the console that
+// should carry it too (the page `omnillm open` writes).
+func Icon() []byte { b, _ := assets.ReadFile("assets/icon.svg"); return b }
 
 const (
 	cookieName   = "omnillm_console"
@@ -160,11 +165,15 @@ func (s *Server) Handler() http.Handler {
 	api("POST /console/api/providers/remove", s.removeProvider)
 	api("POST /console/api/models/set", s.setModel)
 	api("POST /console/api/devices/remove", s.removeDevice)
+	api("POST /console/api/devices/update", s.updateDevice)
 	api("POST /console/api/apps/add", s.addApp)
 	api("POST /console/api/apps/remove", s.removeApp)
+	api("POST /console/api/apps/update", s.updateApp)
+	api("POST /console/api/daily-total", s.setDailyTotal)
 	api("POST /console/api/pair/start", s.pairStart)
 	api("GET /console/api/pair/state", s.pairGet)
 	api("POST /console/api/pair/decide", s.pairDecide)
+	api("POST /console/api/pair/cancel", s.pairCancel)
 	api("POST /console/api/test", s.test)
 	api("POST /console/api/region/confirm", s.regionConfirm)
 	api("POST /console/api/logout", s.logout)
@@ -454,7 +463,8 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]any{
 		"providers": ps, "models": ms, "devices": ds, "apps": as, "usage": usage,
 		"relay_up": s.hub.RelayUp(), "relay_configured": s.hub.RelayConfigured(),
-		"region": map[string]any{"confirmed": confirmed, "seen": seen, "paused": paused},
+		"daily_total_micro_usd": s.hub.DailyTotal(),
+		"region":                map[string]any{"confirmed": confirmed, "seen": seen, "paused": paused},
 	})
 }
 
@@ -545,6 +555,71 @@ func (s *Server) removeDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, map[string]bool{"ok": true})
+}
+
+// updateBody renames a device or app or changes its daily limit; no_limit
+// leaves only the hub's daily total.
+type updateBody struct {
+	ID        string   `json:"id"`
+	Name      *string  `json:"name"`
+	BudgetUSD *float64 `json:"budget_usd"`
+	NoLimit   bool     `json:"no_limit"`
+}
+
+func (in updateBody) budget() *int64 {
+	var b int64
+	switch {
+	case in.NoLimit:
+		b = hub.NoLimit
+	case in.BudgetUSD != nil:
+		b = max(int64(math.Round(*in.BudgetUSD*1e6)), 0) // 0 is refused with a sentence
+	default:
+		return nil
+	}
+	return &b
+}
+
+func (s *Server) updateDevice(w http.ResponseWriter, r *http.Request) {
+	var in updateBody
+	if !decode(w, r, &in) {
+		return
+	}
+	d, err := s.hub.UpdateDevice(r.Context(), in.ID, in.Name, in.budget())
+	if err != nil {
+		writeErr(w, r, 0, err)
+		return
+	}
+	writeJSON(w, map[string]any{"name": d.Name, "budget_micro_usd": d.Budget})
+}
+
+func (s *Server) setDailyTotal(w http.ResponseWriter, r *http.Request) {
+	var in updateBody
+	if !decode(w, r, &in) {
+		return
+	}
+	b := in.budget()
+	if b == nil {
+		writeErr(w, r, http.StatusBadRequest, &omnillm.Error{Code: omnillm.CodeBadRequest, Msg: omnillm.MsgBadBudget})
+		return
+	}
+	if err := s.hub.SetDailyTotal(r.Context(), *b); err != nil {
+		writeErr(w, r, 0, err)
+		return
+	}
+	writeJSON(w, map[string]any{"daily_total_micro_usd": *b})
+}
+
+func (s *Server) updateApp(w http.ResponseWriter, r *http.Request) {
+	var in updateBody
+	if !decode(w, r, &in) {
+		return
+	}
+	a, err := s.hub.UpdateApp(r.Context(), in.ID, in.Name, in.budget())
+	if err != nil {
+		writeErr(w, r, 0, err)
+		return
+	}
+	writeJSON(w, map[string]any{"name": a.Name, "budget_micro_usd": a.Budget})
 }
 
 func (s *Server) addApp(w http.ResponseWriter, r *http.Request) {
@@ -710,6 +785,23 @@ func (s *Server) pairStart(w http.ResponseWriter, r *http.Request) {
 		"id": id, "code": p.Code, "expires": p.Expires,
 		"qr": "data:image/svg+xml;base64," + base64.StdEncoding.EncodeToString([]byte(svg)),
 	})
+}
+
+// pairCancel ends an "add device" the owner closed: the code stops
+// working at once instead of when it expires.
+func (s *Server) pairCancel(w http.ResponseWriter, r *http.Request) {
+	var in idBody
+	if !decode(w, r, &in) {
+		return
+	}
+	s.mu.Lock()
+	ps := s.pairs[in.ID]
+	delete(s.pairs, in.ID)
+	s.mu.Unlock()
+	if ps != nil && ps.cancel != nil {
+		ps.cancel()
+	}
+	writeJSON(w, map[string]bool{"ok": true})
 }
 
 func (s *Server) pairGet(w http.ResponseWriter, r *http.Request) {

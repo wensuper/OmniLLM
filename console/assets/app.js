@@ -22,19 +22,21 @@ const T = {
     skipPair: "先跳过，以后再加",
     w3Title: "试一下",
     model: "模型", message: "消息", send: "发送", finish: "完成",
-    todaySpend: "今天的花费", estimate: "估算", devices: "设备", models: "模型", apps: "应用", usage: "用量",
+    todaySpend: "今天的花费", estimate: "按提供方公布的价格估算", devices: "设备", models: "模型", apps: "应用", usage: "用量",
     addDevice: "添加设备", addProvider: "接入模型", addApp: "添加应用",
-    name: "名字", lastSeen: "最近使用", budget: "每天额度", where: "数据去向", humanOnly: "只给人用",
-    providers: "提供方", keyLast4: "Key 末 4 位", subLogin: "订阅登录（留在本机）",
+    name: "名字", lastSeen: "最近使用", budget: "每天额度", where: "对话发往", humanOnly: "只能手动对话",
+    providers: "模型来源", keyLast4: "登录方式", subLogin: "订阅登录，留在本机",
     noDevices: "还没有设备。点“添加设备”。",
     appsBody: "给不能直接嵌入 OmniLLM 的程序（脚本、其他 App）用。应用只能做后台调用，只能用 API Key 和本地模型。",
-    usageBody: "按提供方公布的价格估算；没设价格的模型按偏高的价格估算。",
-    who: "谁", spend: "花费", calls: "次数", tokens: "token（入 / 出）",
+    usageBody: "今天的用量（按这台电脑的时间）。花费按提供方公布的价格估算，没有公布价格的按偏高的价格估；订阅和本机模型不花钱。",
+    who: "设备或应用", spend: "花费（估算）", calls: "次数", tokens: "token（发出 / 收到）",
+    usageHost: "这台电脑", usageGone: "已移除的设备和应用（{0} 个）", usageGoneOne: "{0}（已移除）", usageTotal: "今天合计",
+    capLine: "整台主机每天最多花 {0}", capNone: "整台主机每天不设上限", capEdit: "修改", noApps: "还没有应用。", modelsBody: "“只能手动对话”的模型只给在手机、电脑上聊天的人用，脚本和应用调用不了（订阅模型一直这样，防止被当成自动化调用）。", claudeSub: "Claude 订阅", codexSub: "ChatGPT 订阅（Codex）", usageEmpty: "今天还没有用过。",
     remove: "移除", removeConfirm: "确定移除“{0}”？它会立即无法使用。",
     removed: "已移除", connected: "已接入，{0} 个模型可用", saved: "已保存",
-    local: "只在本机", remote: "会发到云端", sub: "订阅",
+    local: "只在本机", remote: "云端", sub: "订阅",
     pairHow: "手机或平板：用相机扫这个二维码，不用装任何东西。电脑或服务器：运行 omnillm connect pair，粘贴下面这段配对文字（{0} 前有效，只能用一次）。不要发给别人，也不要贴到聊天里。",
-    pairPhone: "手机或平板：用相机扫这个二维码，不用装任何东西。{0} 前有效，只能用一次。",
+    pairPhone: "手机或平板：用相机扫这个二维码，不用装任何东西。{0} 前有效，只能用一次；过期了再点“添加设备”。",
     pairComputer: "电脑或服务器（没有摄像头）",
     pairComputerNew: "还没装 OmniLLM 的，在那台机器上运行这一行（只装一个程序，不装后台服务），装完会提示粘贴配对文字：",
     pairComputerHow: "已经装好的，运行 omnillm connect pair，粘贴下面这段配对文字。不要发给别人，也不要贴到聊天里。",
@@ -43,9 +45,11 @@ const T = {
     pairYes: "一致，添加", pairNo: "不一致，拒绝",
     pairDone: "已添加“{0}”", pairFailed: "配对没有完成：{0}",
     pairDenied: "已拒绝",
+    close: "关闭", edit: "编辑", save: "保存", cancel: "取消", noLimit: "不设上限", perDay: "每天",
+    noLimitHint: "不设上限时只受主机每天总额度（{0}）限制；订阅模型不按钱计。", nameLabel: "设备名字", budgetLabel: "每天额度（美元）",
     noRelay: "还没有配置连接服务，其他设备暂时连不上。可以先跳过；配好连接服务后，在“设备”里添加。",
     relayWait: "正在连上连接服务……", relayDown: "连接服务现在连不上，请检查这台电脑的网络。连上之后这里会自动继续。",
-    relayOn: "连接服务已连上", relayOff: "连接服务未连上", relayNone: "未配置连接服务",
+    relayOn: "设备可以连上", relayOff: "连接服务断开，设备暂时连不上", relayNone: "只在本机（没有连接服务）",
     regionPaused: "主机所在地区变了，已暂停调用。", regionConfirm: "确认继续",
     appToken: "“{0}”的令牌（只显示这一次，请现在复制保存）：",
     appName: "应用的名字",
@@ -71,19 +75,21 @@ const T = {
     skipPair: "Skip for now",
     w3Title: "Try it",
     model: "Model", message: "Message", send: "Send", finish: "Done",
-    todaySpend: "Spent today", estimate: "estimate", devices: "Devices", models: "Models", apps: "Apps", usage: "Usage",
+    todaySpend: "Spent today", estimate: "estimated from published prices", devices: "Devices", models: "Models", apps: "Apps", usage: "Usage",
     addDevice: "Add device", addProvider: "Connect a model", addApp: "Add app",
-    name: "Name", lastSeen: "Last used", budget: "Daily budget", where: "Data goes", humanOnly: "People only",
-    providers: "Providers", keyLast4: "Key ends", subLogin: "subscription login (stays here)",
+    name: "Name", lastSeen: "Last used", budget: "Daily budget", where: "Messages go to", humanOnly: "Chat only",
+    providers: "Model sources", keyLast4: "Sign-in", subLogin: "subscription login, stays here",
     noDevices: "No devices yet. Choose \"Add device\".",
     appsBody: "For programs that cannot embed OmniLLM (scripts, other apps). Apps make background calls only, with API keys and local models.",
-    usageBody: "Estimated from the providers' published prices; models without a price are estimated high.",
-    who: "Who", spend: "Spend", calls: "Calls", tokens: "tokens (in / out)",
+    usageBody: "Today's use (this computer's time). Spend is estimated from the providers' published prices, high where there is no price; subscriptions and local models cost nothing.",
+    who: "Device or app", spend: "Spend (est.)", calls: "Calls", tokens: "tokens (in / out)",
+    usageHost: "This computer", usageGone: "Removed devices and apps ({0})", usageGoneOne: "{0} (removed)", usageTotal: "Today",
+    capLine: "This hub spends at most {0} a day", capNone: "No daily limit for the whole hub", capEdit: "Change", noApps: "No apps yet.", modelsBody: "Chat-only models are for people chatting on a phone or computer; scripts and apps can't call them (subscription models always are, so they aren't used as automation).", claudeSub: "Claude subscription", codexSub: "ChatGPT subscription (Codex)", usageEmpty: "Nothing used yet today.",
     remove: "Remove", removeConfirm: "Remove \"{0}\"? It stops working at once.",
     removed: "Removed", connected: "Connected: {0} models available", saved: "Saved",
-    local: "stays on this computer", remote: "goes to the cloud", sub: "subscription",
+    local: "this computer only", remote: "the cloud", sub: "subscription",
     pairHow: "Phone or tablet: scan the QR code with the camera; nothing to install. Computer or server: run omnillm connect pair and paste this pairing text (valid until {0}, single use). Don't send it to anyone or paste it into a chat.",
-    pairPhone: "Phone or tablet: scan this QR code with the camera; nothing to install. Valid until {0}, single use.",
+    pairPhone: "Phone or tablet: scan this QR code with the camera; nothing to install. Valid until {0}, single use; if it expires, click Add device again.",
     pairComputer: "Computer or server (no camera)",
     pairComputerNew: "Not installed there yet? Run this line on that machine (one program, no background service); it then asks for the pairing text:",
     pairComputerHow: "Already installed: run omnillm connect pair and paste this pairing text. Don't send it to anyone or paste it into a chat.",
@@ -92,9 +98,11 @@ const T = {
     pairYes: "It matches, add it", pairNo: "It doesn't, refuse",
     pairDone: "Added \"{0}\"", pairFailed: "Pairing did not finish: {0}",
     pairDenied: "Refused",
+    close: "Close", edit: "Edit", save: "Save", cancel: "Cancel", noLimit: "No limit", perDay: "per day",
+    noLimitHint: "With no limit, only the hub's daily total ({0}) applies; subscription models aren't counted in money.", nameLabel: "Device name", budgetLabel: "Daily limit (USD)",
     noRelay: "No connection service is set up yet, so other devices can't connect. Skip for now; add devices under Devices once it is set up.",
     relayWait: "Connecting to the connection service…", relayDown: "The connection service can't be reached right now; check this computer's network. This continues by itself once it connects.",
-    relayOn: "Connection service online", relayOff: "Connection service offline", relayNone: "No connection service",
+    relayOn: "Devices can connect", relayOff: "Offline: devices can't connect now", relayNone: "This computer only (no relay)",
     regionPaused: "The host's region changed; calls are paused.", regionConfirm: "Confirm and resume",
     appToken: "Token for \"{0}\" (shown once — copy it now):",
     appName: "App name",
@@ -288,9 +296,27 @@ $("finish").addEventListener("click", () => { store("omnillm.wizard", "done"); r
 let pairTimer = null;
 function stopPair() { if (pairTimer) { clearInterval(pairTimer); pairTimer = null; } }
 
-async function startPair(area, onDone) {
+// The pairing on screen, so closing the panel can end it at once.
+let curPair = null;
+function closePair(area) {
   stopPair();
+  $("add-device").hidden = false;
+  if (curPair) { api("pair/cancel", { id: curPair }).catch(() => {}); curPair = null; }
   area.textContent = "";
+  area.classList.remove("pair-panel");
+}
+
+async function startPair(area, onDone, closable) {
+  stopPair();
+  if (curPair) { api("pair/cancel", { id: curPair }).catch(() => {}); curPair = null; }
+  area.textContent = "";
+  if (closable) {
+    $("add-device").hidden = true;
+    area.classList.add("pair-panel");
+    const x = el("button", "", "close-x"); x.type = "button"; x.setAttribute("aria-label", t("close")); x.title = t("close");
+    x.addEventListener("click", () => closePair(area));
+    area.append(x);
+  }
   if (!S.relay_configured) {
     area.append(el("p", t("noRelay"), "muted"));
     return;
@@ -305,13 +331,14 @@ async function startPair(area, onDone) {
       let r;
       try { r = await api("relay"); } catch (_) { return; }
       S.relay_up = r.relay_up; S.relay_configured = r.relay_configured;
-      if (r.relay_up || !r.relay_configured) { renderStatus(); startPair(area, onDone); return; }
+      if (r.relay_up || !r.relay_configured) { renderStatus(); startPair(area, onDone, closable); return; }
       if (Date.now() - since > 15000) w.textContent = t("relayDown");
     }, 1000);
     return;
   }
   let p;
   try { p = await api("pair/start", {}); } catch (e) { area.append(el("p", e.message, "muted")); return; }
+  curPair = p.id;
   // Phones first: a big QR code and one sentence. Computers and servers
   // (no camera) open the section below it.
   const box = el("div", undefined, "pair");
@@ -359,6 +386,7 @@ async function startPair(area, onDone) {
     }
     if (st.state === "done") {
       stopPair();
+      curPair = null;
       area.textContent = "";
       area.append(el("p", t("pairDone", st.device_name)));
       toast(t("pairDone", st.device_name));
@@ -366,6 +394,7 @@ async function startPair(area, onDone) {
     }
     if (st.state === "failed") {
       stopPair();
+      curPair = null;
       area.textContent = "";
       area.append(el("p", t("pairFailed", st.message || "")));
     }
@@ -378,8 +407,7 @@ function showDash() {
   show("dash");
   const total = (S.usage || []).find((u) => u.who === "_total");
   $("spend-today").textContent = money(total ? total.micro_usd : 0);
-  $("n-devices").textContent = String(S.devices.length);
-  $("n-models").textContent = String(S.models.length);
+  renderCap();
   renderDevices();
   renderModels();
   renderApps();
@@ -401,6 +429,9 @@ function removeButton(label, path, id) {
   return b;
 }
 
+const NO_LIMIT = -1;
+const budgetText = (micro) => micro === NO_LIMIT ? t("noLimit") : money(micro);
+
 function renderDevices() {
   const tb = $("devices");
   tb.textContent = "";
@@ -408,11 +439,82 @@ function renderDevices() {
     const tr = el("tr");
     cell(tr, d.Name);
     cell(tr, when(d.LastSeen));
-    cell(tr, money(d.BudgetMicroUSD), "num");
-    cell(tr, "").append(removeButton(d.Name, "devices/remove", d.ID));
+    cell(tr, budgetText(d.BudgetMicroUSD), "num");
+    const act = cell(tr, "", "actions");
+    const ed = el("button", t("edit"), "secondary small-btn");
+    ed.type = "button";
+    ed.addEventListener("click", () => editRow(tr, { id: d.ID, name: d.Name, budget: d.BudgetMicroUSD, seen: d.LastSeen }, "devices/update", renderDevices));
+    act.append(ed, removeButton(d.Name, "devices/remove", d.ID));
     tb.append(tr);
   }
   $("devices-empty").hidden = S.devices.length > 0;
+}
+
+// renderCap: the whole hub's daily total next to today's spend, changed in
+// place (an amount, or no limit).
+function renderCap() {
+  const box = $("cap"); box.textContent = "";
+  const v = S.daily_total_micro_usd;
+  box.append(el("span", v === NO_LIMIT ? t("capNone") : t("capLine", money(v)), "muted"));
+  const b = el("button", t("capEdit"), "link"); b.type = "button";
+  b.addEventListener("click", () => {
+    box.textContent = "";
+    const f = el("div", undefined, "cap-edit");
+    const wrap = el("span", undefined, "money-in");
+    const amt = el("input"); amt.type = "number"; amt.min = "1"; amt.step = "1"; amt.inputMode = "decimal";
+    amt.value = v === NO_LIMIT ? "20" : String(v / 1e6); amt.disabled = v === NO_LIMIT; amt.setAttribute("aria-label", t("capLine", ""));
+    wrap.append(el("span", "$"), amt);
+    const sw = el("input"); sw.type = "checkbox"; sw.className = "switch"; sw.checked = v === NO_LIMIT;
+    const lab = el("label", undefined, "toggle"); lab.append(sw, el("span", t("noLimit")));
+    sw.addEventListener("change", () => { amt.disabled = sw.checked; });
+    const save = el("button", t("save"), "primary small-btn"); save.type = "button";
+    const no = el("button", t("cancel"), "secondary small-btn"); no.type = "button";
+    save.addEventListener("click", async () => {
+      save.disabled = true;
+      try { await api("daily-total", sw.checked ? { no_limit: true } : { budget_usd: Number(amt.value) }); toast(t("saved")); await refresh(); } catch (e) { toast(e.message, true); save.disabled = false; }
+    });
+    no.addEventListener("click", renderCap);
+    f.append(wrap, lab, save, no);
+    box.append(f);
+    amt.focus();
+  });
+  box.append(b);
+}
+
+// editRow turns a device's or app's row into a small form: its name, and
+// its daily limit or no limit. Enter saves, Escape puts the row back.
+function editRow(tr, d, path, back) {
+  tr.textContent = "";
+  tr.className = "editing";
+  const name = el("input"); name.value = d.name; name.maxLength = 64; name.setAttribute("aria-label", t("nameLabel"));
+  cell(tr, "").append(name);
+  if (d.seen !== undefined) cell(tr, when(d.seen));
+  const bc = el("div", undefined, "budget-edit"); cell(tr, "").append(bc);
+  const unl = d.budget === NO_LIMIT;
+  const wrap = el("span", undefined, "money-in");
+  const amt = el("input"); amt.type = "number"; amt.min = "0.5"; amt.step = "0.5"; amt.inputMode = "decimal";
+  amt.value = unl ? "5" : String(d.budget / 1e6); amt.disabled = unl; amt.setAttribute("aria-label", t("budgetLabel"));
+  wrap.append(el("span", "$"), amt);
+  const sw = el("input"); sw.type = "checkbox"; sw.className = "switch"; sw.checked = unl;
+  const lab = el("label", undefined, "toggle"); lab.append(sw, el("span", t("noLimit")));
+  const hint = el("p", t("noLimitHint", S.daily_total_micro_usd === NO_LIMIT ? t("noLimit") : money(S.daily_total_micro_usd)), "muted small"); hint.hidden = !unl;
+  sw.addEventListener("change", () => { amt.disabled = sw.checked; hint.hidden = !sw.checked; });
+  bc.append(wrap, lab, hint);
+  const act = cell(tr, "", "actions");
+  const save = el("button", t("save"), "primary small-btn"); save.type = "button";
+  const no = el("button", t("cancel"), "secondary small-btn"); no.type = "button";
+  act.append(save, no);
+  const submit = async () => {
+    const body = { id: d.id, name: name.value };
+    if (sw.checked) body.no_limit = true; else body.budget_usd = Number(amt.value);
+    save.disabled = true;
+    try { await api(path, body); toast(t("saved")); await refresh(); } catch (e) { toast(e.message, true); save.disabled = false; }
+  };
+  const done = () => back();
+  save.addEventListener("click", submit);
+  no.addEventListener("click", done);
+  tr.addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); if (e.key === "Escape") done(); });
+  name.focus(); name.select();
 }
 
 function renderModels() {
@@ -422,9 +524,10 @@ function renderModels() {
     const tr = el("tr");
     cell(tr, m.display_name + (isSub(m) ? " · " + t("sub") : ""));
     cell(tr, "").append(el("span", m.locality === "local" ? t("local") : t("remote"), "tag" + (m.locality === "local" ? " local" : "")));
-    const td = cell(tr, "");
+    const td = cell(tr, "", "actions");
     const box = el("input");
     box.type = "checkbox";
+    box.className = "switch";
     box.checked = !!m.human_only;
     box.setAttribute("aria-label", t("humanOnly") + " " + m.display_name);
     box.addEventListener("change", async () => {
@@ -437,9 +540,10 @@ function renderModels() {
   pb.textContent = "";
   for (const p of S.providers) {
     const tr = el("tr");
-    cell(tr, (p.display_name || p.name) + (p.local ? " · " + t("local") : ""));
-    cell(tr, p.subscription ? t("subLogin") : p.key_last4 ? "…" + p.key_last4 : t("never"), "num");
-    cell(tr, "").append(removeButton(p.name, "providers/remove", p.name));
+    const label = p.name === "claude-code" ? t("claudeSub") : p.name === "codex" ? t("codexSub") : (p.display_name || p.name);
+    cell(tr, label + (p.local ? " · " + t("local") : ""));
+    cell(tr, p.subscription ? t("subLogin") : p.key_last4 ? "API Key …" + p.key_last4 : t("local"));
+    cell(tr, "", "actions").append(removeButton(label, "providers/remove", p.name));
     pb.append(tr);
   }
 }
@@ -450,26 +554,48 @@ function renderApps() {
   for (const a of S.apps) {
     const tr = el("tr");
     cell(tr, a.Name);
-    cell(tr, money(a.BudgetMicroUSD), "num");
-    cell(tr, "").append(removeButton(a.Name, "apps/remove", a.ID));
+    cell(tr, budgetText(a.BudgetMicroUSD), "num");
+    const act = cell(tr, "", "actions");
+    const ed = el("button", t("edit"), "secondary small-btn");
+    ed.type = "button";
+    ed.addEventListener("click", () => editRow(tr, { id: a.ID, name: a.Name, budget: a.BudgetMicroUSD }, "apps/update", renderApps));
+    act.append(ed, removeButton(a.Name, "apps/remove", a.ID));
     tb.append(tr);
   }
+  $("apps-empty").hidden = S.apps.length > 0;
 }
 
+// renderUsage: one line per device or app by its name (never an internal
+// id), busiest first; removed devices folded into one line; today's total
+// against the hub's daily limit at the bottom.
+const num = (n) => Number(n || 0).toLocaleString(lang === "zh" ? "zh-CN" : "en-US");
 function renderUsage() {
-  const tb = $("usage");
-  tb.textContent = "";
-  const names = {};
-  for (const d of S.devices) names["device/" + d.ID] = d.Name;
-  for (const a of S.apps) names["app/" + a.ID] = a.Name;
-  for (const u of (S.usage || []).filter((x) => x.who !== "_total")) {
-    const tr = el("tr");
-    cell(tr, names[u.who] || (u.who === "host" ? "OmniLLM" : u.who));
-    cell(tr, money(u.micro_usd), "num");
-    cell(tr, String(u.calls), "num");
-    cell(tr, u.input_tokens + " / " + u.output_tokens, "num");
-    tb.append(tr);
+  const tb = $("usage"), foot = $("usage-total");
+  tb.textContent = ""; foot.textContent = "";
+  const rows = [], gone = { calls: 0, micro_usd: 0, input_tokens: 0, output_tokens: 0, n: 0, name: "" };
+  let total = null;
+  for (const u of S.usage || []) {
+    if (u.who === "_total") { total = u; continue; }
+    if (u.removed) {
+      gone.n++; gone.name = u.name || "";
+      for (const k of ["calls", "micro_usd", "input_tokens", "output_tokens"]) gone[k] += u[k] || 0;
+      continue;
+    }
+    rows.push({ ...u, label: u.who === "host" ? t("usageHost") : (u.name || u.who) });
   }
+  rows.sort((a, b) => b.calls - a.calls);
+  if (gone.n) rows.push({ ...gone, label: gone.n === 1 && gone.name ? t("usageGoneOne", gone.name) : t("usageGone", gone.n), muted: true });
+  const line = (u, into, cls) => {
+    const tr = el("tr", undefined, cls);
+    cell(tr, u.label, u.muted ? "muted" : "");
+    cell(tr, num(u.calls), "num");
+    cell(tr, money(u.micro_usd), "num");
+    cell(tr, num(u.input_tokens) + " / " + num(u.output_tokens), "num narrow-hide");
+    into.append(tr);
+  };
+  rows.forEach((u) => line(u, tb));
+  if (total && rows.length) line({ ...total, label: t("usageTotal") }, foot, "total");
+  $("usage-empty").hidden = rows.length > 0;
 }
 
 document.querySelectorAll(".tabs button").forEach((b) => {
@@ -480,7 +606,7 @@ document.querySelectorAll(".tabs button").forEach((b) => {
   });
 });
 
-$("add-device").addEventListener("click", () => startPair($("pair-dash"), refresh));
+$("add-device").addEventListener("click", () => startPair($("pair-dash"), () => { closePair($("pair-dash")); refresh(); }, true));
 $("add-provider").addEventListener("click", () => { store("omnillm.wizard", ""); S.providers = []; showWizard(); });
 $("add-app").addEventListener("click", async () => {
   const name = window.prompt(t("appName"));
@@ -509,10 +635,16 @@ async function boot() {
   const tb = document.querySelector('.tabs button[data-tab="' + tab + '"]') || document.querySelector(".tabs button");
   tb.click();
   const m = /(?:^|[#&])login=([0-9a-f]{64})/.exec(location.hash);
+  // "Add a phone or computer…" in the menu bar opens the console with &add.
+  const wantAdd = /[#&]add(?:&|$)/.test(location.hash);
   if (m) {
     history.replaceState(null, "", "/console/");
     try { const r = await api("login", { token: m[1] }); sessionSecret(r.session); } catch (e) { show("login-needed"); return; }
   }
-  try { await refresh(); } catch (e) { if (e.status === 401) show("login-needed"); else toast(e.message, true); }
+  try { await refresh(); } catch (e) { if (e.status === 401) show("login-needed"); else toast(e.message, true); return; }
+  if (wantAdd && !$("dash").hidden) {
+    document.querySelector('.tabs button[data-tab="devices"]').click();
+    $("add-device").click();
+  }
 }
 boot();

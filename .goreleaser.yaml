@@ -8,17 +8,38 @@ before:
     # programs; the server serving omni.ixxzh.com installs it from here.
     - sh -c 'scripts/build-web.sh dist-web && tar -czf omnillm-web.tar.gz -C dist-web . && rm -rf dist-web'
 builds:
-  - id: omnillm
+  - id: omnillm-linux
     main: ./cmd/omnillm
     binary: omnillm
     env: [CGO_ENABLED=0]
-    goos: [darwin, linux]
+    goos: [linux]
     goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags: ["-s -w -X main.version={{ .Version }}"]
+    mod_timestamp: "{{ .CommitTimestamp }}"
+  # The Mac build needs cgo for the menu bar icon, so it runs on a macOS
+  # runner with clang building each architecture natively.
+  - id: omnillm-darwin-amd64
+    main: ./cmd/omnillm
+    binary: omnillm
+    env: [CGO_ENABLED=1, "CC=clang -arch x86_64", CGO_CFLAGS=-mmacosx-version-min=13.0, CGO_LDFLAGS=-mmacosx-version-min=13.0]
+    goos: [darwin]
+    goarch: [amd64]
+    flags: [-trimpath]
+    ldflags: ["-s -w -X main.version={{ .Version }}"]
+    mod_timestamp: "{{ .CommitTimestamp }}"
+  - id: omnillm-darwin-arm64
+    main: ./cmd/omnillm
+    binary: omnillm
+    env: [CGO_ENABLED=1, "CC=clang -arch arm64", CGO_CFLAGS=-mmacosx-version-min=13.0, CGO_LDFLAGS=-mmacosx-version-min=13.0]
+    goos: [darwin]
+    goarch: [arm64]
     flags: [-trimpath]
     ldflags: ["-s -w -X main.version={{ .Version }}"]
     mod_timestamp: "{{ .CommitTimestamp }}"
 archives:
   - id: omnillm
+    ids: [omnillm-linux, omnillm-darwin-amd64, omnillm-darwin-arm64]
     formats: [tar.gz]
     name_template: "omnillm_{{ .Os }}_{{ .Arch }}"
     files: [LICENSE, README.md, INSTALL.md]

@@ -17,7 +17,9 @@ jobs:
       - run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
   release:
     needs: test
-    runs-on: ubuntu-latest
+    # macOS: the Mac binaries are built with cgo (menu bar icon); Linux ones
+    # are cross-compiled without it.
+    runs-on: macos-latest
     environment: release   # add required reviewers to this environment in the repo settings
     permissions:
       contents: write   # create the release
