@@ -254,6 +254,9 @@ function deviceName() {
 const tabs = "BroadcastChannel" in window ? new BroadcastChannel("omnillm") : null;
 function claimTab() { if (tabs) tabs.postMessage("here"); }
 if (tabs) tabs.onmessage = (e) => {
+  // The tab in use went away: a quiet tab takes over by itself (reload reads
+  // what that tab saved, then claims).
+  if (e.data === "gone" && S.quiet) { try { sessionStorage.setItem("omnillm.draft", $("input").value); } catch {} location.reload(); return; }
   if (e.data !== "here" || S.quiet) return;
   S.quiet = true;
   if (S.busy) { try { omnillm.cancel(S.busy); } catch {} }
@@ -265,6 +268,7 @@ $("use-here").addEventListener("click", () => {
   location.reload();
 });
 claimTab();
+addEventListener("pagehide", () => { if (tabs && !S.quiet) tabs.postMessage("gone"); });
 
 // ---------- start ----------
 // A page made of two versions (loaded while the server switched to a new
