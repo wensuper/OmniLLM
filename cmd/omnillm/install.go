@@ -141,12 +141,13 @@ func installCmd(args []string) {
 	if !ok {
 		die(say(t("OmniLLM 没有启动起来。日志在 ", "OmniLLM did not start. Its log is at ") + filepath.Join(dir, "hub.log")))
 	}
-	if u := readUpdate(dir); u.Error != "" || sameVersion(u.Skip, version) || (prev != "" && u.newer(version) != "") {
+	upgraded := prev != "" && compareVersions(version, prev) > 0
+	if u := readUpdate(dir); u.Error != "" || sameVersion(u.Skip, version) || (upgraded && u.newer(version) != "") {
 		u.Error = ""
 		if sameVersion(u.Skip, version) {
 			u.Skip = "" // installed on purpose: it runs
 		}
-		if prev != "" && u.newer(version) != "" {
+		if upgraded && u.newer(version) != "" {
 			// Updated, yet the release still looks newer (its program
 			// names another version): don't reinstall it every round.
 			u.failed(u.Latest)
