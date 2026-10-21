@@ -267,8 +267,8 @@ func updateCmd(args []string) {
 	}
 	r := role()
 	if r == "" {
-		die(say(t("这台电脑上还没有安装 OmniLLM。安装方法见 https://github.com/wensuper/OmniLLM#quick-start",
-			"OmniLLM isn’t installed on this computer yet. See https://github.com/wensuper/OmniLLM#quick-start")))
+		die(say(t("这台电脑上还没有安装 OmniLLM。安装方法见 https://github.com/wensuper/OmniLLM/blob/main/README.zh-CN.md#安装",
+			"OmniLLM isn’t installed on this computer yet. See https://github.com/wensuper/OmniLLM#installation")))
 	}
 	// A hub whose service is gone was uninstalled (where there is a
 	// service manager; without one the hub runs as a plain process).

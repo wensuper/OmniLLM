@@ -1,38 +1,36 @@
-# 安全问题报告 · Security Policy
+# Security policy
 
-## 怎么报告
+English | [简体中文](docs/zh-CN/security-policy.md)
 
-**请不要在公开的 Issue、讨论区或 PR 里报告安全问题。**
+## Reporting a vulnerability
 
-在本仓库的 **Security → Report a vulnerability**（GitHub 私密漏洞报告）里提交：
+**Please don’t report security problems in public issues, discussions, or pull requests.**
+
+Report them privately through GitHub’s **Security → Report a vulnerability**:
 <https://github.com/wensuper/OmniLLM/security/advisories/new>
 
-请尽量写清：
+Please include, as far as you can:
 
-- 影响哪个部分（主机、设备、连接服务、网页客户端、安装脚本）和版本（`omnillm version`）；
-- 复现步骤或概念验证；
-- 你认为的影响：谁能做到什么。
+- the affected component (hub, device, connection service, web client, or installer) and version (`omnillm version`);
+- steps to reproduce, or a proof of concept;
+- the impact as you see it: who can do what.
 
-我们会在 3 个工作日内回复，确认后尽快修复并发布新版本，在更新记录里致谢（你不想署名的话不署）。修复发布前请不要公开细节。
+We reply within 3 business days. Once a report is confirmed, we fix it as soon as we can, publish a new release, and credit you in the changelog (unless you’d rather not be named). Please don’t disclose details until the fix is released.
 
-## 范围
+## Scope
 
-特别关心这几类问题：
+We particularly care about:
 
-- 连接服务（或网络上的人）能读到、改动对话内容，或者冒充主机；
-- 不经主机确认就能配对一台设备；
-- 凭据（API Key、订阅登录）离开主机，或出现在日志、界面、发往设备的数据里；
-- 设备能让主机上的 Claude Code / Codex 运行命令、读写文件、读到主人的个人设置；
-- 后台程序能用上订阅模型，或者绕开限速；
-- 本机控制台、本机接口能被同一台机器上的其他用户或恶意网页利用；
-- 安装脚本或发布流程能被替换成别的程序。
+- the connection service (or anyone on the network) reading or changing conversations, or impersonating a hub;
+- pairing a device without the hub owner’s confirmation;
+- credentials (API keys, subscription sign-ins) leaving the hub, or appearing in logs, the user interface, or data sent to devices;
+- a device making Claude Code or Codex on the hub run commands, read or write files, or read the owner’s personal settings;
+- background programs reaching subscription models, or getting around rate limits;
+- other users on the same computer, or a malicious web page, abusing the local console or local API;
+- the installer or the release process being made to install a different program.
 
-[安全说明](docs/security.md)里写明的已知限制不算漏洞，比如连接服务能看到元数据、第一次加载网页客户端要信任托管方；但如果你有办法改进它们，也欢迎提出。
+Known limitations described in [Security](docs/en/security.md) — for example, that the connection service can see metadata, or that the first load of the web client trusts its host — are not vulnerabilities. Ideas for improving them are still welcome.
 
-## 支持的版本
+## Supported versions
 
-现在是预发布阶段，只修最新的版本。请先升级到最新版再确认问题是否还在。
-
----
-
-**English:** Please report vulnerabilities privately through GitHub's *Report a vulnerability* ([link](https://github.com/wensuper/OmniLLM/security/advisories/new)), not in public issues. Include the affected component and version, reproduction steps and impact. We reply within 3 business days and credit reporters in the changelog unless you prefer otherwise. Only the latest pre-release is supported. Known limits listed in [docs/security.md](docs/security.md) are not vulnerabilities.
+OmniLLM is in pre-release; only the latest release receives fixes. Please update to the latest version (`omnillm update`) and check that the problem is still there before reporting it.

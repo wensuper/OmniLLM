@@ -1,0 +1,60 @@
+name: Bug report / 问题报告
+description: Something doesn’t work as described. / 有地方和文档说的不一样。
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this. **Security problems go to [Report a vulnerability](https://github.com/wensuper/OmniLLM/security/advisories/new), not here.** Please remove API keys, pairing text, and personal details from anything you paste.
+
+        感谢反馈。**安全问题请走 [私密漏洞报告](https://github.com/wensuper/OmniLLM/security/advisories/new)，不要发在这里。** 粘贴内容前请删掉 API Key、配对文字和个人信息。
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened / 发生了什么
+      description: What you did, what you expected, and what happened instead. / 你做了什么、期望什么、实际发生了什么。
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce / 复现步骤
+      placeholder: |
+        1.
+        2.
+        3.
+  - type: input
+    id: version
+    attributes:
+      label: Version / 版本
+      description: Output of `omnillm version` on the hub. / 主机上 `omnillm version` 的输出。
+      placeholder: omnillm 0.2.0-alpha.32
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where / 在哪里
+      multiple: true
+      options:
+        - Hub on macOS / Mac 主机
+        - Hub on Linux / Linux 主机
+        - Phone or tablet browser / 手机或平板浏览器
+        - omnillm connect (server or other computer) / 服务器或另一台电脑
+        - Console / 控制台
+        - Menu bar / 菜单栏
+        - Installer or update / 安装或更新
+  - type: textarea
+    id: status
+    attributes:
+      label: omnillm status
+      description: Output of `omnillm status` on the hub. / 主机上 `omnillm status` 的输出。
+      render: text
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / 日志
+      description: |
+        The last lines of the hub log, if relevant — macOS: `~/Library/Application Support/OmniLLM/hub/hub.log`, Linux: `~/.config/OmniLLM/hub/hub.log`.
+        相关的话，附上主机日志的最后几十行（路径同上）。
+      render: text

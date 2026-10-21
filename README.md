@@ -1,84 +1,119 @@
-<p align="center"><img src="web/icon.svg" width="96" height="96" alt=""></p>
+<p align="center"><img src="web/icon.svg" width="96" height="96" alt="OmniLLM logo"></p>
 
 <h1 align="center">OmniLLM</h1>
 
-<p align="center"><b>Your AI, Everywhere</b></p>
+<p align="center"><b>Your AI, Everywhere</b><br>Sign in to your AI models once, on one computer. Use them from every device you own.</p>
 
-<p align="center">在一台电脑上登录大模型，手机、平板、服务器都能用。<br><i>Log in to your LLM once, on one computer. Use it from every device you own.</i></p>
+<p align="center">
+  <a href="https://github.com/wensuper/OmniLLM/releases"><img src="https://img.shields.io/github/v/release/wensuper/OmniLLM?include_prereleases&label=release" alt="Latest release"></a>
+  <a href="https://github.com/wensuper/OmniLLM/actions/workflows/ci.yml"><img src="https://github.com/wensuper/OmniLLM/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
+  <a href="go.mod"><img src="https://img.shields.io/github/go-mod/go-version/wensuper/OmniLLM" alt="Go version"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/wensuper/OmniLLM" alt="License"></a>
+</p>
 
-- **账号只在你的电脑上**：Claude / ChatGPT 订阅、API Key、本地模型都留在这台电脑（主机）上，不发到别的设备。
-- **端到端加密**：设备和主机之间的内容，中间的服务器只能转发、看不到。
-- **手机不用装 App**：扫一下二维码就能对话，文字、图片都行。
+<p align="center">English | <a href="README.zh-CN.md">简体中文</a></p>
 
-> 早期预发布版（v0.2.0-alpha），主机支持 macOS 和 Linux。
+---
 
-## Quick Start
+OmniLLM turns one computer — the **hub** — into the only place that holds your AI accounts: Claude and ChatGPT subscriptions (through the official Claude Code and Codex), API keys, and local models. Your phone, tablet, and servers use those models through an end-to-end encrypted connection. Phones install nothing: scan a QR code and chat in the browser.
 
-**① 安装**：在 Mac（或 Linux）的终端里运行，不需要 sudo：
+## Features
+
+- **Accounts stay on the hub.** Subscriptions, API keys, and local models never leave the computer they are on. Devices never see a credential.
+- **End-to-end encrypted.** Devices reach the hub through a connection service that only forwards encrypted data; it can’t read your chats or pretend to be your hub.
+- **No app to install.** Scan a QR code with your phone’s camera and chat in the browser, with text and pictures.
+- **You decide who uses what.** Name each device, give it a daily limit, choose which models it may use, or pause it with one switch.
+- **Kind to your subscriptions.** Subscriptions are for people chatting, at one person’s pace; scripts and programs use API keys or local models.
+- **Takes care of itself.** Runs in the background, updates itself while nobody is using it, and rolls back an update that doesn’t start.
+
+## How it works
+
+```mermaid
+flowchart LR
+  P["Phone / tablet<br>(browser)"] <-- end-to-end encrypted --> R["Connection service<br>(forwards only)"]
+  S["Server / other computer<br>(omnillm connect)"] <-- end-to-end encrypted --> R
+  R <-- end-to-end encrypted --> H["Hub<br>(your Mac or Linux computer)"]
+  H --> M["Claude Code · Codex<br>API keys · Ollama"]
+```
+
+Only the hub talks to model providers. The hub opens no ports to the network: it connects out to the connection service, the same way your devices do. See [Security](docs/en/security.md) for what is and isn’t protected.
+
+## Installation
+
+The hub runs on **macOS** and **Linux** (x86-64 and ARM64). Installing needs no `sudo`, takes about a minute, and asks no questions.
+
+### Option 1 — Ask your AI assistant (recommended)
+
+If you use an AI coding assistant on that computer (Claude Code, Codex, Cursor, …), send it this one sentence:
+
+```text
+Read https://raw.githubusercontent.com/wensuper/OmniLLM/main/INSTALL.md and install OmniLLM on this computer.
+```
+
+It reads the installer before running it, verifies the download, installs OmniLLM, and tells you the next step. It never needs your API keys: those go into the OmniLLM console, never into a chat.
+
+### Option 2 — Run the installer yourself
+
+In a terminal, as your normal user:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh
 ```
 
-> 也可以把这一句发给你的 AI 编程助手（Claude Code、Codex、Cursor 等），让它来装：
-> `请阅读并按照 https://raw.githubusercontent.com/wensuper/OmniLLM/main/INSTALL.md 在这台电脑上安装 OmniLLM。`
+The installer downloads the release for your system, checks its SHA-256 checksum (and its signature, if [cosign](https://github.com/sigstore/cosign) is installed), installs `~/.local/bin/omnillm`, starts the hub as a background service, and opens the console in your browser. In the terminal you installed from, use `~/.local/bin/omnillm` until you open a new window.
 
-**② 接上模型**：有 Claude 或 ChatGPT 订阅（只装了桌面版也行）：在自动打开的控制台里点 Claude 或 ChatGPT 卡片上的按钮，或者运行 `omnillm login claude` / `omnillm login chatgpt`。它会用官方安装程序装好 Claude Code 或 Codex，在浏览器里登录，然后自动接上。已经登录过的会直接接上。没有订阅的话，在控制台里粘贴一个 API Key，或者装 [Ollama](https://ollama.com) 用免费的本地模型。
+## Quick start
 
-**③ 加手机**：在控制台的「设备」里点「添加设备」（Mac 上也可以点菜单栏的 OmniLLM 图标 →「添加设备…」），用手机相机扫二维码；两边显示的 6 位数一致，就在电脑上点「一致，添加」。
+1. **Connect a model.** With a Claude or ChatGPT subscription (even if you only have the desktop app), choose the button on the Claude or ChatGPT card in the console, or run `omnillm login claude` / `omnillm login chatgpt`. It installs Claude Code or Codex with the official installer if needed, signs you in in the browser, and connects. Without a subscription, paste an API key in the console, or install [Ollama](https://ollama.com) for free local models.
+2. **Add your phone.** In the console, choose *Devices → Add device* (on a Mac, also the OmniLLM menu bar icon → *Add device…*) and scan the QR code with your phone’s camera. When the 6 digits on both screens match, choose *Matches, add* on the computer.
+3. **Chat.** That’s it — about five minutes in all.
 
-完成，大约 5 分钟。
+The [quick start guide](docs/en/quickstart.md) covers every step in detail, including servers and scripts.
 
-## 更新
-
-**不用管**：主机每隔几小时看一次新版本，在没人用的时候自己更新；手机上的网页也会自己换成新版。想马上更新：
-
-```bash
-omnillm update
-```
-
-Mac 上也可以点菜单栏的 OmniLLM 图标 →「检查更新…」。不想自动更新，运行 `omnillm update --auto off`。
-
-> 装的是 0.2.0-alpha.22 或更早的版本？那时还不会自己更新：再运行一次上面的安装命令（设置都保留），之后就不用管了。
-
-## 常用命令
-
-刚装完的那个终端窗口还不认识 `omnillm`：新开一个终端窗口，或者在命令前加上 `~/.local/bin/`。
+## Usage
 
 ```bash
-omnillm status      # 现在怎么样、下一步做什么
-omnillm open        # 打开控制台
-omnillm login claude   # 用 Claude 订阅（chatgpt：ChatGPT 订阅）
-omnillm uninstall   # 停止并移除（加 --purge 连数据和 Key 一起删）
+omnillm status            # what’s running, and what to do next
+omnillm open              # open the console
+omnillm login claude      # connect a Claude subscription (chatgpt: a ChatGPT subscription)
+omnillm update            # update now (updates also install by themselves)
+omnillm uninstall         # stop and remove the background service (--purge also deletes data and keys)
 ```
 
-## 更多
+Run `omnillm help --all` for every command.
 
-| 文档 | 内容 |
+**Updates** install by themselves: the hub checks every few hours and updates while nobody is using it. To turn that off, run `omnillm update --auto off`. Hubs on 0.2.0-alpha.22 or earlier can’t update themselves yet: run the install command once more (your settings are kept).
+
+## Documentation
+
+| Guide | What’s in it |
 |---|---|
-| [快速上手（详细版）](docs/quickstart.md) | 每一步的细节、能用哪些模型、加 Linux 服务器、让脚本也能用 |
-| [日常使用和常见问题](docs/usage.md) | 设备和额度、出错怎么办、更新和卸载 |
-| [安全说明](docs/security.md) | 保护什么、不保护什么，和别的做法比 |
-| [自己部署连接服务](docs/self-host.md) | 不想用公共连接服务时 |
-| [INSTALL.md](INSTALL.md) | 写给 AI 助手的安装步骤 |
-| [设计](docs/design.md) · [原则](docs/principles.md) · [更新记录](docs/changelog.md) | 开发者 |
+| [Quick start](docs/en/quickstart.md) | Every setup step, which models work, adding Linux servers, letting scripts use the hub |
+| [Everyday use and FAQ](docs/en/usage.md) | Devices and daily limits, messages and what to do about them, updating and uninstalling |
+| [Security](docs/en/security.md) | What OmniLLM protects and what it doesn’t, compared with other approaches |
+| [Self-hosting the connection service](docs/en/self-host.md) | Running your own connection service instead of the public one |
+| [INSTALL.md](INSTALL.md) | Install steps written for AI assistants |
+| [Changelog](CHANGELOG.md) | What changed in each release |
 
-## English
+## Project status
 
-OmniLLM makes one computer (the **hub**) the only place that holds your LLM accounts — Claude or ChatGPT subscriptions via the official Claude Code / Codex, API keys, or local Ollama models — and lets your phone, tablet and servers use them over an end-to-end encrypted connection. Phones install nothing: scan a QR code and chat in the browser.
+OmniLLM is in early pre-release (0.2.0-alpha). Expect rough edges; the hub updates itself, so fixes reach you quickly.
 
-1. Install on your Mac or Linux box (no sudo):
-   ```bash
-   curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh
-   ```
-   Or ask your AI coding assistant: `Read https://raw.githubusercontent.com/wensuper/OmniLLM/main/INSTALL.md and install OmniLLM on this computer.` In the terminal you installed from, use `~/.local/bin/omnillm` until you open a new window.
-2. Connect a model: with a Claude or ChatGPT subscription (even if you only have the desktop app), choose *Install and sign in* in the console that opens, or run `omnillm login claude` / `omnillm login chatgpt`: it installs Claude Code or Codex with the official installer, signs in in your browser and connects. Otherwise paste an API key in the console, or install Ollama.
-3. Add your phone: *Devices → Add device* in the console (or the OmniLLM menu bar icon → *Add device…*), scan the QR code with the phone’s camera, check that the 6 digits match, then choose *Matches, add* on the computer.
+| Platform | Hub | Device |
+|---|---|---|
+| macOS (Apple silicon and Intel) | ✅ with a menu bar icon | ✅ browser or `omnillm connect` |
+| Linux (x86-64 and ARM64) | ✅ | ✅ browser or `omnillm connect` |
+| iPhone, iPad, Android | — | ✅ browser, no app |
+| Windows | Not yet | ✅ browser |
 
-Updates install by themselves while nobody is using the hub. Run `omnillm update` to update now, or `omnillm update --auto off` to turn automatic updates off. On 0.2.0-alpha.22 or earlier, run the install command once more (settings are kept); after that it updates itself.
+## Contributing
 
-Contributions are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md). Report vulnerabilities privately per [SECURITY.md](SECURITY.md).
+Issues and pull requests are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) first, and follow our [Code of Conduct](CODE_OF_CONDUCT.md).
+
+## Security
+
+Please report vulnerabilities privately, as described in [SECURITY.md](SECURITY.md). Don’t open a public issue.
 
 ## License
 
-[Apache-2.0](LICENSE)
+OmniLLM is licensed under the [Apache License 2.0](LICENSE).

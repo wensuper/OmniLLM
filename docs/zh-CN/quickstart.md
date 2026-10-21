@@ -1,5 +1,7 @@
 # 快速上手
 
+[English](../en/quickstart.md) | 简体中文
+
 目标：5 分钟内在手机上用到你 Mac 上的 Claude 或 ChatGPT，全程不花额外的钱、不用自己的服务器。
 
 - [开始前：你需要什么](#开始前你需要什么)
@@ -22,17 +24,17 @@
 
 ## 第 1 步：在主机上安装
 
-**方法一：自己运行。** 在终端里（普通用户，不要 sudo）：
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh
-```
-
-**方法二：交给你的 AI 助手。** 把这一句发给 Claude Code、Codex、Cursor 等：
+**方法一：交给你的 AI 助手（推荐）。** 把这一句发给 Claude Code、Codex、Cursor 等：
 
 > 请阅读并按照 https://raw.githubusercontent.com/wensuper/OmniLLM/main/INSTALL.md 在这台电脑上安装 OmniLLM。
 
 它会先读一遍安装脚本，再下载、核对、安装，然后告诉你下一步。它不会、也不应该让你把任何 Key 贴进聊天。
+
+**方法二：自己运行。** 在终端里（普通用户，不要 sudo）：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh
+```
 
 安装脚本会做这些事，不会改动别的东西：
 
@@ -102,7 +104,7 @@ Codex 有时把登录存在系统钥匙串里，OmniLLM 用不了；控制台会
 ## 第 3 步：加手机或平板
 
 1. 在控制台里点「设备」→「添加设备」。屏幕上出现一个大二维码。
-2. 用手机**相机**扫码，打开链接。网页会说明它要连到哪个连接服务，点「连接」。
+2. 用手机**相机**扫码，打开链接。网页会说明它要连到哪个连接服务，点「添加」。
 3. 电脑和手机上会显示同一个 6 位数。**核对一致**，再在电脑上点「一致，添加」。
 4. 手机上出现对话界面，发一句试试。
 

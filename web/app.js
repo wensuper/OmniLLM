@@ -404,7 +404,9 @@ $("paste").addEventListener("toggle", () => {
 // No hub yet: how to set one up, without leaving the page. The phone
 // can't run the command, so the first choice sends it to the computer.
 const INSTALL_CMD = "curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh";
-const GUIDE_URL = "https://github.com/wensuper/OmniLLM#quick-start";
+// The install section of the README in the page's language.
+const GUIDE_URL = lang === "zh" ? "https://github.com/wensuper/OmniLLM/blob/main/README.zh-CN.md#安装" : "https://github.com/wensuper/OmniLLM#installation";
+document.querySelector(".wl-guide").href = GUIDE_URL;
 $("no-hub").addEventListener("click", () => {
   const open = $("get-hub").hidden;
   $("get-hub").hidden = !open;

@@ -842,8 +842,8 @@ func statusCmd(args []string) {
 		return
 	}
 	if role() == "" && !exists(dataDir("hub")) {
-		st := Status{Next: t("这台电脑上还没有安装 OmniLLM。安装方法见 https://github.com/wensuper/OmniLLM#quick-start",
-			"OmniLLM isn’t installed on this computer yet. See https://github.com/wensuper/OmniLLM#quick-start")}
+		st := Status{Next: t("这台电脑上还没有安装 OmniLLM。安装方法见 https://github.com/wensuper/OmniLLM/blob/main/README.zh-CN.md#安装",
+			"OmniLLM isn’t installed on this computer yet. See https://github.com/wensuper/OmniLLM#installation")}
 		if len(args) > 0 && args[0] == "--json" {
 			b, _ := json.Marshal(st)
 			fmt.Println(string(b))

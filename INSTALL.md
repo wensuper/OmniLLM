@@ -2,9 +2,9 @@
 
 > **For people:** give your AI assistant (Claude Code, Codex, Cursor, …) this one sentence:
 >
-> 请阅读并按照 https://raw.githubusercontent.com/wensuper/OmniLLM/main/INSTALL.md 在这台电脑上安装 OmniLLM。
+> `Read https://raw.githubusercontent.com/wensuper/OmniLLM/main/INSTALL.md and install OmniLLM on this computer.`
 >
-> *Read https://raw.githubusercontent.com/wensuper/OmniLLM/main/INSTALL.md and install OmniLLM on this computer.*
+> 中文用户：见 [README.zh-CN.md](README.zh-CN.md#安装)。
 
 The rest of this page is written for the AI agent doing the install.
 
