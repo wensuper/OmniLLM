@@ -508,3 +508,7 @@ p code, li code, .pair-how code { white-space: nowrap; }
    where the Last seen and Today columns show them. */
 .devices-table .nm-sub.narrow-only, .apps-table .nm-sub.narrow-only { display: none; }
 @media (max-width: 600px) { .devices-table .nm-sub.narrow-only, .apps-table .nm-sub.narrow-only { display: flex; } }
+/* "All models" on: each model shows checked and greyed (what "all"
+   covers today), not unavailable. */
+.model-pick.all-on .switch:disabled { opacity: .55; cursor: default; }
+.model-pick.all-on .pick-row { cursor: default; }

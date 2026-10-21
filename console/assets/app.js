@@ -1112,7 +1112,7 @@ function editDialog(kind, x) {
   const usable = (m) => isApp ? usableByApp(m) : usableByDevice(x, m);
   if (isApp && !S.models.some(usableByApp)) msec.append(el("p", t("appNoModelsBody"), "warn-note"));
   if (!isApp && !deviceHasModels(x)) msec.append(el("p", t(devNoModelsWhy(x)), "warn-note"));
-  const allSw = el("input"); allSw.type = "checkbox"; allSw.className = "switch"; allSw.checked = !(x.Models || []).length;
+  const allSw = el("input"); allSw.type = "checkbox"; allSw.className = "switch";
   const all = el("label", undefined, "toggle wrap"); all.append(allSw, el("span", t("allModels")));
   const list = el("div", undefined, "model-pick");
   const picks = [];
@@ -1130,11 +1130,11 @@ function editDialog(kind, x) {
       if (!isApp && m.hidden) nm.append(" ", el("span", t("hiddenTag"), "tag paused-tag"));
       const sw = el("input"); sw.type = "checkbox"; sw.className = "switch";
       sw.disabled = !usable(m);
-      sw.checked = usable(m) && (x.Models || []).includes(m.id);
+      sw.checked = usable(m) && (!(x.Models || []).length || x.Models.includes(m.id));
       if (sw.disabled) row.classList.add("off");
       row.append(sw, nm);
       grp.append(row);
-      picks.push([m.id, sw]);
+      picks.push([m.id, sw, usable(m)]);
     }
     list.append(grp);
   }
@@ -1148,28 +1148,43 @@ function editDialog(kind, x) {
   }));
   d.left = rm;
   // What the form says now, and whether that differs from what is saved.
-  const chosen = () => picks.filter(([, sw]) => sw.checked && !sw.disabled).map(([id]) => id);
+  const chosen = () => picks.filter(([, sw, ok]) => ok && sw.checked).map(([id]) => id);
+  // "All models" is on whenever every model it can use is on: saved as
+  // all (an empty list, so models added later come too), or every one
+  // picked by hand. While it is on, the models show checked and greyed:
+  // what "all" covers today.
+  const usablePicks = picks.filter(([, , ok]) => ok);
+  const everyOn = () => usablePicks.length > 0 && usablePicks.every(([, sw]) => sw.checked);
+  allSw.checked = !(x.Models || []).length || everyOn();
+  const showAll = () => {
+    for (const [, sw, ok] of usablePicks) { sw.disabled = allSw.checked; if (allSw.checked) sw.checked = true; }
+    list.classList.toggle("all-on", allSw.checked);
+  };
+  showAll();
   const state = () => JSON.stringify([name.value.trim(), on.checked, nolim.checked, nolim.checked ? 0 : dollars(amt.value), allSw.checked ? [] : chosen()]);
   const start = state();
   d.dirty = () => state() !== start;
   const sync = () => {
     amt.disabled = nolim.checked;
     lhint.hidden = !nolim.checked;
-    list.hidden = allSw.checked;
     const none = !allSw.checked && chosen().length === 0;
     pickHint.hidden = !none;
     d.save.disabled = none || !name.value.trim() || !d.dirty();
   };
   allSw.addEventListener("change", () => {
-    // Turning "all" off starts from everything it may use.
-    if (!allSw.checked && chosen().length === 0) picks.forEach(([, sw]) => { if (!sw.disabled) sw.checked = true; });
+    // Turning "all" off keeps every model on, now each one switchable.
+    showAll();
     sync();
+  });
+  // Switching the last one on makes it "all" again.
+  for (const [, sw] of usablePicks) sw.addEventListener("change", () => {
+    if (!allSw.checked && everyOn()) { allSw.checked = true; showAll(); }
   });
   d.dlg.addEventListener("input", sync);
   d.dlg.addEventListener("change", sync);
   // Models on its list that can't be switched here (kept off devices, or
   // chat-only for an app) stay on it: the owner didn't switch them off.
-  const kept = (x.Models || []).filter((id) => !picks.some(([pid, sw]) => pid === id && !sw.disabled));
+  const kept = (x.Models || []).filter((id) => !picks.some(([pid, , ok]) => pid === id && ok));
   d.save.addEventListener("click", async () => {
     const b = { id: x.ID, name: name.value, paused: !on.checked, models: allSw.checked ? [] : [...chosen(), ...kept] };
     if (nolim.checked) b.no_limit = true; else b.budget_usd = dollars(amt.value);
