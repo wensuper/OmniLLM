@@ -24,10 +24,21 @@ func (h *Hub) loadChats(ctx context.Context) {
 	}
 }
 
-// sweepChats removes conversations unused for a day, at start and then
-// every hour, until the hub stops.
+// ForgetChats deletes every conversation a hub kept in st, and the table.
+// For uninstalling, with the hub stopped.
+func ForgetChats(ctx context.Context, st store.Store) {
+	var recs []provider.ChatRecord
+	if err := store.GetJSON(ctx, st, chatsKey, &recs); err == nil {
+		provider.RemoveChats(recs)
+	} else {
+		provider.RemoveChats(nil)
+	}
+	_ = st.Delete(ctx, chatsKey)
+}
+
+// sweepChats removes conversations unused for a day every hour until the
+// hub stops (Start sweeps once itself).
 func (h *Hub) sweepChats(ctx context.Context) {
-	h.chats.Sweep()
 	t := time.NewTicker(time.Hour)
 	defer t.Stop()
 	for {

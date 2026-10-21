@@ -291,6 +291,17 @@ func (c *Chats) Sweep() {
 	})
 }
 
+// RemoveChats deletes the given sessions' files now and waits for it, and
+// the hub's empty Claude Code folder (uninstall: the hub is stopped).
+func RemoveChats(recs []ChatRecord) {
+	for _, r := range recs {
+		if validChatID(r.ID) && r.Kind.Subscription() {
+			removeChat(r)
+		}
+	}
+	_ = os.RemoveAll(claudeChatDir())
+}
+
 // Len is how many sessions are kept.
 func (c *Chats) Len() int {
 	c.mu.Lock()

@@ -222,6 +222,7 @@ func (h *Hub) Start(ctx context.Context) error {
 		h.probeLaterLocked(c)
 	}
 	h.mu.Unlock()
+	h.chats.Sweep() // here, not in the loop: Start's caller owns the clock
 	h.wg.Add(1)
 	go func() { defer h.wg.Done(); h.sweepChats(h.ctx) }()
 	return nil

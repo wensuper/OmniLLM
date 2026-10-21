@@ -566,9 +566,10 @@ func (s *cliStream) Recv() (omnillm.Chunk, error) {
 // line reads one JSON line and returns text to pass on.
 func (s *cliStream) line(b []byte) (text string, final bool) {
 	var ev struct {
-		Type  string `json:"type"`
-		Model string `json:"model"` // Claude Code's system/init
-		Event struct {
+		Type      string `json:"type"`
+		Model     string `json:"model"`      // Claude Code's system/init
+		SessionID string `json:"session_id"` // the same: the session it really uses
+		Event     struct {
 			Type    string `json:"type"`
 			Message struct {
 				Model string `json:"model"`
@@ -646,6 +647,20 @@ func (s *cliStream) line(b []byte) (text string, final bool) {
 		s.mu.Unlock()
 		if !got && ev.Result != "" { // no partial messages: the whole reply
 			return ev.Result, true
+		}
+	case "system": // Claude Code, first: the session it uses (the one it was given)
+		if t := s.chat; t != nil && t.kind == ClaudeCode && validChatID(ev.SessionID) {
+			s.mu.Lock()
+			was := t.id
+			moved := was != ev.SessionID
+			if moved {
+				t.id = ev.SessionID
+			}
+			s.mu.Unlock()
+			if moved {
+				t.chats.pending(ChatRecord{Kind: t.kind, ID: ev.SessionID, Owner: t.owner, Path: t.path})
+				t.chats.discard(ChatRecord{Kind: t.kind, ID: was, Owner: t.owner, Path: t.path})
+			}
 		}
 	case "thread.started": // Codex, first: the session id
 		if t := s.chat; t != nil && !t.resumed && validChatID(ev.ThreadID) {
@@ -820,17 +835,20 @@ func (s *cliStream) finishWith2(o egress.Outcome, wait time.Duration, err error)
 			turn = &t
 		}
 		s.mu.Unlock()
+		if keep && turn != nil {
+			// The answer ended by itself, so end() has already waited for
+			// the program: keep the session before the caller hears the
+			// end, or a quick next message would miss it.
+			turn.keep(reply)
+			turn = nil
+		}
 		go func() {
 			_ = s.wait()
 			os.RemoveAll(s.scratch)
 			// After the program has exited: its session file is complete,
 			// or no longer written to.
 			if turn != nil {
-				if keep {
-					turn.keep(reply)
-				} else {
-					turn.discard()
-				}
+				turn.discard()
 			}
 		}()
 	})

@@ -486,3 +486,34 @@ func TestCodexEarlyStopStillDeletesItsSession(t *testing.T) {
 		t.Fatal("a stopped turn is in the table")
 	}
 }
+
+// Claude Code says which session it really uses; that one is kept.
+func TestClaudeChatFollowsTheSessionItReports(t *testing.T) {
+	chatHome(t)
+	dir := t.TempDir()
+	other := "22222222-3333-4444-8555-666666666666"
+	script := `#!/bin/sh
+if [ "$1" = auth ]; then echo '{"loggedIn":true}'; exit 0; fi
+cat >/dev/null
+sess="$HOME/.claude/projects/$(pwd -P | sed 's/[^a-zA-Z0-9]/-/g')"
+mkdir -p "$sess"; echo x > "$sess/` + other + `.jsonl"
+echo '{"type":"system","subtype":"init","session_id":"` + other + `","model":"claude-haiku"}'
+echo '{"type":"result","is_error":false,"result":"pong","usage":{"input_tokens":1,"output_tokens":1}}'
+`
+	p := filepath.Join(dir, "claude")
+	if err := os.WriteFile(p, []byte(script), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	c, err := New(Config{Name: "claude-code", Kind: ClaudeCode, Path: p}, nil, egress.New(nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.cli.passed, c.cli.checked = "test", time.Now()
+	chats := NewChats(nil, nil)
+	if _, err := chatAsk(t, c, chats, "host", u("first")); err != nil {
+		t.Fatal(err)
+	}
+	if kept := settled(t, chats, 1); kept[0].ID != other {
+		t.Fatalf("kept %s, Claude used %s", kept[0].ID, other)
+	}
+}

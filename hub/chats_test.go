@@ -11,6 +11,7 @@ import (
 	"time"
 
 	omnillm "github.com/wensuper/OmniLLM"
+	"github.com/wensuper/OmniLLM/hub"
 	"github.com/wensuper/OmniLLM/internal/provider"
 )
 
@@ -119,4 +120,21 @@ func TestDeviceChatContinuesUntilTheDeviceIsRemoved(t *testing.T) {
 		t.Fatal(err)
 	}
 	sessionFiles(t, 0)
+}
+
+func TestUninstallForgetsKeptChats(t *testing.T) {
+	e := setup(t, nil)
+	addSessionClaude(t, e)
+	ctx := context.Background()
+	if err := chat(ctx, e.hub, omnillm.Message{Role: "user", Content: "first"}); err != nil {
+		t.Fatal(err)
+	}
+	sessionFiles(t, 1)
+	hub.ForgetChats(ctx, e.hubSt)
+	if m, _ := filepath.Glob(filepath.Join(os.Getenv("HOME"), ".claude", "projects", "*", "*.jsonl")); len(m) != 0 {
+		t.Fatalf("left after uninstall: %v", m)
+	}
+	if _, err := e.hubSt.Get(ctx, "chats/index"); err == nil {
+		t.Fatal("the table is still there")
+	}
 }
