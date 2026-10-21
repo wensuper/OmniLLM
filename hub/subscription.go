@@ -54,13 +54,6 @@ func subscriptionModelName(k provider.Kind, id string) string {
 	return "Claude " + strings.ToUpper(id[:1]) + id[1:]
 }
 
-func pick(lang, zh, en string) string {
-	if strings.HasPrefix(strings.ToLower(lang), "zh") {
-		return zh
-	}
-	return en
-}
-
 // removedKey marks a subscription the owner removed: auto-detection skips
 // it until it is added again on purpose.
 func removedKey(k provider.Kind) string { return "settings/removed/" + string(k) }
@@ -133,21 +126,43 @@ const probeEvery = 7 * 24 * time.Hour
 var probeDelay, probeGap = 30 * time.Second, 20 * time.Second
 
 // probeLaterLocked starts the probe for c in the background, if the hub is
-// running (h.mu held). Start does it for sources added before it.
+// running (h.mu held). Start does it for sources added before it. At most
+// one probe runs per client: a source removed and added again is a new
+// client and is probed, while the old client's probe stops.
 func (h *Hub) probeLaterLocked(c *provider.Client) {
-	if h.ctx == nil || c.Config().Kind != provider.ClaudeCode {
+	if h.ctx == nil || c.Config().Kind != provider.ClaudeCode || h.probing[c] {
 		return
 	}
-	if !h.probing.CompareAndSwap(false, true) {
-		return
+	if h.probing == nil {
+		h.probing = map[*provider.Client]bool{}
 	}
+	h.probing[c] = true
 	ctx := h.ctx
 	h.wg.Add(1)
 	go func() {
 		defer h.wg.Done()
-		defer h.probing.Store(false)
+		defer func() {
+			h.mu.Lock()
+			delete(h.probing, c)
+			h.mu.Unlock()
+		}()
 		h.probeModels(ctx, c)
 	}()
+}
+
+// probeRunning reports whether any model-version probe is running.
+func (h *Hub) probeRunning() bool {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return len(h.probing) > 0
+}
+
+// stillConnected reports whether c is still the client for its source
+// (not removed or replaced since the probe began).
+func (h *Hub) stillConnected(c *provider.Client) bool {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return h.clients[c.Config().Name] == c
 }
 
 func sleepCtx(ctx context.Context, d time.Duration) bool {
@@ -184,6 +199,14 @@ func (h *Hub) probeModels(ctx context.Context, c *provider.Client) {
 			return
 		}
 		first = false
+		// The owner may have removed the source, or the model, while
+		// this probe waited: then nothing is sent.
+		if !h.stillConnected(c) {
+			return
+		}
+		if _, err := h.getModel(ctx, m.ID); err != nil {
+			continue
+		}
 		if !h.probe(ctx, c, m) {
 			return
 		}
@@ -251,15 +274,20 @@ func (h *Hub) probe(ctx context.Context, c *provider.Client, m Model) bool {
 }
 
 // DetectSubscriptions lists the subscription programs installed and logged
-// in on this machine that are not connected yet.
+// in on this machine that are not connected yet, except those the owner
+// removed.
 func (h *Hub) DetectSubscriptions(ctx context.Context) []provider.Config {
+	return h.detectSubscriptions(ctx, false)
+}
+
+func (h *Hub) detectSubscriptions(ctx context.Context, evenRemoved bool) []provider.Config {
 	var out []provider.Config
 	for _, k := range []provider.Kind{provider.ClaudeCode, provider.Codex} {
 		if h.subscription(string(k)) {
 			continue
 		}
 		var removed bool
-		if store.GetJSON(ctx, h.opts.Store, removedKey(k), &removed) == nil && removed {
+		if !evenRemoved && store.GetJSON(ctx, h.opts.Store, removedKey(k), &removed) == nil && removed {
 			continue
 		}
 		cfg, err := provider.Default(k)
@@ -271,4 +299,53 @@ func (h *Hub) DetectSubscriptions(ctx context.Context) []provider.Config {
 		}
 	}
 	return out
+}
+
+// DetectNow is the owner asking, on purpose, to look again: every
+// subscription program logged in on this machine (even one the owner
+// removed earlier; asking is adding it again) and a running local Ollama
+// that are not connected yet are connected now. It returns the names of
+// what it connected ("Claude Code", "Codex", "Ollama": program names, the
+// same in every language). An error is returned only when something was
+// found and none of it could be connected.
+func (h *Hub) DetectNow(ctx context.Context) ([]string, error) {
+	cfgs := h.detectSubscriptions(ctx, true)
+	h.mu.Lock()
+	_, haveOllama := h.clients["ollama"]
+	h.mu.Unlock()
+	if !haveOllama {
+		if ids, err := h.DetectOllama(ctx); err == nil && len(ChatModels(ids)) > 0 {
+			cfg, _ := provider.Default(provider.Ollama)
+			cfgs = append(cfgs, cfg)
+		}
+	}
+	var names []string
+	var firstErr error
+	for _, cfg := range cfgs {
+		if _, err := h.AddProvider(ctx, cfg, ""); err != nil {
+			h.opts.Logf("hub: %s not connected: %s", cfg.Name, omnillm.Describe("en", err))
+			if firstErr == nil {
+				firstErr = err
+			}
+			continue
+		}
+		names = append(names, programName(cfg.Kind))
+	}
+	if len(names) == 0 && firstErr != nil {
+		return nil, firstErr
+	}
+	return names, nil
+}
+
+// programName is the program a source runs, as people know it.
+func programName(k provider.Kind) string {
+	switch k {
+	case provider.ClaudeCode:
+		return "Claude Code"
+	case provider.Codex:
+		return "Codex"
+	case provider.Ollama:
+		return "Ollama"
+	}
+	return string(k)
 }

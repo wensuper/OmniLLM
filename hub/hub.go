@@ -16,7 +16,6 @@ import (
 	"sort"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	omnillm "github.com/wensuper/OmniLLM"
@@ -60,10 +59,6 @@ type Options struct {
 	EgressRegion func(ctx context.Context) (string, error)
 	// RegionAllowed, when set, says whether a provider serves a country.
 	RegionAllowed func(provider, country string) bool
-	// Lang is the owner's language ("zh…" or anything else for English),
-	// for the few names the hub words itself, such as "Claude Sonnet
-	// (latest)" before a model's version is known.
-	Lang string
 	// Now is for tests.
 	Now func() time.Time
 }
@@ -74,8 +69,9 @@ type Hub struct {
 	// resolved: model id -> its name with version, as last reported (mu).
 	resolved map[string]string
 	// seen: model id -> when a call last reported its version (mu).
-	seen    map[string]time.Time
-	probing atomic.Bool // a model-version probe is running
+	seen map[string]time.Time
+	// probing: clients whose model-version probe is running (mu).
+	probing map[*provider.Client]bool
 	lim     *egress.Limiter
 	subs    subscriptionPace
 	key     e2e.KeyPair
@@ -178,6 +174,9 @@ func (h *Hub) Start(ctx context.Context) error {
 	if started {
 		return errors.New("hub: already started")
 	}
+	// Apps with the same name (from before names were made unique) get a
+	// number once, so they can be told apart everywhere.
+	_, _ = h.Apps(ctx)
 	var link *relaylink.HubLink
 	if h.opts.RelayURL != "" {
 		var err error
@@ -575,31 +574,37 @@ func (h *Hub) RemoveModel(ctx context.Context, id string) error {
 }
 
 func (h *Hub) info(m Model) omnillm.ModelInfo {
-	loc := omnillm.Remote
+	loc := omnillm.Local
 	h.mu.Lock()
 	c := h.clients[m.Provider]
+	resolved := h.resolved[m.ID]
 	h.mu.Unlock()
-	if c != nil && c.Config().Local() {
-		loc = omnillm.Local
+	kind := provider.Kind(m.Provider)
+	if c != nil {
+		kind = c.Config().Kind
 	}
-	name := m.DisplayName
-	switch provider.Kind(m.Provider) {
+	if c == nil || !c.Config().Local() {
+		loc = omnillm.Remote
+	}
+	mi := omnillm.ModelInfo{ID: m.ID, DisplayName: m.DisplayName, Provider: m.Provider, Locality: loc,
+		HumanOnly: m.HumanOnly, Kind: string(kind)}
+	// No words in a language here: each screen adds the suffix or the
+	// Codex name in its own language from Latest and Kind.
+	switch kind {
 	case provider.ClaudeCode:
 		// An alias follows the newest model; until a call (or the
-		// weekly probe) reports which one, say so.
-		name = subscriptionModelName(provider.ClaudeCode, m.Upstream) + pick(h.opts.Lang, "（最新版）", " (latest)")
+		// weekly probe) reports which one, it is the family alone.
+		mi.DisplayName, mi.Latest = subscriptionModelName(provider.ClaudeCode, m.Upstream), true
 	case provider.Codex:
 		// Codex's replies do not name their model.
-		name = pick(h.opts.Lang, "ChatGPT（Codex）", "ChatGPT (Codex)")
+		mi.DisplayName = subscriptionModelName(provider.Codex, m.Upstream)
 	}
 	// The version the provider last said it answered with ("Claude Opus"
 	// behind the alias "opus" is "Claude Opus 5.5" today).
-	h.mu.Lock()
-	if v := h.resolved[m.ID]; v != "" {
-		name = v
+	if resolved != "" {
+		mi.DisplayName, mi.Latest = resolved, false
 	}
-	h.mu.Unlock()
-	return omnillm.ModelInfo{ID: m.ID, DisplayName: name, Provider: m.Provider, Locality: loc, HumanOnly: m.HumanOnly}
+	return mi
 }
 
 // noteModel remembers the exact model a provider answered with for one of

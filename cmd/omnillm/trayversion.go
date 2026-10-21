@@ -234,6 +234,7 @@ type updateState struct {
 	Latest      string    // a newer release, if one was found
 	Installing  string    // the version being installed now
 	Failed      bool      // the last install failed
+	Log         string    // the installer's log, for the failure line
 }
 
 // upToDateFor is how long "✓ 已是最新版本" stays before the line offers
@@ -244,11 +245,15 @@ const upToDateFor = time.Minute
 func versionLine(cur string, s updateState) (title string, install bool) {
 	switch {
 	case s.Installing != "":
-		return fmt.Sprintf(t("正在更新到 %s…", "Updating to %s…"), s.Installing), false
+		return fmt.Sprintf(t("正在更新到 %s……", "Updating to %s…"), s.Installing), false
 	case s.Failed && s.Latest != "":
+		if s.Log != "" {
+			return fmt.Sprintf(t("更新失败，点击重试（日志：%s）", "Update failed; click to retry (log: %s)"), tildePath(s.Log)), true
+		}
 		return t("更新失败，点击重试", "Update failed; click to retry"), true
 	case s.Latest != "" && compareVersions(s.Latest, cur) > 0:
-		return fmt.Sprintf(t("有新版本 %s · 点击更新", "New version %s · click to update"), s.Latest), true
+		// Installing restarts the hub, which ends replies in progress.
+		return fmt.Sprintf(t("有新版本 %s · 点击更新（正在进行的回答会中断）", "New version %s · click to update (replies in progress will stop)"), s.Latest), true
 	}
 	return fmt.Sprintf(t("版本 %s", "Version %s"), cur), false
 }
@@ -261,7 +266,7 @@ func checkLine(cur string, s updateState, now time.Time) (title string, click, s
 	}
 	switch {
 	case s.Checking:
-		return t("正在检查更新…", "Checking for updates…"), false, true
+		return t("正在检查更新……", "Checking for updates…"), false, true
 	case s.CheckFailed:
 		return t("检查失败，点击重试", "Check failed; click to retry"), true, true
 	case !s.CheckedAt.IsZero() && now.Sub(s.CheckedAt) < upToDateFor:
@@ -286,4 +291,50 @@ func (s updateState) checked(cur, latest string, err error, now time.Time) updat
 	}
 	s.Latest, s.CheckedAt = "", now
 	return s
+}
+
+// tildePath shortens a path in the home folder to ~/… for a menu line.
+func tildePath(p string) string {
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		return p
+	}
+	if p == home {
+		return "~"
+	}
+	if rel, ok := strings.CutPrefix(p, home+string(os.PathSeparator)); ok {
+		return "~/" + rel
+	}
+	return p
+}
+
+// installedVersion asks the installed program for its version
+// ("omnillm 0.2.0-alpha.9" → "0.2.0-alpha.9").
+func installedVersion(ctx context.Context, bin string) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, bin, "version").Output()
+	if err != nil {
+		return "", err
+	}
+	f := strings.Fields(string(out))
+	if len(f) != 2 || f[0] != "omnillm" {
+		return "", fmt.Errorf("unexpected version output %q", out)
+	}
+	return f[1], nil
+}
+
+// installed folds a finished install into the state, when this process is
+// still running afterwards (the installer normally replaces it). have is
+// the version the installed program reports. restart says the new version
+// is there: the offer is done, and the menu should run the new program.
+func (s updateState) installed(err error, have string) (next updateState, restart bool) {
+	offered := s.Installing
+	s.Installing = ""
+	if err == nil && have != "" && compareVersions(have, offered) >= 0 {
+		s.Latest, s.Failed = "", false
+		return s, true
+	}
+	s.Failed = true
+	return s, false
 }

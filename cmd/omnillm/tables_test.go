@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	omnillm "github.com/wensuper/OmniLLM"
 	"github.com/wensuper/OmniLLM/hub"
 )
 
@@ -22,7 +23,8 @@ func TestWhenText(t *testing.T) {
 		{"en", time.Date(2026, 10, 20, 21, 10, 0, 0, time.Local), "Yesterday 9:10 PM"},
 		{"zh", time.Date(2026, 10, 18, 8, 0, 0, 0, time.Local), "10月18日"},
 		{"en", time.Date(2026, 10, 18, 8, 0, 0, 0, time.Local), "Oct 18"},
-		{"en", time.Time{}, "Never"},
+		{"en", time.Time{}, "Not yet"},
+		{"zh", time.Time{}, "还没用过"},
 	} {
 		t.Setenv("OMNILLM_LANG", c.lang)
 		if got := whenText(c.at, now); got != c.want {
@@ -87,5 +89,81 @@ func TestUsageTable(t *testing.T) {
 	}
 	if strings.Contains(got, "device/") {
 		t.Fatal("an id is shown:\n" + got)
+	}
+	if !strings.Contains(lines[0], "Calls") || !strings.Contains(lines[0], "Tokens (in / out)") {
+		t.Fatal(lines[0])
+	}
+}
+
+func TestUsageTableGroupsThousands(t *testing.T) {
+	t.Setenv("OMNILLM_LANG", "zh")
+	b, _ := json.Marshal([]hub.Spend{{Who: "device/a", Name: "iPhone", Calls: 1234, MicroUSD: 1_234_567_890, InputTokens: 1_234_567, OutputTokens: 89}})
+	got, err := usageTable(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(got, "次数") || !strings.Contains(got, "Token（发出 / 收到）") || !strings.Contains(got, "1,234  ") ||
+		!strings.Contains(got, "$1,234.57") || !strings.Contains(got, "1,234,567 / 89") {
+		t.Fatal(got)
+	}
+}
+
+func TestDevicesTableWithOnlineAndSpend(t *testing.T) {
+	t.Setenv("OMNILLM_LANG", "en")
+	now := time.Now()
+	five, none, spent, zero := int64(5_000_000), hub.NoLimit, int64(1_250_000), int64(0)
+	on, off := true, false
+	b, _ := json.Marshal([]deviceRow{
+		{ID: "a", Name: "iPhone", BudgetMicroUSD: &five, SpentMicroUSD: &spent, Online: &on, LastSeen: now},
+		{ID: "b", Name: "Laptop", BudgetMicroUSD: &none, SpentMicroUSD: &zero, Online: &off, Paused: true},
+	})
+	got, err := devicesTable(b, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(got, "\n")
+	if !strings.Contains(lines[0], "Status") || !strings.Contains(lines[0], "Today / daily limit") {
+		t.Fatal(got)
+	}
+	if !strings.Contains(lines[1], " On ") || !strings.Contains(lines[1], "$1.25 / $5.00") || !strings.Contains(lines[1], "● Online") {
+		t.Fatal(got)
+	}
+	if !strings.Contains(lines[2], "Paused") || !strings.Contains(lines[2], "$0.00 · no limit") || !strings.Contains(lines[2], "Not yet") {
+		t.Fatal(got)
+	}
+}
+
+func TestModelNameInTheTerminalsLanguage(t *testing.T) {
+	for _, c := range []struct {
+		lang string
+		m    omnillm.ModelInfo
+		want string
+	}{
+		{"zh", omnillm.ModelInfo{DisplayName: "Claude Sonnet", Latest: true, Kind: "claude-code"}, "Claude Sonnet（最新版）"},
+		{"en", omnillm.ModelInfo{DisplayName: "Claude Sonnet", Latest: true, Kind: "claude-code"}, "Claude Sonnet (latest)"},
+		{"en", omnillm.ModelInfo{DisplayName: "Claude Opus 5.5", Kind: "claude-code"}, "Claude Opus 5.5"},
+		{"zh", omnillm.ModelInfo{DisplayName: "ChatGPT (Codex)", Kind: "codex"}, "ChatGPT（Codex）"},
+		{"en", omnillm.ModelInfo{DisplayName: "ChatGPT (Codex)", Kind: "codex"}, "ChatGPT (Codex)"},
+		{"zh", omnillm.ModelInfo{DisplayName: "我的 GPT", Kind: "codex", Renamed: true}, "我的 GPT"},
+		{"zh", omnillm.ModelInfo{DisplayName: "写作", Latest: true, Renamed: true}, "写作"},
+		{"en", omnillm.ModelInfo{DisplayName: "gpt-5", Kind: "openai"}, "gpt-5"},
+	} {
+		t.Setenv("OMNILLM_LANG", c.lang)
+		if got := modelName(c.m); got != c.want {
+			t.Errorf("%s %+v: %q, want %q", c.lang, c.m, got, c.want)
+		}
+	}
+}
+
+func TestMoney(t *testing.T) {
+	for in, want := range map[int64]string{0: "$0.00", 5_000_000: "$5.00", 4_999: "$0.00", 5_000: "$0.01", 1_234_567_890: "$1,234.57", -1_500_000: "-$1.50"} {
+		if got := usd(in); got != want {
+			t.Errorf("usd(%d) = %q, want %q", in, got, want)
+		}
+	}
+	for in, want := range map[int64]string{0: "0", 999: "999", 1000: "1,000", 1234567: "1,234,567", -1000: "-1,000"} {
+		if got := thousands(in); got != want {
+			t.Errorf("thousands(%d) = %q, want %q", in, got, want)
+		}
 	}
 }

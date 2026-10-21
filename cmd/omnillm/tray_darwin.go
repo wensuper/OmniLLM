@@ -63,19 +63,28 @@ func trayReady() {
 	quit := systray.AddMenuItem(t("隐藏菜单栏图标（下次登录时恢复）", "Hide the menu bar icon (back at next login)"), "")
 
 	startFailed := false // launchctl kickstart failed: say what to do instead
+	// Updates: checked a minute after start, then every day, and on a click.
+	logPath := filepath.Join(dataDir("hub"), "update.log")
+	up := updateState{Log: logPath}
 	show := func() {
 		st, ok := queryStatus()
 		if !ok {
 			systray.SetTemplateIcon(trayDown, trayDown)
-			head.SetTitle(t("OmniLLM 没有运行", "OmniLLM isn't running"))
-			relay.SetTitle(t("设备暂时连不上", "Devices can't connect now"))
+			head.SetTitle(t("OmniLLM 没有运行", "OmniLLM isn’t running"))
+			relay.SetTitle(t("设备暂时连不上", "Devices can’t connect now"))
 			if startFailed {
-				relay.SetTitle(t("没能启动。在终端运行 omnillm install。", "Couldn't start it. Run omnillm install in Terminal."))
+				relay.SetTitle(t("没能启动。在终端运行 omnillm install。", "Couldn’t start it. Run omnillm install in Terminal."))
 			}
 			counts.Hide()
 			open.Disable()
 			add.Disable()
-			start.Show()
+			// While an update installs, the hub is down on purpose and
+			// comes back by itself.
+			if up.Installing != "" {
+				start.Hide()
+			} else {
+				start.Show()
+			}
 			return
 		}
 		startFailed = false
@@ -83,7 +92,7 @@ func trayReady() {
 		open.Enable()
 		add.Enable()
 		counts.Show()
-		head.SetTitle(fmt.Sprintf(t("OmniLLM 在运行（%s）", "OmniLLM is running (%s)"), st.Version))
+		head.SetTitle(t("OmniLLM 在运行", "OmniLLM is running")) // the version has its own line
 		switch {
 		case !st.RelayConfigured:
 			systray.SetTemplateIcon(trayUp, trayUp)
@@ -93,14 +102,12 @@ func trayReady() {
 			relay.SetTitle(t("● 手机和其他设备可以连上", "● Phones and other devices can connect"))
 		default:
 			systray.SetTemplateIcon(trayDown, trayDown)
-			relay.SetTitle(t("○ 远程连接断开，设备暂时连不上", "○ Remote access is down; devices can't connect now"))
+			relay.SetTitle(t("○ 远程连接断开，设备暂时连不上", "○ Remote access is down; devices can’t connect now"))
 		}
 		counts.SetTitle(fmt.Sprintf(t("设备 %d 台 · 模型来源 %d 个", "Devices: %d · Model sources: %d"), st.Devices, st.Providers))
 	}
 	show()
 
-	// Updates: checked a minute after start, then every day, and on a click.
-	var up updateState
 	checkClick, installClick := false, false
 	showUpdate := func() {
 		title, inst := versionLine(version, up)
@@ -147,7 +154,7 @@ func trayReady() {
 		go func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
 			defer cancel()
-			installDone <- runInstaller(ctx, updateClient(), filepath.Join(dataDir("hub"), "update.log"))
+			installDone <- runInstaller(ctx, updateClient(), logPath)
 		}()
 	}
 	showUpdate()
@@ -181,10 +188,25 @@ func trayReady() {
 					startInstall()
 				}
 			case err := <-installDone:
-				// Success replaces this process (the installer starts the
-				// menu bar icon again); still here means it did not work.
-				up.Installing, up.Failed = "", err != nil
+				// Success normally replaces this process (the installer
+				// starts the menu bar icon again). Still here: if the
+				// new version is installed all the same, run it.
+				home, _ := os.UserHomeDir()
+				bin := filepath.Join(home, ".local", "bin", "omnillm")
+				have := ""
+				if err == nil {
+					have, _ = installedVersion(context.Background(), bin)
+				}
+				var restart bool
+				up, restart = up.installed(err, have)
 				showUpdate()
+				if restart {
+					// The lock file is close-on-exec: the new menu takes it.
+					if e := syscall.Exec(bin, []string{bin, "tray"}, os.Environ()); e != nil {
+						fmt.Fprintln(os.Stderr, "omnillm tray: restart:", e)
+					}
+				}
+				show()
 			case <-open.ClickedCh:
 				trayOpen("")
 			case <-add.ClickedCh:

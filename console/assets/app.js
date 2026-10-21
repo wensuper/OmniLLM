@@ -24,7 +24,7 @@ const T = {
     w1Codex2: "在终端运行 `codex login`。",
     w1Key: "我有 API Key",
     w1Free: "想免费：安装 Ollama，用这台 Mac 上的模型。",
-    recheck: "重新检查", recheckNone: "还没发现已登录的订阅或本机模型。",
+    recheck: "重新检查", recheckNone: "还没发现已登录的订阅或本机模型。", connectedNames: "已接入 {0}",
     ollamaFound: "发现了这台 Mac 上的本地模型（Ollama）",
     ollamaUse: "直接使用本地模型",
     source: "来源", otherCompatible: "其他 OpenAI 兼容服务",
@@ -37,41 +37,41 @@ const T = {
     w3Title: "试一下",
     model: "模型", message: "消息", send: "发送", finish: "完成",
     todaySpend: "今天的花费", estimate: "按公布的价格估算", devices: "设备", models: "模型", apps: "应用", usage: "用量",
-    addDevice: "添加设备", addProvider: "接入模型", addApp: "添加应用",
+    addDevice: "添加设备", addProvider: "接入模型", addApp: "添加应用", add: "添加",
     name: "名字", lastSeen: "最近使用", budget: "每天额度", todayBudget: "今天 / 每天额度", where: "对话发往", humanOnly: "只能手动对话",
-    showOnDevices: "在设备上显示", subAlways: "订阅模型始终只能手动对话", rename: "改名",
-    enabled: "启用", pausedChip: "已暂停", pausedToast: "已暂停“{0}”", resumedToast: "已开启“{0}”",
+    showOnDevices: "在设备上显示", subAlways: "订阅模型始终只能手动对话", rename: "改名", editModel: "编辑模型 · {0}",
+    enabled: "开启", pausedChip: "已暂停", pausedToast: "已暂停“{0}”", resumedToast: "已开启“{0}”",
     online: "在线", todayAt: "今天 {0}", yesterdayAt: "昨天 {0}",
-    editDevice: "编辑设备 · {0}", editApp: "编辑应用 · {0}", secBasics: "基本", secStatus: "状态", secModels: "可用模型",
+    editDevice: "编辑设备 · {0}", editApp: "编辑应用 · {0}", secStatus: "状态", secModels: "可用模型",
     infoAdded: "添加于 {0}", infoSeen: "最近使用 {0}", infoSpent: "今天已用 {0}",
-    pauseHint: "关掉就是暂停：这台设备马上不能用，配对和设置都保留。", pauseHintApp: "关掉就是暂停：这个应用马上不能用，令牌和设置都保留。",
+    pauseHint: "关掉即暂停：这台设备马上停用，配对和设置都保留。", pauseHintApp: "关掉即暂停：这个应用马上停用，令牌和设置都保留。",
     limitHint: "只受整台 Mac 每天总额度（{0}）限制。", allModels: "全部模型（以后接入的新模型也自动可用）",
     grpSub: "订阅", grpKey: "API Key", grpLocal: "这台 Mac", pickOne: "至少选一个模型。", appNoSub: "订阅模型只能手动对话，应用用不了。",
+    hiddenTag: "不在设备上显示", appNoModels: "没有能用的模型", appNoModelsBody: "现在接入的模型应用都用不了。先接入 API Key 或这台 Mac 上的模型。",
     removeDevice: "移除设备", removeApp: "移除应用",
+    discardQ: "放弃没保存的修改？", discard: "放弃", keepEditing: "继续编辑",
     providers: "模型来源", keyLast4: "接入方式", subLogin: "订阅登录（只留在这台 Mac 上）",
     problemLogin: "登录已失效：在终端运行 claude 并 /login", problemLoginCodex: "登录已失效：在终端运行 codex login",
     problemLimit: "用量到上限，约 {0}后恢复", problemLimitNow: "用量到上限，稍后恢复", hours: "{0} 小时", hour: "1 小时", minutes: "{0} 分钟", minute: "1 分钟",
     noDevices: "还没有设备。点“添加设备”。",
-    appsBody: "给不能直接嵌入 OmniLLM 的程序（脚本、其他 App）用。应用只能做后台调用，只能用 API Key 和这台 Mac 上的模型。",
-    usageBody: "{0}（按这台 Mac 的时间）。花费按模型来源公布的价格估算，没有公布价格的按偏高的价格估；订阅和这台 Mac 上的模型不花钱。",
+    appsBody: "给不能直接嵌入 OmniLLM 的程序（脚本或其他程序）用。应用只能做后台调用，只能用 API Key 和这台 Mac 上的模型。",
+    usageBody: "按这台 Mac 的时间计。花费按公布的价格估算，没有公布价格的按偏高估；订阅和这台 Mac 上的模型不花钱。",
     rangeToday: "今天", rangeYesterday: "昨天", rangeWeek: "最近 7 天",
-    headToday: "今天的用量", headYesterday: "昨天的用量", headWeek: "最近 7 天的用量",
     totalToday: "今天合计", totalYesterday: "昨天合计", totalWeek: "最近 7 天合计",
     emptyToday: "今天还没有用过。", emptyYesterday: "昨天没有用过。", emptyWeek: "最近 7 天没有用过。",
-    byModel: "按模型", modelsGone: "已移除的模型（{0} 个）",
-    who: "设备或应用", spend: "花费（估算）", calls: "次数", tokens: "文字量（发出 / 收到）", tokensTip: "按 token 计",
+    byModel: "按模型", modelsGone: "已移除的模型（{0} 个）", byModelTotal: "合计", byModelEarlier: "更早的记录（没有按模型记）",
+    who: "设备或应用", spend: "花费", calls: "次数", tokens: "Token（发出 / 收到）",
     usageHost: "这台 Mac", usageGone: "已移除的设备和应用（{0} 个）", usageGoneOne: "{0}（已移除）",
     capLine: "整台 Mac 每天总额度 {0}", capLabel: "整台 Mac 每天总额度", capNone: "整台 Mac 每天总额度：不设上限", capEdit: "修改", noApps: "还没有应用。",
     modelsBody: "“只能手动对话”的模型只给在手机、电脑上聊天的人用，脚本和应用调用不了。订阅模型一直是这样，免得账号被当成自动化调用。",
-    claudeSub: "Claude 订阅", codexName: "ChatGPT（Codex）",
-    remove: "移除", removeConfirm: "确定移除“{0}”？它会立即无法使用。",
-    removeDeviceConfirm: "移除“{0}”？它会立刻用不了，那台设备上的对话也会在它下次打开时清除。",
+    claudeSub: "Claude 订阅", codexName: "ChatGPT（Codex）", latest: "（最新版）",
+    remove: "移除", removeConfirm: "移除“{0}”？它会立刻用不了。",
     removed: "已移除", connected: "已接入，{0} 个模型可用", saved: "已保存",
     local: "只在这台 Mac", remote: "云端", localChip: "这台 Mac", sub: "订阅",
-    todayOf: "今天 {0} / {1}", todayNoLimit: "今天 {0} · 不设上限",
+    todayOf: "{0} / {1}", todayNoLimit: "{0} · 不设上限",
     pairPhone: "手机或平板：用相机扫这个二维码，不用装任何东西。{0} 前有效，只能用一次。",
     pairComputer: "电脑或服务器（没有摄像头）",
-    pairComputerNew: "还没装 OmniLLM 的，在那台电脑上运行这一行（只用来聊天，不会一直在后台运行），装完会提示粘贴配对文字：",
+    pairComputerNew: "那台电脑还没装 OmniLLM 的话，在它上面运行这一行，装完会提示粘贴配对文字（只用来聊天，不常驻后台）：",
     pairComputerHow: "已经装好的，运行 `omnillm connect pair`，粘贴下面这段配对文字。不要发给别人，也不要贴到聊天里。",
     pairWait: "等待设备连接……",
     pairConfirmQ: "设备“{0}”请求加入。它屏幕上显示的数字是这个吗？",
@@ -80,23 +80,23 @@ const T = {
     pairDenied: "已拒绝。", pairExpired: "这个二维码已过期。", pairNew: "换一个二维码",
     pairStartOffline: "远程连接现在没有连上，生成不了二维码。", retry: "重试",
     close: "关闭", edit: "编辑", save: "保存", cancel: "取消", noLimit: "不设上限",
-    nameLabel: "设备名字", budgetLabel: "每天额度（美元）",
+    budgetLabel: "每天额度（美元）",
     noRelay: "还没有设置远程连接，其他设备暂时连不上。可以先跳过；设置好远程连接后，在“设备”里添加。",
     relayWait: "正在打开远程连接……", relayDown: "远程连接现在连不上，请检查这台 Mac 的网络。连上之后这里会自动继续。",
     relayOn: "设备可以连上", relayOff: "远程连接断开，设备暂时连不上", relayNone: "只在这台 Mac 上用（没有远程连接）",
     regionPaused: "这台 Mac 所在的地区变了，已暂停调用。", regionConfirm: "确认继续",
-    appToken: "“{0}”的令牌（只显示这一次，请现在复制保存）：",
+    appTokenFor: "“{0}”的令牌", appTokenOnce: "只显示这一次，现在复制。",
     appName: "应用的名字",
     tryText: "你好",
-    never: "—", copy: "复制", copied: "已复制",
+    never: "还没用过", copy: "复制", copied: "已复制",
   },
   en: {
     loading: "Loading…",
     loginTitle: "Open the console again",
-    loginBody: "Click the OmniLLM icon in the menu bar and choose Open the console.",
+    loginBody: "Click the OmniLLM icon in the menu bar and choose “Open the console”.",
     loginOr: "Or run in Terminal:",
     loginSafe: "For safety, the console opens only from this Mac.",
-    hubDown: "OmniLLM isn't running. Click the OmniLLM icon in the menu bar and choose Start OmniLLM. Or run omnillm install in Terminal.",
+    hubDown: "OmniLLM isn’t running. Click the OmniLLM icon in the menu bar and choose “Start OmniLLM”, or run omnillm install in Terminal.",
     ariaLang: "Language", ariaTheme: "Light or dark", ariaSteps: "Steps", back: "Back",
     step1: "Connect a model", step2: "Add a device", step3: "Try it",
     w1Title: "First, connect a model",
@@ -108,71 +108,71 @@ const T = {
     w1Codex2: "In Terminal, run `codex login`.",
     w1Key: "I have an API key",
     w1Free: "Want it free? Install Ollama to use models on this Mac.",
-    recheck: "Check again", recheckNone: "No signed-in subscription or local model found yet.",
+    recheck: "Check again", recheckNone: "No signed-in subscription or local model found yet.", connectedNames: "Connected {0}",
     ollamaFound: "A local model (Ollama) is running on this Mac",
     ollamaUse: "Use the local model",
     source: "Source", otherCompatible: "Other OpenAI-compatible service",
     cname: "Name (e.g. groq)", curl: "API address (https://)",
     key: "API key",
-    keyHint: "It is checked with one minimal request first and saved only if it works; it is kept only in this Mac's keychain.",
+    keyHint: "It is checked with one minimal request first and saved only if it works; it is kept only in this Mac’s keychain.",
     connect: "Check and connect",
     w2Title: "Add a device",
     skipPair: "Skip for now",
     w3Title: "Try it",
     model: "Model", message: "Message", send: "Send", finish: "Done",
-    todaySpend: "Spent today", estimate: "estimated from published prices", devices: "Devices", models: "Models", apps: "Apps", usage: "Usage",
-    addDevice: "Add device", addProvider: "Connect a model", addApp: "Add app",
+    todaySpend: "Spent today", estimate: "Estimated from published prices", devices: "Devices", models: "Models", apps: "Apps", usage: "Usage",
+    addDevice: "Add device", addProvider: "Connect a model", addApp: "Add app", add: "Add",
     name: "Name", lastSeen: "Last used", budget: "Daily limit", todayBudget: "Today / daily limit", where: "Messages go to", humanOnly: "Chat only",
-    showOnDevices: "Show on devices", subAlways: "Subscription models are always chat-only", rename: "Rename",
+    showOnDevices: "Show on devices", subAlways: "Subscription models are always chat-only", rename: "Rename", editModel: "Edit model · {0}",
     enabled: "On", pausedChip: "Paused", pausedToast: "Paused “{0}”", resumedToast: "Turned on “{0}”",
     online: "Online", todayAt: "Today {0}", yesterdayAt: "Yesterday {0}",
-    editDevice: "Edit device · {0}", editApp: "Edit app · {0}", secBasics: "Basics", secStatus: "Status", secModels: "Models it can use",
+    editDevice: "Edit device · {0}", editApp: "Edit app · {0}", secStatus: "Status", secModels: "Models it can use",
     infoAdded: "Added {0}", infoSeen: "Last used {0}", infoSpent: "Spent today {0}",
-    pauseHint: "Off pauses it: the device stops working at once; its pairing and settings stay.", pauseHintApp: "Off pauses it: the app stops working at once; its token and settings stay.",
+    pauseHint: "Turn off to pause: the device stops at once; its pairing and settings are kept.", pauseHintApp: "Turn off to pause: the app stops at once; its token and settings are kept.",
     limitHint: "Only the daily total for this Mac ({0}) applies.", allModels: "All models (including ones added later)",
-    grpSub: "Subscriptions", grpKey: "API key", grpLocal: "This Mac", pickOne: "Choose at least one model.", appNoSub: "Subscription models are chat-only; apps can't use them.",
+    grpSub: "Subscriptions", grpKey: "API key", grpLocal: "This Mac", pickOne: "Choose at least one model.", appNoSub: "Subscription models are chat-only; apps can’t use them.",
+    hiddenTag: "Hidden on devices", appNoModels: "No usable models", appNoModelsBody: "None of the connected models work for apps. Connect an API key or a model on this Mac first.",
     removeDevice: "Remove device", removeApp: "Remove app",
+    discardQ: "Discard unsaved changes?", discard: "Discard", keepEditing: "Keep editing",
     providers: "Model sources", keyLast4: "Connected with", subLogin: "Subscription login (stays on this Mac)",
     problemLogin: "Signed out: run claude and /login in Terminal", problemLoginCodex: "Signed out: run codex login in Terminal",
     problemLimit: "Usage limit reached; back in about {0}", problemLimitNow: "Usage limit reached; back soon", hours: "{0} hours", hour: "1 hour", minutes: "{0} minutes", minute: "1 minute",
     noDevices: "No devices yet. Choose “Add device”.",
     appsBody: "For programs that cannot embed OmniLLM (scripts, other apps). Apps make background calls only, with API keys and models on this Mac.",
-    usageBody: "{0} (this Mac's time). Spend is estimated from the model sources' published prices, high where there is no price; subscriptions and models on this Mac cost nothing.",
+    usageBody: "Days follow this Mac’s clock. Spend is estimated from published prices (on the high side where none is published); subscriptions and models on this Mac cost nothing.",
     rangeToday: "Today", rangeYesterday: "Yesterday", rangeWeek: "Last 7 days",
-    headToday: "Today's use", headYesterday: "Yesterday's use", headWeek: "Use over the last 7 days",
     totalToday: "Total today", totalYesterday: "Total yesterday", totalWeek: "Total, last 7 days",
     emptyToday: "Nothing used yet today.", emptyYesterday: "Nothing was used yesterday.", emptyWeek: "Nothing used in the last 7 days.",
-    byModel: "By model", modelsGone: "Removed models ({0})",
-    who: "Device or app", spend: "Spend (est.)", calls: "Calls", tokens: "Text (sent / received)", tokensTip: "tokens",
+    byModel: "By model", modelsGone: "Removed models ({0})", byModelTotal: "Total", byModelEarlier: "Earlier records (not by model)",
+    who: "Device or app", spend: "Spend", calls: "Calls", tokens: "Tokens (in / out)",
     usageHost: "This Mac", usageGone: "Removed devices and apps ({0})", usageGoneOne: "{0} (removed)",
     capLine: "Daily total for this Mac: {0}", capLabel: "Daily total for this Mac", capNone: "Daily total for this Mac: no limit", capEdit: "Change", noApps: "No apps yet.",
-    modelsBody: "Chat-only models are for people chatting on a phone or computer; scripts and apps can't use them. Subscription models are always chat-only, so the account isn't flagged as automated.",
-    claudeSub: "Claude subscription", codexName: "ChatGPT (Codex)",
+    modelsBody: "Chat-only models are for people chatting on a phone or computer; scripts and apps can’t use them. Subscription models are always chat-only, so the account isn’t flagged as automated.",
+    claudeSub: "Claude subscription", codexName: "ChatGPT (Codex)", latest: " (latest)",
     remove: "Remove", removeConfirm: "Remove “{0}”? It stops working at once.",
-    removeDeviceConfirm: "Remove “{0}”? It stops working at once, and its chats are cleared next time it opens.",
     removed: "Removed", connected: "Connected: {0} models available", saved: "Saved",
     local: "This Mac only", remote: "Cloud", localChip: "This Mac", sub: "subscription",
-    todayOf: "Today {0} / {1}", todayNoLimit: "Today {0} · no limit",
+    todayOf: "{0} / {1}", todayNoLimit: "{0} · no limit",
     pairPhone: "Phone or tablet: scan this QR code with the camera; nothing to install. Valid until {0}, single use.",
     pairComputer: "Computer or server (no camera)",
-    pairComputerNew: "Not installed there yet? Run this line on that computer (just for chatting; nothing keeps running in the background); it then asks for the pairing text:",
-    pairComputerHow: "Already installed: run `omnillm connect pair` and paste this pairing text. Don't send it to anyone or paste it into a chat.",
+    pairComputerNew: "Not installed there yet? Run this line on that computer; it asks for the pairing text when done (chat only; nothing stays running):",
+    pairComputerHow: "Already installed: run `omnillm connect pair` and paste this pairing text. Don’t send it to anyone or paste it into a chat.",
     pairWait: "Waiting for the device…",
     pairConfirmQ: "“{0}” wants to join. Does its screen show this number?",
-    pairYes: "Matches, add", pairNo: "Doesn't match, refuse", pairLeft: "The device cancelled or lost its connection.",
+    pairYes: "Matches, add", pairNo: "Doesn’t match, refuse", pairLeft: "The device cancelled or lost its connection.",
     pairDone: "Added “{0}”", pairFailed: "Pairing did not finish: {0}",
     pairDenied: "Refused.", pairExpired: "This QR code has expired.", pairNew: "New QR code",
-    pairStartOffline: "Remote access isn't connected right now, so no QR code can be made.", retry: "Retry",
+    pairStartOffline: "Remote access isn’t connected right now, so no QR code can be made.", retry: "Retry",
     close: "Close", edit: "Edit", save: "Save", cancel: "Cancel", noLimit: "No limit",
-    nameLabel: "Device name", budgetLabel: "Daily limit (USD)",
-    noRelay: "Remote access isn't set up yet, so other devices can't connect. Skip for now; add devices under Devices once it is set up.",
-    relayWait: "Turning on remote access…", relayDown: "Remote access can't connect right now; check this Mac's network. This continues by itself once it connects.",
-    relayOn: "Devices can connect", relayOff: "Remote access is down; devices can't connect now", relayNone: "This Mac only (no remote access)",
-    regionPaused: "This Mac's region changed; calls are paused.", regionConfirm: "Confirm and resume",
-    appToken: "Token for “{0}” (shown once — copy it now):",
+    budgetLabel: "Daily limit (USD)",
+    noRelay: "Remote access isn’t set up yet, so other devices can’t connect. Skip for now; add devices under Devices once it is set up.",
+    relayWait: "Turning on remote access…", relayDown: "Remote access can’t connect right now; check this Mac’s network. It picks up again once connected.",
+    relayOn: "Devices can connect", relayOff: "Remote access is down; devices can’t connect now", relayNone: "This Mac only (no remote access)",
+    regionPaused: "This Mac’s region changed; calls are paused.", regionConfirm: "Confirm and resume",
+    appTokenFor: "Token for “{0}”", appTokenOnce: "Shown once — copy it now.",
     appName: "App name",
     tryText: "Hello",
-    never: "—", copy: "Copy", copied: "Copied",
+    never: "Not yet", copy: "Copy", copied: "Copied",
   },
 };
 
@@ -224,11 +224,17 @@ function applyTheme(v) {
 // with other localhost ports, unlike cookies) and goes with every call.
 function sessionSecret(v) { try { if (v === undefined) return sessionStorage.getItem("omnillm.session") || ""; sessionStorage.setItem("omnillm.session", v); } catch (_) { return ""; } }
 
+// Changes the owner makes (every POST): how many were sent, and how many
+// are still on their way. A status poll that overlaps one is dropped, so
+// it can't put back what was just changed (a pause switch flipping back).
+let changes = 0, changing = 0;
+
 async function api(path, body) {
   const opts = { method: body === undefined ? "GET" : "POST", credentials: "same-origin",
     headers: { "X-OmniLLM-Console": "1", "X-OmniLLM-Lang": lang, "X-OmniLLM-Session": sessionSecret() } };
-  if (body !== undefined) { opts.headers["Content-Type"] = "application/json"; opts.body = JSON.stringify(body); }
-  const r = await fetch("/console/api/" + path, opts);
+  if (body !== undefined) { opts.headers["Content-Type"] = "application/json"; opts.body = JSON.stringify(body); changes++; changing++; }
+  let r;
+  try { r = await fetch("/console/api/" + path, opts); } finally { if (body !== undefined) changing--; }
   let data = null;
   try { data = await r.json(); } catch (_) { data = null; }
   if (!r.ok) {
@@ -268,12 +274,24 @@ const money = (micro) => "$" + (micro / 1e6).toFixed(2);
 
 let S = null;
 
-// status asks for everything on the dashboard, with the Usage tab's range.
-const statusPath = () => "status?range=" + usageRange;
+// load asks for everything on the dashboard, with the Usage tab's range.
+// The answer is tagged with that range (S.range) and dropped (null) when
+// another range was picked meanwhile, or, for a poll, when the owner
+// changed something while it was on its way.
+async function load(poll) {
+  const range = usageRange, before = changes, busyBefore = changing;
+  const next = await api("status?range=" + range);
+  if (range !== usageRange || (poll && (busyBefore || changing || before !== changes))) return null;
+  for (const k of ["providers", "models", "devices", "apps", "usage", "range_usage", "model_usage"]) next[k] = next[k] || [];
+  next.range = range;
+  sortModels(next.models);
+  return next;
+}
 
 async function refresh() {
-  S = await api(statusPath());
-  for (const k of ["providers", "models", "devices", "apps", "usage", "range_usage", "model_usage"]) S[k] = S[k] || [];
+  const next = await load(false);
+  if (!next) return; // a newer range was asked for; its answer draws
+  S = next;
   renderStatus();
   if (!wizardDone() && (S.providers.length === 0 || (S.devices.length === 0 && !store("omnillm.skipPair")))) {
     showWizard();
@@ -305,14 +323,13 @@ setInterval(async () => {
 // something is being edited or a device is being added, so nothing typed
 // or on screen is thrown away.
 function busy() {
-  return !!(curPair || pairTimer || document.querySelector("tr.editing, .cap-edit, .pair-panel, .dialog-scrim"));
+  return !!(curPair || pairTimer || document.querySelector("tr.editing, tr.asking, .cap-edit, .pair-panel, .dialog-scrim"));
 }
 setInterval(async () => {
   if (!S || signedOut || document.hidden || $("dash").hidden || busy()) return;
   let next;
-  try { next = await api(statusPath()); } catch (_) { return; }
-  if ($("dash").hidden || busy()) return;
-  for (const k of ["providers", "models", "devices", "apps", "usage", "range_usage", "model_usage"]) next[k] = next[k] || [];
+  try { next = await load(true); } catch (_) { return; }
+  if (!next || $("dash").hidden || busy()) return;
   S = next;
   renderStatus();
   showDash();
@@ -353,9 +370,6 @@ function stepTo(n) {
   });
 }
 
-// The wizard's "Skip for now" line; startPair moves it under the QR code.
-const skipLine = $("skip-line");
-
 // fromDash: "Connect a model" was opened from the dashboard, so the
 // wizard offers a way back to it.
 let fromDash = false;
@@ -373,7 +387,7 @@ async function showWizard() {
     } catch (_) { /* no local model */ }
   } else if (S.devices.length === 0 && !store("omnillm.skipPair")) {
     stepTo(2);
-    startPair($("pair-area"), () => { stepTo(3); fillModels(); }, false, skipLine);
+    startPair($("pair-area"), () => { stepTo(3); fillModels(); }, false);
   } else {
     stepTo(3);
     fillModels();
@@ -384,7 +398,7 @@ function fillModels() {
   const sel = $("try-model");
   sel.textContent = "";
   for (const m of S.models) {
-    const o = el("option", modelName(m) + (m.locality === "local" ? " · " + t("local") : isSub(m) ? " · " + t("sub") : ""));
+    const o = el("option", m.locality === "local" ? withDot(modelName(m), t("local")) : isSub(m) ? withDot(modelName(m), t("sub")) : modelName(m));
     o.value = m.id;
     sel.append(o);
   }
@@ -415,14 +429,17 @@ $("ollama-use").addEventListener("click", async (ev) => {
   } catch (e) { toast(e.message, true); } finally { ev.target.disabled = false; }
 });
 
-// "Check again": a subscription logged in since the page opened is found
-// by status itself (and Ollama by showWizard), no reload needed.
+// "Check again": the hub connects every subscription signed in on this Mac
+// (even one removed before: asking is adding it again) and a running
+// Ollama, and says which.
 $("recheck").addEventListener("click", async (ev) => {
   const b = ev.currentTarget;
   b.disabled = true;
   try {
-    await refresh();
-    if (S.providers.length === 0) toast(t("recheckNone"));
+    const r = await api("providers/detect", {});
+    const names = r.connected || [];
+    toast(names.length ? t("connectedNames", names.join(lang === "zh" ? "、" : ", ")) : t("recheckNone"));
+    if (names.length) await refresh();
   } catch (e) { toast(e.message, true); } finally { b.disabled = false; }
 });
 
@@ -465,9 +482,8 @@ function closePair(area) {
 
 // startPair shows "add device" in area: a QR code for phones, pairing text
 // for computers, then the owner's yes or no. closable: the dashboard's
-// panel with its x. under: kept right under the QR caption, or under any
-// message shown instead of the code (the wizard's "Skip for now").
-async function startPair(area, onDone, closable, under) {
+// panel with its x. onDone gets the new device's id.
+async function startPair(area, onDone, closable) {
   const gen = ++pairGen;
   stopPair();
   cancelPair();
@@ -492,14 +508,12 @@ async function startPair(area, onDone, closable, under) {
     fresh();
     const again = el("button", label || t("pairNew"), "primary");
     again.type = "button";
-    again.addEventListener("click", () => startPair(area, onDone, closable, under));
+    again.addEventListener("click", () => startPair(area, onDone, closable));
     area.append(el("p", msg, isErr ? "err-text" : ""), again);
-    if (under) area.append(under);
   };
   fresh();
   if (!S.relay_configured) {
     area.append(el("p", t("noRelay"), "muted"));
-    if (under) area.append(under);
     return;
   }
   if (!S.relay_up) {
@@ -507,14 +521,13 @@ async function startPair(area, onDone, closable, under) {
     // down): wait for it here and carry on by itself.
     const w = el("p", t("relayWait"), "muted");
     area.append(w);
-    if (under) area.append(under);
     const since = Date.now();
     pairTimer = setInterval(async () => {
       let r;
       try { r = await api("relay"); } catch (_) { return; }
       if (gen !== pairGen) return;
       S.relay_up = r.relay_up; S.relay_configured = r.relay_configured;
-      if (r.relay_up || !r.relay_configured) { renderStatus(); startPair(area, onDone, closable, under); return; }
+      if (r.relay_up || !r.relay_configured) { renderStatus(); startPair(area, onDone, closable); return; }
       if (Date.now() - since > 15000) w.textContent = t("relayDown");
     }, 1000);
     return;
@@ -539,7 +552,6 @@ async function startPair(area, onDone, closable, under) {
   img.alt = "QR";
   img.src = p.qr;
   left.append(img, el("p", t("pairPhone", exp), "muted small"));
-  if (under) left.append(under);
   const right = el("div");
   const state = el("p", t("pairWait"), "muted");
   right.append(state);
@@ -565,6 +577,8 @@ async function startPair(area, onDone, closable, under) {
     if (st.state === "waiting" && Date.now() > expires) { ended(t("pairExpired")); return; }
     if (st.state === "confirm" && !asked) {
       asked = true;
+      // Only the question now: the QR code and the computer steps are done
+      // with, and the owner's eyes go straight to the number.
       const c = el("div", undefined, "confirm");
       c.append(el("p", t("pairConfirmQ", st.device_name)), el("div", String(st.code).replace(/^(\d{3})(\d{3})$/, "$1 $2"), "sas"));
       // The owner may name the device while confirming.
@@ -576,12 +590,19 @@ async function startPair(area, onDone, closable, under) {
       const yes = el("button", t("pairYes"), "primary");
       const no = el("button", t("pairNo"), "secondary");
       yes.type = no.type = "button";
-      const decide = async (v) => { yes.disabled = no.disabled = true; try { await api("pair/decide", { id: p.id, yes: v, name: v ? nameIn.value.trim() : "" }); } catch (e) { toast(e.message, true); } };
+      const decide = async (v) => {
+        yes.disabled = no.disabled = true;
+        try { await api("pair/decide", { id: p.id, yes: v, name: v ? nameIn.value.trim() : "" }); } catch (e) { yes.disabled = no.disabled = false; toast(e.message, true); }
+      };
       yes.addEventListener("click", () => decide(true));
       no.addEventListener("click", () => decide(false));
-      actions.append(yes, no);
+      nameIn.addEventListener("keydown", (e) => { if (e.key === "Enter" && !yes.disabled) decide(true); });
+      actions.append(no, yes);
       c.append(actions);
-      state.replaceWith(c);
+      box.hidden = true;
+      area.append(c);
+      c.scrollIntoView({ block: "center" });
+      yes.focus({ preventScroll: true });
     }
     if (st.state === "done") {
       stopPair();
@@ -589,12 +610,13 @@ async function startPair(area, onDone, closable, under) {
       area.textContent = "";
       area.append(el("p", t("pairDone", st.device_name)));
       toast(t("pairDone", st.device_name));
-      onDone && onDone();
+      onDone && onDone(st.device_id);
     }
     if (st.state === "failed") {
       curPair = null;
       if (st.reason === "denied") ended(t("pairDenied"));
       else if (st.reason === "left") ended(t("pairLeft"));
+      else if (st.reason === "relay") ended(st.message || t("pairStartOffline"), true);
       else if (st.reason === "expired") ended(t("pairExpired"));
       else ended(t("pairFailed", st.message || ""), true);
     }
@@ -622,12 +644,29 @@ function isSub(m) { const k = kindOf(m.provider); return k === "claude-code" || 
 function kindOf(name) { const p = S.providers.find((x) => x.name === name); return p ? p.kind : name; }
 function cell(row, text, cls) { const td = el("td", text, cls); row.append(td); return td; }
 
-function removeButton(label, path, id, q) {
+// removeButton: Remove in a table row; it asks in a line of its own right
+// under the row (the question, then Cancel and Remove).
+function removeButton(label, path, id, redraw) {
   const b = el("button", t("remove"), "danger");
   b.type = "button";
-  b.addEventListener("click", async () => {
-    if (!window.confirm(t(q || "removeConfirm", label))) return;
-    try { await api(path, { id }); toast(t("removed")); refresh(); } catch (e) { toast(e.message, true); }
+  b.addEventListener("click", () => {
+    const tr = b.closest("tr");
+    tr.classList.add("asking");
+    b.hidden = true;
+    const ask = el("tr", undefined, "asking ask-row");
+    const td = el("td"); td.colSpan = tr.cells.length;
+    const no = el("button", t("cancel"), "secondary small-btn"); no.type = "button";
+    const yes = el("button", t("remove"), "danger"); yes.type = "button";
+    no.addEventListener("click", redraw);
+    yes.addEventListener("click", async () => {
+      no.disabled = yes.disabled = true;
+      try { await api(path, { id }); toast(t("removed")); refresh(); } catch (e) { toast(e.message, true); no.disabled = yes.disabled = false; }
+    });
+    const btns = el("div", undefined, "btns"); btns.append(no, yes);
+    const line = el("div", undefined, "row-ask"); line.append(el("p", t("removeConfirm", label)), btns);
+    td.append(line); ask.append(td);
+    tr.after(ask);
+    no.focus();
   });
   return b;
 }
@@ -670,9 +709,16 @@ function seenText(td, online, iso) {
 }
 
 // nameCell: a device's or app's name, with a "Paused" chip when it is.
-function nameCell(tr, name, paused) {
-  const td = cell(tr, name, "nm");
-  if (paused) td.append(" ", el("span", t("pausedChip"), "tag paused-tag"));
+// On a phone-width window the row stacks: the name (after a dot while it
+// is online), and under it what it spent today against its limit.
+function nameCell(tr, name, paused, online, spent) {
+  const td = cell(tr, "", "nm");
+  const line = el("div", undefined, "nm-line");
+  if (online) { const dot = el("span", "", "dot-on narrow-only"); dot.setAttribute("role", "img"); dot.setAttribute("aria-label", t("online")); line.append(dot); }
+  line.append(el("span", name, "nm-text"));
+  if (paused) line.append(el("span", t("pausedChip"), "tag paused-tag"));
+  td.append(line);
+  if (spent) td.append(el("div", spent, "nm-sub narrow-only"));
   td.title = name;
   return td;
 }
@@ -699,9 +745,10 @@ function renderDevices() {
   tb.textContent = "";
   for (const d of S.devices) {
     const tr = el("tr", undefined, d.Paused ? "paused" : "");
-    nameCell(tr, d.Name, d.Paused);
+    const spent = spentText("device/" + d.ID, d.BudgetMicroUSD);
+    nameCell(tr, d.Name, d.Paused, d.Online, spent);
     seenText(cell(tr, "", "seen"), d.Online, d.LastSeen);
-    cell(tr, spentText("device/" + d.ID, d.BudgetMicroUSD), "spent");
+    cell(tr, spent, "spent");
     pauseSwitch(tr, d.Name, "devices/update", d.ID, d.Paused);
     const ed = el("button", t("edit"), "secondary small-btn");
     ed.type = "button";
@@ -751,7 +798,7 @@ function renderCap() {
     const fields = el("div", undefined, "cap-fields");
     fields.append(el("span", t("capLabel"), "cap-label"), wrap, lab);
     const btns = el("div", undefined, "btns");
-    btns.append(save, no);
+    btns.append(no, save);
     f.append(fields, btns);
     box.append(f);
     amt.focus();
@@ -759,31 +806,110 @@ function renderCap() {
   box.append(b);
 }
 
-// ---------- edit dialog for a device or an app ----------
+// ---------- edit dialogs ----------
+
+// dialog: the frame every edit dialog shares: a head with its title and
+// x, a body, and a foot with Cancel and then Save on the right (left: an
+// optional button such as Remove). With nothing changed, Esc, the x and
+// the backdrop close it; with unsaved changes the backdrop does nothing,
+// and Esc or the x ask first, in the foot. Enter in a field saves when
+// Save can. Tab stays inside. Questions are asked in the foot, never in a
+// browser window.
+function dialog(titleText) {
+  const opener = document.activeElement;
+  const scrim = el("div", undefined, "dialog-scrim");
+  const dlg = el("div", undefined, "dialog");
+  dlg.setAttribute("role", "dialog"); dlg.setAttribute("aria-modal", "true"); dlg.tabIndex = -1;
+  const head = el("div", undefined, "dialog-head");
+  const title = el("h2", titleText); title.id = "dlg-title";
+  dlg.setAttribute("aria-labelledby", title.id);
+  const xb = el("button", "", "close-x"); xb.type = "button"; xb.setAttribute("aria-label", t("close")); xb.title = t("close");
+  head.append(title, xb);
+  const body = el("div", undefined, "dialog-body");
+  const foot = el("div", undefined, "dialog-foot");
+  const no = el("button", t("cancel"), "secondary"); no.type = "button";
+  const save = el("button", t("save"), "primary"); save.type = "button";
+  const right = el("div", undefined, "btns"); right.append(no, save);
+  const d = { dlg, body, save, left: null, asking: false, dirty: () => false };
+  const onKey = (e) => {
+    if (e.key === "Escape") { e.preventDefault(); if (d.asking) d.showFoot(); else leave(); return; }
+    if (e.key === "Enter" && e.target.tagName === "INPUT" && e.target.type !== "checkbox" && dlg.contains(e.target)) {
+      e.preventDefault();
+      if (!save.disabled && !d.asking) save.click();
+      return;
+    }
+    if (e.key !== "Tab") return;
+    const f = [...dlg.querySelectorAll("button, input, select, textarea, [tabindex]")].filter((n) => !n.disabled && n.offsetParent !== null);
+    if (!f.length) return;
+    const first = f[0], last = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    else if (!dlg.contains(document.activeElement) || document.activeElement === dlg) { e.preventDefault(); first.focus(); }
+  };
+  d.close = () => { scrim.remove(); document.removeEventListener("keydown", onKey, true); if (opener && opener.isConnected) opener.focus(); };
+  // showFoot: the foot as it normally is.
+  d.showFoot = () => {
+    d.asking = false;
+    foot.textContent = ""; foot.classList.remove("asking");
+    if (d.left) foot.append(d.left);
+    foot.append(right);
+  };
+  // ask: a question in the foot: Cancel (or back) goes back to the form,
+  // the other button does it.
+  d.ask = (q, yesLabel, onYes, backLabel) => {
+    d.asking = true;
+    foot.textContent = ""; foot.classList.add("asking");
+    const back = el("button", backLabel || t("cancel"), "secondary"); back.type = "button";
+    const yes = el("button", yesLabel, "danger"); yes.type = "button";
+    back.addEventListener("click", () => { d.showFoot(); });
+    yes.addEventListener("click", async () => { back.disabled = yes.disabled = true; if (await onYes() === false) back.disabled = yes.disabled = false; });
+    const btns = el("div", undefined, "btns"); btns.append(back, yes);
+    foot.append(el("p", q, "foot-q"), btns);
+    back.focus();
+  };
+  const leave = () => { if (d.dirty()) d.ask(t("discardQ"), t("discard"), d.close, t("keepEditing")); else d.close(); };
+  xb.addEventListener("click", leave);
+  no.addEventListener("click", d.close);
+  document.addEventListener("keydown", onKey, true);
+  scrim.addEventListener("mousedown", (e) => { if (e.target === scrim && !d.dirty()) d.close(); });
+  dlg.append(head, body, foot);
+  scrim.append(dlg);
+  // open: shows it. On a wide screen the first field takes the caret, at
+  // the end of what is there; on a phone nothing is focused, so the
+  // keyboard does not cover the dialog before anything is chosen.
+  d.open = (field) => {
+    d.showFoot();
+    document.body.append(scrim);
+    if (field && matchMedia("(min-width: 601px)").matches) { field.focus(); const n = field.value.length; field.setSelectionRange(n, n); }
+    else dlg.focus({ preventScroll: true });
+  };
+  return d;
+}
+
+// section: a part of a dialog's body, with a heading when it has one.
+function section(body, label) {
+  const sec = el("section", undefined, "dlg-sec");
+  if (label) sec.append(el("h3", label));
+  body.append(sec);
+  return sec;
+}
+
+// usableByApp: apps make background calls only: no chat-only models.
+const usableByApp = (m) => !(m.human_only || m.group === "sub");
+// appHasModels: an app can use at least one connected model.
+function appHasModels(a) {
+  return S.models.some((m) => usableByApp(m) && (!(a.Models || []).length || a.Models.includes(m.id)));
+}
 
 // editDialog: everything about one device or app in one place: its name,
 // on or paused, its daily limit, the models it may use, and removing it.
-// Esc, the x or the backdrop close it; Save sends one update.
 function editDialog(kind, x) {
   const isApp = kind === "app";
   const path = isApp ? "apps/update" : "devices/update";
   const who = (isApp ? "app/" : "device/") + x.ID;
-  const opener = document.activeElement;
-  const scrim = el("div", undefined, "dialog-scrim");
-  const dlg = el("div", undefined, "dialog");
-  dlg.setAttribute("role", "dialog"); dlg.setAttribute("aria-modal", "true");
-  const close = () => { scrim.remove(); document.removeEventListener("keydown", onKey, true); if (opener && opener.isConnected) opener.focus(); };
-  // Head.
-  const head = el("div", undefined, "dialog-head");
-  const title = el("h2", t(isApp ? "editApp" : "editDevice", x.Name)); title.id = "dlg-title";
-  dlg.setAttribute("aria-labelledby", title.id);
-  const xb = el("button", "", "close-x"); xb.type = "button"; xb.setAttribute("aria-label", t("close")); xb.title = t("close");
-  xb.addEventListener("click", close);
-  head.append(title, xb);
-  const body = el("div", undefined, "dialog-body");
-  const section = (label) => { const sec = el("section", undefined, "dlg-sec"); sec.append(el("h3", label)); body.append(sec); return sec; };
-  // Basics.
-  const basics = section(t("secBasics"));
+  const d = dialog(t(isApp ? "editApp" : "editDevice", x.Name));
+  // The name, and what is known about it.
+  const basics = section(d.body);
   const nid = "dlg-name";
   const nl = el("label", t("name")); nl.htmlFor = nid;
   const name = el("input"); name.id = nid; name.maxLength = 64; name.value = x.Name;
@@ -793,12 +919,12 @@ function editDialog(kind, x) {
   info.push(t("infoSpent", money(u ? u.micro_usd : 0)));
   basics.append(nl, name, el("p", info.join(" · "), "muted small dlg-info"));
   // Status: on, or paused.
-  const status = section(t("secStatus"));
+  const status = section(d.body, t("secStatus"));
   const on = el("input"); on.type = "checkbox"; on.className = "switch"; on.checked = !x.Paused;
   const onl = el("label", undefined, "toggle"); onl.append(on, el("span", t("enabled")));
   status.append(onl, el("p", t(isApp ? "pauseHintApp" : "pauseHint"), "muted small"));
   // Daily limit.
-  const lim = section(t("budget"));
+  const lim = section(d.body, t("budget"));
   const unl = x.BudgetMicroUSD === NO_LIMIT;
   const [wrap, amt] = moneyInput(unl ? "5" : String(x.BudgetMicroUSD / 1e6), t("budgetLabel"));
   amt.disabled = unl;
@@ -807,12 +933,14 @@ function editDialog(kind, x) {
   const line = el("div", undefined, "budget-line"); line.append(wrap, nll);
   const lhint = el("p", t("limitHint", S.daily_total_micro_usd === NO_LIMIT ? t("noLimit") : money(S.daily_total_micro_usd)), "muted small");
   lim.append(line, lhint);
-  // Models it can use: all (also later ones), or the ones switched on.
-  const msec = section(t("secModels"));
+  // Models it can use: all (also later ones), or the ones switched on. A
+  // device never gets a model kept off devices; an app never a chat-only one.
+  const msec = section(d.body, t("secModels"));
+  const usable = (m) => isApp ? usableByApp(m) : !m.hidden;
+  if (isApp && !S.models.some(usableByApp)) msec.append(el("p", t("appNoModelsBody"), "warn-note"));
   const allSw = el("input"); allSw.type = "checkbox"; allSw.className = "switch"; allSw.checked = !(x.Models || []).length;
   const all = el("label", undefined, "toggle wrap"); all.append(allSw, el("span", t("allModels")));
   const list = el("div", undefined, "model-pick");
-  const usable = (m) => !(isApp && (m.human_only || m.group === "sub"));
   const picks = [];
   for (const [g, label] of [["sub", t("grpSub")], ["key", t("grpKey")], ["local", t("grpLocal")]]) {
     const ms = S.models.filter((m) => (m.group || "key") === g);
@@ -824,6 +952,7 @@ function editDialog(kind, x) {
       const row = el("label", undefined, "pick-row");
       const nm = el("span", modelName(m), "pick-name");
       if (m.human_only || g === "sub") nm.append(" ", el("span", t("humanOnly"), "tag"));
+      if (!isApp && m.hidden) nm.append(" ", el("span", t("hiddenTag"), "tag paused-tag"));
       const sw = el("input"); sw.type = "checkbox"; sw.className = "switch";
       sw.disabled = !usable(m);
       sw.checked = usable(m) && (x.Models || []).includes(m.id);
@@ -835,66 +964,99 @@ function editDialog(kind, x) {
   }
   const pickHint = el("p", t("pickOne"), "err-text small");
   msec.append(all, list, pickHint);
-  // Foot: remove on the left, cancel and save on the right.
-  const foot = el("div", undefined, "dialog-foot");
+  // Foot: Remove on the left; it asks in the foot first.
   const rm = el("button", t(isApp ? "removeApp" : "removeDevice"), "danger-text"); rm.type = "button";
-  rm.addEventListener("click", async () => {
-    if (!window.confirm(t(isApp ? "removeConfirm" : "removeDeviceConfirm", x.Name))) return;
-    try { await api(isApp ? "apps/remove" : "devices/remove", { id: x.ID }); close(); toast(t("removed")); refresh(); } catch (e) { toast(e.message, true); }
-  });
-  const no = el("button", t("cancel"), "secondary"); no.type = "button"; no.addEventListener("click", close);
-  const save = el("button", t("save"), "primary"); save.type = "button";
-  const right = el("div", undefined, "btns"); right.append(no, save);
-  foot.append(rm, right);
+  rm.addEventListener("click", () => d.ask(t("removeConfirm", x.Name), t("remove"), async () => {
+    try { await api(isApp ? "apps/remove" : "devices/remove", { id: x.ID }); d.close(); toast(t("removed")); refresh(); } catch (e) { toast(e.message, true); return false; }
+  }));
+  d.left = rm;
   // What the form says now, and whether that differs from what is saved.
   const chosen = () => picks.filter(([, sw]) => sw.checked && !sw.disabled).map(([id]) => id);
   const state = () => JSON.stringify([name.value.trim(), on.checked, nolim.checked, nolim.checked ? 0 : dollars(amt.value), allSw.checked ? [] : chosen()]);
   const start = state();
+  d.dirty = () => state() !== start;
   const sync = () => {
     amt.disabled = nolim.checked;
     lhint.hidden = !nolim.checked;
     list.hidden = allSw.checked;
     const none = !allSw.checked && chosen().length === 0;
     pickHint.hidden = !none;
-    save.disabled = none || state() === start;
+    d.save.disabled = none || !name.value.trim() || !d.dirty();
   };
   allSw.addEventListener("change", () => {
     // Turning "all" off starts from everything it may use.
     if (!allSw.checked && chosen().length === 0) picks.forEach(([, sw]) => { if (!sw.disabled) sw.checked = true; });
     sync();
   });
-  dlg.addEventListener("input", sync);
-  dlg.addEventListener("change", sync);
-  save.addEventListener("click", async () => {
+  d.dlg.addEventListener("input", sync);
+  d.dlg.addEventListener("change", sync);
+  d.save.addEventListener("click", async () => {
     const b = { id: x.ID, name: name.value, paused: !on.checked, models: allSw.checked ? [] : chosen() };
     if (nolim.checked) b.no_limit = true; else b.budget_usd = dollars(amt.value);
-    save.disabled = true;
-    try { await api(path, b); close(); toast(t("saved")); await refresh(); } catch (e) { toast(e.message, true); sync(); }
+    d.save.disabled = true;
+    try { await api(path, b); d.close(); toast(t("saved")); await refresh(); } catch (e) { toast(e.message, true); sync(); }
   });
-  // Keys: Esc closes; Tab stays inside the dialog.
-  const onKey = (e) => {
-    if (e.key === "Escape") { e.preventDefault(); close(); return; }
-    if (e.key !== "Tab") return;
-    const f = [...dlg.querySelectorAll("button, input, select, textarea, [tabindex]")].filter((n) => !n.disabled && n.offsetParent !== null);
-    if (!f.length) return;
-    const first = f[0], last = f[f.length - 1];
-    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
-    else if (!dlg.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
-  };
-  document.addEventListener("keydown", onKey, true);
-  scrim.addEventListener("mousedown", (e) => { if (e.target === scrim) close(); });
-  dlg.append(head, body, foot);
-  scrim.append(dlg);
-  document.body.append(scrim);
   sync();
-  name.focus(); name.select();
+  d.open(name);
 }
 
-// modelName: Codex without a known model is "ChatGPT (Codex)" in every row.
+// modelDialog: one model's name and switches, for a phone-width window
+// where the table keeps only the name and an Edit button.
+function modelDialog(m) {
+  const cur = modelName(m);
+  const d = dialog(t("editModel", cur));
+  const sec = section(d.body);
+  const nl = el("label", t("name")); nl.htmlFor = "dlg-model-name";
+  const name = el("input"); name.id = "dlg-model-name"; name.maxLength = 64; name.value = cur;
+  sec.append(nl, name);
+  const sw = (checked, label) => {
+    const box = el("input"); box.type = "checkbox"; box.className = "switch"; box.checked = checked;
+    const l = el("label", undefined, "toggle wrap"); l.append(box, el("span", label));
+    return [l, box];
+  };
+  const [sl, shown] = sw(!m.hidden, t("showOnDevices"));
+  const [hl, human] = sw(!!m.human_only || isSub(m), t("humanOnly"));
+  human.disabled = isSub(m);
+  const opts = section(d.body);
+  opts.append(sl, hl);
+  if (isSub(m)) opts.append(el("p", t("subAlways"), "muted small"));
+  // Only what changed is sent; an unchanged name is not a rename.
+  const diff = () => {
+    const b = {};
+    if (name.value.trim() !== cur) b.name = name.value.trim();
+    if (shown.checked === !!m.hidden) b.shown = shown.checked;
+    if (!isSub(m) && human.checked !== !!m.human_only) b.human_only = human.checked;
+    return b;
+  };
+  d.dirty = () => Object.keys(diff()).length > 0;
+  const sync = () => { d.save.disabled = !d.dirty(); };
+  d.dlg.addEventListener("input", sync);
+  d.dlg.addEventListener("change", sync);
+  d.save.addEventListener("click", async () => {
+    d.save.disabled = true;
+    try { await api("models/set", { id: m.id, ...diff() }); d.close(); toast(t("saved")); await refresh(); } catch (e) { toast(e.message, true); sync(); }
+  });
+  sync();
+  d.open(name);
+}
+
+// modelName: a model as people see it here: the owner's own name as it
+// is; else Codex is "ChatGPT (Codex)", and a model that follows its
+// family's newest version (not known yet) says so, in the page's language.
 function modelName(m) {
-  if (kindOf(m.provider) === "codex" && /^(codex|chatgpt)\b/i.test(m.display_name) && !/\d/.test(m.display_name)) return t("codexName");
-  return m.display_name;
+  if (m.renamed) return m.display_name;
+  if ((m.kind || kindOf(m.provider)) === "codex") return t("codexName");
+  return m.display_name + (m.latest ? t("latest") : "");
+}
+// withDot: "a · b", with no space after a full-width bracket
+// ("ChatGPT（Codex）· 订阅").
+const withDot = (a, b) => a + (/[）」』】]$/.test(a) ? "· " : " · ") + b;
+// sortModels: the models of one source stay together, in the order the
+// sources come; Claude's go Opus, Sonnet, Haiku.
+function sortModels(ms) {
+  const src = [...new Set(ms.map((m) => m.provider))];
+  const rank = (m) => { const id = m.id.toLowerCase(); return id.includes("opus") ? 0 : id.includes("sonnet") ? 1 : id.includes("haiku") ? 2 : 3; };
+  ms.sort((a, b) => src.indexOf(a.provider) - src.indexOf(b.provider) || rank(a) - rank(b));
 }
 // vendorChip: where a model's messages go: this Mac, or the company that
 // runs it in the cloud.
@@ -937,7 +1099,7 @@ function renderModels() {
   for (const m of S.models) {
     const tr = el("tr");
     const name = modelName(m);
-    const nc = cell(tr, name + (isSub(m) ? " · " + t("sub") : ""), "nm");
+    const nc = cell(tr, isSub(m) ? withDot(name, t("sub")) : name, "nm");
     // On a phone the chip sits under the name (its own column is hidden).
     nc.append(el("br", undefined, "narrow-only"), vendorChip(m)); nc.lastChild.classList.add("narrow-only");
     cell(tr, "").append(vendorChip(m));
@@ -949,9 +1111,12 @@ function renderModels() {
       try { await api("models/set", { id: m.id, shown: box.checked }); toast(t("saved")); m.hidden = !box.checked; } catch (e) { box.checked = !box.checked; toast(e.message, true); }
     });
     const act = cell(tr, "", "actions");
-    const rn = el("button", t("rename"), "secondary small-btn"); rn.type = "button";
+    const rn = el("button", t("rename"), "secondary small-btn wide-only"); rn.type = "button";
     rn.addEventListener("click", () => renameModel(tr, nc, act, m, name));
-    act.append(rn);
+    // A phone-width window keeps the name and this; the rest is in a dialog.
+    const ed = el("button", t("edit"), "secondary small-btn narrow-only"); ed.type = "button";
+    ed.addEventListener("click", () => modelDialog(m));
+    act.append(rn, ed);
     tb.append(tr);
   }
   const pb = $("providers");
@@ -959,11 +1124,11 @@ function renderModels() {
   for (const p of S.providers) {
     const tr = el("tr");
     const label = p.kind === "claude-code" ? t("claudeSub") : p.kind === "codex" ? t("codexName") : (p.display_name || p.name);
-    const nc = cell(tr, label + (p.local ? " · " + t("local") : ""));
+    const nc = cell(tr, p.local ? withDot(label, t("local")) : label);
     const pt = problemText(p);
     if (pt) { nc.append(document.createElement("br"), el("span", pt, "tag warn-tag")); }
     cell(tr, p.subscription ? t("subLogin") : p.key_last4 ? "API Key …" + p.key_last4 : t("local"));
-    cell(tr, "", "actions").append(removeButton(label, "providers/remove", p.name));
+    cell(tr, "", "actions").append(removeButton(label, "providers/remove", p.name, renderModels));
     pb.append(tr);
   }
 }
@@ -978,15 +1143,17 @@ function renameModel(tr, nc, act, m, cur) {
   act.textContent = "";
   const save = el("button", t("save"), "primary small-btn"); save.type = "button";
   const no = el("button", t("cancel"), "secondary small-btn"); no.type = "button";
-  act.append(save, no);
+  act.append(no, save);
   const submit = async () => {
+    // The name as it was is not a rename: nothing to send.
+    if (inp.value.trim() === cur) { renderModels(); return; }
     save.disabled = true;
     try { await api("models/set", { id: m.id, name: inp.value.trim() }); toast(t("saved")); await refresh(); } catch (e) { toast(e.message, true); save.disabled = false; }
   };
   save.addEventListener("click", submit);
   no.addEventListener("click", renderModels);
   inp.addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); if (e.key === "Escape") renderModels(); });
-  inp.focus(); inp.select();
+  inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length);
 }
 
 function renderApps() {
@@ -994,8 +1161,12 @@ function renderApps() {
   tb.textContent = "";
   for (const a of S.apps) {
     const tr = el("tr", undefined, a.Paused ? "paused" : "");
-    nameCell(tr, a.Name, a.Paused);
-    cell(tr, spentText("app/" + a.ID, a.BudgetMicroUSD), "spent");
+    const spent = spentText("app/" + a.ID, a.BudgetMicroUSD);
+    const nc = nameCell(tr, a.Name, a.Paused, false, spent);
+    // Nothing it may use works for apps (only subscriptions or chat-only
+    // models are connected, or its own list has none left).
+    if (!appHasModels(a)) nc.firstChild.append(el("span", t("appNoModels"), "tag warn-tag"));
+    cell(tr, spent, "spent");
     pauseSwitch(tr, a.Name, "apps/update", a.ID, a.Paused);
     const ed = el("button", t("edit"), "secondary small-btn");
     ed.type = "button";
@@ -1008,15 +1179,18 @@ function renderApps() {
 
 // The Usage tab's range, kept for next time: today, yesterday or week.
 let usageRange = ["today", "yesterday", "week"].includes(store("omnillm.range")) ? store("omnillm.range") : "today";
-// rangeWords: the range's heading, total line and empty line.
-const rangeWords = () => usageRange === "yesterday" ? [t("headYesterday"), t("totalYesterday"), t("emptyYesterday")]
-  : usageRange === "week" ? [t("headWeek"), t("totalWeek"), t("emptyWeek")] : [t("headToday"), t("totalToday"), t("emptyToday")];
+// rangeWords: the total line and empty line of the range the data is for.
+const rangeWords = (r) => r === "yesterday" ? [t("totalYesterday"), t("emptyYesterday")]
+  : r === "week" ? [t("totalWeek"), t("emptyWeek")] : [t("totalToday"), t("emptyToday")];
+const pressRange = () => document.querySelectorAll("#usage-range button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.range === usageRange)));
+// A click shows the new choice at once; the tables change when that
+// range's numbers arrive (an older answer that comes later is dropped).
 document.querySelectorAll("#usage-range button").forEach((b) => {
   b.addEventListener("click", async () => {
     if (b.dataset.range === usageRange) return;
     usageRange = b.dataset.range;
     store("omnillm.range", usageRange);
-    renderUsage();
+    pressRange();
     try { await refresh(); } catch (e) { toast(e.message, true); }
   });
 });
@@ -1026,9 +1200,9 @@ document.querySelectorAll("#usage-range button").forEach((b) => {
 // total at the bottom. Below it the same per model.
 const num = (n) => Number(n || 0).toLocaleString(lang === "zh" ? "zh-CN" : "en-US");
 function renderUsage() {
-  document.querySelectorAll("#usage-range button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.range === usageRange)));
-  const [head, totalLabel, emptyText] = rangeWords();
-  $("usage-body").textContent = t("usageBody", head);
+  pressRange();
+  const [totalLabel, emptyText] = rangeWords(S.range);
+  $("usage-body").textContent = t("usageBody");
   const tb = $("usage"), foot = $("usage-total");
   tb.textContent = ""; foot.textContent = "";
   const paused = new Set([...S.devices.filter((d) => d.Paused).map((d) => "device/" + d.ID), ...S.apps.filter((a) => a.Paused).map((a) => "app/" + a.ID)]);
@@ -1059,8 +1233,8 @@ function renderUsage() {
   $("usage-empty").textContent = emptyText;
   $("usage-empty").hidden = rows.length > 0;
   // By model: the same range, one line per model by its name.
-  const mt = $("usage-models");
-  mt.textContent = "";
+  const mt = $("usage-models"), mfoot = $("usage-models-total");
+  mt.textContent = ""; mfoot.textContent = "";
   const mrows = [], mgone = { calls: 0, micro_usd: 0, input_tokens: 0, output_tokens: 0, n: 0 };
   for (const u of S.model_usage || []) {
     if (u.removed) {
@@ -1073,7 +1247,15 @@ function renderUsage() {
   }
   mrows.sort((a, b) => b.calls - a.calls);
   if (mgone.n) mrows.push({ ...mgone, label: t("modelsGone", mgone.n), muted: true });
+  // Calls from before use was kept per model are in the total above but in
+  // no model's line: one line says so, so the two totals agree.
+  const fields = ["calls", "micro_usd", "input_tokens", "output_tokens"];
+  const sum = Object.fromEntries(fields.map((k) => [k, mrows.reduce((n, u) => n + (u[k] || 0), 0)]));
+  if (total && mrows.length && (total.calls > sum.calls || total.micro_usd > sum.micro_usd)) {
+    mrows.push({ ...Object.fromEntries(fields.map((k) => [k, Math.max(0, (total[k] || 0) - sum[k])])), label: t("byModelEarlier"), muted: true });
+  }
   mrows.forEach((u) => line(u, mt));
+  if (mrows.length) line({ ...(total || sum), label: t("byModelTotal") }, mfoot, "total");
   $("usage-models-box").hidden = mrows.length === 0;
 }
 
@@ -1085,19 +1267,47 @@ document.querySelectorAll(".tabs button").forEach((b) => {
   });
 });
 
-$("add-device").addEventListener("click", () => startPair($("pair-dash"), () => { closePair($("pair-dash")); refresh(); }, true));
+$("add-device").addEventListener("click", () => startPair($("pair-dash"), (id) => { closePair($("pair-dash")); afterPair(id); }, true));
+
+// afterPair: the new device opens its session a moment after it is
+// added; look again (every second, for up to 10 s) until it shows online.
+function afterPair(id) {
+  let n = 0;
+  const look = async () => {
+    try { await refresh(); } catch (_) { return; }
+    const d = S.devices.find((x) => x.ID === id);
+    if (d && !d.Online && ++n < 10 && !signedOut) setTimeout(look, 1000);
+  };
+  look();
+}
 $("add-provider").addEventListener("click", () => { store("omnillm.wizard", ""); fromDash = true; S.providers = []; showWizard(); });
 $("wiz-back").addEventListener("click", async () => { fromDash = false; store("omnillm.wizard", "done"); try { await refresh(); } catch (e) { toast(e.message, true); } });
-$("add-app").addEventListener("click", async () => {
-  const name = window.prompt(t("appName"));
+// "Add app": a name field in place, then the app's token, shown this once
+// with its Copy button.
+const appForm = $("app-add"), appName = $("app-name");
+const closeAppForm = () => { appForm.hidden = true; $("add-app").hidden = false; appName.value = ""; };
+$("add-app").addEventListener("click", () => {
+  appForm.hidden = false; $("add-app").hidden = true; $("app-add-ok").disabled = true;
+  appName.focus();
+});
+appName.addEventListener("input", () => { $("app-add-ok").disabled = !appName.value.trim(); });
+appName.addEventListener("keydown", (e) => { if (e.key === "Escape") closeAppForm(); });
+$("app-add-cancel").addEventListener("click", closeAppForm);
+appForm.addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const name = appName.value.trim();
   if (!name) return;
+  const ok = $("app-add-ok");
+  ok.disabled = true;
   try {
     const r = await api("apps/add", { name });
+    closeAppForm();
     const box = $("app-token");
+    box.textContent = "";
+    box.append(el("p", t("appTokenFor", r.name), "token-for"), codeBox(r.token), el("p", t("appTokenOnce"), "muted small"));
     box.hidden = false;
-    box.textContent = t("appToken", r.name) + "\n" + r.token;
     refresh();
-  } catch (e) { toast(e.message, true); }
+  } catch (e) { toast(e.message, true); ok.disabled = false; }
 });
 
 $("lang").addEventListener("click", () => { lang = lang === "zh" ? "en" : "zh"; store("omnillm.lang", lang); applyLang(); if (S) { renderStatus(); if (!$("dash").hidden) showDash(); } });

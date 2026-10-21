@@ -28,7 +28,7 @@ type mailboxConn struct {
 	link   *relaylink.HubLink
 	in     chan []byte
 	ctx    context.Context
-	cancel context.CancelFunc
+	cancel context.CancelCauseFunc
 	once   sync.Once
 }
 
@@ -52,7 +52,15 @@ func (c *mailboxConn) WriteMessage(ctx context.Context, b []byte) error {
 
 func (c *mailboxConn) Close() error { c.close(); return nil }
 
-func (c *mailboxConn) close() { c.once.Do(c.cancel) }
+func (c *mailboxConn) close() { c.closeCause(nil) }
+
+// closeCause ends the connection and says why, for whoever is still
+// working on it (a pairing whose owner is being asked).
+func (c *mailboxConn) closeCause(err error) { c.once.Do(func() { c.cancel(err) }) }
+
+// errLinkDown ends every session when this Mac's own link to the relay
+// drops: the device did not leave, the Mac lost remote access.
+var errLinkDown = errors.New("hub: the relay link dropped")
 
 func gen(b []byte) uint64 {
 	if len(b) != 8 {
@@ -111,7 +119,7 @@ func (h *Hub) dispatch(link *relaylink.HubLink) {
 			h.sessions = map[relayproto.ID]*mailboxConn{}
 			h.mu.Unlock()
 			for _, c := range old {
-				c.close()
+				c.closeCause(errLinkDown)
 			}
 		case relayproto.ClaimFail:
 			h.opts.Logf("hub: the relay refused a mailbox claim")
@@ -120,7 +128,7 @@ func (h *Hub) dispatch(link *relaylink.HubLink) {
 }
 
 func (h *Hub) openSession(link *relaylink.HubLink, id relayproto.ID, g uint64) {
-	ctx, cancel := context.WithCancel(h.ctx)
+	ctx, cancel := context.WithCancelCause(h.ctx)
 	c := &mailboxConn{id: id, gen: g, link: link, in: make(chan []byte, 64), ctx: ctx, cancel: cancel}
 	h.mu.Lock()
 	if old := h.sessions[id]; old != nil {
@@ -213,7 +221,7 @@ func (h *Hub) serveDevice(ctx context.Context, c *mailboxConn) {
 		return
 	}
 	defer sess.Close()
-	ds := &devSession{h: h, sess: sess, devID: d.ID, cancels: map[uint64]context.CancelFunc{}, tools: map[uint64]chan proto.Envelope{}}
+	ds := &devSession{h: h, sess: sess, devID: d.ID, cancels: map[uint64]context.CancelCauseFunc{}, tools: map[uint64]chan proto.Envelope{}}
 	defer ds.cancelAll()
 	registered := false
 	defer func() {
@@ -259,7 +267,7 @@ type devSession struct {
 	devID   string
 	mu      sync.Mutex
 	closed  bool
-	cancels map[uint64]context.CancelFunc
+	cancels map[uint64]context.CancelCauseFunc
 	tools   map[uint64]chan proto.Envelope
 	active  atomic.Int32
 	nextID  atomic.Uint64
@@ -283,7 +291,7 @@ func (ds *devSession) cancelAll() {
 	defer ds.mu.Unlock()
 	ds.closed = true
 	for _, c := range ds.cancels {
-		c()
+		c(nil)
 	}
 	for _, ch := range ds.tools {
 		close(ch)
@@ -319,7 +327,7 @@ func (ds *devSession) handle(ctx context.Context, env proto.Envelope, d Device) 
 	case proto.TChatCancel:
 		ds.mu.Lock()
 		if c := ds.cancels[env.ID]; c != nil {
-			c()
+			c(nil)
 		}
 		ds.mu.Unlock()
 	case proto.TToolResult:
@@ -381,11 +389,11 @@ func (ds *devSession) startChat(ctx context.Context, env proto.Envelope, d Devic
 		ds.h.sendErr(ctx, ds.sess, id, &omnillm.Error{Code: omnillm.CodeBusy, Msg: omnillm.MsgBusyQueue, RetryAfter: 5 * time.Second})
 		return
 	}
-	cctx, cancel := context.WithCancel(ctx)
+	cctx, cancel := context.WithCancelCause(ctx)
 	ds.mu.Lock()
 	if _, dup := ds.cancels[id]; dup || ds.closed {
 		ds.mu.Unlock()
-		cancel()
+		cancel(nil)
 		ds.active.Add(-1)
 		return
 	}
@@ -397,7 +405,7 @@ func (ds *devSession) startChat(ctx context.Context, env proto.Envelope, d Devic
 	go func() {
 		defer ds.h.wg.Done()
 		defer func() {
-			cancel()
+			cancel(nil)
 			ds.mu.Lock()
 			delete(ds.cancels, id)
 			ds.mu.Unlock()
@@ -405,7 +413,7 @@ func (ds *devSession) startChat(ctx context.Context, env proto.Envelope, d Devic
 		}()
 		s, err := ds.h.complete(cctx, p, req)
 		if err != nil {
-			ds.h.sendErr(ctx, ds.sess, id, err)
+			ds.h.sendErr(ctx, ds.sess, id, stopCause(cctx, err))
 			return
 		}
 		defer s.Close()
@@ -446,10 +454,19 @@ func (ds *devSession) relayStream(ctx, cctx context.Context, id uint64, s omnill
 		buf.Reset()
 		return err == nil
 	}
+	// stopped: the hub ended the chat (the owner paused this device); the
+	// device hears why, after what was already said. A cancel the device
+	// asked for itself needs no answer.
+	stopped := func() {
+		if err := stopCause(cctx, nil); err != nil && flush() {
+			ds.h.sendErr(ctx, ds.sess, id, err)
+		}
+	}
 	for {
 		select {
 		case it, ok := <-ch:
 			if !ok {
+				stopped()
 				return
 			}
 			if it.model != "" {
@@ -467,7 +484,7 @@ func (ds *devSession) relayStream(ctx, cctx context.Context, id uint64, s omnill
 					u := s.Usage()
 					_ = ds.send(ctx, proto.Envelope{T: proto.TChatEnd, ID: id, Usage: &u, Finish: s.FinishReason()})
 				} else {
-					ds.h.sendErr(ctx, ds.sess, id, it.err)
+					ds.h.sendErr(ctx, ds.sess, id, stopCause(cctx, it.err))
 				}
 				return
 			}
@@ -479,8 +496,45 @@ func (ds *devSession) relayStream(ctx, cctx context.Context, id uint64, s omnill
 				return
 			}
 		case <-cctx.Done():
+			stopped()
 			return
 		}
+	}
+}
+
+// stopCause is why the hub stopped a chat, when it did (the owner paused
+// the device), else err.
+func stopCause(cctx context.Context, err error) error {
+	var oe *omnillm.Error
+	if c := context.Cause(cctx); c != nil && errors.As(c, &oe) && oe.Code == omnillm.CodeDevicePaused {
+		return c
+	}
+	return err
+}
+
+// stopChats ends every reply this session is giving, telling the device
+// why (err).
+func (ds *devSession) stopChats(err error) {
+	ds.mu.Lock()
+	defer ds.mu.Unlock()
+	for _, c := range ds.cancels {
+		c(err)
+	}
+}
+
+// stopDeviceChats ends the replies a device is being given right now (it
+// was paused): pausing stops a reply in progress, not only the next one.
+func (h *Hub) stopDeviceChats(id string, err error) {
+	h.mu.Lock()
+	var ss []*devSession
+	for _, e := range h.devSessions {
+		if e.deviceID == id {
+			ss = append(ss, e.s)
+		}
+	}
+	h.mu.Unlock()
+	for _, s := range ss {
+		s.stopChats(err)
 	}
 }
 

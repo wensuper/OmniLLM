@@ -163,6 +163,7 @@ func (s *Server) Handler() http.Handler {
 	api("GET /console/api/ollama", s.ollama)
 	api("POST /console/api/providers/add", s.addProvider)
 	api("POST /console/api/providers/remove", s.removeProvider)
+	api("POST /console/api/providers/detect", s.detectProviders)
 	api("POST /console/api/models/set", s.setModel)
 	api("POST /console/api/devices/remove", s.removeDevice)
 	api("POST /console/api/devices/update", s.updateDevice)
@@ -388,7 +389,7 @@ func writeErr(w http.ResponseWriter, r *http.Request, status int, err error) {
 	msg := omnillm.Describe(lang(r), e)
 	if e.Msg == msgLoginExpired {
 		msg = map[string]string{"zh": "登录已失效。点菜单栏里的 OmniLLM 图标，选“打开控制台”，或者在终端运行 omnillm open。",
-			"en": "This login has expired. Click the OmniLLM icon in the menu bar and choose Open the console, or run omnillm open in Terminal."}[lang(r)]
+			"en": "This login has expired. Click the OmniLLM icon in the menu bar and choose “Open the console”, or run omnillm open in Terminal."}[lang(r)]
 	}
 	if status == 0 {
 		status = omnillm.HTTPStatus(e.Code)
@@ -549,6 +550,18 @@ func (s *Server) addProvider(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, map[string]any{"models": ms})
+}
+
+// detectProviders is "Check again": every subscription program logged in
+// on this Mac (even one removed before: asking is adding it again) and a
+// running Ollama are connected now; the page names what was.
+func (s *Server) detectProviders(w http.ResponseWriter, r *http.Request) {
+	names, err := s.hub.DetectNow(r.Context())
+	if err != nil {
+		writeErr(w, r, 0, err)
+		return
+	}
+	writeJSON(w, map[string]any{"connected": orEmpty(names)})
 }
 
 type idBody struct {
@@ -896,12 +909,15 @@ func (s *Server) pairGet(w http.ResponseWriter, r *http.Request) {
 // pairReason tells the page why a pairing ended, so it can say "refused"
 // or "expired" in its own words and offer a new QR code: denied (the owner
 // said no), left (the device cancelled or lost its connection while the
-// owner was asked), expired (the code ran out or was cancelled), or failed.
+// owner was asked), relay (this Mac lost remote access; the message says
+// so), expired (the code ran out or was cancelled), or failed.
 func pairReason(err error) string {
 	e := omnillm.AsError(err)
 	switch {
 	case errors.Is(err, hub.ErrPairingDeviceLeft):
 		return "left"
+	case e.Msg == omnillm.MsgRelayUnavailable:
+		return "relay"
 	case e.Code == omnillm.CodePairingDenied:
 		return "denied"
 	case e.Msg == omnillm.MsgPairingExpired, errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):

@@ -201,6 +201,19 @@ type ModelInfo struct {
 	// For a device it is still Remote (the data leaves the device); this
 	// only lets a screen say "on your Mac".
 	OnHost bool `json:"on_host,omitempty"`
+	// Latest: the model follows its family's newest version and no call
+	// has said which one yet. DisplayName is then the family alone
+	// ("Claude Sonnet"); a screen adds "（最新版）" / " (latest)" in its
+	// own language.
+	Latest bool `json:"latest,omitempty"`
+	// Kind is the provider's kind ("claude-code", "codex", "openai",
+	// "ollama", …). A screen names a Codex model "ChatGPT（Codex）" /
+	// "ChatGPT (Codex)" in its own language from it; DisplayName holds
+	// the English form for screens that do not.
+	Kind string `json:"kind,omitempty"`
+	// Renamed: DisplayName is the owner's own name for the model, to be
+	// shown as it is (no suffix, no translation).
+	Renamed bool `json:"renamed,omitempty"`
 }
 
 // Code is a stable error code. Local API status codes map 1:1 (design §6).

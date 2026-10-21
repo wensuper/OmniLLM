@@ -86,7 +86,7 @@
     <div id="w2" hidden>
       <h1 data-t="w2Title"></h1>
       <div id="pair-area"></div>
-      <!-- Moved under the QR caption by startPair. -->
+      <!-- Always at the bottom of the step. -->
       <p class="muted skip-line" id="skip-line"><button type="button" class="link" id="skip-pair" data-t="skipPair"></button></p>
     </div>
 
@@ -137,7 +137,12 @@
 
     <div class="tab" id="tab-apps" hidden>
       <div class="row-head"><p class="muted" data-t="appsBody"></p><button type="button" class="primary" id="add-app" data-t="addApp"></button></div>
-      <div id="app-token" class="secret" hidden></div>
+      <!-- "Add app": its name in place, then its token, shown once. -->
+      <form id="app-add" class="inline-add" autocomplete="off" hidden>
+        <label for="app-name" data-t="appName"></label>
+        <div class="inline-row"><input id="app-name" maxlength="64" spellcheck="false"><div class="btns"><button type="button" class="secondary" id="app-add-cancel" data-t="cancel"></button><button type="submit" class="primary" id="app-add-ok" data-t="add"></button></div></div>
+      </form>
+      <div id="app-token" class="token-box" hidden></div>
       <table class="fixed apps-table"><colgroup><col><col class="c-budget"><col class="c-sw"><col class="c-act"></colgroup>
         <thead><tr><th data-t="name"></th><th data-t="todayBudget"></th><th data-t="enabled" class="sw"></th><th></th></tr></thead><tbody id="apps"></tbody></table>
       <p class="empty" id="apps-empty" data-t="noApps" hidden></p>
@@ -149,11 +154,14 @@
         <button type="button" data-range="today" data-t="rangeToday"></button><button type="button" data-range="yesterday" data-t="rangeYesterday"></button><button type="button" data-range="week" data-t="rangeWeek"></button>
       </div>
       <p class="muted" id="usage-body"></p>
-      <table><thead><tr><th data-t="who"></th><th data-t="calls" class="num"></th><th data-t="spend" class="num"></th><th data-t="tokens" data-tip="tokensTip" class="num narrow-hide"></th></tr></thead><tbody id="usage"></tbody><tfoot id="usage-total"></tfoot></table>
+      <!-- Both usage tables share their column widths, so they line up. -->
+      <table class="usage-table"><colgroup><col><col class="c-num"><col class="c-num"><col class="c-tok"></colgroup>
+        <thead><tr><th data-t="who"></th><th data-t="calls" class="num"></th><th data-t="spend" class="num"></th><th data-t="tokens" class="num narrow-hide"></th></tr></thead><tbody id="usage"></tbody><tfoot id="usage-total"></tfoot></table>
       <p class="empty" id="usage-empty" hidden></p>
       <div id="usage-models-box" hidden>
         <h3 data-t="byModel"></h3>
-        <table><thead><tr><th data-t="model"></th><th data-t="calls" class="num"></th><th data-t="spend" class="num"></th><th data-t="tokens" data-tip="tokensTip" class="num narrow-hide"></th></tr></thead><tbody id="usage-models"></tbody></table>
+        <table class="usage-table"><colgroup><col><col class="c-num"><col class="c-num"><col class="c-tok"></colgroup>
+          <thead><tr><th data-t="model"></th><th data-t="calls" class="num"></th><th data-t="spend" class="num"></th><th data-t="tokens" class="num narrow-hide"></th></tr></thead><tbody id="usage-models"></tbody><tfoot id="usage-models-total"></tfoot></table>
       </div>
     </div>
   </section>

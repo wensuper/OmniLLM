@@ -2,8 +2,11 @@ package main
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -54,7 +57,7 @@ func TestUpdateLines(t *testing.T) {
 		t.Fatal(c)
 	}
 	s.Checking = true
-	if c, click, _ := checkLine(cur, s, now); c != "正在检查更新…" || click {
+	if c, click, _ := checkLine(cur, s, now); c != "正在检查更新……" || click {
 		t.Fatal(c)
 	}
 	s = s.checked(cur, "v0.2.0-alpha.9", nil, now)
@@ -69,22 +72,33 @@ func TestUpdateLines(t *testing.T) {
 		t.Fatal(c)
 	}
 	s = s.checked(cur, "v0.2.0-alpha.10", nil, now)
-	if v, inst := versionLine(cur, s); v != "有新版本 v0.2.0-alpha.10 · 点击更新" || !inst {
+	if v, inst := versionLine(cur, s); v != "有新版本 v0.2.0-alpha.10 · 点击更新（正在进行的回答会中断）" || !inst {
 		t.Fatal(v)
 	}
 	if _, _, show := checkLine(cur, s, now); show {
 		t.Fatal("check line shown while an update is offered")
 	}
 	s.Installing = s.Latest
-	if v, inst := versionLine(cur, s); v != "正在更新到 v0.2.0-alpha.10…" || inst {
+	if v, inst := versionLine(cur, s); v != "正在更新到 v0.2.0-alpha.10……" || inst {
 		t.Fatal(v)
 	}
 	s.Installing, s.Failed = "", true
 	if v, inst := versionLine(cur, s); v != "更新失败，点击重试" || !inst {
 		t.Fatal(v)
 	}
+	home, _ := os.UserHomeDir()
+	s.Log = filepath.Join(home, ".omnillm", "hub", "update.log")
+	if v, _ := versionLine(cur, s); v != "更新失败，点击重试（日志：~/.omnillm/hub/update.log）" {
+		t.Fatal(v)
+	}
 	t.Setenv("OMNILLM_LANG", "en")
 	if v, _ := versionLine(cur, updateState{}); v != "Version 0.2.0-alpha.9" {
+		t.Fatal(v)
+	}
+	if v, _ := versionLine(cur, s); v != "Update failed; click to retry (log: ~/.omnillm/hub/update.log)" {
+		t.Fatal(v)
+	}
+	if v, _ := versionLine(cur, updateState{Latest: "v0.2.0-alpha.10"}); v != "New version v0.2.0-alpha.10 · click to update (replies in progress will stop)" {
 		t.Fatal(v)
 	}
 }
@@ -99,5 +113,60 @@ func TestLatestRelease(t *testing.T) {
 	got, err := latestRelease(context.Background(), srv.Client())
 	if err != nil || got != "v0.2.0-alpha.12" {
 		t.Fatal(got, err)
+	}
+}
+
+func TestTildePath(t *testing.T) {
+	home, _ := os.UserHomeDir()
+	for in, want := range map[string]string{
+		filepath.Join(home, "a", "b.log"): "~/a/b.log",
+		home:                              "~",
+		"/var/log/x.log":                  "/var/log/x.log",
+		home + "x/y":                      home + "x/y", // a sibling folder, not inside home
+	} {
+		if got := tildePath(in); got != want {
+			t.Errorf("tildePath(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestInstalledVersion(t *testing.T) {
+	dir := t.TempDir()
+	bin := filepath.Join(dir, "omnillm")
+	if err := os.WriteFile(bin, []byte("#!/bin/sh\n[ \"$1\" = version ] && echo 'omnillm 0.2.0-alpha.10'\n"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if v, err := installedVersion(context.Background(), bin); err != nil || v != "0.2.0-alpha.10" {
+		t.Fatal(v, err)
+	}
+	bad := filepath.Join(dir, "other")
+	_ = os.WriteFile(bad, []byte("#!/bin/sh\necho hello there world\n"), 0o700)
+	if v, err := installedVersion(context.Background(), bad); err == nil {
+		t.Fatal("accepted", v)
+	}
+	if _, err := installedVersion(context.Background(), filepath.Join(dir, "missing")); err == nil {
+		t.Fatal("a missing program has a version")
+	}
+}
+
+func TestAfterAnInstallThatDidNotReplaceTheMenu(t *testing.T) {
+	offer := updateState{Latest: "v0.2.0-alpha.10", Installing: "v0.2.0-alpha.10"}
+	// The new version is there: the offer is done, run it.
+	s, restart := offer.installed(nil, "0.2.0-alpha.10")
+	if !restart || s.Latest != "" || s.Installing != "" || s.Failed {
+		t.Fatalf("%+v %v", s, restart)
+	}
+	if _, restart := offer.installed(nil, "0.2.0-alpha.11"); !restart {
+		t.Fatal("a newer one than offered is fine too")
+	}
+	// Still the old version, or the installer failed: offer a retry.
+	for _, c := range []struct {
+		err  error
+		have string
+	}{{nil, "0.2.0-alpha.9"}, {errors.New("exit 1"), "0.2.0-alpha.10"}, {nil, ""}} {
+		s, restart := offer.installed(c.err, c.have)
+		if restart || !s.Failed || s.Latest != offer.Latest || s.Installing != "" {
+			t.Fatalf("%v %q: %+v %v", c.err, c.have, s, restart)
+		}
 	}
 }

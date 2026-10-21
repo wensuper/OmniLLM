@@ -89,7 +89,7 @@ func sayf(format string, a ...any) error { return sayErr(fmt.Sprintf(format, a..
 func hubSay(err error) error {
 	if e := omnillm.AsError(err); e.Code == omnillm.CodeInternal {
 		log.Printf("hub: control: %v", err)
-		return say(omnillm.Describe(lang(), err) + t("（原因写在 OmniLLM 的日志里）", " (the cause is in OmniLLM's log)"))
+		return say(omnillm.Describe(lang(), err) + t("（原因写在 OmniLLM 的日志里）", " (the cause is in OmniLLM’s log)"))
 	}
 	return say(omnillm.Describe(lang(), err))
 }
@@ -120,6 +120,8 @@ func usage() {
   omnillm hub providers | models | devices | apps | usage | audit
   omnillm hub pair [--name N] [--models a,b] [--budget-usd 5] [--background-only]
   omnillm hub revoke <设备ID>        立即移除设备
+  omnillm hub device set <名字或ID> [--name N] [--paused true|false] [--budget-usd X | --no-limit] [--models a,b | --all-models]
+                                     改设备的名字、开启或暂停、每天额度、能用的模型
   omnillm hub app add <名字>         给不能嵌入库的程序发一枚应用令牌
   omnillm hub app rm <ID>
   omnillm hub model set <ID> [--price-in X --price-out Y] [--name 显示名] [--human-only true|false]
@@ -135,20 +137,22 @@ func usage() {
 `, `Usage:
   omnillm install                    one step: run the hub as a background service, open the console
   omnillm open                       open the local console
-  omnillm status                     show the hub's status
+  omnillm status                     show the hub’s status
   omnillm hub run                    run the hub (foreground)
   omnillm hub provider add <openai|anthropic|ollama|openai-compatible> [--name N] [--base-url U]
                                      connect a model source (the API key is read from stdin, never argv)
   omnillm hub providers | models | devices | apps | usage | audit
   omnillm hub pair [--name N] [--models a,b] [--budget-usd 5] [--background-only]
   omnillm hub revoke <device-id>     remove a device now
+  omnillm hub device set <name-or-id> [--name N] [--paused true|false] [--budget-usd X | --no-limit] [--models a,b | --all-models]
+                                     rename a device, pause or resume it, change its daily limit or models
   omnillm hub app add <name>         token for a program that cannot embed the library
   omnillm hub app rm <id>
   omnillm hub model set <id> [--price-in X --price-out Y] [--name display] [--human-only true|false]
-  omnillm hub region confirm         accept the hub's new region and resume calls
-  omnillm connect pair               enter the hub's pairing text on this device
+  omnillm hub region confirm         accept the hub’s new region and resume calls
+  omnillm connect pair               enter the hub’s pairing text on this device
   omnillm connect run [--listen 127.0.0.1:8766]
-  omnillm connect chat [--model ID]  chat with the hub's models in this terminal
+  omnillm connect chat [--model ID]  chat with the hub’s models in this terminal
   omnillm connect ask [--model ID] [--image FILE] "question"
   omnillm connect models             list the models you can use
   omnillm connect forget             remove this device (from your Mac too)
@@ -366,6 +370,15 @@ func hubCmd(args []string) {
 			usage()
 		}
 		call(sock, control.Request{Op: "revoke", Args: map[string]string{"id": args[1]}})
+	case "device":
+		if len(args) < 3 || args[1] != "set" {
+			usage()
+		}
+		a, err := deviceSetArgs(args[2], args[3:])
+		if err != nil {
+			die(err)
+		}
+		call(sock, control.Request{Op: "device.set", Args: a})
 	case "app":
 		if len(args) != 3 {
 			usage()
@@ -531,7 +544,7 @@ func hubRun(dir, sock string, args []string) {
 		}
 	}
 	h, err := hub.New(ctx, hub.Options{Secrets: sec, Store: st, RelayURL: *relayURL, RelayToken: token, WebAppURL: *webApp,
-		Lang: lang(), Logf: func(f string, a ...any) { log.Printf(f, a...) }})
+		Logf: func(f string, a ...any) { log.Printf(f, a...) }})
 	if err != nil {
 		die(err)
 	}
@@ -587,10 +600,10 @@ func hubRun(dir, sock string, args []string) {
 	}
 	log.Print(t("OmniLLM 已启动。", "OmniLLM is running."))
 	if *relayURL == "" {
-		log.Print(t("没有设置远程连接（--relay），其他设备暂时连不上。", "Remote access not set up (--relay); other devices can't connect yet."))
+		log.Print(t("没有设置远程连接（--relay），其他设备暂时连不上。", "Remote access not set up (--relay); other devices can’t connect yet."))
 	} else {
 		sum := sha256.Sum256([]byte(token))
-		log.Printf(t("远程连接登记令牌的哈希（自己部署 relay 时填进 --hub-token-hash）：%x", "Remote access registration token hash (for your own relay's --hub-token-hash): %x"), sum)
+		log.Printf(t("远程连接登记令牌的哈希（自己部署 relay 时填进 --hub-token-hash）：%x", "Remote access registration token hash (for your own relay’s --hub-token-hash): %x"), sum)
 	}
 	<-ctx.Done()
 	sctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -679,11 +692,17 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 			if err != nil {
 				return err
 			}
+			spent := map[string]int64{}
+			if u, err := h.Usage(ctx, ""); err == nil {
+				for _, s := range u {
+					spent[s.Who] = s.MicroUSD
+				}
+			}
 			var rows []deviceRow
 			for _, d := range ds {
-				b := d.Budget
+				b, on, sp := d.Budget, d.Online, spent["device/"+d.ID]
 				rows = append(rows, deviceRow{ID: d.ID, Name: d.Name, Budget: limitText(d.Budget), BudgetMicroUSD: &b, Paused: d.Paused,
-					Created: d.Created, LastSeen: d.LastSeen, Models: d.Models})
+					Created: d.Created, LastSeen: d.LastSeen, Models: d.Models, Online: &on, SpentMicroUSD: &sp})
 			}
 			return c.Send(control.Reply{Event: "ok", Data: jsonData(rows)})
 		case "apps":
@@ -694,7 +713,7 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 			type row struct{ ID, Name, Budget string }
 			var rows []row
 			for _, x := range as {
-				rows = append(rows, row{x.ID, x.Name, usd(x.Budget)})
+				rows = append(rows, row{x.ID, x.Name, limitText(x.Budget)})
 			}
 			return c.Send(control.Reply{Event: "ok", Data: jsonData(rows)})
 		case "usage":
@@ -709,6 +728,24 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 				return err
 			}
 			return c.Send(control.Reply{Event: "ok", Data: jsonData(u)})
+		case "device.set":
+			ds, err := h.Devices(ctx)
+			if err != nil {
+				return err
+			}
+			d, err := findDevice(ds, a["device"])
+			if err != nil {
+				return err
+			}
+			name, budget, paused, models, err := deviceUpdate(a)
+			if err != nil {
+				return err
+			}
+			d, err = h.UpdateDevice(ctx, d.ID, name, budget, paused, models)
+			if err != nil {
+				return hubSay(err)
+			}
+			return c.Send(control.Reply{Event: "ok", Text: fmt.Sprintf(t("已更新“%s”。", "Updated “%s”."), d.Name)})
 		case "revoke":
 			if err := h.Revoke(ctx, a["id"]); err != nil {
 				return hubSay(err)
@@ -721,7 +758,7 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 			}
 			return c.Send(control.Reply{Event: "ok", Text: fmt.Sprintf(t(
 				"已为“%s”创建令牌（只显示这一次，请保存好）：\n%s\n这个应用只能做后台调用，每天额度 %s。",
-				"Token for \"%s\" (shown once, keep it safe):\n%s\nThis app makes background calls only; daily limit %s."), app.Name, tok, usd(app.Budget))})
+				"Token for “%s” (shown once, keep it safe):\n%s\nThis app makes background calls only; daily limit %s."), app.Name, tok, usd(app.Budget))})
 		case "app.rm":
 			if err := h.RevokeApp(ctx, a["id"]); err != nil {
 				return err
@@ -764,7 +801,17 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 	}
 }
 
-func usd(micro int64) string { return fmt.Sprintf("$%.2f", float64(micro)/1e6) }
+func usd(micro int64) string {
+	cents := (micro + 5_000) / 10_000 // rounded to the cent
+	if micro < 0 {
+		cents = (micro - 5_000) / 10_000
+	}
+	sign := ""
+	if cents < 0 {
+		sign, cents = "-", -cents
+	}
+	return fmt.Sprintf("%s$%s.%02d", sign, thousands(cents/100), cents%100)
+}
 
 func pairOp(ctx context.Context, h *hub.Hub, c *control.Conn, a map[string]string) error {
 	var models []string
@@ -778,7 +825,7 @@ func pairOp(ctx context.Context, h *hub.Hub, c *control.Conn, a map[string]strin
 	p, err := h.Pair(ctx, hub.PairOptions{Name: a["name"], Models: models, Budget: budget, BackgroundOnly: a["background_only"] == "true",
 		Confirm: func(ctx context.Context, r hub.PairRequest) (bool, error) {
 			return c.Ask(ctx, fmt.Sprintf(t("设备“%s”请求加入。它屏幕上显示的数字是 %s 吗？一致才确认。",
-				"Device \"%s\" wants to join. Does its screen show %s? Confirm only if it matches."), r.DeviceName, r.Code))
+				"Device “%s” wants to join. Does its screen show %s? Confirm only if it matches."), r.DeviceName, r.Code))
 		}})
 	if err != nil {
 		return hubSay(err)
@@ -799,7 +846,7 @@ func pairOp(ctx context.Context, h *hub.Hub, c *control.Conn, a map[string]strin
 	if err != nil {
 		return hubSay(err)
 	}
-	return c.Send(control.Reply{Event: "done", Text: fmt.Sprintf(t("已添加设备“%s”（%s），每天额度 %s。", "Added \"%s\" (%s), daily limit %s."), d.Name, d.ID, usd(d.Budget))})
+	return c.Send(control.Reply{Event: "done", Text: fmt.Sprintf(t("已添加设备“%s”（%s），每天额度 %s。", "Added “%s” (%s), daily limit %s."), d.Name, d.ID, usd(d.Budget))})
 }
 
 // ---------------- connect (device) ----------------
@@ -819,12 +866,12 @@ func connectCmd(args []string) {
 	case "pair":
 		paired, err := device.CheckPaired(ctx, sec)
 		if err != nil {
-			die(sayf(t("读不出这台设备保存的配对（%s）。如果它已经配对过，请用配对时的同一个用户运行；确实要重新配对，先运行 omnillm connect forget。", "Can't read this device's saved pairing (%s). If it is already paired, run as the same user it was paired as; to pair again, run omnillm connect forget first."), dir))
+			die(sayf(t("读不出这台设备保存的配对（%s）。如果它已经配对过，请用配对时的同一个用户运行；确实要重新配对，先运行 omnillm connect forget。", "Can’t read this device’s saved pairing (%s). If it is already paired, run as the same user it was paired as; to pair again, run omnillm connect forget first."), dir))
 		}
 		if paired {
 			die(say(t("这台设备已经配对过（"+dir+"）。要换一台 Mac 或重新配对，先运行 omnillm connect forget。", "This device is already paired ("+dir+"). To pair again (or with another Mac), run omnillm connect forget first.")))
 		}
-		code := readSecret(t("粘贴你的 Mac 上“添加设备”给的配对文字：", "Paste the pairing text from Add device on your Mac: "))
+		code := readSecret(t("粘贴你的 Mac 上“添加设备”给的配对文字：", "Paste the pairing text from “Add device” on your Mac: "))
 		host, _ := os.Hostname()
 		info, err := device.Pair(ctx, device.Options{Secrets: sec}, code, host, func(sas string) {
 			if len(sas) == 6 {
@@ -835,7 +882,7 @@ func connectCmd(args []string) {
 		if err != nil {
 			die(err)
 		}
-		fmt.Printf(t("已添加到你的 Mac（这台设备在 Mac 上叫“%s”）。\n", "Added to your Mac (it lists this device as \"%s\").\n"), info.Name)
+		fmt.Printf(t("已添加到你的 Mac（这台设备在 Mac 上叫“%s”）。\n", "Added to your Mac (it lists this device as “%s”).\n"), info.Name)
 	case "run":
 		fs := flag.NewFlagSet("connect run", flag.ExitOnError)
 		listen := fs.String("listen", "127.0.0.1:8766", "")
@@ -873,7 +920,7 @@ func connectCmd(args []string) {
 		if left {
 			fmt.Println(t("这台设备已从你的 Mac 上移除，这里的配对也删了。", "This device was removed from your Mac and its pairing here is deleted."))
 		} else {
-			fmt.Println(t("这台设备的配对已删除。你的 Mac 现在连不上，记得在 Mac 的设备列表里也移除它。", "This device's pairing is deleted. Your Mac can't be reached now; remove it from the Mac's device list too."))
+			fmt.Println(t("这台设备的配对已删除。你的 Mac 现在连不上，记得在 Mac 的设备列表里也移除它。", "This device’s pairing is deleted. Your Mac can’t be reached now; remove it from the Mac’s device list too."))
 		}
 	case "models":
 		d := openDevice(ctx, sec, dir)
@@ -887,7 +934,7 @@ func connectCmd(args []string) {
 			if m.HumanOnly {
 				note = t("（只能手动对话）", " (chat only)")
 			}
-			fmt.Printf("%-28s %s%s\n", m.ID, m.DisplayName, note)
+			fmt.Printf("%-28s %s%s\n", m.ID, modelName(m), note)
 		}
 	case "chat":
 		fs := flag.NewFlagSet("connect chat", flag.ExitOnError)
@@ -955,7 +1002,7 @@ func relayCmd(args []string) {
 	if len(args) > 0 && args[0] == "token" {
 		tok := hex.EncodeToString(e2e.RandomBytes(32))
 		sum := sha256.Sum256([]byte(tok))
-		fmt.Printf(t("主机登记令牌（放在主机的 OMNILLM_RELAY_TOKEN，保密）：\n%s\n连接服务用的哈希（--hub-token-hash，可以公开）：\n%x\n",
+		fmt.Printf(t("主机登记令牌（放在主机的 OMNILLM_RELAY_TOKEN，保密）：\n%s\n远程连接用的哈希（--hub-token-hash，可以公开）：\n%x\n",
 			"Hub registration token (OMNILLM_RELAY_TOKEN on the hub; keep secret):\n%s\nHash for the relay (--hub-token-hash; not secret):\n%x\n"), tok, sum)
 		return
 	}
@@ -1018,7 +1065,7 @@ func relayCmd(args []string) {
 		}
 		err = srv.ListenAndServe()
 	default:
-		die(say(t("连接服务必须用 TLS：用 --autocert、--tls-cert，或在 TLS 反向代理后面用 --behind-tls-proxy。",
+		die(say(t("远程连接必须用 TLS：用 --autocert、--tls-cert，或在 TLS 反向代理后面用 --behind-tls-proxy。",
 			"The relay requires TLS: use --autocert, --tls-cert, or --behind-tls-proxy behind a TLS reverse proxy.")))
 	}
 	if err != nil && !errors.Is(err, http.ErrServerClosed) {

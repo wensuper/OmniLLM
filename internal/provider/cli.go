@@ -495,6 +495,11 @@ func (s *cliStream) line(b []byte) (text string, final bool) {
 		Usage struct {
 			InputTokens  int `json:"input_tokens"`
 			OutputTokens int `json:"output_tokens"`
+			// Claude Code sends most of a prompt (its own instructions,
+			// the earlier turns) through the prompt cache, and counts
+			// those tokens apart from input_tokens.
+			CacheRead     int `json:"cache_read_input_tokens"`
+			CacheCreation int `json:"cache_creation_input_tokens"`
 		} `json:"usage"`
 		IsError    bool   `json:"is_error"`
 		Result     string `json:"result"`
@@ -536,7 +541,9 @@ func (s *cliStream) line(b []byte) (text string, final bool) {
 			s.mu.Unlock()
 		}
 	case "result": // Claude Code, end
-		s.setUsage(ev.Usage.InputTokens, ev.Usage.OutputTokens)
+		// All of what was sent counts as input, cached or not; otherwise
+		// "Tokens (in)" shows next to nothing.
+		s.setUsage(ev.Usage.InputTokens+ev.Usage.CacheRead+ev.Usage.CacheCreation, ev.Usage.OutputTokens)
 		if ev.IsError {
 			s.fail(ev.Result)
 			return "", true

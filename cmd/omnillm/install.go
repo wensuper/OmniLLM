@@ -12,12 +12,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html"
 	"io"
 	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -63,7 +66,7 @@ func installCmd(args []string) {
 	}
 	if os.Geteuid() == 0 {
 		// Root would leave root-owned files in the person's home folder.
-		die(say(t("不要用 root 或 sudo 运行：OmniLLM 只为当前用户安装。", "Don't run this as root or with sudo: OmniLLM installs for the current user only.")))
+		die(say(t("不要用 root 或 sudo 运行：OmniLLM 只为当前用户安装。", "Don’t run this as root or with sudo: OmniLLM installs for the current user only.")))
 	}
 	if deviceOnly {
 		installDevice()
@@ -137,7 +140,7 @@ func headless() bool {
 // notRunning is what a person sees when the background service is down.
 func notRunning() string {
 	return t("OmniLLM 没有运行。运行 omnillm install 重新启动（设置都在）。",
-		"OmniLLM isn't running. Run omnillm install to start it again (settings are kept).")
+		"OmniLLM isn’t running. Run omnillm install to start it again (settings are kept).")
 }
 
 // runningLine is the first line of omnillm status.
@@ -162,7 +165,7 @@ func nextStep(st Status) string {
 		return notRunning()
 	case st.Providers == 0 && st.Headless:
 		return t("下一步：这台机器没有浏览器。请在这台机器的终端里亲自运行 omnillm hub provider add anthropic（或 openai、openai-compatible），然后在提示时粘贴 API Key；API Key 不要发到聊天里。",
-			"Next: this machine has no browser. In this machine's terminal, run omnillm hub provider add anthropic (or openai, openai-compatible) yourself and paste the API key when asked; don't send the key in a chat.")
+			"Next: this machine has no browser. In this machine’s terminal, run omnillm hub provider add anthropic (or openai, openai-compatible) yourself and paste the API key when asked; don’t send the key in a chat.")
 	case st.Providers == 0:
 		return fmt.Sprintf(t("下一步：接入一个模型来源。用 Claude 订阅的，在%s上安装 Claude Code，在终端运行 claude 并输入 /login 登录；用 ChatGPT 订阅的，安装 Codex 并运行 codex login。然后运行 omnillm status，会自动接上。也可以在控制台里粘贴 API Key（omnillm open），或安装 Ollama 用本机模型。",
 			"Next: connect a model source. With a Claude subscription, install Claude Code on %s, run claude in Terminal and type /login; with a ChatGPT subscription, install Codex and run codex login. Then run omnillm status: it connects by itself. Or paste an API key in the console (omnillm open), or install Ollama for models that run on %[1]s."), thisMachine())
@@ -171,9 +174,9 @@ func nextStep(st Status) string {
 			"Ready on %s. To let other devices connect, set up remote access first."), thisMachine())
 	case !st.RelayUp:
 		return fmt.Sprintf(t("远程连接断开，设备暂时连不上；OmniLLM 会自己重连。请检查%s的网络。",
-			"Remote access is down, so devices can't connect now; OmniLLM keeps retrying. Check %s's network."), thisMachine())
+			"Remote access is down, so devices can’t connect now; OmniLLM keeps retrying. Check %s’s network."), thisMachine())
 	case st.Devices == 0:
-		return t("下一步：在控制台的“设备”里点“添加设备”，添加手机或其他电脑。", "Next: under Devices in the console, choose Add device to add a phone or another computer.")
+		return t("下一步：在控制台的“设备”里点“添加设备”，添加手机或其他电脑。", "Next: under “Devices” in the console, choose “Add device” to add a phone or another computer.")
 	}
 	if runtime.GOOS == "darwin" {
 		return t("一切正常。运行 omnillm open 打开控制台，或点菜单栏里的 OmniLLM 图标。",
@@ -302,17 +305,55 @@ func xmlEscape(s string) string {
 
 func installLaunchd(home, bin, dir string, env map[string]string) error {
 	plist := filepath.Join(home, "Library", "LaunchAgents", launchdLabel+".plist")
-	var envXML strings.Builder
+	body := hubPlist(bin, dir, serviceEnv(env, plistEnv(plist)))
+	if err := os.MkdirAll(filepath.Dir(plist), 0o755); err != nil {
+		return err
+	}
+	if err := os.WriteFile(plist, []byte(body), 0o644); err != nil {
+		return err
+	}
+	return bootstrapAgent(plist, launchdLabel)
+}
+
+// carriedEnv are the owner's own choices an earlier install wrote into the
+// service: a self-hosted relay (or "off") and web client. An update (from
+// the menu bar, or install.sh run again) usually has neither in its
+// environment and must not undo them.
+var carriedEnv = []string{"OMNILLM_RELAY", "OMNILLM_WEB_APP"}
+
+// serviceEnv is the service's environment: env, then each carried
+// variable from this environment, or else from the previous service's
+// (when it is still valid).
+func serviceEnv(env, previous map[string]string) map[string]string {
+	out := make(map[string]string, len(env)+len(carriedEnv))
 	for k, v := range env {
-		fmt.Fprintf(&envXML, "<key>%s</key><string>%s</string>", xmlEscape(k), xmlEscape(v))
+		out[k] = v
 	}
 	if relay := relayFromEnv(); relay != "" {
-		fmt.Fprintf(&envXML, "<key>OMNILLM_RELAY</key><string>%s</string>", xmlEscape(relay))
+		out["OMNILLM_RELAY"] = relay
+	} else if old := previous["OMNILLM_RELAY"]; validRelay(old) {
+		out["OMNILLM_RELAY"] = old
 	}
 	if web := webAppFromEnv(); web != "" {
-		fmt.Fprintf(&envXML, "<key>OMNILLM_WEB_APP</key><string>%s</string>", xmlEscape(web))
+		out["OMNILLM_WEB_APP"] = web
+	} else if old := previous["OMNILLM_WEB_APP"]; validWebApp(old) {
+		out["OMNILLM_WEB_APP"] = old
 	}
-	body := `<?xml version="1.0" encoding="UTF-8"?>
+	return out
+}
+
+// hubPlist is the hub's launch agent, its environment in a stable order.
+func hubPlist(bin, dir string, env map[string]string) string {
+	keys := make([]string, 0, len(env))
+	for k := range env {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	var envXML strings.Builder
+	for _, k := range keys {
+		fmt.Fprintf(&envXML, "<key>%s</key><string>%s</string>", xmlEscape(k), xmlEscape(env[k]))
+	}
+	return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
 <key>Label</key><string>` + launchdLabel + `</string>
@@ -325,13 +366,29 @@ func installLaunchd(home, bin, dir string, env map[string]string) error {
 <key>StandardErrorPath</key><string>` + xmlEscape(filepath.Join(dir, "hub.log")) + `</string>
 </dict></plist>
 `
-	if err := os.MkdirAll(filepath.Dir(plist), 0o755); err != nil {
-		return err
+}
+
+var (
+	plistEnvDict = regexp.MustCompile(`(?s)<key>EnvironmentVariables</key>\s*<dict>(.*?)</dict>`)
+	plistPair    = regexp.MustCompile(`(?s)<key>([^<]*)</key>\s*<string>([^<]*)</string>`)
+)
+
+// plistEnv reads the environment of an existing launch agent (as this
+// program writes it); nil when there is none.
+func plistEnv(path string) map[string]string {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return nil
 	}
-	if err := os.WriteFile(plist, []byte(body), 0o644); err != nil {
-		return err
+	m := plistEnvDict.FindSubmatch(b)
+	if m == nil {
+		return nil
 	}
-	return bootstrapAgent(plist, launchdLabel)
+	out := map[string]string{}
+	for _, p := range plistPair.FindAllSubmatch(m[1], -1) {
+		out[html.UnescapeString(string(p[1]))] = html.UnescapeString(string(p[2]))
+	}
+	return out
 }
 
 // installTray adds the menu bar icon as a login item. It comes back at
@@ -399,16 +456,24 @@ func systemdQuote(v string) string {
 }
 
 // relayFromEnv passes OMNILLM_RELAY to the service only if it is a valid
-// relay address.
+// relay address, or "off" (no relay at all).
 func relayFromEnv() string {
 	r := os.Getenv("OMNILLM_RELAY")
-	if r == "" {
-		return ""
+	if r == "" || r == "off" {
+		return r
 	}
 	if _, err := relaylink.CheckURL(r); err != nil {
 		die(fmt.Errorf("OMNILLM_RELAY: %w", err))
 	}
 	return r
+}
+
+func validRelay(r string) bool {
+	if r == "off" {
+		return true
+	}
+	_, err := relaylink.CheckURL(r)
+	return r != "" && err == nil
 }
 
 // webAppFromEnv passes OMNILLM_WEB_APP (a self-hosted web client) to the
@@ -418,12 +483,16 @@ func webAppFromEnv() string {
 	if w == "" {
 		return ""
 	}
-	u, err := url.Parse(w)
-	local := err == nil && u.Scheme == "http" && (u.Hostname() == "localhost" || u.Hostname() == "127.0.0.1")
-	if err != nil || (u.Scheme != "https" && !local) || u.Host == "" || u.RawQuery != "" || u.Fragment != "" || u.User != nil {
+	if !validWebApp(w) {
 		die(errors.New("OMNILLM_WEB_APP must be an https:// address"))
 	}
 	return w
+}
+
+func validWebApp(w string) bool {
+	u, err := url.Parse(w)
+	local := err == nil && u.Scheme == "http" && (u.Hostname() == "localhost" || u.Hostname() == "127.0.0.1")
+	return w != "" && err == nil && (u.Scheme == "https" || local) && u.Host != "" && u.RawQuery == "" && u.Fragment == "" && u.User == nil
 }
 
 func installSystemd(home, bin, dir string, env map[string]string) error {
@@ -617,7 +686,7 @@ func installDevice() {
 	}
 	tty, err := os.Open("/dev/tty")
 	if err != nil {
-		fmt.Println(runnable(t("下一步：在你的 Mac 上点“添加设备”，然后在这里运行 omnillm connect pair，粘贴配对文字。", "Next: choose Add device on your Mac, then run omnillm connect pair here and paste the pairing text.")))
+		fmt.Println(runnable(t("下一步：在你的 Mac 上点“添加设备”，然后在这里运行 omnillm connect pair，粘贴配对文字。", "Next: choose “Add device” on your Mac, then run omnillm connect pair here and paste the pairing text.")))
 		return
 	}
 	tty.Close()

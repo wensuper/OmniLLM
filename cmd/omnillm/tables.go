@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
 
+	omnillm "github.com/wensuper/OmniLLM"
 	"github.com/wensuper/OmniLLM/hub"
 )
 
@@ -22,10 +24,14 @@ type deviceRow struct {
 	Created        time.Time
 	LastSeen       time.Time `json:",omitempty"`
 	Models         []string  `json:",omitempty"`
+	// Online and SpentMicroUSD (today) come from newer hubs only.
+	Online        *bool  `json:",omitempty"`
+	SpentMicroUSD *int64 `json:",omitempty"`
 }
 
-// devicesTable is the table `omnillm hub devices` prints: name, daily
-// limit, last used (relative, local time).
+// devicesTable is the table `omnillm hub devices` prints: name, on or
+// paused, today's spend / daily limit, last used (online, or relative
+// local time).
 func devicesTable(data []byte, now time.Time) (string, error) {
 	var rows []deviceRow
 	if err := json.Unmarshal(data, &rows); err != nil {
@@ -34,17 +40,28 @@ func devicesTable(data []byte, now time.Time) (string, error) {
 	if len(rows) == 0 {
 		return t("还没有设备。", "No devices yet."), nil
 	}
-	out := [][]string{{t("名字", "Name"), t("每天额度", "Daily limit"), t("最近使用", "Last used")}}
+	out := [][]string{{t("名字", "Name"), t("状态", "Status"), t("今天 / 每天额度", "Today / daily limit"), t("最近使用", "Last used")}}
 	for _, r := range rows {
-		name := r.Name
+		state := t("开启", "On")
 		if r.Paused {
-			name += t(" · 已暂停", " · Paused")
+			state = t("已暂停", "Paused")
 		}
 		limit := r.Budget
 		if r.BudgetMicroUSD != nil {
 			limit = limitText(*r.BudgetMicroUSD)
 		}
-		out = append(out, []string{name, limit, whenText(r.LastSeen, now)})
+		if r.SpentMicroUSD != nil {
+			if r.BudgetMicroUSD != nil && *r.BudgetMicroUSD == hub.NoLimit {
+				limit = fmt.Sprintf(t("%s · 不设上限", "%s · no limit"), usd(*r.SpentMicroUSD))
+			} else {
+				limit = usd(*r.SpentMicroUSD) + " / " + limit
+			}
+		}
+		last := whenText(r.LastSeen, now)
+		if r.Online != nil && *r.Online {
+			last = t("● 在线", "● Online")
+		}
+		out = append(out, []string{r.Name, state, limit, last})
 	}
 	return table(out), nil
 }
@@ -56,11 +73,40 @@ func limitText(micro int64) string {
 	return usd(micro)
 }
 
+// modelName is a model's name in the terminal's language: the owner's own
+// name as it is; otherwise Codex by the name people know, and a model whose
+// version is not known yet marked as the latest.
+func modelName(m omnillm.ModelInfo) string {
+	switch {
+	case m.Renamed:
+		return m.DisplayName
+	case m.Kind == "codex":
+		return t("ChatGPT（Codex）", "ChatGPT (Codex)")
+	case m.Latest:
+		return m.DisplayName + t("（最新版）", " (latest)")
+	}
+	return m.DisplayName
+}
+
+// thousands writes n with thousands separators: 12,345.
+func thousands(n int64) string {
+	s := strconv.FormatInt(n, 10)
+	neg := strings.HasPrefix(s, "-")
+	s = strings.TrimPrefix(s, "-")
+	for i := len(s) - 3; i > 0; i -= 3 {
+		s = s[:i] + "," + s[i:]
+	}
+	if neg {
+		return "-" + s
+	}
+	return s
+}
+
 // whenText is a time as people say it: "今天 09:33" / "Today 9:33 AM",
 // "昨天 21:10" / "Yesterday 9:10 PM", "10月18日" / "Oct 18".
 func whenText(at, now time.Time) string {
 	if at.IsZero() {
-		return t("还没用过", "Never")
+		return t("还没用过", "Not yet")
 	}
 	at = at.In(now.Location())
 	day := func(x time.Time) time.Time { y, m, d := x.Date(); return time.Date(y, m, d, 0, 0, 0, 0, x.Location()) }
@@ -122,9 +168,9 @@ func usageTable(data []byte) (string, error) {
 		total.Name = t("今天合计", "Total today")
 		rows = append(rows, *total)
 	}
-	out := [][]string{{t("名字", "Name"), t("调用", "Calls"), t("花费", "Spend"), t("文字量（发出 / 收到）", "Text (sent / received)")}}
+	out := [][]string{{t("名字", "Name"), t("次数", "Calls"), t("花费", "Spend"), t("Token（发出 / 收到）", "Tokens (in / out)")}}
 	for _, s := range rows {
-		out = append(out, []string{s.Name, fmt.Sprint(s.Calls), usd(s.MicroUSD), fmt.Sprintf("%d / %d", s.InputTokens, s.OutputTokens)})
+		out = append(out, []string{s.Name, thousands(s.Calls), usd(s.MicroUSD), thousands(s.InputTokens) + " / " + thousands(s.OutputTokens)})
 	}
 	return table(out), nil
 }

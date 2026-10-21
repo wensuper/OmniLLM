@@ -124,18 +124,37 @@ div.codebox > .code, div.codebox > .cmd { padding-right: 72px; margin: 0; }
 .codebox .copy { position: absolute; top: 6px; right: 6px; }
 .skip-line { margin: 12px 0 0; }
 .small-btn { padding: 4px 10px; min-height: 28px; font-size: 12px; }
-.pair .code { font-family: var(--mono); font-size: 12px; word-break: break-all; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-s); padding: 10px; user-select: all; }
+.codebox > .code { font-family: var(--mono); font-size: 12px; word-break: break-all; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-s); padding: 10px; user-select: all; }
 .sas { font-family: var(--mono); font-size: 34px; font-weight: 600; letter-spacing: .18em; margin: 8px 0; color: var(--ink); }
-.confirm { background: var(--warn-soft); border: 1px solid var(--warn-line); border-left: 3px solid var(--warn-hi); border-radius: 0 var(--r-l) var(--r-l) 0; padding: 16px; margin-top: 12px; }
+/* A question or notice, as NEXA's chips: a warn hairline all round and a
+   16 px warn icon before the text. */
+.confirm, .banner { position: relative; background: var(--warn-soft); border: 1px solid var(--warn-line); border-radius: var(--r-l); color: var(--ink); }
+.confirm::before, .banner::before { content: ""; position: absolute; left: 16px; width: 16px; height: 16px; background: var(--warn-hi);
+  -webkit-mask: var(--warn-icon) center / contain no-repeat; mask: var(--warn-icon) center / contain no-repeat; }
+:root { --warn-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 1.8 14.8 13.9H1.2Z' fill='none' stroke='%23000' stroke-width='1.5' stroke-linejoin='round'/%3E%3Cpath d='M8 6.2v3.6' stroke='%23000' stroke-width='1.5' stroke-linecap='round'/%3E%3Ccircle cx='8' cy='11.8' r='.95'/%3E%3C/svg%3E"); }
+.confirm { padding: 16px 16px 16px 44px; }
+.confirm::before { top: 19px; }
+.confirm > p:first-child { margin-bottom: 4px; }
 .confirm .actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .confirm .actions button { margin-top: 8px; }
 .err-text { color: var(--danger); }
 /* The hub stopped: a notice, not an alarm (starting it again is one click). */
-.banner { background: var(--warn-soft); border: 1px solid var(--warn-line); border-left: 3px solid var(--warn-hi); border-radius: 0 var(--r-l) var(--r-l) 0; padding: 12px 16px; margin-bottom: 16px; color: var(--ink); }
+.banner { padding: 12px 16px 12px 44px; margin-bottom: 16px; }
+.banner::before { top: 15px; }
 .cmd { font-family: var(--mono); background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-s); padding: 10px 12px; overflow-x: auto; }
 
 .reply { white-space: pre-wrap; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-s); padding: 12px; margin-top: 12px; }
-.secret { font-family: var(--mono); word-break: break-all; background: var(--warn-soft); border: 1px solid var(--warn-line); border-radius: var(--r-s); padding: 12px; margin: 12px 0; }
+/* An app's token, shown once, with its Copy button. */
+.token-box { margin: 12px 0; }
+.token-box .token-for { margin: 0 0 6px; font-weight: 500; }
+.token-box p.small { margin: 6px 0 0; }
+/* "Add app": the name in place. */
+.inline-add { margin: 12px 0 4px; }
+.inline-add label { margin-top: 0; }
+.inline-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.inline-row input { flex: 1 1 220px; max-width: 360px; }
+.inline-row .btns { display: flex; gap: 8px; }
+.inline-row button.primary { margin-top: 0; }
 
 .cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 20px; }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-l); padding: 14px 16px; box-shadow: var(--shadow-1); }
@@ -195,8 +214,8 @@ input.switch { min-height: 0; padding: 0; }
 .switch:disabled { opacity: .45; cursor: not-allowed; }
 .toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); white-space: nowrap; cursor: pointer; }
 /* The add-device panel closes with the x in its corner. */
-.pair-panel { position: relative; border: 1px solid var(--line); border-radius: var(--r-l); padding: 16px; margin-top: 12px; background: var(--surface); }
-.pair-panel .pair { margin-top: 0; }
+.pair-panel { position: relative; border: 1px solid var(--line); border-radius: var(--r-l); padding: 16px 56px 16px 16px; margin-top: 12px; background: var(--surface); }
+.pair-panel .pair, .pair-panel .confirm { margin-top: 0; }
 .close-x { position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; min-height: 0; padding: 0; border: 0; border-radius: var(--r-s); background: transparent; color: var(--muted); cursor: pointer; z-index: 1; }
 .close-x::before, .close-x::after { content: ""; position: absolute; left: 9px; top: 15px; width: 14px; height: 1.6px; background: currentColor; border-radius: 1px; transform: rotate(45deg); }
 .close-x::after { transform: rotate(-45deg); }
@@ -224,7 +243,7 @@ td.muted { color: var(--muted); }
 td:first-child { overflow-wrap: normal; word-break: keep-all; }
 @media (max-width: 600px) {
   .narrow-hide { display: none; }
-  .pair-panel { padding-top: 44px; }
+  .pair-panel { padding: 44px 16px 16px; }
   tr.editing td { display: block; border-bottom: 0; padding: 6px 8px; }
   tr.editing { display: block; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
   tr.editing td.actions { text-align: left; }
@@ -250,11 +269,12 @@ td.nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .safe-line { margin: 12px 0 0; font-size: 13px; }
 .confirm label { margin-top: 4px; }
 .confirm input { max-width: 320px; }
-/* Today / Yesterday / Last 7 days. */
-.seg { display: inline-flex; border: 1px solid var(--line-2); border-radius: var(--r-s); overflow: hidden; margin-bottom: 12px; }
-.seg button { border: 0; border-radius: 0; min-height: 30px; padding: 4px 12px; background: var(--surface); color: var(--ink-2); }
-.seg button + button { border-left: 1px solid var(--line-2); }
-.seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent-text); }
+/* Today / Yesterday / Last 7 days, as NEXA's segmented control: the
+   chosen one raised on a sunken track. */
+.seg { display: inline-flex; gap: 2px; padding: 2px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-s); margin-bottom: 12px; }
+.seg button { border: 0; border-radius: var(--r-xs); min-height: 28px; padding: 3px 12px; background: transparent; color: var(--muted); }
+.seg button:hover:not(:disabled) { background: transparent; color: var(--ink); }
+.seg button[aria-pressed="true"], .seg button[aria-pressed="true"]:hover:not(:disabled) { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-1), 0 0 0 1px var(--line); }
 /* Editing a row: the amount and "No limit" on one line, Save and Cancel
    together; fixed column widths so nothing moves. */
 .budget-line { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -287,8 +307,11 @@ td.nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dialog-body { padding: 4px 20px 16px; overflow-y: auto; }
 .dlg-sec { padding-top: 12px; }
 .dlg-sec + .dlg-sec { border-top: 1px solid var(--line); margin-top: 12px; }
-.dlg-sec h3 { margin: 0 0 8px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.dlg-sec h3 { margin: 0 0 8px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.dlg-sec > label:not(.toggle) { color: var(--muted); font-weight: 500; }
 .dlg-sec > label:first-of-type { margin-top: 0; }
+.dlg-sec .toggle + .toggle { margin-top: 10px; display: flex; }
+.warn-note { background: var(--warn-soft); color: var(--warn); box-shadow: inset 0 0 0 1px var(--warn-line); border-radius: var(--r-s); padding: 6px 10px; font-size: 13px; margin: 0 0 10px; }
 .dlg-sec p.small { margin: 6px 0 0; }
 .dlg-sec .money-in input { width: 100px; }
 .toggle.wrap { white-space: normal; }
@@ -298,8 +321,17 @@ td.nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pick-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 0; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 14px; font-weight: 400; color: var(--ink); cursor: pointer; }
 .pick-name { min-width: 0; overflow-wrap: anywhere; }
 .dialog-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 20px; border-top: 1px solid var(--line); }
-.dialog-foot .btns { display: flex; gap: 8px; }
+.dialog-foot .btns { display: flex; gap: 8px; margin-left: auto; }
 .dialog-foot button.primary { margin-top: 0; }
+.dialog-foot button.danger { padding: 6px 14px; min-height: 32px; font-size: 13px; }
+/* A question asked in the foot (remove, or discard changes). */
+.dialog-foot.asking { flex-wrap: wrap; }
+.foot-q { margin: 0; flex: 1 1 220px; color: var(--ink); }
+/* Remove, asked in a line under its row. */
+tr.asking:not(.ask-row) td { border-bottom: 0; }
+.row-ask { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; }
+.row-ask p { margin: 0; flex: 1 1 220px; }
+.row-ask .btns { display: flex; gap: 6px; margin-left: auto; }
 button.danger-text { background: none; border: 0; color: var(--danger); padding: 6px 0; }
 button.danger-text:hover:not(:disabled) { background: none; text-decoration: underline; text-underline-offset: 3px; }
 @media (max-width: 599px) {
@@ -307,21 +339,48 @@ button.danger-text:hover:not(:disabled) { background: none; text-decoration: und
   .dialog { width: 100%; max-height: 92vh; border-radius: var(--r-l) var(--r-l) 0 0; border-bottom: 0; }
   .dialog-foot { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
 }
-/* A phone-width window: the amount and the name may wrap rather than push
-   the On switch and Edit off screen. */
+/* A device's or app's name; on a phone-width window the row stacks (the
+   name, then what it spent) with the switch and Edit on the right. */
+.nm-line { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; min-width: 0; }
+.nm-line .nm-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nm-line .tag { flex: none; }
+.nm-line .tag.warn-tag { margin-top: 0; white-space: nowrap; }
+.dot-on { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
+.nm-sub { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
 @media (max-width: 600px) {
-  .devices-table td.spent, .devices-table td.nm, .apps-table td.nm { white-space: normal; }
-  td.nm { overflow-wrap: anywhere; }
+  .devices-table, .apps-table, .devices-table > *, .apps-table > * { display: block; }
+  .devices-table tr, .apps-table tr { display: grid; grid-template-columns: minmax(0, 1fr) 44px auto; align-items: center; column-gap: 12px; border-bottom: 1px solid var(--line); }
+  .devices-table td, .devices-table th, .apps-table td, .apps-table th { border-bottom: 0; }
+  .devices-table .seen, .devices-table .spent, .apps-table .spent,
+  .devices-table th:nth-child(2), .devices-table th:nth-child(3), .apps-table th:nth-child(2) { display: none; }
+  .devices-table td.actions, .apps-table td.actions { padding-right: 0; }
+  .devices-table .narrow-only, .apps-table .narrow-only { display: block; }
+  .devices-table .nm-line .narrow-only { display: inline-block; }
+  .devices-table tr.paused .nm-sub, .apps-table tr.paused .nm-sub { color: var(--muted); }
 }
 .tag { white-space: nowrap; }
 .tag.warn-tag { white-space: normal; border-radius: var(--r-s); }
 .narrow-only { display: none; }
+@media (min-width: 601px) { button.narrow-only { display: none; } }
 @media (max-width: 600px) {
-  .models-table th:nth-child(2), .models-table td:nth-child(2) { display: none; }
+  .wide-only { display: none; }
+  button.narrow-only { display: inline-block; }
+  /* Models: the name and Edit; the switches and renaming are in its dialog. */
+  .models-table th:nth-child(n+2):not(:last-child), .models-table td:nth-child(n+2):not(:last-child) { display: none; }
   .models-table td.nm { white-space: normal; }
   .models-table .narrow-only { display: inline; }
   .models-table br.narrow-only { display: block; }
   .models-table td.nm .tag { margin-top: 4px; }
-  .models-table th.sw { white-space: normal; }
   .cap-label { flex-basis: 100%; }
 }
+/* Usage: both tables share their column widths; Tokens goes on a phone. */
+.usage-table { table-layout: fixed; }
+.usage-table col.c-num { width: 96px; }
+.usage-table col.c-tok { width: 190px; }
+.usage-table td.nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 600px) {
+  .usage-table col.c-num { width: 76px; }
+  .usage-table col.c-tok { display: none; width: 0; }
+}
+@media (max-width: 600px) { .usage-table td.nm { white-space: normal; } }
+@media (max-width: 600px) { .confirm .actions button { flex: 1 1 100%; } }

@@ -268,3 +268,20 @@ func TestCodexHomeFailureIsNotALogin(t *testing.T) {
 		t.Fatalf("problem %q", p)
 	}
 }
+
+func TestCLIInputCountsCachedTokens(t *testing.T) {
+	c, _ := fakeCLI(t, `cat <<'X'
+{"type":"stream_event","event":{"type":"content_block_delta","delta":{"type":"text_delta","text":"ok"}}}
+{"type":"result","is_error":false,"result":"ok","usage":{"input_tokens":4,"cache_read_input_tokens":12000,"cache_creation_input_tokens":800,"output_tokens":9}}
+X`)
+	s, err := ask(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := collect(t, s); err != nil {
+		t.Fatal(err)
+	}
+	if u := s.Usage(); u.InputTokens != 12804 || u.OutputTokens != 9 {
+		t.Fatalf("%+v", u)
+	}
+}

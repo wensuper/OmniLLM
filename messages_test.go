@@ -105,7 +105,7 @@ func TestRoundDuration(t *testing.T) {
 
 func TestWaitsAreInTheReadersLanguage(t *testing.T) {
 	e := &Error{Code: CodeBusy, Msg: MsgSubscriptionLimit, Args: []string{"claude-code"}, RetryAfter: 6 * time.Hour}
-	if got := Describe("zh", e); got != "Claude 订阅的用量到了上限，约 6 小时后恢复。现在可以换一个用 API Key 或本机的模型。" {
+	if got := Describe("zh", e); got != "Claude 订阅的用量到了上限，约 6 小时后恢复。现在可以换一个用 API Key 或你的 Mac 上的模型。" {
 		t.Fatal(got)
 	}
 	if got := Describe("en", e); got != "Your Claude subscription has reached its usage limit. It resets in about 6 hours. Meanwhile, pick a model that uses an API key or runs on your Mac." {
@@ -154,7 +154,7 @@ func TestSubscriptionNamesAndLoginSteps(t *testing.T) {
 		t.Fatal(got)
 	}
 	// Other names pass through unchanged.
-	if got := Describe("en", &Error{Code: CodeCredentialProblem, Msg: MsgCredentialMissing, Args: []string{"my-proxy"}}); !strings.HasPrefix(got, "my-proxy isn't connected on your Mac.") {
+	if got := Describe("en", &Error{Code: CodeCredentialProblem, Msg: MsgCredentialMissing, Args: []string{"my-proxy"}}); !strings.HasPrefix(got, "my-proxy isn’t connected on your Mac.") {
 		t.Fatal(got)
 	}
 }
@@ -185,13 +185,49 @@ func TestNewMessages(t *testing.T) {
 	if got := Describe("en", ctx); got != "This chat is too long for Claude Sonnet. Start a new chat and ask again." {
 		t.Fatal(got)
 	}
-	if got := Describe("en", &Error{Code: CodeBudgetExceeded, Msg: MsgBudgetWouldExceed}); !strings.HasPrefix(got, "This message may exceed what's left of today's limit.") {
+	if got := Describe("en", &Error{Code: CodeBudgetExceeded, Msg: MsgBudgetWouldExceed}); !strings.HasPrefix(got, "This message may exceed what’s left of today’s limit.") {
 		t.Fatal(got)
 	}
 	if got := Describe("zh", &Error{Code: CodeModelNotAllowed, Msg: MsgHumanOnly}); !strings.Contains(got, "只能手动对话") {
 		t.Fatal(got)
 	}
-	if got := Describe("en", &Error{Code: CodeBusy, Msg: MsgSubscriptionPace, RetryAfter: time.Minute}); !strings.HasSuffix(got, "so the account isn't flagged as automated.") {
+	if got := Describe("en", &Error{Code: CodeBusy, Msg: MsgSubscriptionPace, RetryAfter: time.Minute}); !strings.HasSuffix(got, "so the account isn’t flagged as automated.") {
 		t.Fatal(got)
+	}
+}
+
+func TestEnglishUsesCurlyQuotes(t *testing.T) {
+	for k, v := range texts {
+		if strings.ContainsAny(v[1], "'\"") {
+			t.Errorf("%s en: straight quote in %q", k, v[1])
+		}
+	}
+}
+
+func TestDeviceAndAppMessagesAreApart(t *testing.T) {
+	for _, c := range []struct{ key, zh, en string }{
+		{MsgBudgetDevice, "这台设备今天的额度用完了。明天恢复，也可以在你的 Mac 上调高。", "This device’s daily limit is used up. It resets tomorrow, or raise it on your Mac."},
+		{MsgBudgetApp, "这个应用今天的额度用完了。明天恢复，也可以在你的 Mac 上调高。", "This app’s daily limit is used up. It resets tomorrow, or raise it on your Mac."},
+		{MsgModelNotAllowed, "这台设备不能用这个模型。可以在你的 Mac 上调整它能用的模型。", "This device can’t use this model. You can change its models on your Mac."},
+		{MsgModelNotAllowedApp, "这个应用不能用这个模型。可以在你的 Mac 上调整它能用的模型。", "This app can’t use this model. You can change its models on your Mac."},
+	} {
+		if got := Text("zh", c.key); got != c.zh {
+			t.Errorf("%s zh: %q", c.key, got)
+		}
+		if got := Text("en", c.key); got != c.en {
+			t.Errorf("%s en: %q", c.key, got)
+		}
+	}
+	// Older devices know only the device keys, which stay as they were named.
+	if MsgBudgetDevice != "budget_device" || MsgModelNotAllowed != "model_not_allowed" {
+		t.Fatal("the device keys were renamed")
+	}
+	if got := Text("en", MsgPairingExpired); !strings.HasPrefix(got, "This QR code") || !strings.Contains(got, "“Add device”") {
+		t.Fatal(got)
+	}
+	for _, k := range []string{MsgSubscriptionPace, MsgSubscriptionLimit} {
+		if s := Text("zh", k); !strings.Contains(s, "你的 Mac 上的模型") || strings.Contains(s, "本机") {
+			t.Errorf("%s zh: %q", k, s)
+		}
 	}
 }

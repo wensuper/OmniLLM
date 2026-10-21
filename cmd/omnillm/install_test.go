@@ -63,7 +63,7 @@ func TestStatusLinesFollowTheGlossary(t *testing.T) {
 	if got := runningLine(Status{Version: "0.2.0", Providers: 1, Devices: 3}); got != "OmniLLM is running (0.2.0). 1 model source, 3 devices." {
 		t.Fatal(got)
 	}
-	if got := nextStep(Status{}); !strings.Contains(got, "isn't running") || !strings.Contains(got, "settings are kept") {
+	if got := nextStep(Status{}); !strings.Contains(got, "isn’t running") || !strings.Contains(got, "settings are kept") {
 		t.Fatal(got)
 	}
 	t.Setenv("OMNILLM_LANG", "zh")
@@ -74,5 +74,50 @@ func TestStatusLinesFollowTheGlossary(t *testing.T) {
 		if s := nextStep(st); strings.Contains(s, "主机") || strings.Contains(s, "连接服务") {
 			t.Fatalf("%+v: %s", st, s)
 		}
+	}
+}
+
+func TestUpdateKeepsTheOwnersRelayAndWebApp(t *testing.T) {
+	plist := filepath.Join(t.TempDir(), "hub.plist")
+	write := func(env map[string]string) {
+		if err := os.WriteFile(plist, []byte(hubPlist("/x/omnillm", "/x/data", env)), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// First install, with a self-hosted relay and web client.
+	t.Setenv("OMNILLM_RELAY", "wss://relay.example.org/a&b")
+	t.Setenv("OMNILLM_WEB_APP", "https://chat.example.org/")
+	write(serviceEnv(map[string]string{"K": "v"}, plistEnv(plist)))
+	// The update runs with neither set: both are kept.
+	t.Setenv("OMNILLM_RELAY", "")
+	t.Setenv("OMNILLM_WEB_APP", "")
+	got := serviceEnv(nil, plistEnv(plist))
+	if got["OMNILLM_RELAY"] != "wss://relay.example.org/a&b" || got["OMNILLM_WEB_APP"] != "https://chat.example.org/" {
+		t.Fatalf("lost on update: %v", got)
+	}
+	if _, ok := got["K"]; ok {
+		t.Fatal("only the owner's relay and web client are carried over")
+	}
+	// "off" is a choice too.
+	t.Setenv("OMNILLM_RELAY", "off")
+	write(serviceEnv(nil, nil))
+	t.Setenv("OMNILLM_RELAY", "")
+	if got := serviceEnv(nil, plistEnv(plist)); got["OMNILLM_RELAY"] != "off" {
+		t.Fatalf("relay off undone: %v", got)
+	}
+	// Set in the environment, it wins over the old one.
+	t.Setenv("OMNILLM_RELAY", "wss://other.example.org")
+	if got := serviceEnv(nil, plistEnv(plist)); got["OMNILLM_RELAY"] != "wss://other.example.org" {
+		t.Fatalf("environment ignored: %v", got)
+	}
+	// A broken old value is dropped, not carried on.
+	t.Setenv("OMNILLM_RELAY", "")
+	write(map[string]string{"OMNILLM_RELAY": "ws://evil.example.org", "OMNILLM_WEB_APP": "javascript:x"})
+	if got := serviceEnv(nil, plistEnv(plist)); len(got) != 0 {
+		t.Fatalf("invalid values carried over: %v", got)
+	}
+	// No earlier install.
+	if got := serviceEnv(nil, plistEnv(filepath.Join(t.TempDir(), "none"))); len(got) != 0 {
+		t.Fatalf("%v", got)
 	}
 }

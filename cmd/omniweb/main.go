@@ -237,7 +237,10 @@ func models(_ js.Value, _ []js.Value) any {
 		}
 		out := []any{}
 		for _, m := range ms {
-			out = append(out, map[string]any{"id": m.ID, "name": m.DisplayName, "provider": m.Provider, "humanOnly": m.HumanOnly, "onHost": m.OnHost})
+			// latest, kind and renamed let the page word the name in its
+			// own language ("(latest)", "ChatGPT (Codex)").
+			out = append(out, map[string]any{"id": m.ID, "name": m.DisplayName, "provider": m.Provider, "humanOnly": m.HumanOnly, "onHost": m.OnHost,
+				"latest": m.Latest, "kind": m.Kind, "renamed": m.Renamed})
 		}
 		return out, nil
 	})

@@ -26,6 +26,15 @@ type principal struct {
 	paused string
 }
 
+// msg picks the sentence for whoever made the call: an app's own, or the
+// device one (also for this Mac itself, and what older devices know).
+func (p principal) msg(device, app string) string {
+	if strings.HasPrefix(p.key, "app/") {
+		return app
+	}
+	return device
+}
+
 func (h *Hub) hostPrincipal() principal {
 	return principal{key: "host", budget: h.opts.HostBudget}
 }
@@ -58,7 +67,7 @@ func (h *Hub) complete(ctx context.Context, p principal, req omnillm.Request) (o
 		return nil, err
 	}
 	if len(p.models) > 0 && !slices.Contains(p.models, m.ID) {
-		return nil, &omnillm.Error{Code: omnillm.CodeModelNotAllowed, Msg: omnillm.MsgModelNotAllowed}
+		return nil, &omnillm.Error{Code: omnillm.CodeModelNotAllowed, Msg: p.msg(omnillm.MsgModelNotAllowed, omnillm.MsgModelNotAllowedApp)}
 	}
 	// A model the owner took off the devices' list is gone for them, as if
 	// removed: the device reloads its list and picks another.
@@ -251,7 +260,7 @@ func (h *Hub) reserve(ctx context.Context, p principal, worst int64) error {
 	}
 	// NoLimit: only the hub's daily total applies to this device.
 	if p.budget != NoLimit && mine.MicroUSD+h.reserved[p.key]+worst > p.budget {
-		return h.overBudget(mine.MicroUSD+h.reserved[p.key], p.budget, omnillm.MsgBudgetDevice)
+		return h.overBudget(mine.MicroUSD+h.reserved[p.key], p.budget, p.msg(omnillm.MsgBudgetDevice, omnillm.MsgBudgetApp))
 	}
 	h.reserved[p.key] += worst
 	h.reserved["_total"] += worst

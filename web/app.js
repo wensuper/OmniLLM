@@ -18,7 +18,7 @@ const T = {
     bootCrashed: "程序意外停止了。点下面的按钮清掉缓存重新载入。", bootError: "载入失败：", bootRetry: "重新载入",
     welcomeTitle: "在这台设备上用你的模型",
     welcomeBody: "在你的 Mac 上打开 OmniLLM，点“添加设备”，再用这台设备扫屏幕上的二维码。",
-    scan: "扫描二维码", pasteInstead: "扫不了码？粘贴配对文字", pastePh: "把配对文字粘贴到这里（以 omnillm3- 开头）", add: "添加", cancel: "取消", back: "返回",
+    scan: "扫描二维码", pasteInstead: "扫不了码？粘贴配对文字", pastePh: "粘贴配对文字（以 omnillm3- 开头）", add: "添加", cancel: "取消", back: "返回",
     scanHint: "把 Mac 屏幕上的二维码放进框里", camDenied: "没有拿到摄像头权限。可以改用下面的“粘贴配对文字”。",
     pairTitle: "添加这台设备", pairConnecting: "正在连接你的 Mac……",
     pairAsk: "要把这台设备添加到你的 Mac 吗？只有你刚在 Mac 上点了“添加设备”才继续。", pairVia: "经由 {0}",
@@ -30,9 +30,9 @@ const T = {
     addImage: "添加图片", removeImage: "移除图片", tooManyImages: "每条消息最多 4 张图片。", imageFailed: "这张图片打不开，换一张试试。", imageTooBig: "图片太大，换一张小一点的。", imageTitle: "图片",
     offline: "连不上你的 Mac：它可能睡眠了或者没联网。醒来后会自动恢复。", retry: "重试",
     noNetwork: "这台设备没有联网，联网后会自动连上。", kept: "刚才输入的还在。", loadingModels: "正在连接你的 Mac……",
-    noModels: "你的 Mac 上还没有可用的模型。在 Mac 的控制台“模型”里接入一个。", noModelsOpt: "没有可用的模型",
+    noModels: "这台设备现在没有能用的模型。在 Mac 的控制台里接入模型，或在“设备”里给它开放模型。", noModelsOpt: "没有可用的模型",
     modelGone: "原来的模型已从你的 Mac 上移除，换成了 {0}",
-    grpSub: "订阅（不另花钱）", grpKey: "API Key", grpLocal: "本机",
+    grpSub: "订阅（不另花钱）", grpKey: "API Key", grpLocal: "你的 Mac 上", latest: "（最新版）", codex: "ChatGPT（Codex）",
     forget: "移除这台设备", forgetQ: "这里的对话会删掉。以后要用，在 Mac 上重新添加。", removing: "正在移除……",
     forgetFar: "已从这台设备上移除，对话已删除。你的 Mac 现在连不上，下次在 Mac 的“设备”里也把它移除。",
     close: "关闭", deleteChat: "删除这个对话", deleteChatQ: "删除对话“{0}”？", chatsLocal: "对话只保存在这台设备上。", searchChats: "搜索对话", noMatch: "没有找到",
@@ -41,7 +41,7 @@ const T = {
     today: "今天", copy: "复制", copied: "已复制", again: "重新回答", againWith: "用 {0} 再答一次", thinking: "正在思考",
     earlier: "之前的回答（{0}）· 展开", earlierOpen: "之前的回答（{0}）· 收起",
     dropped: "（连接断了，回答没写完。连上后点“重试”。）",
-    longChat: "对话已经很长，每次都会整段发出。开个新对话会更快，用 API Key 时也更省。", paused: "已暂停", waited: "{0} 秒", slow: "比平常慢。可以点停止，换个模型再问。",
+    longChat: "对话已经很长，每次都会整段发出。开个新对话会更快，用 API Key 时也更省。", paused: "已暂停", pausedDot: "已在你的 Mac 上暂停", waited: "{0} 秒", slow: "比平常慢。可以点停止，换个模型再问。",
     switchedTo: "换成了 {0}", newContent: "↓ 新内容", waitReply: "等这条回答完成，或先点停止。",
     liveOn: "在线：你的 Mac 连得上，模型可以用", liveOff: "离线：现在连不上你的 Mac", liveWait: "正在连接你的 Mac……",
     volatile: "这个浏览器不能安全地保存配对，所以只在这个页面打开时有效；关掉后要在 Mac 上重新添加。换用 Safari 或 Chrome 可以一直保存。",
@@ -53,34 +53,34 @@ const T = {
     bootSlow: "Loading has made no progress for 20 seconds, stuck at “{0}”. Tap below to clear the cache and load again; on a slow network, another network may help.",
     bootCrashed: "The program stopped unexpectedly. Tap below to clear the cache and load again.", bootError: "Loading failed: ", bootRetry: "Load again",
     welcomeTitle: "Use your models on this device",
-    welcomeBody: "On your Mac, open OmniLLM, choose Add device, and scan the QR code on its screen with this device.",
-    scan: "Scan QR code", pasteInstead: "Can't scan? Paste the pairing text", pastePh: "Paste the pairing text here (starts with omnillm3-)", add: "Add", cancel: "Cancel", back: "Back",
-    scanHint: "Point at the QR code on your Mac's screen", camDenied: "No camera access. Use “Paste the pairing text” below instead.",
+    welcomeBody: "On your Mac, open OmniLLM, choose “Add device”, and scan the QR code on its screen with this device.",
+    scan: "Scan QR code", pasteInstead: "Can’t scan? Paste the pairing text", pastePh: "Paste the pairing text (starts with omnillm3-)", add: "Add", cancel: "Cancel", back: "Back",
+    scanHint: "Point at the QR code on your Mac’s screen", camDenied: "No camera access. Use “Paste the pairing text” below instead.",
     pairTitle: "Add this device", pairConnecting: "Connecting to your Mac…",
-    pairAsk: "Add this device to your Mac? Continue only if you just chose Add device on your Mac.", pairVia: "Via {0}",
-    pairReplace: "This replaces this device's current pairing ({0}); the previous Mac can no longer be used from here.",
-    pairCheck: "If your Mac shows the same number, choose “Matches, add” there.", pairWait: "Waiting for you to confirm on your Mac…", pairMismatch: "Numbers don't match? Cancel", pairDone: "Added.",
-    pairDropped: "The connection dropped. Choose New QR code on your Mac and scan again.", connectedMac: "Connected to your Mac",
-    notCode: "This is not an OmniLLM pairing QR code or pairing text.", needTLS: "Your Mac's remote access can't be used from a phone browser (it needs a wss:// address). Set up public remote access on your Mac.",
+    pairAsk: "Add this device to your Mac? Continue only if you just chose “Add device” on your Mac.", pairVia: "Via {0}",
+    pairReplace: "This replaces this device’s current pairing ({0}); the previous Mac can no longer be used from here.",
+    pairCheck: "If your Mac shows the same number, choose “Matches, add” there.", pairWait: "Waiting for you to confirm on your Mac…", pairMismatch: "Numbers don’t match? Cancel", pairDone: "Added.",
+    pairDropped: "The connection dropped. Choose “New QR code” on your Mac and scan again.", connectedMac: "Connected to your Mac",
+    notCode: "This is not an OmniLLM pairing QR code or pairing text.", needTLS: "Your Mac’s remote access can’t be used from a phone browser (it needs a wss:// address). Set up public remote access on your Mac.",
     chats: "Chats", newChat: "New chat", placeholder: "Message", stop: "Stop", send: "Send", menu: "Menu", model: "Model",
-    addImage: "Add image", removeImage: "Remove image", tooManyImages: "Up to 4 images per message.", imageFailed: "This image can't be opened; try another one.", imageTooBig: "Image too large; try a smaller one.", imageTitle: "Image",
-    offline: "Can't reach your Mac: it may be asleep or offline. This recovers by itself when it wakes.", retry: "Retry",
+    addImage: "Add image", removeImage: "Remove image", tooManyImages: "Up to 4 images per message.", imageFailed: "This image can’t be opened; try another one.", imageTooBig: "Image too large; try a smaller one.", imageTitle: "Image",
+    offline: "Can’t reach your Mac: it may be asleep or offline. It reconnects when your Mac wakes.", retry: "Retry",
     noNetwork: "This device is offline; it reconnects when the network is back.", kept: "What you typed is kept.", loadingModels: "Connecting to your Mac…",
-    noModels: "Your Mac has no models yet. Connect one under Models in the console on your Mac.", noModelsOpt: "No models",
+    noModels: "No models are available to this device. On your Mac, connect a model or allow this device more models under Devices.", noModelsOpt: "No models",
     modelGone: "The previous model was removed from your Mac; switched to {0}",
-    grpSub: "Subscriptions (no extra cost)", grpKey: "API key", grpLocal: "On this Mac",
+    grpSub: "Subscriptions (no extra cost)", grpKey: "API key", grpLocal: "On your Mac", latest: " (latest)", codex: "ChatGPT (Codex)",
     forget: "Remove this device", forgetQ: "Chats here will be deleted. To use this device later, add it on your Mac again.", removing: "Removing…",
-    forgetFar: "Removed from this device and its chats deleted. Your Mac can't be reached now; remove it under Devices on your Mac later too.",
+    forgetFar: "Removed from this device and its chats deleted. Your Mac can’t be reached now; remove it under Devices on your Mac later too.",
     close: "Close", deleteChat: "Delete this chat", deleteChatQ: "Delete the chat “{0}”?", chatsLocal: "Chats are kept on this device only.", searchChats: "Search chats", noMatch: "No matching chats",
-    addHome: "Add to Home Screen", addHomeTip: "Tap the browser's Share button and choose Add to Home Screen. The first time it's opened from the Home Screen, you'll scan the QR code once more.",
+    addHome: "Add to Home Screen", addHomeTip: "Tap the browser’s “Share” button and choose “Add to Home Screen”. The first time it’s opened from the Home Screen, you’ll scan the QR code once more.",
     deviceLine: "This device: {0}", empty: "How can I help?", cut: "(The reply was cut off. Send “continue” to have it go on.)", stopped: "(stopped)",
     today: "Today", copy: "Copy", copied: "Copied", again: "Answer again", againWith: "Answer again with {0}", thinking: "Thinking",
     earlier: "Earlier answer ({0}) · Show", earlierOpen: "Earlier answer ({0}) · Hide",
     dropped: "(Connection lost; the reply is incomplete. Tap Retry once reconnected.)",
-    longChat: "This chat is long and is sent in full each time. A new chat is faster, and cheaper with an API key.", paused: "Paused", waited: "{0}s", slow: "Slower than usual. You can tap Stop and try another model.",
+    longChat: "This chat is long and is sent in full each time. A new chat is faster, and cheaper with an API key.", paused: "Paused", pausedDot: "Paused on your Mac", waited: "{0}s", slow: "Slower than usual. You can tap Stop and try another model.",
     switchedTo: "Switched to {0}", newContent: "↓ New", waitReply: "Wait for this reply, or tap Stop first.",
-    liveOn: "Online: your Mac answers; models are ready", liveOff: "Offline: your Mac can't be reached now", liveWait: "Connecting to your Mac…",
-    volatile: "This browser can't keep the pairing safely, so it only lasts while this page is open; after closing it, add the device on your Mac again. Safari or Chrome keep it.",
+    liveOn: "Online: your Mac answers; models are ready", liveOff: "Offline: your Mac can’t be reached now", liveWait: "Connecting to your Mac…",
+    volatile: "This browser can’t keep the pairing safely, so it only lasts while this page is open; after closing it, add the device on your Mac again. Safari or Chrome keep it.",
     removedHere: "This device was removed from your Mac and its chats here were cleared.",
     otherTab: "OmniLLM is open in another tab.", useHere: "Use here",
   },
@@ -407,25 +407,33 @@ function relayURL(code) {
     return JSON.parse(raw).r;
   } catch { return ""; }
 }
+// relayHost is the host alone (no scheme, no port), except on this
+// computer itself, where the port is what tells relays apart.
 function relayHost(code) {
-  try { return new URL(relayURL(code)).host; } catch { return "?"; }
+  try {
+    const u = new URL(relayURL(code));
+    return /^(127\.|localhost$|\[::1\]$)/.test(u.hostname) ? u.host : u.hostname;
+  } catch { return "?"; }
 }
 
-// A phone paired again first leaves its old pairing on that Mac (failure
-// ignored: the old Mac may be away), so the Mac doesn't keep a dead
-// device under the same name. Its chats stay on the phone.
+// A phone paired again first leaves its old pairing on that Mac, so the
+// Mac doesn't keep a dead device under the same name. Its chats stay on
+// the phone. S.leftOld says the old Mac really let it go: only then is the
+// old pairing gone if the new one fails; otherwise (the old Mac away) it
+// stays in use.
 async function connectPair(text) {
   $("pair-status").textContent = t("pairConnecting");
   $("pair-stop").hidden = false;
   S.pairStopped = false; S.leftOld = false;
   const old = S.device;
+  let closed = false;
   try {
     await omnillm.check(text);
     if (old && !S.pairStopped) {
-      S.leftOld = true;
+      closed = true;
       try { omnillm.close(); } catch {}
       S.openedState = null;
-      try { await omnillm.leave(old.state); } catch {}
+      try { await omnillm.leave(old.state); S.leftOld = true; } catch {}
     }
     if (S.pairStopped) throw new Error("cancelled");
     const name = deviceName();
@@ -446,7 +454,12 @@ async function connectPair(text) {
     const dropped = S.sasUp && e && e.code === "hub_offline";
     sasShown(false); $("pair-stop").hidden = true;
     $("pair-status").textContent = "";
-    if (S.leftOld && S.device === old) { S.device = null; await idb.del("device").catch(() => {}); }
+    if (S.leftOld && S.device === old) {
+      S.device = null; await idb.del("device").catch(() => {});
+      if (S.pairStopped) show("welcome"); // Cancel came while it was leaving
+    }
+    // The old pairing is still good: open it again (it was closed to leave).
+    else if (old && closed && S.device === old) connect();
     if (S.pairStopped) return; // cancelled here; already back where it started
     quoted($("pair-err"), dropped ? t("pairDropped") : errText(e, text));
     $("pair-retry").hidden = false;
@@ -548,24 +561,38 @@ async function recheck() {
     if (e && e.code === "hub_offline") setOnline(false);
   }
 }
+// Back in front: the list again, so versions found meanwhile show. A page
+// restored from the browser's back-forward cache counts too.
 document.addEventListener("visibilitychange", () => { if (!document.hidden) recheck(); });
+addEventListener("pageshow", (e) => { if (e.persisted) recheck(); });
 setInterval(recheck, 120000);
 
 // isSub: a Claude or ChatGPT subscription (the official programs on the
 // hub), not merely a model kept for people (a local model can be that too).
-function isSub(m) { return m.provider === "claude-code" || m.provider === "codex"; }
+function isSub(m) { const k = m.kind || m.provider; return k === "claude-code" || k === "codex"; }
 // isLocal: runs on the Mac itself. The hub tells a device every model is
 // remote (the data leaves the phone), so this goes by the provider: local
 // models come through Ollama.
 function isLocal(m) { return !!m.onHost; } // runs on the Mac itself (the hub says so)
 function group(m) { return isSub(m) ? 0 : isLocal(m) ? 2 : 1; }
 function modelName(id) { const m = S.models.find((x) => x.id === id); return m ? m.name : id; }
+// label: the name in this page's language. The Mac sends the name without
+// language-built parts and says what to add: "latest" (the version isn't
+// known yet) and the kind (Codex). A name the owner chose stays as it is.
+function label(m) {
+  if (m.renamed) return m.name;
+  if (m.kind === "codex") return t("codex");
+  return m.latest ? m.name + t("latest") : m.name;
+}
+// family orders Claude's models Opus, Sonnet, Haiku (largest first).
+function family(m) { const s = (m.id + " " + m.name).toLowerCase(), i = ["opus", "sonnet", "haiku"].findIndex((f) => s.includes(f)); return i < 0 ? 3 : i; }
 
 async function loadModels() {
   const ms = await omnillm.models();
+  for (const m of ms) m.name = label(m);
   // Subscriptions first (the owner pays for them already), then API keys,
   // then models on the Mac; the picker shows names only, grouped.
-  ms.sort((a, b) => (group(a) - group(b)) || a.name.localeCompare(b.name));
+  ms.sort((a, b) => (group(a) - group(b)) || (group(a) === 0 && family(a) - family(b)) || a.name.localeCompare(b.name));
   S.models = ms; S.listed = true;
   const sel = $("model"); sel.textContent = "";
   let og = null, g = -1;
@@ -599,7 +626,7 @@ function localStorageSet(k, v) { try { localStorage.setItem("omnillm." + k, v); 
 // be reached, pulsing grey while connecting.
 function liveDot(state) {
   const d = $("live-dot"); d.className = "live-dot " + state;
-  const label = t({ on: "liveOn", off: "liveOff", paused: "paused" }[state] || "liveWait");
+  const label = t({ on: "liveOn", off: "liveOff", paused: "pausedDot" }[state] || "liveWait");
   d.title = label; d.setAttribute("aria-label", label);
 }
 // Any answer from the Mac other than "paused" ends a pause.
@@ -612,6 +639,8 @@ function setOnline(ok, why) {
 // says so). The typed text stays; Send rests until a check gets through.
 function setPaused(why) {
   S.online = true; S.paused = why;
+  // Paused before the list ever came: the picker says so, not "loading".
+  if (!S.models.length) { const sel = $("model"); sel.textContent = ""; const o = el("option", t("paused")); o.value = ""; sel.append(o); }
   paintBanner(); sendState(); refreshActs();
 }
 // paintBanner: paused, offline (why, and that the text is kept if a send

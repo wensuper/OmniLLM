@@ -24,7 +24,7 @@ func openFailed(ctx context.Context, sec secret.Store, dir string, err error) {
 	paired, cerr := device.CheckPaired(ctx, sec)
 	switch {
 	case cerr != nil:
-		die(sayf(t("读不出这台设备保存的配对（%s）。请用配对时的同一个用户运行。", "Can't read this device's saved pairing (%s). Run as the same user it was paired as."), dir))
+		die(sayf(t("读不出这台设备保存的配对（%s）。请用配对时的同一个用户运行。", "Can’t read this device’s saved pairing (%s). Run as the same user it was paired as."), dir))
 	case !paired:
 		die(sayf(t("这台设备还没配对（在 %s 里没有找到配对），先运行 omnillm connect pair。", "This device is not paired yet (no pairing in %s). Run omnillm connect pair first."), dir))
 	}
@@ -102,7 +102,7 @@ func chatLoop(ctx context.Context, d *device.Device, model string) {
 	name := func(id string) string {
 		for _, m := range ms {
 			if m.ID == id {
-				return m.DisplayName
+				return modelName(m)
 			}
 		}
 		return id
@@ -151,7 +151,7 @@ func chatLoop(ctx context.Context, d *device.Device, model string) {
 					if m.ID == model {
 						mark = "*"
 					}
-					fmt.Fprintf(os.Stderr, "%s %d. %s  (%s)\n", mark, i+1, m.DisplayName, m.ID)
+					fmt.Fprintf(os.Stderr, "%s %d. %s  (%s)\n", mark, i+1, modelName(m), m.ID)
 				}
 				fmt.Fprintln(os.Stderr, t("输入 /model 序号 或 /model ID 切换。", "Type /model NUMBER or /model ID to switch."))
 				continue

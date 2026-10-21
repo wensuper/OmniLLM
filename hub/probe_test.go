@@ -56,7 +56,7 @@ func waitProbes(t *testing.T, h *Hub) {
 	t.Helper()
 	deadline := time.Now().Add(20 * time.Second)
 	time.Sleep(50 * time.Millisecond)
-	for h.probing.Load() {
+	for h.probeRunning() {
 		if time.Now().After(deadline) {
 			t.Fatal("probe never finished")
 		}
@@ -72,39 +72,42 @@ func TestModelVersionsAreAskedOncePerWeek(t *testing.T) {
 	now := time.Now()
 	clock := func() time.Time { return now }
 	ctx := context.Background()
-	start := func() *Hub {
-		h, err := New(ctx, Options{Secrets: sec, Store: st, Lang: "zh", Now: clock})
+	open := func() *Hub {
+		h, err := New(ctx, Options{Secrets: sec, Store: st, Now: clock})
 		if err != nil {
-			t.Fatal(err)
-		}
-		if err := h.Start(ctx); err != nil {
 			t.Fatal(err)
 		}
 		t.Cleanup(func() { _ = h.Stop(ctx) })
 		return h
 	}
-	h := start()
-	h.probing.Store(true) // hold the probe back to see the names before it
+	start := func() *Hub {
+		h := open()
+		if err := h.Start(ctx); err != nil {
+			t.Fatal(err)
+		}
+		return h
+	}
+	// Added before Start, so no probe runs yet: the names before it.
+	h := open()
 	ms, err := h.AddProvider(ctx, provider.Config{Name: "claude-code", Kind: provider.ClaudeCode, Path: path}, "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, m := range ms {
-		if !strings.HasSuffix(m.DisplayName, "（最新版）") {
-			t.Fatalf("unknown version named %q", m.DisplayName)
+		if !m.Latest || m.Kind != "claude-code" || strings.ContainsAny(m.DisplayName, "（(") || !strings.HasPrefix(m.DisplayName, "Claude ") {
+			t.Fatalf("unknown version: %+v", m)
 		}
 	}
-	h.probing.Store(false)
-	h.mu.Lock()
-	h.probeLaterLocked(h.clients["claude-code"])
-	h.mu.Unlock()
+	if err := h.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
 	waitProbes(t, h)
 	if got := probes(t, log); len(got) != 3 {
 		t.Fatalf("probes %v", got)
 	}
 	all, _ := h.Models(ctx)
 	for _, m := range all {
-		if !strings.HasPrefix(m.DisplayName, "Claude ") || !strings.HasSuffix(m.DisplayName, " 4.5") {
+		if m.Latest || !strings.HasPrefix(m.DisplayName, "Claude ") || !strings.HasSuffix(m.DisplayName, " 4.5") {
 			t.Fatalf("after the probe: %q", m.DisplayName)
 		}
 	}
@@ -196,5 +199,104 @@ func TestRemovedSubscriptionIsNotDetectedAgain(t *testing.T) {
 	var removed bool
 	if store.GetJSON(ctx, h.opts.Store, removedKey(provider.ClaudeCode), &removed) == nil {
 		t.Fatal("the removal mark outlived an explicit add")
+	}
+}
+
+func TestProbeFollowsTheConnectedClient(t *testing.T) {
+	defer func(d, g time.Duration) { probeDelay, probeGap = d, g }(probeDelay, probeGap)
+	probeDelay, probeGap = 0, 0
+	path, log := fakeClaude(t)
+	ctx := context.Background()
+	h, err := New(ctx, Options{Secrets: secret.NewMemory(), Store: store.NewMemory()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg := provider.Config{Name: "claude-code", Kind: provider.ClaudeCode, Path: path}
+	if _, err := h.AddProvider(ctx, cfg, ""); err != nil {
+		t.Fatal(err)
+	}
+	old := h.clients["claude-code"]
+	// Added again (say, removed and re-added): the old client's probe
+	// sends nothing.
+	if _, err := h.AddProvider(ctx, cfg, ""); err != nil {
+		t.Fatal(err)
+	}
+	h.probeModels(ctx, old)
+	if got := probes(t, log); len(got) != 0 {
+		t.Fatalf("a replaced client was probed: %v", got)
+	}
+	// A probe still running for the old client does not keep the new one
+	// from being probed.
+	if err := h.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = h.Stop(ctx) })
+	waitProbes(t, h)
+	if got := probes(t, log); len(got) != 3 {
+		t.Fatalf("probes %v", got)
+	}
+	h.mu.Lock()
+	h.probing[old] = true
+	h.probeLaterLocked(old) // already running: not started twice
+	n := len(h.probing)
+	delete(h.probing, old)
+	h.mu.Unlock()
+	if n != 1 {
+		t.Fatalf("probing %d clients", n)
+	}
+	// A model removed while the probe waits is not asked about.
+	_ = h.opts.Store.Delete(ctx, "probed/claude-code/opus")
+	h.mu.Lock()
+	delete(h.resolved, "claude-code/opus")
+	h.mu.Unlock()
+	if err := h.RemoveModel(ctx, "claude-code/opus"); err != nil {
+		t.Fatal(err)
+	}
+	h.probeModels(ctx, h.clients["claude-code"])
+	if got := probes(t, log); len(got) != 3 {
+		t.Fatalf("a removed model was probed: %v", got)
+	}
+}
+
+func TestDetectNowConnectsEvenARemovedSubscription(t *testing.T) {
+	path, _ := fakeClaude(t)
+	t.Setenv("PATH", filepath.Dir(path))
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("CODEX_HOME", t.TempDir())
+	ctx := context.Background()
+	h, err := New(ctx, Options{Secrets: secret.NewMemory(), Store: store.NewMemory()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.AddProvider(ctx, provider.Config{Name: "claude-code", Kind: provider.ClaudeCode, Path: path}, ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := h.RemoveProvider(ctx, "claude-code"); err != nil {
+		t.Fatal(err)
+	}
+	names, err := h.DetectNow(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, n := range names {
+		found = found || n == "Claude Code"
+	}
+	if !found || !h.subscription("claude-code") {
+		t.Fatalf("not connected again on request: %v", names)
+	}
+	var removed bool
+	if store.GetJSON(ctx, h.opts.Store, removedKey(provider.ClaudeCode), &removed) == nil {
+		t.Fatal("the removal mark outlived an explicit check")
+	}
+	// Asked again: nothing new to connect, and that is not an error.
+	names, err = h.DetectNow(ctx)
+	for _, n := range names {
+		if n == "Claude Code" {
+			t.Fatalf("connected twice: %v", names)
+		}
+	}
+	if err != nil {
+		t.Fatal(err)
 	}
 }

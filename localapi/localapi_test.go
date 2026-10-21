@@ -227,7 +227,7 @@ func TestStatusMapping(t *testing.T) {
 		}
 	}
 	w := do(t, Handler(&fakeBackend{err: omnillm.ErrModelNotAllowed}), "POST", "/v1/chat/completions", chatBody, map[string]string{"Accept-Language": "zh-CN"})
-	if !strings.Contains(w.Body.String(), "不允许") {
+	if !strings.Contains(w.Body.String(), "不能用这个模型") {
 		t.Fatalf("zh message expected: %s", w.Body)
 	}
 }

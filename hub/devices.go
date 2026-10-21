@@ -178,7 +178,15 @@ func (h *Hub) UpdateDevice(ctx context.Context, id string, name *string, budget 
 		}
 		d.Models = ms
 	}
-	return d, store.PutJSON(ctx, h.opts.Store, "device/"+id, d)
+	if err := store.PutJSON(ctx, h.opts.Store, "device/"+id, d); err != nil {
+		return d, err
+	}
+	if d.Paused {
+		// Off means off now: a reply in progress stops too, and the device
+		// is told it was paused.
+		h.stopDeviceChats(id, &omnillm.Error{Code: omnillm.CodeDevicePaused, Msg: omnillm.MsgDevicePaused})
+	}
+	return d, nil
 }
 
 // Revoke removes a device at once: its key is deleted, its mailbox released
@@ -509,6 +517,12 @@ func (h *Hub) finishPairing(ctx context.Context, p *pairing, sess *e2e.Session, 
 	}
 	expired := cctx.Err() == context.DeadlineExceeded
 	cancel()
+	if (err != nil || !ok) && errors.Is(context.Cause(ctx), errLinkDown) {
+		// This Mac lost its link to the relay while the owner was asked:
+		// the device did not leave; remote access is down.
+		h.endPairing(p, &omnillm.Error{Code: omnillm.CodeHubOffline, Msg: omnillm.MsgRelayUnavailable})
+		return omnillm.ErrPairingFailed
+	}
 	if (err != nil || !ok) && ctx.Err() != nil && !expired {
 		// The device side ended while the owner was looking (it cancelled,
 		// or its connection dropped): not the owner's refusal.
@@ -710,7 +724,7 @@ func (h *Hub) OwnerModels(ctx context.Context) ([]ModelView, error) {
 	for _, m := range all {
 		mp := prefs[m.ID]
 		if mp.Name != "" {
-			m.DisplayName = mp.Name
+			m.DisplayName, m.Renamed = mp.Name, true
 		}
 		out = append(out, ModelView{ModelInfo: m, Hidden: mp.Hidden})
 	}
@@ -728,7 +742,7 @@ func (h *Hub) forDevices(ctx context.Context, ms []omnillm.ModelInfo) []omnillm.
 			continue
 		}
 		if mp.Name != "" {
-			m.DisplayName = mp.Name
+			m.DisplayName, m.Renamed = mp.Name, true
 		}
 		out = append(out, m)
 	}
@@ -763,7 +777,9 @@ func (h *Hub) AddApp(ctx context.Context, name string, models []string, budget i
 		budget = h.opts.DefaultBudget
 	}
 	tok := appTokenPrefix + hex.EncodeToString(e2e.RandomBytes(32))
-	apps, _ := h.Apps(ctx)
+	h.deviceMu.Lock()
+	defer h.deviceMu.Unlock()
+	apps, _ := h.listApps(ctx)
 	a := App{ID: newDeviceID(), Name: uniqueName(cleanName(name), appNames(apps, "")), TokenHash: tokenHash(tok), Models: models, Budget: budget, Created: h.opts.Now().UTC()}
 	if err := store.PutJSON(ctx, h.opts.Store, "app/"+a.ID, a); err != nil {
 		return App{}, "", err
@@ -771,8 +787,32 @@ func (h *Hub) AddApp(ctx context.Context, name string, models []string, budget i
 	return a, tok, nil
 }
 
-// Apps lists app tokens (hashes only).
+// Apps lists app tokens (hashes only). Apps are named uniquely, as
+// devices are; two apps that share a name from before that rule (or from
+// two hubs' records merged) are told apart once, here, the later one
+// becoming "my-script 2".
 func (h *Hub) Apps(ctx context.Context) ([]App, error) {
+	h.deviceMu.Lock()
+	defer h.deviceMu.Unlock()
+	apps, err := h.listApps(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var seen []string
+	for i, a := range apps {
+		if n := uniqueName(a.Name, seen); n != a.Name {
+			a.Name = n
+			if store.PutJSON(ctx, h.opts.Store, "app/"+a.ID, a) == nil {
+				apps[i] = a
+			}
+		}
+		seen = append(seen, apps[i].Name)
+	}
+	return apps, nil
+}
+
+// listApps reads the app records, oldest first.
+func (h *Hub) listApps(ctx context.Context) ([]App, error) {
 	keys, err := h.opts.Store.List(ctx, "app/")
 	if err != nil {
 		return nil, err
@@ -784,6 +824,7 @@ func (h *Hub) Apps(ctx context.Context) ([]App, error) {
 			out = append(out, a)
 		}
 	}
+	sort.SliceStable(out, func(i, j int) bool { return out[i].Created.Before(out[j].Created) })
 	return out, nil
 }
 
@@ -807,7 +848,7 @@ func (h *Hub) UpdateApp(ctx context.Context, id string, name *string, budget *in
 		a.Budget = *budget
 	}
 	if name != nil {
-		apps, _ := h.Apps(ctx)
+		apps, _ := h.listApps(ctx)
 		a.Name = uniqueName(cleanName(*name), appNames(apps, a.ID))
 	}
 	if paused != nil {
@@ -836,7 +877,7 @@ func (h *Hub) appByToken(ctx context.Context, tok string) (App, error) {
 		return App{}, &omnillm.Error{Code: omnillm.CodeInvalidToken, Msg: omnillm.MsgInvalidToken}
 	}
 	want := tokenHash(tok)
-	apps, err := h.Apps(ctx)
+	apps, err := h.listApps(ctx)
 	if err != nil {
 		return App{}, err
 	}
@@ -897,7 +938,7 @@ func (h *Hub) ModelsForApp(ctx context.Context, token string) ([]omnillm.ModelIn
 	prefs := h.modelPrefs(ctx)
 	for i := range out {
 		if n := prefs[out[i].ID].Name; n != "" {
-			out[i].DisplayName = n
+			out[i].DisplayName, out[i].Renamed = n, true
 		}
 	}
 	return out, nil
