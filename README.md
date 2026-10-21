@@ -48,7 +48,6 @@ Mac 上也可以点菜单栏的 OmniLLM 图标 →「检查更新…」。不想
 ```bash
 omnillm status      # 现在怎么样、下一步做什么
 omnillm open        # 打开控制台
-omnillm update      # 更新到最新版本
 omnillm uninstall   # 停止并移除（加 --purge 连数据和 Key 一起删）
 ```
 
@@ -71,6 +70,7 @@ OmniLLM makes one computer (the **hub**) the only place that holds your LLM acco
    ```bash
    curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh
    ```
+   Or ask your AI coding assistant: `Read https://raw.githubusercontent.com/wensuper/OmniLLM/main/INSTALL.md and install OmniLLM on this computer.` In the terminal you installed from, use `~/.local/bin/omnillm` until you open a new window.
 2. Connect a model: a logged-in Claude Code or Codex connects by itself; otherwise paste an API key in the console that opens, or install Ollama.
 3. Add your phone: *Devices → Add device* in the console (or the OmniLLM menu bar icon → *Add device…*), scan the QR code with the phone’s camera, check that the 6 digits match, then choose *Matches, add* on the computer.
 
