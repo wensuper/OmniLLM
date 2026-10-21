@@ -395,12 +395,12 @@ function welcomeNote(key) {
 
 // ---------- pairing ----------
 // Add waits for something to add.
-const pasteReady = () => { $("paste-go").disabled = !/^omnillm\d-/.test($("paste-text").value.trim()); $("welcome-err").textContent = ""; }; // only pairing text can be added
+const pasteReady = () => { $("paste-go").disabled = !$("paste-text").value.trim(); $("welcome-err").textContent = ""; }; // pair() explains anything that isn’t pairing text
 $("paste-text").addEventListener("input", pasteReady);
 pasteReady();
 $("paste-go").addEventListener("click", () => {
   const v = $("paste-text").value.trim();
-  if (!/^omnillm\d-/.test(v)) return;
+  if (!v) return;
   pair(v);
 });
 $("pair-retry").addEventListener("click", () => { show(S.device ? "chat" : "welcome"); });
