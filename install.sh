@@ -125,7 +125,7 @@ if [ "$code" = "200" ]; then
 else
   say "$(t "还没有发布的版本：从源代码编译（没有签名可核对）。" "No release published yet: building from source (not signature-checked).")"
   command -v go >/dev/null 2>&1 || fail "$(t "还没有发布的版本，这台电脑上也没有 Go。从 https://go.dev/dl/ 装 Go 1.27.2 或更新的版本后再运行一次。" "No release yet, and Go isn’t installed. Install Go 1.27.2 or newer from https://go.dev/dl/ and run this again.")"
-  GOBIN="$work" GOFLAGS=-trimpath go install "github.com/$REPO/cmd/omnillm@latest" || fail "$(t "编译失败。" "The build failed.")"
+  GOBIN="$work" GOFLAGS=-trimpath go install "github.com/$REPO/cmd/omnillm@latest" || fail "$(t "编译失败。看上面的报错；如果是网络问题，换个网络再运行一次。" "The build failed. See the errors above; if it’s the network, try another network and run this again.")"
   bin="$work/omnillm"
 fi
 

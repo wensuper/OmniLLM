@@ -109,14 +109,14 @@ func installCmd(args []string) {
 	}
 	if os.Geteuid() == 0 {
 		// Root would leave root-owned files in the person's home folder.
-		die(say(t("不要用 root 或 sudo 运行：OmniLLM 只为当前用户安装。", "Don’t run this as root or with sudo: OmniLLM installs for the current user only.")))
+		die(say(t("不要用 root 或 sudo 运行：OmniLLM 只为当前用户安装。去掉 sudo 再运行一次。", "Don’t run this as root or with sudo: OmniLLM installs for the current user only. Run it again without sudo.")))
 	}
 	// Running the installer again on a machine set up as a device only
 	// (a server) updates that, rather than turning it into a hub.
 	if deviceOnly || (!hubOnly && role() == "device") {
 		if !deviceOnly {
-			fmt.Println(runnable(t("这台机器用的是另一台电脑上的 OmniLLM，所以按设备更新。想让这台机器自己当主机，运行 omnillm install --hub。",
-				"This machine uses OmniLLM on another computer, so it was updated as a device. To make this machine the hub, run omnillm install --hub.")))
+			fmt.Println(runnable(t("这台电脑只当设备用，这次只更新了程序。想让它自己接入模型、给别的设备用，运行 omnillm install --hub。",
+				"This computer is set up as a device, so only the program was updated. To have it run its own models for other devices, run omnillm install --hub.")))
 		}
 		installDevice()
 		return
@@ -270,7 +270,7 @@ func nextStep(st Status) string {
 		return fmt.Sprintf(t("下一步：接入一个模型（选一种）：\n"+
 			"· 有 Claude 订阅：%[1]s运行 claude，输入 /login\n"+
 			"· 有 ChatGPT 订阅：%[1]s运行 codex login\n"+
-			"· 有 API Key：在这台机器的终端里亲自运行 omnillm hub provider add anthropic（或 openai、openai-compatible），在提示时粘贴；API Key 不要发到聊天里",
+			"· 有 API Key：在这台电脑的终端里亲自运行 omnillm hub provider add anthropic（或 openai、openai-compatible），在提示时粘贴；API Key 不要发到聊天里",
 			"Next: connect a model (pick one):\n"+
 				"· Claude subscription: %[1]s, run claude, then type /login\n"+
 				"· ChatGPT subscription: %[1]s, run codex login\n"+
@@ -811,8 +811,8 @@ func loginURL() (string, error) {
 
 func statusCmd(args []string) {
 	if role() == "device" {
-		st := Status{Next: runnable(t("这台机器用的是另一台电脑上的 OmniLLM，不在这里运行主机。对话：omnillm connect chat。",
-			"This machine uses OmniLLM on another computer; no hub runs here. To chat: omnillm connect chat."))}
+		st := Status{Next: runnable(t("这台电脑用的是你 Mac 上的 OmniLLM，自己不接入模型。对话：omnillm connect chat。",
+			"This computer uses OmniLLM on your Mac and runs no models itself. To chat: omnillm connect chat."))}
 		u := readUpdate(dataDir("device"))
 		st.Update = plain(u.newer(version))
 		if len(args) > 0 && args[0] == "--json" {
@@ -945,12 +945,12 @@ func installDevice() {
 	}
 	_ = os.WriteFile(filepath.Join(dir, deviceMark), nil, 0o600)
 	if device.Paired(context.Background(), secrets(dir, "omnillm-device")) {
-		fmt.Println(runnable(t("这台机器已经配对过，可以直接用：omnillm connect chat", "This machine is already paired. Ready: omnillm connect chat")))
+		fmt.Println(runnable(t("这台电脑已经配对过，可以直接用：omnillm connect chat", "This computer is already paired. Ready: omnillm connect chat")))
 		return
 	}
 	tty, err := os.Open("/dev/tty")
 	if err != nil {
-		fmt.Println(runnable(t("下一步：在主机的控制台里点“添加设备”，展开“电脑或服务器（没有摄像头）”复制配对文字，然后在这里运行 omnillm connect pair 粘贴。", "Next: in your hub’s console choose “Add device”, open “Computer or server (no camera)” and copy the pairing text, then run omnillm connect pair here and paste it.")))
+		fmt.Println(runnable(t("下一步：在你的 Mac 上打开 OmniLLM 控制台，点“添加设备”，展开“电脑或服务器（没有摄像头）”复制配对文字，然后在这里运行 omnillm connect pair 粘贴。", "Next: on your Mac, open the OmniLLM console, choose “Add device”, open “Computer or server (no camera)” and copy the pairing text, then run omnillm connect pair here and paste it.")))
 		return
 	}
 	tty.Close()
