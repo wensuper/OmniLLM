@@ -21,6 +21,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -344,8 +345,8 @@ func underService() bool {
 }
 
 // quietFor is how long ago the hub last answered a call (the audit log
-// records each call when it ends). Pairing a device takes a person at
-// the console; a restart then only asks them to scan again.
+// records each call when it ends); a call still under way, or a pairing,
+// is Busy.
 func quietFor(ctx context.Context, h *hub.Hub, started time.Time) time.Duration {
 	last := started
 	for back := 0; back < 2; back++ {
@@ -387,7 +388,11 @@ func autoUpdate(ctx context.Context, h *hub.Hub, dir string) {
 			u.Latest, u.CheckedAt = latest, time.Now()
 			writeUpdate(dir, u)
 		}
-		switch autoAction(version, u, quietFor(ctx, h, started), underService()) {
+		quiet := quietFor(ctx, h, started)
+		if h.Busy() {
+			quiet = 0
+		}
+		switch autoAction(version, u, quiet, underService()) {
 		case "busy":
 			wait = autoRetry
 		case "install":

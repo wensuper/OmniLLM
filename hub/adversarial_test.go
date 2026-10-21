@@ -240,12 +240,21 @@ func TestCancelMidStreamReleasesUpstream(t *testing.T) {
 	if c, err := s.Recv(); err != nil || c.Text != "first" {
 		t.Fatalf("%q %v", c.Text, err)
 	}
+	// A reply on its way keeps an update from restarting the hub.
+	if !e.hub.Busy() {
+		t.Fatal("hub not busy while a reply streams")
+	}
 	cancel()
 	s.Close()
 	select {
 	case <-cancelled:
 	case <-time.After(5 * time.Second):
 		t.Fatal("cancelling on the device did not cancel the upstream request")
+	}
+	for deadline := time.Now().Add(5 * time.Second); e.hub.Busy(); time.Sleep(20 * time.Millisecond) {
+		if time.Now().After(deadline) {
+			t.Fatal("hub still busy after the reply was cancelled")
+		}
 	}
 	// The slot is free again: a new request goes through.
 	e.fake.setHook(nil)

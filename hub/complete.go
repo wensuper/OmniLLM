@@ -117,7 +117,17 @@ func (h *Hub) complete(ctx context.Context, p principal, req omnillm.Request) (o
 		h.audit(ctx, p, m, req.Caller, omnillm.Usage{}, string(omnillm.AsError(err).Code))
 		return nil, err
 	}
+	h.inFlight.Add(1)
 	return &accounted{Stream: s, h: h, p: p, m: m, caller: req.Caller, reserved: worst, inEst: inEst, start: start}, nil
+}
+
+// Busy reports a reply still on its way or a device being paired: what a
+// restart (an update) would cut off.
+func (h *Hub) Busy() bool {
+	h.mu.Lock()
+	pairing := len(h.pairings) > 0
+	h.mu.Unlock()
+	return pairing || h.inFlight.Load() > 0
 }
 
 // DefaultMaxTokens caps a reply when the caller sets no limit.
@@ -187,6 +197,7 @@ func (a *accounted) Close() error {
 
 func (a *accounted) settle(outcome string) {
 	a.once.Do(func() {
+		a.h.inFlight.Add(-1)
 		u := a.Stream.Usage()
 		if u.InputTokens == 0 {
 			u.InputTokens = a.inEst
