@@ -118,7 +118,7 @@ if [ "$code" = "200" ]; then
       --certificate-identity-regexp "^https://github\\.com/wensuper/OmniLLM/\\.github/workflows/release\\.yml@refs/tags/v[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.]+)?\$" \
       --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
       "$work/checksums.txt" >/dev/null 2>&1 || fail "$(t "签名核对没有通过，没有安装。" "The signature check failed, so nothing was installed.")"
-    say "$(t "签名也核对通过（由 $REPO 的发布流程构建）。" "Signature OK (built by $REPO’s release workflow).")"
+    say "$(t "签名也核对通过（由 ${REPO} 的发布流程构建）。" "Signature OK (built by ${REPO}’s release workflow).")"
   fi
   tar -xzf "$work/$asset" -C "$work" omnillm || fail "$(t "下载的压缩包损坏了，请再运行一次。" "The archive is damaged. Run this again.")"
   bin="$work/omnillm"
