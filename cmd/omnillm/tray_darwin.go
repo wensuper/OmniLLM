@@ -5,6 +5,7 @@ package main
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -81,7 +82,7 @@ func trayReady() {
 	sources := systray.AddMenuItem("", "")
 	// No separator here: while the hub is down the counts are hidden, and
 	// two separators would stand together.
-	add := systray.AddMenuItem(t("添加设备…", "Add a device…"), "")
+	add := systray.AddMenuItem(t("添加设备…", "Add device…"), "")
 	open := systray.AddMenuItem(t("打开控制台…", "Open the console…"), "")
 	systray.AddSeparator()
 	// The version line: grey while this is the latest; 有新版本 X when a
@@ -96,10 +97,16 @@ func trayReady() {
 	startFailed := false // launchctl kickstart failed: say what to do instead
 	// Updates: checked a minute after start, then every day, and on a click.
 	logPath := filepath.Join(dataDir("hub"), "update.log")
+	// Held while anyone installs: this menu, the hub's own updater or
+	// omnillm update (update.go).
+	lockPath := filepath.Join(dataDir("hub"), "update.lock")
 	up := updateState{Log: logPath}
+	starting := false // a launchctl kickstart is under way
 	show := func() {
 		st, ok := queryStatus()
-		head.SetTitle(statusLine(st, ok, up.Installing != "", startFailed))
+		up.HubUpdating = up.Installing == "" && holderAlive(lockPath)
+		updating := up.Installing != "" || up.HubUpdating
+		head.SetTitle(statusLine(st, ok, updating, startFailed))
 		if !ok {
 			systray.SetTemplateIcon(trayDown, trayDown)
 			devices.Hide()
@@ -107,8 +114,8 @@ func trayReady() {
 			add.Disable()
 			open.Disable()
 			// While an update installs, the hub is down on purpose and
-			// comes back by itself.
-			if up.Installing != "" {
+			// comes back by itself: starting it would race the installer.
+			if updating || starting {
 				start.Hide()
 			} else {
 				start.Show()
@@ -162,6 +169,7 @@ func trayReady() {
 	}
 	checkDone := make(chan checkResult, 1)
 	installDone := make(chan error, 1)
+	startDone := make(chan error, 1)
 	startCheck := func() {
 		up.Checking = true
 		showUpdate()
@@ -216,9 +224,24 @@ func trayReady() {
 				}
 			case <-ver.ClickedCh:
 				if installClick && up.Installing == "" {
-					startInstall()
+					if holderAlive(lockPath) {
+						// Someone else is installing already.
+						up.HubUpdating = true
+						showUpdate()
+						show()
+					} else {
+						startInstall()
+					}
 				}
 			case err := <-installDone:
+				if errors.Is(err, errLocked) {
+					// The hub (or a terminal) is installing it already:
+					// not a failure, and that one replaces this process too.
+					up.Installing, up.HubUpdating = "", true
+					showUpdate()
+					show()
+					break
+				}
 				// Success normally replaces this process (the installer
 				// starts the menu bar icon again). Still here: if the
 				// new version is installed all the same, run it.
@@ -252,9 +275,20 @@ func trayReady() {
 			case <-add.ClickedCh:
 				trayOpen("&add")
 			case <-start.ClickedCh:
-				err := exec.Command("launchctl", "kickstart", "gui/"+strconv.Itoa(os.Getuid())+"/"+launchdLabel).Run()
-				startFailed = err != nil
-				time.Sleep(2 * time.Second)
+				if starting {
+					break
+				}
+				starting = true
+				start.Hide()
+				go func() {
+					err := exec.Command("launchctl", "kickstart", "gui/"+strconv.Itoa(os.Getuid())+"/"+launchdLabel).Run()
+					if err == nil {
+						time.Sleep(2 * time.Second) // the hub opens its control socket
+					}
+					startDone <- err
+				}()
+			case err := <-startDone:
+				starting, startFailed = false, err != nil
 				show()
 			}
 		}

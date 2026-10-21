@@ -58,7 +58,7 @@ func TestUpdateLines(t *testing.T) {
 		t.Fatal(c)
 	}
 	s.Checking = true
-	if c, click, _ := checkLine(cur, s, now); c != "正在检查更新…" || click {
+	if c, click, _ := checkLine(cur, s, now); c != "正在检查更新……" || click {
 		t.Fatal(c)
 	}
 	s = s.checked(cur, "v0.2.0-alpha.9", nil, now)
@@ -69,7 +69,7 @@ func TestUpdateLines(t *testing.T) {
 		t.Fatal("up to date did not go back after a minute: " + c)
 	}
 	s = s.checked(cur, "", context.DeadlineExceeded, now)
-	if c, click, _ := checkLine(cur, s, now); c != "检查失败，点击重试" || !click {
+	if c, click, _ := checkLine(cur, s, now); c != "检查失败 · 点击重试" || !click {
 		t.Fatal(c)
 	}
 	s = s.checked(cur, "v0.2.0-alpha.10", nil, now)
@@ -80,11 +80,11 @@ func TestUpdateLines(t *testing.T) {
 		t.Fatal("check line shown while an update is offered")
 	}
 	s.Installing = s.Latest
-	if v, inst := versionLine(cur, s); v != "正在更新到 0.2.0-alpha.10…" || inst {
+	if v, inst := versionLine(cur, s); v != "正在更新到 0.2.0-alpha.10……" || inst {
 		t.Fatal(v)
 	}
 	s.Installing, s.Failed = "", true
-	if v, inst := versionLine(cur, s); v != "更新到 0.2.0-alpha.10 没有成功，点击再试" || !inst {
+	if v, inst := versionLine(cur, s); v != "更新到 0.2.0-alpha.10 没有成功 · 点击重试" || !inst {
 		t.Fatal(v)
 	}
 	home, _ := os.UserHomeDir()
@@ -96,7 +96,7 @@ func TestUpdateLines(t *testing.T) {
 	if v, _ := versionLine(cur, updateState{}); v != "Version 0.2.0-alpha.9" {
 		t.Fatal(v)
 	}
-	if v, _ := versionLine(cur, s); v != "Updating to 0.2.0-alpha.10 didn’t work · click to try again" || versionTip(cur, s) != "Log: ~/.omnillm/hub/update.log" {
+	if v, _ := versionLine(cur, s); v != "Update to 0.2.0-alpha.10 didn’t work · click to retry" || versionTip(cur, s) != "Log: ~/.omnillm/hub/update.log" {
 		t.Fatal(v)
 	}
 	if v, _ := versionLine(cur, updateState{Latest: "v0.2.0-alpha.10"}); v != "New version 0.2.0-alpha.10 · click to update" {
@@ -189,10 +189,10 @@ func TestTrayFollowsTheHubsUpdater(t *testing.T) {
 func TestMenuLines(t *testing.T) {
 	t.Setenv("OMNILLM_LANG", "zh")
 	for _, c := range []struct{ got, want string }{
-		{devicesLine(Status{Devices: 3, Online: 0}), "设备  0 台在线 / 共 3 台"},
+		{devicesLine(Status{Devices: 3, Online: 0}), "设备  3 台（0 台在线）"},
 		{devicesLine(Status{}), "设备  还没有添加"},
 		{sourcesLine(Status{Providers: 2}), "模型来源  2"},
-		{statusLine(Status{RelayConfigured: true, RelayUp: true}, true, false, false), "在线 · 手机和其他设备能连上"},
+		{statusLine(Status{RelayConfigured: true, RelayUp: true}, true, false, false), "在线 · 手机和其他设备可以连上"},
 		{statusLine(Status{RelayConfigured: true}, true, false, false), "远程连接断开 · 设备暂时连不上"},
 		{statusLine(Status{}, true, false, false), "在运行 · 只在这台 Mac 上用"},
 		{statusLine(Status{}, false, true, true), "正在更新 · 马上回来"},
@@ -204,7 +204,7 @@ func TestMenuLines(t *testing.T) {
 	}
 	t.Setenv("OMNILLM_LANG", "en")
 	for _, c := range []struct{ got, want string }{
-		{devicesLine(Status{Devices: 3, Online: 1}), "Devices  1 of 3 online"},
+		{devicesLine(Status{Devices: 3, Online: 1}), "Devices  3 (1 online)"},
 		{sourcesLine(Status{}), "Model sources  none yet"},
 		{statusLine(Status{}, false, false, false), "OmniLLM isn’t running"},
 	} {
@@ -217,12 +217,29 @@ func TestMenuLines(t *testing.T) {
 func TestRestartFailedKeepsTheOffer(t *testing.T) {
 	t.Setenv("OMNILLM_LANG", "en")
 	s := updateState{Installing: "v0.2.0-alpha.10"}.restartFailed("v0.2.0-alpha.10")
-	if title, install := versionLine("0.2.0-alpha.9", s); !install || title != "Updating to 0.2.0-alpha.10 didn’t work · click to try again" {
+	if title, install := versionLine("0.2.0-alpha.9", s); !install || title != "Update to 0.2.0-alpha.10 didn’t work · click to retry" {
 		t.Fatalf("%q %v", title, install)
 	}
 	log := filepath.Join(t.TempDir(), "update.log")
 	noteLog(log, "restart failed: %v", errors.New("exec format error"))
 	if b, _ := os.ReadFile(log); !strings.Contains(string(b), "exec format error") {
 		t.Fatalf("%q", b)
+	}
+}
+
+func TestHubUpdatingIsNotAFailure(t *testing.T) {
+	t.Setenv("OMNILLM_LANG", "zh")
+	s := updateState{HubUpdating: true, Latest: "v0.2.0-alpha.10"}
+	if title, install := versionLine("0.2.0-alpha.9", s); title != "正在更新……" || install {
+		t.Fatalf("%q %v", title, install)
+	}
+	if _, _, show := checkLine("0.2.0-alpha.9", s, time.Now()); show {
+		t.Fatal("check line shown while the hub updates")
+	}
+	if tip := versionTip("0.2.0-alpha.9", s); tip != "" {
+		t.Fatal(tip)
+	}
+	if got := statusLine(Status{}, false, true, false); got != "正在更新 · 马上回来" {
+		t.Fatal(got)
 	}
 }

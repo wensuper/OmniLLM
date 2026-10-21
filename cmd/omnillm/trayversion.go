@@ -222,7 +222,7 @@ func runInstaller(ctx context.Context, c *http.Client, dir string, args []string
 	defer os.RemoveAll(work)
 	cmd := exec.CommandContext(ctx, "/bin/sh", append([]string{p}, args...)...)
 	cmd.Dir = work
-	cmd.Env = append(os.Environ(), "OMNILLM_NO_BROWSER=1")
+	cmd.Env = append(os.Environ(), "OMNILLM_NO_BROWSER=1", "OMNILLM_UPDATE_TO="+readUpdate(dir).Latest)
 	cmd.Stdout, cmd.Stderr = logw, logw
 	if detached {
 		detach(cmd)
@@ -244,7 +244,7 @@ var errHandedOff = errors.New("update: installer handed to its own unit")
 func runInUnit(ctx context.Context, dir, work, script string, args []string) error {
 	unit := fmt.Sprintf("omnillm-update-%d-%d", time.Now().Unix(), os.Getpid())
 	run := []string{"--user", "--collect", "--quiet", "--unit", unit, "--property=RuntimeMaxSec=900",
-		"--setenv=OMNILLM_NO_BROWSER=1"}
+		"--setenv=OMNILLM_NO_BROWSER=1", "--setenv=OMNILLM_UPDATE_TO=" + readUpdate(dir).Latest}
 	for _, k := range []string{"OMNILLM_HOME", "OMNILLM_LANG", "LANG", "LC_ALL"} {
 		if v := os.Getenv(k); v != "" {
 			run = append(run, "--setenv="+k+"="+v)
@@ -273,6 +273,7 @@ type updateState struct {
 	Installing  string    // the version being installed now
 	Failed      bool      // the last install failed
 	Log         string    // the installer's log, for the failure line
+	HubUpdating bool      // someone else holds the update lock: the hub's own updater or omnillm update
 }
 
 // upToDateFor is how long "✓ 已是最新版本" stays before the line offers
@@ -285,9 +286,13 @@ const upToDateFor = time.Minute
 func versionLine(cur string, s updateState) (title string, install bool) {
 	switch {
 	case s.Installing != "":
-		return fmt.Sprintf(t("正在更新到 %s…", "Updating to %s…"), plain(s.Installing)), false
+		return fmt.Sprintf(t("正在更新到 %s……", "Updating to %s…"), plain(s.Installing)), false
+	case s.HubUpdating:
+		// The hub's own updater (or omnillm update) is installing; a click
+		// would only find the lock taken.
+		return t("正在更新……", "Updating…"), false
 	case s.Failed && s.Latest != "":
-		return fmt.Sprintf(t("更新到 %s 没有成功，点击再试", "Updating to %s didn’t work · click to try again"), plain(s.Latest)), true
+		return fmt.Sprintf(t("更新到 %s 没有成功 · 点击重试", "Update to %s didn’t work · click to retry"), plain(s.Latest)), true
 	case s.Latest != "" && compareVersions(s.Latest, cur) > 0:
 		return fmt.Sprintf(t("有新版本 %s · 点击更新", "New version %s · click to update"), plain(s.Latest)), true
 	}
@@ -297,7 +302,7 @@ func versionLine(cur string, s updateState) (title string, install bool) {
 // versionTip is the version line's tooltip.
 func versionTip(cur string, s updateState) string {
 	switch {
-	case s.Installing != "":
+	case s.Installing != "" || s.HubUpdating:
 		return ""
 	case s.Failed && s.Latest != "" && s.Log != "":
 		return fmt.Sprintf(t("日志：%s", "Log: %s"), tildePath(s.Log))
@@ -311,14 +316,14 @@ func versionTip(cur string, s updateState) string {
 // checkLine is the line under it: shown only while the version line offers
 // nothing (one way to update at a time); click says a click starts a check.
 func checkLine(cur string, s updateState, now time.Time) (title string, click, show bool) {
-	if _, install := versionLine(cur, s); install || s.Installing != "" {
+	if _, install := versionLine(cur, s); install || s.Installing != "" || s.HubUpdating {
 		return "", false, false
 	}
 	switch {
 	case s.Checking:
-		return t("正在检查更新…", "Checking for updates…"), false, true
+		return t("正在检查更新……", "Checking for updates…"), false, true
 	case s.CheckFailed:
-		return t("检查失败，点击重试", "Check failed; click to retry"), true, true
+		return t("检查失败 · 点击重试", "Check failed · click to retry"), true, true
 	case !s.CheckedAt.IsZero() && now.Sub(s.CheckedAt) < upToDateFor:
 		return t("✓ 已是最新版本", "✓ Up to date"), false, true
 	}
@@ -435,18 +440,19 @@ func statusLine(st Status, ok, updating, startFailed bool) string {
 	case !st.RelayConfigured:
 		return t("在运行 · 只在这台 Mac 上用", "Running · this Mac only")
 	case st.RelayUp:
-		return t("在线 · 手机和其他设备能连上", "Online · phones and other devices can connect")
+		return t("在线 · 手机和其他设备可以连上", "Online · phones and other devices can connect")
 	}
 	return t("远程连接断开 · 设备暂时连不上", "Remote access down · devices can’t connect now")
 }
 
 // devicesLine and sourcesLine are the menu's two counts, NEXA's
-// "待我决策  3": each opens its page in the console.
+// "待我决策  3": each opens its page in the console. Devices are counted
+// in omnillm status's order: all of them, then how many are online.
 func devicesLine(st Status) string {
 	if st.Devices == 0 {
 		return t("设备  还没有添加", "Devices  none yet")
 	}
-	return fmt.Sprintf(t("设备  %d 台在线 / 共 %d 台", "Devices  %d of %d online"), st.Online, st.Devices)
+	return fmt.Sprintf(t("设备  %d 台（%d 台在线）", "Devices  %d (%d online)"), st.Devices, st.Online)
 }
 
 func sourcesLine(st Status) string {
