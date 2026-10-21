@@ -371,3 +371,5 @@ body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-i
 .primary:disabled, .secondary:disabled { opacity: .5; cursor: default; box-shadow: none; }
 .primary:focus-visible, .secondary:focus-visible { box-shadow: var(--focus); }
 @media (max-width: 359px) { .wl-chip { padding: 5px 9px; font-size: 11.5px; letter-spacing: 0; } .wl-brand span { display: none; } }
+/* Disabled buttons read as "not yet", not broken (as in the console). */
+.primary:disabled, .secondary:disabled { opacity: 1; background: var(--surface-3); border-color: var(--line-2); color: var(--muted); }
