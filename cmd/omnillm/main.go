@@ -662,7 +662,13 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 			}
 			ps, _ := h.Providers(ctx)
 			ds, _ := h.Devices(ctx)
-			st := map[string]any{"running": true, "version": version, "providers": len(ps), "devices": len(ds),
+			online := 0
+			for _, d := range ds {
+				if d.Online {
+					online++
+				}
+			}
+			st := map[string]any{"running": true, "version": version, "providers": len(ps), "devices": len(ds), "online": online,
 				"relay_configured": relayURL != "", "relay_up": h.RelayUp(), "console": con != nil}
 			return c.Send(control.Reply{Event: "ok", Data: jsonData(st)})
 		case "provider.add":

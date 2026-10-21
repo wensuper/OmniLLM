@@ -46,6 +46,7 @@ type Status struct {
 	Version         string `json:"version,omitempty"`
 	Providers       int    `json:"providers"`
 	Devices         int    `json:"devices"`
+	Online          int    `json:"online"` // devices connected now
 	RelayConfigured bool   `json:"relay_configured"`
 	RelayUp         bool   `json:"relay_up"`
 	Console         bool   `json:"console"`
@@ -480,8 +481,9 @@ func plistEnv(path string) map[string]string {
 	return out
 }
 
-// installTray adds the menu bar icon as a login item. It comes back at
-// login; quitting it from its menu keeps it away until then.
+// installTray adds the menu bar icon as a login item. Its menu has no
+// quit item: it stays in the menu bar, and launchd starts it again at login
+// and after a crash.
 func installTray(home, bin, dir string) error {
 	plist := filepath.Join(home, "Library", "LaunchAgents", trayLabel+".plist")
 	body := `<?xml version="1.0" encoding="UTF-8"?>

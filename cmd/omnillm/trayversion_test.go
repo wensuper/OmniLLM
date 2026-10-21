@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -57,7 +58,7 @@ func TestUpdateLines(t *testing.T) {
 		t.Fatal(c)
 	}
 	s.Checking = true
-	if c, click, _ := checkLine(cur, s, now); c != "正在检查更新……" || click {
+	if c, click, _ := checkLine(cur, s, now); c != "正在检查更新…" || click {
 		t.Fatal(c)
 	}
 	s = s.checked(cur, "v0.2.0-alpha.9", nil, now)
@@ -72,14 +73,14 @@ func TestUpdateLines(t *testing.T) {
 		t.Fatal(c)
 	}
 	s = s.checked(cur, "v0.2.0-alpha.10", nil, now)
-	if v, inst := versionLine(cur, s); v != "有新版本 0.2.0-alpha.10 · 点击更新（正在进行的回答会中断）" || !inst {
+	if v, inst := versionLine(cur, s); v != "有新版本 0.2.0-alpha.10 · 点击更新" || !inst {
 		t.Fatal(v)
 	}
 	if _, _, show := checkLine(cur, s, now); show {
 		t.Fatal("check line shown while an update is offered")
 	}
 	s.Installing = s.Latest
-	if v, inst := versionLine(cur, s); v != "正在更新到 0.2.0-alpha.10……" || inst {
+	if v, inst := versionLine(cur, s); v != "正在更新到 0.2.0-alpha.10…" || inst {
 		t.Fatal(v)
 	}
 	s.Installing, s.Failed = "", true
@@ -88,17 +89,17 @@ func TestUpdateLines(t *testing.T) {
 	}
 	home, _ := os.UserHomeDir()
 	s.Log = filepath.Join(home, ".omnillm", "hub", "update.log")
-	if v, _ := versionLine(cur, s); v != "更新到 0.2.0-alpha.10 没有成功，点击再试（日志：~/.omnillm/hub/update.log）" {
+	if v := versionTip(cur, s); v != "日志：~/.omnillm/hub/update.log" {
 		t.Fatal(v)
 	}
 	t.Setenv("OMNILLM_LANG", "en")
 	if v, _ := versionLine(cur, updateState{}); v != "Version 0.2.0-alpha.9" {
 		t.Fatal(v)
 	}
-	if v, _ := versionLine(cur, s); v != "Updating to 0.2.0-alpha.10 didn’t work; click to try again (log: ~/.omnillm/hub/update.log)" {
+	if v, _ := versionLine(cur, s); v != "Updating to 0.2.0-alpha.10 didn’t work · click to try again" || versionTip(cur, s) != "Log: ~/.omnillm/hub/update.log" {
 		t.Fatal(v)
 	}
-	if v, _ := versionLine(cur, updateState{Latest: "v0.2.0-alpha.10"}); v != "New version 0.2.0-alpha.10 · click to update (a reply in progress is cut off)" {
+	if v, _ := versionLine(cur, updateState{Latest: "v0.2.0-alpha.10"}); v != "New version 0.2.0-alpha.10 · click to update" {
 		t.Fatal(v)
 	}
 }
@@ -182,5 +183,46 @@ func TestTrayFollowsTheHubsUpdater(t *testing.T) {
 	s = updateState{}.fromHub(cur, updateFile{Latest: "v0.2.0-alpha.22", Error: "v0.2.0-alpha.22"})
 	if !s.Failed || s.Latest == "" {
 		t.Fatalf("failed automatic update not shown: %+v", s)
+	}
+}
+
+func TestMenuLines(t *testing.T) {
+	t.Setenv("OMNILLM_LANG", "zh")
+	for _, c := range []struct{ got, want string }{
+		{devicesLine(Status{Devices: 3, Online: 0}), "设备  0 台在线 / 共 3 台"},
+		{devicesLine(Status{}), "设备  还没有添加"},
+		{sourcesLine(Status{Providers: 2}), "模型来源  2"},
+		{statusLine(Status{RelayConfigured: true, RelayUp: true}, true, false, false), "在线 · 手机和其他设备能连上"},
+		{statusLine(Status{RelayConfigured: true}, true, false, false), "远程连接断开 · 设备暂时连不上"},
+		{statusLine(Status{}, true, false, false), "在运行 · 只在这台 Mac 上用"},
+		{statusLine(Status{}, false, true, true), "正在更新 · 马上回来"},
+		{statusLine(Status{}, false, false, true), "没能启动 · 在终端运行 omnillm install"},
+	} {
+		if c.got != c.want {
+			t.Errorf("%q, want %q", c.got, c.want)
+		}
+	}
+	t.Setenv("OMNILLM_LANG", "en")
+	for _, c := range []struct{ got, want string }{
+		{devicesLine(Status{Devices: 3, Online: 1}), "Devices  1 of 3 online"},
+		{sourcesLine(Status{}), "Model sources  none yet"},
+		{statusLine(Status{}, false, false, false), "OmniLLM isn’t running"},
+	} {
+		if c.got != c.want {
+			t.Errorf("%q, want %q", c.got, c.want)
+		}
+	}
+}
+
+func TestRestartFailedKeepsTheOffer(t *testing.T) {
+	t.Setenv("OMNILLM_LANG", "en")
+	s := updateState{Installing: "v0.2.0-alpha.10"}.restartFailed("v0.2.0-alpha.10")
+	if title, install := versionLine("0.2.0-alpha.9", s); !install || title != "Updating to 0.2.0-alpha.10 didn’t work · click to try again" {
+		t.Fatalf("%q %v", title, install)
+	}
+	log := filepath.Join(t.TempDir(), "update.log")
+	noteLog(log, "restart failed: %v", errors.New("exec format error"))
+	if b, _ := os.ReadFile(log); !strings.Contains(string(b), "exec format error") {
+		t.Fatalf("%q", b)
 	}
 }
