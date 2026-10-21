@@ -466,5 +466,5 @@ func sourcesLine(st Status) string {
 	if st.Providers == 0 {
 		return t("模型来源  还没有接入", "Model sources  none yet")
 	}
-	return fmt.Sprintf(t("模型来源  %d", "Model sources  %d"), st.Providers)
+	return fmt.Sprintf(t("模型来源  %d 个", "Model sources  %d"), st.Providers)
 }

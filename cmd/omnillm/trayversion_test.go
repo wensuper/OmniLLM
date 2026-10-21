@@ -191,7 +191,7 @@ func TestMenuLines(t *testing.T) {
 	for _, c := range []struct{ got, want string }{
 		{devicesLine(Status{Devices: 3, Online: 0}), "设备  3 台（0 台在线）"},
 		{devicesLine(Status{}), "设备  还没有添加"},
-		{sourcesLine(Status{Providers: 2}), "模型来源  2"},
+		{sourcesLine(Status{Providers: 2}), "模型来源  2 个"},
 		{statusLine(Status{RelayConfigured: true, RelayUp: true}, true, false, false), "在线 · 手机和其他设备可以连上"},
 		{statusLine(Status{RelayConfigured: true}, true, false, false), "远程连接断开 · 设备暂时连不上"},
 		{statusLine(Status{}, true, false, false), "在运行 · 只在这台 Mac 上用"},
