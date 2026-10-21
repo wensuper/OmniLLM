@@ -396,6 +396,9 @@ func autoUpdate(ctx context.Context, h *hub.Hub, dir string) {
 			u = readUpdate(dir)
 			u.Latest, u.CheckedAt = latest, time.Now()
 			writeUpdate(dir, u)
+			if v := u.newer(version); v != "" {
+				log.Printf("hub: version %s is out; it installs once nobody has used the hub for %s", plain(v), autoQuiet)
+			}
 		}
 		quiet := quietFor(ctx, h, started)
 		if h.Busy() {
