@@ -62,6 +62,12 @@ type Server struct {
 	addr string // host:port as the browser sees it
 	now  func() time.Time
 
+	// OpenLogin, set by the host, opens the official program's install
+	// and login for a subscription ("claude-code" or "codex") where the
+	// owner sees it (a Terminal window on a Mac). Nil: the page shows the
+	// command to run instead. The library never runs it on its own.
+	OpenLogin func(kind string) error
+
 	mu       sync.Mutex
 	logins   map[string]time.Time // one-time login tokens → expiry
 	sessions map[string]*session
@@ -174,6 +180,9 @@ func (s *Server) Handler() http.Handler {
 	api("POST /console/api/apps/update", s.updateApp)
 	api("POST /console/api/daily-total", s.setDailyTotal)
 	api("POST /console/api/lang", s.setLang)
+	api("GET /console/api/subs", s.subs)
+	api("POST /console/api/subs/login", s.subsLogin)
+	api("POST /console/api/subs/connect", s.subsConnect)
 	api("POST /console/api/pair/start", s.pairStart)
 	api("GET /console/api/pair/state", s.pairGet)
 	api("POST /console/api/pair/decide", s.pairDecide)
@@ -681,6 +690,62 @@ func orEmpty(xs []string) []string {
 		return []string{}
 	}
 	return xs
+}
+
+// subs is how far Claude and ChatGPT are from usable here (the first
+// step's cards); a newly logged-in one is connected on the way. can_open
+// says whether the page may offer to open the login for the owner.
+func (s *Server) subs(w http.ResponseWriter, r *http.Request) {
+	out := []map[string]any{}
+	for _, st := range s.hub.SubscriptionStates(r.Context()) {
+		m := map[string]any{"kind": st.Kind, "installed": st.Installed, "logged_in": st.LoggedIn, "connected": st.Connected,
+			"desktop": st.Desktop, "elsewhere": st.Elsewhere, "removed": st.Removed}
+		if st.Problem != nil {
+			m["problem"] = omnillm.Describe(lang(r), st.Problem)
+		}
+		out = append(out, m)
+	}
+	writeJSON(w, map[string]any{"subs": out, "can_open": s.OpenLogin != nil})
+}
+
+// subsLogin opens the official program's install and login (OpenLogin);
+// the owner finishes it there, and subs sees it connect.
+func (s *Server) subsLogin(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Kind string `json:"kind"`
+	}
+	if !decode(w, r, &in) {
+		return
+	}
+	if in.Kind != "claude-code" && in.Kind != "codex" {
+		writeErr(w, r, http.StatusBadRequest, &omnillm.Error{Code: omnillm.CodeBadRequest, Msg: omnillm.MsgNotFound})
+		return
+	}
+	if s.OpenLogin == nil {
+		writeErr(w, r, http.StatusNotImplemented, &omnillm.Error{Code: omnillm.CodeBadRequest, Msg: omnillm.MsgNotFound})
+		return
+	}
+	if err := s.OpenLogin(in.Kind); err != nil {
+		writeErr(w, r, 0, err)
+		return
+	}
+	writeJSON(w, map[string]any{"opened": true})
+}
+
+// subsConnect connects one signed-in subscription the owner asked for
+// (and only that one: no other source is looked for on the way).
+func (s *Server) subsConnect(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Kind string `json:"kind"`
+	}
+	if !decode(w, r, &in) {
+		return
+	}
+	if err := s.hub.ConnectSubscription(r.Context(), in.Kind); err != nil {
+		writeErr(w, r, 0, err)
+		return
+	}
+	writeJSON(w, map[string]any{"connected": in.Kind})
 }
 
 // setLang keeps the page's 中文 / English choice in the hub, where the menu

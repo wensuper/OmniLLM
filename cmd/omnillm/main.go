@@ -237,6 +237,7 @@ func usageText(all bool) string {
   omnillm status                     查看主机状态
   omnillm update [--check] [--auto on|off]
                                      更新到最新版本（主机默认会在空闲时自己更新）；--auto 开关自动更新
+  omnillm login claude|chatgpt       用 Claude 或 ChatGPT 订阅：没装官方程序会先装上，再在浏览器里登录
   omnillm uninstall [--purge]        停止并移除后台服务（--purge 连数据和 API Key 一起删）
   omnillm tray                       把菜单栏图标找回来
   omnillm version                    显示版本
@@ -276,6 +277,7 @@ func usageText(all bool) string {
   omnillm status                     show the hub’s status
   omnillm update [--check] [--auto on|off]
                                      update to the newest version (the hub also updates itself when idle); --auto turns that on or off
+  omnillm login claude|chatgpt       use your Claude or ChatGPT subscription: installs the official program if needed, signs in in your browser
   omnillm uninstall [--purge]        stop and remove the background service (--purge also deletes data and API keys)
   omnillm tray                       bring back the menu bar icon
   omnillm version                    show the version
@@ -317,6 +319,7 @@ func usageText(all bool) string {
   omnillm status                     查看主机状态
   omnillm update [--check] [--auto on|off]
                                      更新到最新版本（主机默认会在空闲时自己更新）；--auto 开关自动更新
+  omnillm login claude|chatgpt       用 Claude 或 ChatGPT 订阅：没装官方程序会先装上，再在浏览器里登录
   omnillm uninstall [--purge]        停止并移除后台服务（--purge 连数据和 API Key 一起删）
   omnillm tray                       把菜单栏图标找回来
   omnillm version                    显示版本
@@ -327,6 +330,7 @@ func usageText(all bool) string {
   omnillm status                     show the hub’s status
   omnillm update [--check] [--auto on|off]
                                      update to the newest version (the hub also updates itself when idle); --auto turns that on or off
+  omnillm login claude|chatgpt       use your Claude or ChatGPT subscription: installs the official program if needed, signs in in your browser
   omnillm uninstall [--purge]        stop and remove the background service (--purge also deletes data and API keys)
   omnillm tray                       bring back the menu bar icon
   omnillm version                    show the version
@@ -378,6 +382,8 @@ func main() {
 		statusCmd(os.Args[2:])
 	case "update", "upgrade":
 		updateCmd(os.Args[2:])
+	case "login":
+		loginCmd(os.Args[2:])
 	case "tray":
 		trayCmd()
 	case "version":
@@ -848,6 +854,9 @@ func hubRun(dir, sock string, args []string) {
 			if err != nil {
 				die(err)
 			}
+			if runtime.GOOS == "darwin" {
+				con.OpenLogin = openLoginWindow // elsewhere the page shows the command
+			}
 			log.Printf(t("控制台：http://%s/console/（用 omnillm open 打开）", "Console: http://%s/console/ (open it with omnillm open)"), cln.Addr())
 			go func() {
 				if err := con.ServeListener(ctx, cln); err != nil {
@@ -918,6 +927,17 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 				}
 			}
 			return c.Send(control.Reply{Event: "ok"})
+		case "subscription.connect":
+			// After omnillm login: connect it now, even if it was
+			// removed before (logging in again is asking for it).
+			if err := h.ConnectSubscription(ctx, a["kind"]); err != nil {
+				return hubSay(l, err)
+			}
+			name := tl(l, "Claude 订阅", "Claude subscription")
+			if a["kind"] == string(provider.Codex) {
+				name = tl(l, "ChatGPT 订阅", "ChatGPT subscription")
+			}
+			return c.Send(control.Reply{Event: "ok", Text: fmt.Sprintf(tl(l, "已接入 %s：手机和其他设备现在就能用。", "Connected your %s: your phone and other devices can use it now."), name)})
 		case "console.login":
 			if con == nil {
 				return say(tl(l, "控制台没有开启。", "The console is off."))

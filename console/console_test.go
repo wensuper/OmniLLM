@@ -656,3 +656,42 @@ func TestLanguageIsSharedWithTheMenuBar(t *testing.T) {
 		t.Fatalf("unknown language accepted: %d", w.Code)
 	}
 }
+
+// The first step's subscription cards: one entry for Claude and one for
+// ChatGPT, and without the host's hook the page is told to show the
+// command instead of a button that would do nothing.
+func TestSubscriptionCards(t *testing.T) {
+	// No real program is found or asked (and nothing is connected with
+	// the owner's real subscription): an empty home and PATH.
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("PATH", "/usr/bin:/bin")
+	r := newRig(t, false)
+	sid := r.login(t)
+	w := r.do(req{method: "GET", path: "/console/api/subs", origin: origin, header: true, cookie: sid})
+	var out struct {
+		Subs []struct {
+			Kind string `json:"kind"`
+		} `json:"subs"`
+		CanOpen bool `json:"can_open"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &out); err != nil || w.Code != 200 {
+		t.Fatalf("%d %s", w.Code, w.Body)
+	}
+	if len(out.Subs) != 2 || out.Subs[0].Kind != "claude-code" || out.Subs[1].Kind != "codex" || out.CanOpen {
+		t.Fatalf("%+v", out)
+	}
+	w = r.do(req{method: "POST", path: "/console/api/subs/login", body: `{"kind":"claude-code"}`, origin: origin, header: true, cookie: sid})
+	if w.Code != http.StatusNotImplemented {
+		t.Fatalf("no hook: %d", w.Code)
+	}
+	var opened string
+	r.s.OpenLogin = func(kind string) error { opened = kind; return nil }
+	w = r.do(req{method: "POST", path: "/console/api/subs/login", body: `{"kind":"codex"}`, origin: origin, header: true, cookie: sid})
+	if w.Code != 200 || opened != "codex" {
+		t.Fatalf("hook: %d %q", w.Code, opened)
+	}
+	w = r.do(req{method: "POST", path: "/console/api/subs/login", body: `{"kind":"../etc"}`, origin: origin, header: true, cookie: sid})
+	if w.Code != 400 {
+		t.Fatalf("unknown kind: %d", w.Code)
+	}
+}

@@ -347,3 +347,89 @@ func (h *Hub) DetectNow(ctx context.Context) (connected []string, failed []Detec
 	}
 	return connected, failed, nil
 }
+
+// SubscriptionState is how far one subscription (Claude, ChatGPT) is from
+// being usable here, so a page can show the one step left. The steps, in
+// order: the official program installed (Installed), logged in where the
+// hub can use the login (LoggedIn), connected (Connected). Desktop says
+// the subscription's desktop app is on this computer (the same account
+// signs in to the program; its name, "" for none); Elsewhere, Codex only, that Codex is logged in
+// but keeps the login in the system keychain, out of the hub's reach.
+// Removed: the owner removed it, so it is not connected again by itself.
+// Problem is why connecting a logged-in program failed (for Describe).
+type SubscriptionState struct {
+	Kind      string `json:"kind"`
+	Installed bool   `json:"installed"`
+	LoggedIn  bool   `json:"logged_in"`
+	Connected bool   `json:"connected"`
+	Desktop   string `json:"desktop"`
+	Elsewhere bool   `json:"elsewhere"`
+	Removed   bool   `json:"removed"`
+	Problem   error  `json:"-"`
+}
+
+// subStatesFor is how long a SubscriptionStates answer is reused.
+const subStatesFor = 2 * time.Second
+
+// SubscriptionStates says, for Claude and ChatGPT, what is done and what is
+// left. A subscription that became logged in since (and that the owner
+// did not remove) is connected on the way, so a page that polls this while
+// someone logs in sees it connected without another click.
+func (h *Hub) SubscriptionStates(ctx context.Context) []SubscriptionState {
+	h.subMu.Lock()
+	defer h.subMu.Unlock()
+	if !h.subAt.IsZero() && time.Since(h.subAt) < subStatesFor && !h.subStale.Load() {
+		return h.subLast
+	}
+	// Its own time limit, not the asking page's: a page closed meanwhile
+	// must not leave a half-done answer (killed checks read as "signed
+	// out") for the next one.
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), time.Minute)
+	defer cancel()
+	h.subStale.Store(false)
+	var out []SubscriptionState
+	for _, k := range []provider.Kind{provider.ClaudeCode, provider.Codex} {
+		st := SubscriptionState{Kind: string(k), Desktop: provider.DesktopApp(k), Connected: h.subscription(string(k))}
+		var removed bool
+		st.Removed = store.GetJSON(ctx, h.opts.Store, removedKey(k), &removed) == nil && removed
+		if cfg, err := provider.Default(k); err == nil {
+			st.Installed = true
+			st.LoggedIn = st.Connected || provider.CLILoggedIn(ctx, k, cfg.Path)
+			if !st.LoggedIn && k == provider.Codex {
+				// The owner's own Codex settings may reach the keychain:
+				// asked at most every half minute, not on every poll.
+				if time.Since(h.codexOwnAt) > 30*time.Second {
+					h.codexOwn, h.codexOwnAt = provider.CodexLoggedInOwn(ctx, cfg.Path), time.Now()
+				}
+				st.Elsewhere = h.codexOwn
+			}
+			if st.LoggedIn && !st.Connected && !st.Removed {
+				if _, err := h.AddProvider(ctx, cfg, ""); err != nil {
+					st.Problem = err
+				} else {
+					st.Connected = true
+				}
+			}
+		}
+		out = append(out, st)
+	}
+	h.subAt, h.subLast = time.Now(), out
+	return out
+}
+
+// ConnectSubscription connects one subscription ("claude-code" or
+// "codex") whose program is signed in: the owner asked for it (a button,
+// or omnillm login), so one removed earlier comes back too. Nothing else
+// is looked for.
+func (h *Hub) ConnectSubscription(ctx context.Context, kind string) error {
+	k := provider.Kind(kind)
+	if !k.Subscription() {
+		return &omnillm.Error{Code: omnillm.CodeBadRequest, Msg: omnillm.MsgNotFound}
+	}
+	cfg, err := provider.Default(k)
+	if err != nil {
+		return &omnillm.Error{Code: omnillm.CodeCredentialProblem, Msg: omnillm.MsgCLINotFound, Args: []string{kind}}
+	}
+	_, err = h.AddProvider(ctx, cfg, "")
+	return err
+}

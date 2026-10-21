@@ -50,16 +50,10 @@
         <p class="muted" id="ollama-models"></p>
         <button type="button" id="ollama-use" class="primary" data-t="ollamaUse"></button>
       </div>
-      <!-- Three ways in, each with its own steps; subscriptions are found by
-           themselves once logged in ("Check again"). -->
-      <div class="choice">
-        <h2 data-t="w1Claude"></h2>
-        <ol class="howto"><li data-t="w1Claude1"></li><li data-t="w1Claude2" data-rich></li></ol>
-      </div>
-      <div class="choice">
-        <h2 data-t="w1Codex"></h2>
-        <ol class="howto"><li data-t="w1Codex1"></li><li data-t="w1Codex2" data-rich></li></ol>
-      </div>
+      <!-- Claude and ChatGPT: one card each, saying what is done and the one
+           step left (install, sign in, connect), with the button that does it
+           (subsCards in app.js). -->
+      <div id="subs"></div>
       <details class="choice key-choice">
         <summary data-t="w1Key"></summary>
         <form id="key-form" autocomplete="off">

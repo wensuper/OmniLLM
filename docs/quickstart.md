@@ -65,14 +65,21 @@ curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | 
 
 ### 用订阅（Claude 或 ChatGPT）
 
-在主机上装好官方程序，**自己**登录一次：
+订阅通过官方的命令行程序用：Claude 订阅（Pro / Max）用 [Claude Code](https://claude.com/claude-code)，ChatGPT 订阅（Plus / Pro 等付费订阅）用 [Codex](https://github.com/openai/codex)。只装了 Claude 或 ChatGPT 桌面版也没关系，同一个账号再登录一次命令行版就行，OmniLLM 会带着你做：
 
-| 订阅 | 装什么 | 怎么登录 |
-|---|---|---|
-| Claude Pro / Max | [Claude Code](https://claude.com/claude-code) | 终端里运行 `claude`，按提示登录 |
-| ChatGPT Plus / Pro | [Codex](https://github.com/openai/codex) | 终端里运行 `codex login` |
+- **控制台**：第一步的卡片会说清现在差哪一步（“发现 Claude 桌面版”“已经装好，还没登录”），点「安装并登录」或「登录」。会打开一个终端窗口，里面每条命令都写着：没装的先用官方安装程序装上（不用 sudo，约 1 分钟），然后浏览器打开，你用订阅账号确认。完成后卡片自己变成“已接入”，不用再点别的。
+- **终端**（或没有浏览器的服务器）：
 
-登录好以后，再打开一次控制台（或运行 `~/.local/bin/omnillm status`），主机会发现它并自动接上。Claude 的 Sonnet、Opus、Haiku 和 Codex 的默认模型会出现在模型列表里，不用填任何东西。
+  ```bash
+  omnillm login claude     # Claude Pro / Max
+  omnillm login chatgpt    # ChatGPT Plus / Pro
+  ```
+
+已经登录过的，主机会自己发现并接上。Claude 的 Sonnet、Opus、Haiku 和 Codex 的默认模型会出现在模型列表里，不用填任何东西。
+
+Codex 有时把登录存在系统钥匙串里，OmniLLM 用不了；控制台会提示“再登一次”，这次的登录会存成 OmniLLM 能用的文件（`~/.codex/auth.json`）。
+
+没装好或没登录成功：终端窗口里会说下一步；控制台的卡片上有「重新打开」，再点一次就行。免费版 Claude 用不了 Claude Code，要 Pro 或 Max。
 
 登录始终留在官方程序自己那里，OmniLLM 只问它“登录了吗”，不读取、不复制登录信息。主机调用它时关掉了它所有的工具（运行命令、读写文件、联网搜索、插件），只当纯文本模型用，所以设备上的人没法让它动你 Mac 上的文件。
 

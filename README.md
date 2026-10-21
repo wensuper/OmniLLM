@@ -23,7 +23,7 @@ curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | 
 > 也可以把这一句发给你的 AI 编程助手（Claude Code、Codex、Cursor 等），让它来装：
 > `请阅读并按照 https://raw.githubusercontent.com/wensuper/OmniLLM/main/INSTALL.md 在这台电脑上安装 OmniLLM。`
 
-**② 接上模型**：这台电脑上已经登录了 Claude Code 或 Codex 的，会自动接上，跳过这步。没有的话，在自动打开的控制台里粘贴一个 API Key，或者装 [Ollama](https://ollama.com) 用免费的本地模型。
+**② 接上模型**：有 Claude 或 ChatGPT 订阅（只装了桌面版也行）：在自动打开的控制台里点 Claude 或 ChatGPT 卡片上的按钮，或者运行 `omnillm login claude` / `omnillm login chatgpt`。它会用官方安装程序装好 Claude Code 或 Codex，在浏览器里登录，然后自动接上。已经登录过的会直接接上。没有订阅的话，在控制台里粘贴一个 API Key，或者装 [Ollama](https://ollama.com) 用免费的本地模型。
 
 **③ 加手机**：在控制台的「设备」里点「添加设备」（Mac 上也可以点菜单栏的 OmniLLM 图标 →「添加设备…」），用手机相机扫二维码；两边显示的 6 位数一致，就在电脑上点「一致，添加」。
 
@@ -48,6 +48,7 @@ Mac 上也可以点菜单栏的 OmniLLM 图标 →「检查更新…」。不想
 ```bash
 omnillm status      # 现在怎么样、下一步做什么
 omnillm open        # 打开控制台
+omnillm login claude   # 用 Claude 订阅（chatgpt：ChatGPT 订阅）
 omnillm uninstall   # 停止并移除（加 --purge 连数据和 Key 一起删）
 ```
 
@@ -71,7 +72,7 @@ OmniLLM makes one computer (the **hub**) the only place that holds your LLM acco
    curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh
    ```
    Or ask your AI coding assistant: `Read https://raw.githubusercontent.com/wensuper/OmniLLM/main/INSTALL.md and install OmniLLM on this computer.` In the terminal you installed from, use `~/.local/bin/omnillm` until you open a new window.
-2. Connect a model: a logged-in Claude Code or Codex connects by itself; otherwise paste an API key in the console that opens, or install Ollama.
+2. Connect a model: with a Claude or ChatGPT subscription (even if you only have the desktop app), choose *Install and sign in* in the console that opens, or run `omnillm login claude` / `omnillm login chatgpt`: it installs Claude Code or Codex with the official installer, signs in in your browser and connects. Otherwise paste an API key in the console, or install Ollama.
 3. Add your phone: *Devices → Add device* in the console (or the OmniLLM menu bar icon → *Add device…*), scan the QR code with the phone’s camera, check that the 6 digits match, then choose *Matches, add* on the computer.
 
 Updates install by themselves while nobody is using the hub. Run `omnillm update` to update now, or `omnillm update --auto off` to turn automatic updates off. On 0.2.0-alpha.22 or earlier, run the install command once more (settings are kept); after that it updates itself.

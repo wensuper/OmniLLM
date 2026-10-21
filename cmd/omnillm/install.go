@@ -260,6 +260,10 @@ func plural(n int, noun string) string {
 	return fmt.Sprintf("%d %s", n, noun)
 }
 
+// hasDesktopApp reports a subscription's desktop app on this computer (a
+// variable for tests).
+var hasDesktopApp = func(k provider.Kind) bool { return provider.DesktopApp(k) != "" }
+
 func nextStep(st Status) string {
 	switch {
 	case !st.Running:
@@ -270,26 +274,34 @@ func nextStep(st Status) string {
 		return upperFirst(s) // "This Mac’s region …"
 	case st.Providers == 0 && st.Headless:
 		// No browser here: a key is typed in this terminal, never sent in a chat.
-		return fmt.Sprintf(t("下一步：接入一个模型（选一种）：\n"+
-			"· 有 Claude 订阅：%[1]s运行 claude，输入 /login\n"+
-			"· 有 ChatGPT 订阅：%[1]s运行 codex login\n"+
+		return t("下一步：接入一个模型（选一种）：\n"+
+			"· 有 Claude 订阅：运行 omnillm login claude（没装 Claude Code 会先装上，再登录）\n"+
+			"· 有 ChatGPT 订阅：运行 omnillm login chatgpt（没装 Codex 会先装上，再登录）\n"+
 			"· 有 API Key：在这台电脑的终端里亲自运行 omnillm hub provider add anthropic（或 openai、openai-compatible），在提示时粘贴；API Key 不要发到聊天里",
 			"Next: connect a model (pick one):\n"+
-				"· Claude subscription: %[1]s, run claude, then type /login\n"+
-				"· ChatGPT subscription: %[1]s, run codex login\n"+
-				"· API key: in this machine’s terminal, run omnillm hub provider add anthropic (or openai, openai-compatible) yourself and paste the key when asked; don’t send it in a chat"), inTerminal())
+				"· Claude subscription: run omnillm login claude (installs Claude Code first if needed, then signs in)\n"+
+				"· ChatGPT subscription: run omnillm login chatgpt (installs Codex first if needed, then signs in)\n"+
+				"· API key: in this computer’s terminal, run omnillm hub provider add anthropic (or openai, openai-compatible) yourself and paste the key when asked; don’t send it in a chat")
 	case st.Providers == 0:
-		// One command a line: the person picks the one that fits.
-		if zh() {
-			return fmt.Sprintf("下一步：接入一个模型（选一种）：\n"+
-				"· 有 Claude 订阅：%[1]s运行 claude，输入 /login\n"+
-				"· 有 ChatGPT 订阅：%[1]s运行 codex login\n"+
-				"· 有 API Key 或想用免费的本机模型：运行 omnillm open，在“模型”里接入", inTerminal())
+		// One command a line: the person picks the one that fits. A
+		// desktop app on this Mac says which subscription they have.
+		var lead string
+		switch {
+		case hasDesktopApp(provider.ClaudeCode) && hasDesktopApp(provider.Codex):
+			lead = t("发现 Claude 和 ChatGPT 桌面版：同一个订阅也能给手机用，只要再用官方命令行版登录一次（免费）。\n", "Found the Claude and ChatGPT desktop apps: the same subscriptions can serve your phone once you sign in with the official command-line programs (free).\n")
+		case hasDesktopApp(provider.ClaudeCode):
+			lead = t("发现 Claude 桌面版：同一个订阅也能给手机用，只要再用官方命令行版 Claude Code 登录一次（免费）。\n", "Found the Claude desktop app: the same subscription can serve your phone once you sign in with Claude Code, the official command-line program (free).\n")
+		case hasDesktopApp(provider.Codex):
+			lead = t("发现 ChatGPT 桌面版：同一个订阅也能给手机用，只要再用官方命令行版 Codex 登录一次（免费）。\n", "Found the ChatGPT desktop app: the same subscription can serve your phone once you sign in with Codex, the official command-line program (free).\n")
 		}
-		return fmt.Sprintf("Next: connect a model (pick one):\n"+
-			"· Claude subscription: %[1]s, run claude, then type /login\n"+
-			"· ChatGPT subscription: %[1]s, run codex login\n"+
-			"· API key or a free model on %[2]s: run omnillm open and connect it under “Models”", inTerminal(), thisMachine())
+		return lead + onMachine(t("下一步：接入一个模型（选一种）：\n"+
+			"· 有 Claude 订阅：运行 omnillm login claude（没装 Claude Code 会先装上，再在浏览器里登录）\n"+
+			"· 有 ChatGPT 订阅：运行 omnillm login chatgpt（没装 Codex 会先装上，再在浏览器里登录）\n"+
+			"· 有 API Key 或想用 %s 上免费的模型：运行 omnillm open，在“模型”里接入",
+			"Next: connect a model (pick one):\n"+
+				"· Claude subscription: run omnillm login claude (installs Claude Code first if needed, then signs in in your browser)\n"+
+				"· ChatGPT subscription: run omnillm login chatgpt (installs Codex first if needed, then signs in in your browser)\n"+
+				"· API key or a free model on %s: run omnillm open and connect it under “Models”"))
 	case !st.RelayConfigured:
 		return onMachine(t("已经可以在 %s 上用。要让其他设备连进来，需要先设置远程连接。",
 			"Ready on %s. To let other devices connect, set up remote access first."))

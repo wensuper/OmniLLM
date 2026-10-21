@@ -21,11 +21,21 @@ const T = {
     step1: "接入模型", step2: "添加设备", step3: "试一下",
     w1Title: "先接入一个模型",
     w1Claude: "我有 Claude 订阅",
-    w1Claude1: "在{here}上安装 Claude Code。",
-    w1Claude2: "在终端运行 `claude` 并登录。", w1Claude2Other: "在终端里运行 `claude` 并登录。",
     w1Codex: "我有 ChatGPT 订阅",
-    w1Codex1: "在{here}上安装 Codex。",
-    w1Codex2: "在终端运行 `codex login`。", w1Codex2Other: "在终端里运行 `codex login`。",
+    subOn: "已接入", subOnBody: "可以用了：手机和其他设备现在就能用这个订阅。",
+    subDesktop: "发现 {0}。同一个订阅也能给手机用：再装上官方命令行版 {1}（安装不收费，约 1 分钟），用同一个账号登录就好。{2}",
+    subNone: "在{here}上装好官方的 {1}（安装不收费，约 1 分钟），用你的订阅账号登录。{2}",
+    subPlanClaude: "需要 Claude Pro 或 Max 订阅。", subPlanCodex: "需要 ChatGPT Plus、Pro 等付费订阅。",
+    subSignedOut: "{1} 已经装好，还没登录。",
+    subPending: "{1} 已登录，正在接入……",
+    subElsewhere: "Codex 已经登录，但这次的登录 OmniLLM 用不上。点“登录”，用同一个账号再登一次就好。",
+    subOpenAgain: "重新打开", subCmdHere: "在这台电脑的终端里运行这一行：",
+    subRemoved: "{1} 已登录，之前被你从这里移除了。",
+    subInstall: "安装并登录", subSignIn: "登录", subReconnect: "重新接入",
+    subHow: "会打开一个终端窗口，每一步都写在里面；登录在浏览器里完成。",
+    subWaiting: "在打开的终端窗口和浏览器里完成登录；好了以后这里会自己接上。",
+    subWaitingLong: "还没好？看一下终端窗口里写了什么。窗口没打开的话，在终端里运行下面这一行。",
+    subConnected: "已接入 {0}。",
     w1Key: "我有 API Key",
     w1Free: "想免费：安装 Ollama，用{here}上的模型。",
     recheck: "重新检查", recheckNone: "还没发现已登录的订阅，也没发现{here}上的模型。", recheckNoMore: "没有发现别的已登录订阅或{here}上的模型。", connectedNames: "已接入 {0}。",
@@ -113,11 +123,21 @@ const T = {
     step1: "Connect a model", step2: "Add a device", step3: "Try it",
     w1Title: "First, connect a model",
     w1Claude: "I have a Claude subscription",
-    w1Claude1: "Install Claude Code on {here}.",
-    w1Claude2: "In Terminal, run `claude` and log in.", w1Claude2Other: "In a terminal, run `claude` and log in.",
     w1Codex: "I have a ChatGPT subscription",
-    w1Codex1: "Install Codex on {here}.",
-    w1Codex2: "In Terminal, run `codex login`.", w1Codex2Other: "In a terminal, run `codex login`.",
+    subOn: "Connected", subOnBody: "Ready: your phone and other devices can use this subscription now.",
+    subDesktop: "Found {0}. The same subscription can serve your phone too: add {1}, the official command-line program (no charge to install, about a minute), and sign in with the same account. {2}",
+    subNone: "Install {1}, the official program, on {here} (no charge to install, about a minute) and sign in with your subscription account. {2}",
+    subPlanClaude: "Needs a Claude Pro or Max plan.", subPlanCodex: "Needs a paid ChatGPT plan such as Plus or Pro.",
+    subSignedOut: "{1} is installed but not signed in.",
+    subPending: "{1} is signed in; connecting…",
+    subElsewhere: "Codex is signed in, but OmniLLM can’t use that sign-in. Choose “Sign in” and sign in once more with the same account.",
+    subOpenAgain: "Open again", subCmdHere: "In a terminal on this computer, run:",
+    subRemoved: "{1} is signed in; you removed it from here earlier.",
+    subInstall: "Install and sign in", subSignIn: "Sign in", subReconnect: "Connect again",
+    subHow: "A Terminal window opens with every step written out; you sign in in your browser.",
+    subWaiting: "Finish signing in in the Terminal window and your browser; this connects by itself when you’re done.",
+    subWaitingLong: "Not yet? Check what the Terminal window says. If no window opened, run the line below in a terminal.",
+    subConnected: "Connected your {0}.",
     w1Key: "I have an API key",
     w1Free: "Want it free? Install Ollama to use models on {here}.",
     recheck: "Check again", recheckNone: "No signed-in subscription or model on {here} found yet.", recheckNoMore: "No other signed-in subscription or model on {here} found.", connectedNames: "Connected {0}.",
@@ -451,9 +471,121 @@ function stepTo(n) {
 // wizard offers a way back to it.
 let fromDash = false;
 
+// ---- Claude and ChatGPT on the first step ----
+// One card each: what is done, and the one step left with the button that
+// does it. The program's own installer and login run in a Terminal window
+// the hub opens (the owner sees every command and signs in in the
+// browser); while that runs the card asks the hub every 2 s and connects
+// the subscription as soon as it is signed in.
+const SUB = {
+  "claude-code": { title: "w1Claude", app: "Claude", plan: "subPlanClaude", word: "claude", program: "Claude Code" },
+  "codex": { title: "w1Codex", app: "ChatGPT", plan: "subPlanCodex", word: "chatgpt", program: "Codex" },
+};
+// The desktop app by its name ("Claude", "ChatGPT", "Codex").
+const desktopName = (n) => lang === "zh" ? n + " 桌面版" : "the " + n + " desktop app";
+let subsTimer = 0, subsWaiting = {}, subsAsked = {}, subsCanOpen = true, subsSeq = 0;
+const WAIT_MAX = 10 * 60e3;
+async function renderSubs() {
+  // Answers may come back out of order (a click, the timer, coming back
+  // into view): only the newest one draws.
+  const seq = ++subsSeq;
+  let r;
+  try { r = await api("subs"); } catch (_) { return; }
+  if (seq !== subsSeq) return;
+  for (const [k, since] of Object.entries(subsWaiting)) if (Date.now() - since > WAIT_MAX) delete subsWaiting[k];
+  subsCanOpen = r.can_open;
+  const box = $("subs");
+  box.textContent = "";
+  // The one nearest to usable first: connected, then signed in, installed,
+  // a desktop app found, nothing.
+  const rank = (x) => x.connected ? 0 : x.logged_in ? 1 : x.installed ? 2 : x.desktop ? 3 : 4;
+  const subs = (r.subs || []).slice().sort((a, b) => rank(a) - rank(b));
+  // Signed in from here after the owner had removed it: signing in was
+  // asking for it again, so connect it without a second click.
+  const again = subs.filter((x) => subsWaiting[x.kind] && x.logged_in && !x.connected && x.removed && !subsAsked[x.kind]);
+  if (again.length) {
+    for (const x of again) { subsAsked[x.kind] = true; try { await api("subs/connect", { kind: x.kind }); } catch (_) {} }
+    return renderSubs();
+  }
+  let newly = [];
+  for (const x of subs) {
+    const k = SUB[x.kind];
+    if (!k) continue;
+    if (x.connected && subsWaiting[x.kind]) { newly.push(sourceName(x.kind) || k.app); delete subsWaiting[x.kind]; }
+    box.append(subCard(x, k));
+  }
+  if (newly.length) toast(t("subConnected", newly.join(lang === "zh" ? "、" : ", ")));
+  // Connected while the first step shows (a click, or one found signed
+  // in): the wizard goes on to adding a device.
+  if (newly.length || (subs.some((x) => x.connected) && S && S.providers.length === 0 && !fromDash)) refresh();
+  // Keep asking while someone is signing in (at most 10 minutes).
+  clearTimeout(subsTimer);
+  // A signed-in one is being connected right now: look again shortly too.
+  const pending = subs.some((x) => x.logged_in && !x.connected && !x.removed && !x.problem);
+  if ((Object.keys(subsWaiting).length || pending) && !$("w1").hidden && !document.hidden) subsTimer = setTimeout(renderSubs, 3000);
+}
+function subCard(x, k) {
+  const card = el("div", undefined, "choice sub-card");
+  const head = el("div", undefined, "sub-head");
+  head.append(el("h2", t(k.title)));
+  if (x.connected) head.append(el("span", t("subOn"), "tag ok-tag"));
+  card.append(head);
+  const fill = (key) => t(key, desktopName(x.desktop || k.app), k.program, t(k.plan));
+  if (x.connected) { delete subsWaiting[x.kind]; card.append(el("p", t("subOnBody"), "muted")); return card; }
+  let text, btn = null, act = null;
+  if (x.logged_in && x.removed) { text = fill("subRemoved"); btn = t("subReconnect"); act = "connect"; }
+  else if (x.logged_in && x.problem) { text = x.problem; btn = t("recheck"); act = "connect"; }
+  else if (x.logged_in) { card.append(el("p", fill("subPending"), "muted")); return card; }
+  else if (x.elsewhere) { text = t("subElsewhere"); btn = t("subSignIn"); act = "login"; }
+  else if (x.installed) { text = fill("subSignedOut"); btn = t("subSignIn"); act = "login"; }
+  else { text = fill(x.desktop ? "subDesktop" : "subNone"); btn = t("subInstall"); act = "login"; }
+  card.append(el("p", text, "muted"));
+  const cmd = "omnillm login " + k.word;
+  if (act !== "login") delete subsWaiting[x.kind];
+  const since = subsWaiting[x.kind];
+  if (act === "login" && !subsCanOpen) {
+    // No window to open here (not a Mac): the one line to run, and the
+    // card keeps looking while the owner runs it.
+    card.append(el("p", t("subCmdHere"), "small sub-cmd-label"), codeBox(cmd, true));
+    if (!since) subsWaiting[x.kind] = Date.now();
+    return card;
+  }
+  if (since && act === "login") {
+    // Signing in now: say where it happens; after a while, the command
+    // too. The button stays, to open the window again.
+    const w = el("div", undefined, "sub-wait");
+    w.append(el("span", "", "spinner sm"), el("span", t(Date.now() - since > 45e3 ? "subWaitingLong" : "subWaiting")));
+    card.append(w);
+    if (Date.now() - since > 45e3) card.append(codeBox(cmd, true));
+    btn = t("subOpenAgain");
+  }
+  const b = el("button", btn, since && act === "login" ? "secondary" : "primary"); b.type = "button";
+  b.addEventListener("click", async () => {
+    b.disabled = true;
+    try {
+      if (act === "connect") {
+        await api("subs/connect", { kind: x.kind });
+        toast(t("subConnected", sourceName(x.kind) || k.app));
+        await refresh();
+      } else {
+        await api("subs/login", { kind: x.kind });
+        subsWaiting[x.kind] = Date.now();
+        delete subsAsked[x.kind];
+      }
+    } catch (e) { toast(e.message, true); }
+    renderSubs();
+  });
+  card.append(b);
+  if (act === "login" && !since) card.append(el("p", t("subHow"), "muted small sub-how"));
+  return card;
+}
+// Back in view (the owner signed in elsewhere meanwhile): look again now.
+document.addEventListener("visibilitychange", () => { if (!document.hidden && !$("w1").hidden) renderSubs(); });
+
 async function showWizard() {
   show("wizard");
   $("wiz-back-line").hidden = !fromDash;
+  if (S.providers.length === 0 || fromDash) renderSubs();
   if (S.providers.length === 0) {
     stepTo(1);
     try {

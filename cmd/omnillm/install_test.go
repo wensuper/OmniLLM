@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/wensuper/OmniLLM/internal/provider"
 	"os"
 	"path/filepath"
 	"strings"
@@ -132,6 +133,9 @@ func TestUpdateKeepsTheOwnersRelayAndWebApp(t *testing.T) {
 }
 
 func TestNextStepWithoutModelsIsOneCommandALine(t *testing.T) {
+	old := hasDesktopApp
+	hasDesktopApp = func(provider.Kind) bool { return false }
+	defer func() { hasDesktopApp = old }()
 	for _, lang := range []string{"zh", "en"} {
 		t.Setenv("OMNILLM_LANG", lang)
 		for _, st := range []Status{{Running: true}, {Running: true, Headless: true}} {
@@ -148,6 +152,22 @@ func TestNextStepWithoutModelsIsOneCommandALine(t *testing.T) {
 			if st.Headless == strings.Contains(s, "omnillm open") {
 				t.Errorf("%s %+v: %q", lang, st, s)
 			}
+		}
+	}
+}
+
+// Only the desktop app (Claude.app) and no command-line program: the first
+// thing said is that the same subscription works, and the line to run.
+func TestNextStepNamesTheDesktopApp(t *testing.T) {
+	old := hasDesktopApp
+	hasDesktopApp = func(k provider.Kind) bool { return k == provider.ClaudeCode }
+	defer func() { hasDesktopApp = old }()
+	for _, l := range []string{"zh", "en"} {
+		t.Setenv("OMNILLM_LANG", l)
+		s := nextStep(Status{Running: true})
+		lines := strings.Split(s, "\n")
+		if len(lines) != 5 || !strings.Contains(lines[0], "Claude") || strings.Contains(lines[0], "ChatGPT") || !strings.Contains(s, "omnillm login claude") {
+			t.Fatalf("%s: %q", l, s)
 		}
 	}
 }

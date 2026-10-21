@@ -91,7 +91,15 @@ type Hub struct {
 	reserved    map[string]int64 // worst-case cost of calls in flight (accountMu)
 	accountMu   sync.Mutex
 	inFlight    atomic.Int64 // calls whose reply is still coming (Busy)
-	region      regionState
+	// subStates: the last SubscriptionStates answer and when (subMu);
+	// pages poll it while someone logs in, and each look runs programs.
+	subMu      sync.Mutex
+	subAt      time.Time
+	subLast    []SubscriptionState
+	subStale   atomic.Bool // a source was added or removed since subLast
+	codexOwnAt time.Time   // when CodexLoggedInOwn last ran (subMu)
+	codexOwn   bool
+	region     regionState
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -368,6 +376,7 @@ func prepare(c *provider.Client) {
 // checked with a minimal call (listing models) before anything is saved, and
 // the models it can use are added. The key is stored only in Secrets.
 func (h *Hub) AddProvider(ctx context.Context, cfg provider.Config, apiKey string) ([]omnillm.ModelInfo, error) {
+	defer h.subStale.Store(true) // SubscriptionStates looks again
 	apiKey = strings.TrimSpace(apiKey)
 	if err := cfg.Validate(); err != nil {
 		return nil, &omnillm.Error{Code: omnillm.CodeBadRequest, Msg: omnillm.MsgBadSource, Detail: err.Error()}
@@ -457,6 +466,7 @@ func (h *Hub) connected(name string) bool {
 
 // RemoveProvider deletes the key and the provider's models.
 func (h *Hub) RemoveProvider(ctx context.Context, name string) error {
+	defer h.subStale.Store(true) // SubscriptionStates looks again
 	if err := h.opts.Secrets.Delete(ctx, providerKey(name)); err != nil {
 		return err
 	}
