@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/wensuper/OmniLLM/hub"
@@ -60,5 +61,20 @@ func TestFindDevice(t *testing.T) {
 	}
 	if _, err := findDevice(ds, "Pixel"); err == nil {
 		t.Error("unknown name accepted")
+	}
+}
+
+func TestFindApp(t *testing.T) {
+	as := []hub.App{{ID: "a1", Name: "backup"}, {ID: "a2", Name: "Notes"}, {ID: "a3", Name: "notes"}}
+	for q, want := range map[string]string{"a1": "a1", "backup": "a1", "BACKUP": "a1", " Notes ": "a2", "notes": "a3"} {
+		if a, err := findApp(as, q); err != nil || a.ID != want {
+			t.Errorf("%q: %v %v", q, a.ID, err)
+		}
+	}
+	if _, err := findApp(as, "NOTES"); err == nil {
+		t.Error("ambiguous name accepted")
+	}
+	if _, err := findApp(as, "x"); err == nil || !strings.Contains(describe(err), "omnillm hub apps") {
+		t.Errorf("unknown name: %v", err)
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -168,5 +169,35 @@ func TestAfterAnInstallThatDidNotReplaceTheMenu(t *testing.T) {
 		if restart || !s.Failed || s.Latest != offer.Latest || s.Installing != "" {
 			t.Fatalf("%v %q: %+v %v", c.err, c.have, s, restart)
 		}
+	}
+}
+
+func TestRestartIntoTheNewVersionFailed(t *testing.T) {
+	t.Setenv("OMNILLM_LANG", "en")
+	offer := updateState{Latest: "v0.2.0-alpha.10", Installing: "v0.2.0-alpha.10", Log: "/x/update.log"}
+	s, restart := offer.installed(nil, "0.2.0-alpha.10")
+	if !restart {
+		t.Fatal("no restart")
+	}
+	s = s.restartFailed(offer.Installing)
+	title, install := versionLine("v0.2.0-alpha.9", s)
+	if !install || !strings.HasPrefix(title, "Update failed; click to retry (log: ") {
+		t.Fatalf("%q %v", title, install)
+	}
+	log := filepath.Join(t.TempDir(), "update.log")
+	noteLog(log, "restart failed: %v", errors.New("exec format error"))
+	if b, _ := os.ReadFile(log); !strings.Contains(string(b), "exec format error") {
+		t.Fatalf("%q", b)
+	}
+}
+
+func TestCountsLine(t *testing.T) {
+	t.Setenv("OMNILLM_LANG", "zh")
+	if got := countsLine(Status{Devices: 3, Online: 0, Providers: 2}); got != "设备 3 台（0 台在线）· 模型来源 2 个" {
+		t.Fatal(got)
+	}
+	t.Setenv("OMNILLM_LANG", "en")
+	if got := countsLine(Status{Devices: 3, Online: 1, Providers: 2}); got != "Devices: 3 (1 online) · Model sources: 2" {
+		t.Fatal(got)
 	}
 }

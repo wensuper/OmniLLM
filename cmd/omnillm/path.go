@@ -73,7 +73,7 @@ func ensureOnPath(home string) {
 	}
 	// Only a plain file of the person's own: never write through a link.
 	if fi, err := os.Lstat(rc); err == nil && !fi.Mode().IsRegular() {
-		fmt.Println(t("提示：~/.local/bin 不在 PATH 里，请用完整路径 ~/.local/bin/omnillm 运行。", "Note: ~/.local/bin is not on PATH; run omnillm as ~/.local/bin/omnillm."))
+		fmt.Println(t("提示：~/.local/bin 不在 PATH 里，请用完整路径 ~/.local/bin/omnillm 运行。", "Note: ~/.local/bin isn’t on PATH; run omnillm as ~/.local/bin/omnillm."))
 		return
 	}
 	if err := os.MkdirAll(filepath.Dir(rc), 0o755); err != nil {
@@ -81,7 +81,7 @@ func ensureOnPath(home string) {
 	}
 	f, err := os.OpenFile(rc, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
-		fmt.Println(t("提示：~/.local/bin 不在 PATH 里，请用完整路径 ~/.local/bin/omnillm 运行。", "Note: ~/.local/bin is not on PATH; run omnillm as ~/.local/bin/omnillm."))
+		fmt.Println(t("提示：~/.local/bin 不在 PATH 里，请用完整路径 ~/.local/bin/omnillm 运行。", "Note: ~/.local/bin isn’t on PATH; run omnillm as ~/.local/bin/omnillm."))
 		return
 	}
 	defer f.Close()

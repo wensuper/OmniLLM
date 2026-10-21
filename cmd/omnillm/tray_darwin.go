@@ -104,7 +104,7 @@ func trayReady() {
 			systray.SetTemplateIcon(trayDown, trayDown)
 			relay.SetTitle(t("○ 远程连接断开，设备暂时连不上", "○ Remote access is down; devices can’t connect now"))
 		}
-		counts.SetTitle(fmt.Sprintf(t("设备 %d 台 · 模型来源 %d 个", "Devices: %d · Model sources: %d"), st.Devices, st.Providers))
+		counts.SetTitle(countsLine(st))
 	}
 	show()
 
@@ -197,14 +197,19 @@ func trayReady() {
 				if err == nil {
 					have, _ = installedVersion(context.Background(), bin)
 				}
+				offered := up.Installing
 				var restart bool
 				up, restart = up.installed(err, have)
 				showUpdate()
 				if restart {
 					// The lock file is close-on-exec: the new menu takes it.
-					if e := syscall.Exec(bin, []string{bin, "tray"}, os.Environ()); e != nil {
-						fmt.Fprintln(os.Stderr, "omnillm tray: restart:", e)
-					}
+					// Exec returns only when it failed: then the update
+					// did not take here, and the menu says so.
+					e := syscall.Exec(bin, []string{bin, "tray"}, os.Environ())
+					fmt.Fprintln(os.Stderr, "omnillm tray: restart:", e)
+					noteLog(logPath, "restart into the new version failed: %v", e)
+					up = up.restartFailed(offered)
+					showUpdate()
 				}
 				show()
 			case <-open.ClickedCh:

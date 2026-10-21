@@ -26,7 +26,7 @@ func openFailed(ctx context.Context, sec secret.Store, dir string, err error) {
 	case cerr != nil:
 		die(sayf(t("读不出这台设备保存的配对（%s）。请用配对时的同一个用户运行。", "Can’t read this device’s saved pairing (%s). Run as the same user it was paired as."), dir))
 	case !paired:
-		die(sayf(t("这台设备还没配对（在 %s 里没有找到配对），先运行 omnillm connect pair。", "This device is not paired yet (no pairing in %s). Run omnillm connect pair first."), dir))
+		die(sayf(t("这台设备还没配对（在 %s 里没有找到配对），先运行 omnillm connect pair。", "This device isn’t paired yet (no pairing in %s). Run omnillm connect pair first."), dir))
 	}
 	die(err)
 }
@@ -77,8 +77,8 @@ func pickModel(ms []omnillm.ModelInfo, person bool) string {
 		}
 	}
 	if !person {
-		die(say(t("在脚本里（没有终端）只能用 API Key 或本机模型；你的 Mac 上只有订阅模型，它们只给人在终端里对话用。",
-			"From a script (no terminal) only API-key or local models can be used; your Mac has only subscription models, which are for a person typing in a terminal.")))
+		die(say(t("从脚本里只能用 API Key 或你的 Mac 上的模型；你的 Mac 上现在只有订阅模型，它们只能手动对话。",
+			"From a script, only models that use an API key or run on your Mac work; your Mac has only subscription models, which are chat-only.")))
 	}
 	if len(ms) == 0 {
 		die(say(t("你的 Mac 上还没有可用的模型。", "Your Mac has no models yet.")))

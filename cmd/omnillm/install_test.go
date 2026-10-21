@@ -121,3 +121,24 @@ func TestUpdateKeepsTheOwnersRelayAndWebApp(t *testing.T) {
 		t.Fatalf("%v", got)
 	}
 }
+
+func TestNextStepWithoutModelsIsOneCommandALine(t *testing.T) {
+	for _, lang := range []string{"zh", "en"} {
+		t.Setenv("OMNILLM_LANG", lang)
+		for _, st := range []Status{{Running: true}, {Running: true, Headless: true}} {
+			s := nextStep(st)
+			lines := strings.Split(s, "\n")
+			if len(lines) != 4 || strings.Contains(s, "%!") {
+				t.Fatalf("%s %+v: %q", lang, st, s)
+			}
+			for _, l := range lines[1:] {
+				if !strings.HasPrefix(l, "· ") || strings.Count(l, "omnillm ")+strings.Count(l, "claude")+strings.Count(l, "codex login") == 0 {
+					t.Errorf("%s: %q", lang, l)
+				}
+			}
+			if st.Headless == strings.Contains(s, "omnillm open") {
+				t.Errorf("%s %+v: %q", lang, st, s)
+			}
+		}
+	}
+}

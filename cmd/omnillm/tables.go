@@ -30,7 +30,7 @@ type deviceRow struct {
 }
 
 // devicesTable is the table `omnillm hub devices` prints: name, on or
-// paused, today's spend / daily limit, last used (online, or relative
+// paused, today's spend / daily limit, last seen (online, or relative
 // local time).
 func devicesTable(data []byte, now time.Time) (string, error) {
 	var rows []deviceRow
@@ -40,7 +40,7 @@ func devicesTable(data []byte, now time.Time) (string, error) {
 	if len(rows) == 0 {
 		return t("还没有设备。", "No devices yet."), nil
 	}
-	out := [][]string{{t("名字", "Name"), t("状态", "Status"), t("今天 / 每天额度", "Today / daily limit"), t("最近使用", "Last used")}}
+	out := [][]string{{t("名字", "Name"), t("状态", "Status"), t("今天 / 每天额度", "Today / daily limit"), t("最近在线", "Last seen")}}
 	for _, r := range rows {
 		state := t("开启", "On")
 		if r.Paused {
@@ -74,12 +74,17 @@ func limitText(micro int64) string {
 }
 
 // modelName is a model's name in the terminal's language: the owner's own
-// name as it is; otherwise Codex by the name people know, and a model whose
-// version is not known yet marked as the latest.
+// name as it is; otherwise Codex by the name people know (with the model
+// it runs, when the hub names one), and a model whose version is not known
+// yet marked as the latest.
 func modelName(m omnillm.ModelInfo) string {
 	switch {
 	case m.Renamed:
 		return m.DisplayName
+	case m.Kind == "codex" && m.Version != "":
+		return fmt.Sprintf(t("ChatGPT（Codex · %s）", "ChatGPT (Codex · %s)"), m.Version)
+	case m.Kind == "codex" && m.Latest:
+		return t("ChatGPT（Codex）", "ChatGPT (Codex)") // its version is never known; same as the phone and console
 	case m.Kind == "codex":
 		return t("ChatGPT（Codex）", "ChatGPT (Codex)")
 	case m.Latest:

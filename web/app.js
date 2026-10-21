@@ -13,12 +13,12 @@ if (window.top !== window.self) { document.documentElement.textContent = ""; thr
 // access"; "host" and "hub" stay in developer text only.
 const T = {
   zh: {
-    loading: "正在载入……", bootDownload: "正在下载……", bootStart: "正在启动……", bootStorage: "正在读取这台设备上保存的内容……",
+    loading: "正在载入……", bootDownload: "正在下载……", bootStart: "正在启动……", bootStorage: "正在打开……",
     bootSlow: "载入停了 20 秒没有进展，停在“{0}”。点下面的按钮清掉缓存重新载入；网络慢的话也可以换个网络再试。",
     bootCrashed: "程序意外停止了。点下面的按钮清掉缓存重新载入。", bootError: "载入失败：", bootRetry: "重新载入",
     welcomeTitle: "在这台设备上用你的模型",
     welcomeBody: "在你的 Mac 上打开 OmniLLM，点“添加设备”，再用这台设备扫屏幕上的二维码。",
-    scan: "扫描二维码", pasteInstead: "扫不了码？粘贴配对文字", pastePh: "粘贴配对文字（以 omnillm3- 开头）", add: "添加", cancel: "取消", back: "返回",
+    scan: "扫描二维码", pasteInstead: "扫不了码？粘贴配对文字", pastePh: "粘贴配对文字（以 omnillm3- 开头）", add: "添加", cancel: "取消", back: "返回", delete: "删除", remove: "移除", gotIt: "知道了",
     scanHint: "把 Mac 屏幕上的二维码放进框里", camDenied: "没有拿到摄像头权限。可以改用下面的“粘贴配对文字”。",
     pairTitle: "添加这台设备", pairConnecting: "正在连接你的 Mac……",
     pairAsk: "要把这台设备添加到你的 Mac 吗？只有你刚在 Mac 上点了“添加设备”才继续。", pairVia: "经由 {0}",
@@ -32,7 +32,7 @@ const T = {
     noNetwork: "这台设备没有联网，联网后会自动连上。", kept: "刚才输入的还在。", loadingModels: "正在连接你的 Mac……",
     noModels: "这台设备现在没有能用的模型。在 Mac 的控制台里接入模型，或在“设备”里给它开放模型。", noModelsOpt: "没有可用的模型",
     modelGone: "原来的模型已从你的 Mac 上移除，换成了 {0}",
-    grpSub: "订阅（不另花钱）", grpKey: "API Key", grpLocal: "你的 Mac 上", latest: "（最新版）", codex: "ChatGPT（Codex）",
+    grpSub: "订阅（不另花钱）", grpKey: "API Key", grpLocal: "你的 Mac 上", latest: "（最新版）", codex: "ChatGPT（Codex）", codexV: "ChatGPT（Codex · {0}）",
     forget: "移除这台设备", forgetQ: "这里的对话会删掉。以后要用，在 Mac 上重新添加。", removing: "正在移除……",
     forgetFar: "已从这台设备上移除，对话已删除。你的 Mac 现在连不上，下次在 Mac 的“设备”里也把它移除。",
     close: "关闭", deleteChat: "删除这个对话", deleteChatQ: "删除对话“{0}”？", chatsLocal: "对话只保存在这台设备上。", searchChats: "搜索对话", noMatch: "没有找到",
@@ -45,16 +45,16 @@ const T = {
     switchedTo: "换成了 {0}", newContent: "↓ 新内容", waitReply: "等这条回答完成，或先点停止。",
     liveOn: "在线：你的 Mac 连得上，模型可以用", liveOff: "离线：现在连不上你的 Mac", liveWait: "正在连接你的 Mac……",
     volatile: "这个浏览器不能安全地保存配对，所以只在这个页面打开时有效；关掉后要在 Mac 上重新添加。换用 Safari 或 Chrome 可以一直保存。",
-    removedHere: "这台设备已从你的 Mac 上移除，这里的对话也已清除。",
+    removedHere: "这台设备已从你的 Mac 上移除，这里的对话也已清除。要再用，在 Mac 上点“添加设备”再扫一次。",
     otherTab: "OmniLLM 已在另一个标签页打开。", useHere: "在这里用",
   },
   en: {
-    loading: "Loading…", bootDownload: "Downloading…", bootStart: "Starting…", bootStorage: "Reading what this device saved…",
+    loading: "Loading…", bootDownload: "Downloading…", bootStart: "Starting…", bootStorage: "Opening…",
     bootSlow: "Loading has made no progress for 20 seconds, stuck at “{0}”. Tap below to clear the cache and load again; on a slow network, another network may help.",
     bootCrashed: "The program stopped unexpectedly. Tap below to clear the cache and load again.", bootError: "Loading failed: ", bootRetry: "Load again",
     welcomeTitle: "Use your models on this device",
     welcomeBody: "On your Mac, open OmniLLM, choose “Add device”, and scan the QR code on its screen with this device.",
-    scan: "Scan QR code", pasteInstead: "Can’t scan? Paste the pairing text", pastePh: "Paste the pairing text (starts with omnillm3-)", add: "Add", cancel: "Cancel", back: "Back",
+    scan: "Scan QR code", pasteInstead: "Can’t scan? Paste the pairing text", pastePh: "Paste the pairing text (starts with omnillm3-)", add: "Add", cancel: "Cancel", back: "Back", delete: "Delete", remove: "Remove", gotIt: "Got it",
     scanHint: "Point at the QR code on your Mac’s screen", camDenied: "No camera access. Use “Paste the pairing text” below instead.",
     pairTitle: "Add this device", pairConnecting: "Connecting to your Mac…",
     pairAsk: "Add this device to your Mac? Continue only if you just chose “Add device” on your Mac.", pairVia: "Via {0}",
@@ -68,7 +68,7 @@ const T = {
     noNetwork: "This device is offline; it reconnects when the network is back.", kept: "What you typed is kept.", loadingModels: "Connecting to your Mac…",
     noModels: "No models are available to this device. On your Mac, connect a model or allow this device more models under Devices.", noModelsOpt: "No models",
     modelGone: "The previous model was removed from your Mac; switched to {0}",
-    grpSub: "Subscriptions (no extra cost)", grpKey: "API key", grpLocal: "On your Mac", latest: " (latest)", codex: "ChatGPT (Codex)",
+    grpSub: "Subscriptions (no extra cost)", grpKey: "API key", grpLocal: "On your Mac", latest: " (latest)", codex: "ChatGPT (Codex)", codexV: "ChatGPT (Codex · {0})",
     forget: "Remove this device", forgetQ: "Chats here will be deleted. To use this device later, add it on your Mac again.", removing: "Removing…",
     forgetFar: "Removed from this device and its chats deleted. Your Mac can’t be reached now; remove it under Devices on your Mac later too.",
     close: "Close", deleteChat: "Delete this chat", deleteChatQ: "Delete the chat “{0}”?", chatsLocal: "Chats are kept on this device only.", searchChats: "Search chats", noMatch: "No matching chats",
@@ -81,7 +81,7 @@ const T = {
     switchedTo: "Switched to {0}", newContent: "↓ New", waitReply: "Wait for this reply, or tap Stop first.",
     liveOn: "Online: your Mac answers; models are ready", liveOff: "Offline: your Mac can’t be reached now", liveWait: "Connecting to your Mac…",
     volatile: "This browser can’t keep the pairing safely, so it only lasts while this page is open; after closing it, add the device on your Mac again. Safari or Chrome keep it.",
-    removedHere: "This device was removed from your Mac and its chats here were cleared.",
+    removedHere: "This device was removed from your Mac and its chats here were cleared. To use it again, choose “Add device” on your Mac and scan again.",
     otherTab: "OmniLLM is open in another tab.", useHere: "Use here",
   },
 };
@@ -437,13 +437,14 @@ async function connectPair(text) {
     }
     if (S.pairStopped) throw new Error("cancelled");
     const name = deviceName();
-    const state = await omnillm.pair(text, name, (code) => {
+    const r = await omnillm.pair(text, name, (code) => {
       $("pair-stop").hidden = true;
       quoted($("pair-status"), t("pairCheck"));
       $("sas").textContent = code.slice(0, 3) + " " + code.slice(3);
       sasShown(true);
     });
-    S.device = { state, name, added: Date.now() };
+    // The Mac names the device (another iPhone there: "iPhone (2)").
+    S.device = { state: r.state, name: r.name || name, added: Date.now() };
     await seal("device", S.device);
     $("pair-status").textContent = t("pairDone");
     sasShown(false); $("pair-stop").hidden = true;
@@ -581,7 +582,7 @@ function modelName(id) { const m = S.models.find((x) => x.id === id); return m ?
 // known yet) and the kind (Codex). A name the owner chose stays as it is.
 function label(m) {
   if (m.renamed) return m.name;
-  if (m.kind === "codex") return t("codex");
+  if (m.kind === "codex") return m.version ? t("codexV", m.version) : t("codex");
   return m.latest ? m.name + t("latest") : m.name;
 }
 // family orders Claude's models Opus, Sonnet, Haiku (largest first).
@@ -589,6 +590,7 @@ function family(m) { const s = (m.id + " " + m.name).toLowerCase(), i = ["opus",
 
 async function loadModels() {
   const ms = await omnillm.models();
+  syncName();
   for (const m of ms) m.name = label(m);
   // Subscriptions first (the owner pays for them already), then API keys,
   // then models on the Mac; the picker shows names only, grouped.
@@ -603,6 +605,16 @@ async function loadModels() {
   if (!ms.length) { const o = el("option", t("noModelsOpt")); o.value = ""; o.disabled = true; sel.append(o); sel.value = ""; return; }
   if (pickModel()) renderLog(true);
   if (S.cur) renderList(); // the drawer names models by name now
+}
+// syncName keeps this device's name as the Mac has it (the owner may rename
+// it there; the hub sends it with the models): the drawer line and the
+// "replace this pairing" question use it.
+function syncName() {
+  const n = omnillm.name && omnillm.name();
+  if (!n || !S.device || S.openedState !== S.device.state || n === S.device.name) return;
+  S.device.name = n;
+  seal("device", S.device).catch(() => {});
+  $("device-line").textContent = t("deviceLine", n);
 }
 // pickModel selects the current chat's model, else the last one used, else
 // the Claude subscription's Sonnet, else the first. A chat whose model is
@@ -920,7 +932,7 @@ function renderList() {
       const x = el("button", "", "chat-del"); x.type = "button"; x.setAttribute("aria-label", t("deleteChat")); x.title = t("deleteChat");
       x.addEventListener("click", async () => {
         if (S.busy && c === S.cur) return toastText(t("waitReply"));
-        if (!confirm(t("deleteChatQ", c.title || t("newChat")))) return;
+        if (!await ask(t("deleteChatQ", c.title || t("newChat")), t("delete"), true)) return;
         S.chats = S.chats.filter((o) => o.id !== c.id);
         if (c === S.cur) { S.cur = S.chats[0] || newChat(); renderLog(); }
         if (!S.quiet) await seal("chats", S.chats).catch(() => {});
@@ -1173,12 +1185,12 @@ $("chat-search").placeholder = t("searchChats"); $("chat-search").setAttribute("
 $("chat-search").addEventListener("input", () => { if (S.cur) renderList(); });
 $("drawer-close").setAttribute("aria-label", t("close")); $("drawer-close").title = t("close");
 $("drawer-close").addEventListener("click", closeDrawer);
-$("install-tip").addEventListener("click", () => { alert(t("addHomeTip")); });
+$("install-tip").addEventListener("click", () => { ask(t("addHomeTip"), t("gotIt")); });
 // Remove this device: on the Mac too (so it leaves the device list), then
 // here. If the Mac can't be reached it is still removed here, and the
 // welcome screen says to remove it on the Mac as well.
 $("forget").addEventListener("click", async () => {
-  if (!confirm(t("forgetQ"))) return;
+  if (!await ask(t("forgetQ"), t("remove"), true)) return;
   const btn = $("forget"); btn.disabled = true; btn.textContent = t("removing");
   if (S.busy) { try { omnillm.cancel(S.busy); } catch {} }
   let far = !navigator.onLine;
@@ -1188,6 +1200,27 @@ $("forget").addEventListener("click", async () => {
   S.openedState = null;
   await unpaired(far ? "forgetFar" : "");
 });
+// ask shows a question in the page (no browser dialog): yes is the action
+// (danger: red), Cancel beside it; with no cancel it is a note with one
+// button. Esc or a tap outside counts as Cancel. Resolves true for yes.
+function ask(text, yes, danger, cancel = !!danger) {
+  const d = $("ask"), ok = $("ask-yes"), no = $("ask-no");
+  quoted($("ask-text"), text);
+  ok.textContent = yes; ok.className = danger ? "primary bad" : "primary";
+  no.textContent = t("cancel"); no.hidden = !cancel;
+  return new Promise((res) => {
+    const done = (v) => { ok.onclick = no.onclick = d.onclick = d.oncancel = null; if (d.open) d.close(); res(v); };
+    ok.onclick = () => done(true);
+    no.onclick = () => done(false);
+    d.oncancel = (e) => { e.preventDefault(); done(false); };
+    d.onclick = (e) => { // the backdrop (the card's own padding is the dialog too)
+      const r = d.getBoundingClientRect();
+      if (e.target === d && (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom)) done(false);
+    };
+    d.showModal();
+    (cancel ? no : ok).focus();
+  });
+}
 async function unpaired(note) {
   if (S.quiet) return; // the tab in use handles it
   S.device = null; S.chats = []; S.cur = null; S.models = []; S.listed = false; S.paused = null; S.hello = null;

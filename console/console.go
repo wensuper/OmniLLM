@@ -554,14 +554,20 @@ func (s *Server) addProvider(w http.ResponseWriter, r *http.Request) {
 
 // detectProviders is "Check again": every subscription program logged in
 // on this Mac (even one removed before: asking is adding it again) and a
-// running Ollama are connected now; the page names what was.
+// running Ollama are connected now. connected lists their kinds (the page
+// names them in its language); failed, what was found but not connected,
+// each with the hub's sentence in the page's language.
 func (s *Server) detectProviders(w http.ResponseWriter, r *http.Request) {
-	names, err := s.hub.DetectNow(r.Context())
+	kinds, failures, err := s.hub.DetectNow(r.Context())
 	if err != nil {
 		writeErr(w, r, 0, err)
 		return
 	}
-	writeJSON(w, map[string]any{"connected": orEmpty(names)})
+	failed := []map[string]string{}
+	for _, f := range failures {
+		failed = append(failed, map[string]string{"kind": f.Kind, "message": omnillm.Describe(lang(r), f.Err)})
+	}
+	writeJSON(w, map[string]any{"connected": orEmpty(kinds), "failed": failed})
 }
 
 type idBody struct {

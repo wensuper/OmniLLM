@@ -274,13 +274,13 @@ func TestDetectNowConnectsEvenARemovedSubscription(t *testing.T) {
 	if err := h.RemoveProvider(ctx, "claude-code"); err != nil {
 		t.Fatal(err)
 	}
-	names, err := h.DetectNow(ctx)
-	if err != nil {
-		t.Fatal(err)
+	names, failed, err := h.DetectNow(ctx)
+	if err != nil || len(failed) != 0 {
+		t.Fatal(err, failed)
 	}
 	found := false
 	for _, n := range names {
-		found = found || n == "Claude Code"
+		found = found || n == "claude-code"
 	}
 	if !found || !h.subscription("claude-code") {
 		t.Fatalf("not connected again on request: %v", names)
@@ -290,13 +290,13 @@ func TestDetectNowConnectsEvenARemovedSubscription(t *testing.T) {
 		t.Fatal("the removal mark outlived an explicit check")
 	}
 	// Asked again: nothing new to connect, and that is not an error.
-	names, err = h.DetectNow(ctx)
+	names, failed, err = h.DetectNow(ctx)
 	for _, n := range names {
-		if n == "Claude Code" {
+		if n == "claude-code" {
 			t.Fatalf("connected twice: %v", names)
 		}
 	}
-	if err != nil {
-		t.Fatal(err)
+	if err != nil || len(failed) != 0 {
+		t.Fatal(err, failed)
 	}
 }

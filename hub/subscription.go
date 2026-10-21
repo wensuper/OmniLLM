@@ -301,14 +301,23 @@ func (h *Hub) detectSubscriptions(ctx context.Context, evenRemoved bool) []provi
 	return out
 }
 
+// DetectFailure is a source DetectNow found but could not connect: Kind
+// is its kind ("claude-code", "codex", "ollama") and Err says why, for
+// omnillm.Describe.
+type DetectFailure struct {
+	Kind string
+	Err  error
+}
+
 // DetectNow is the owner asking, on purpose, to look again: every
 // subscription program logged in on this machine (even one the owner
 // removed earlier; asking is adding it again) and a running local Ollama
-// that are not connected yet are connected now. It returns the names of
-// what it connected ("Claude Code", "Codex", "Ollama": program names, the
-// same in every language). An error is returned only when something was
-// found and none of it could be connected.
-func (h *Hub) DetectNow(ctx context.Context) ([]string, error) {
+// that are not connected yet are connected now. It returns the kinds of
+// what it connected ("claude-code", "codex", "ollama"; the page names
+// them in its language) and, separately, what was found but could not be
+// connected, each with its error. Finding nothing is not an error; err is
+// set only when the request itself ended (ctx).
+func (h *Hub) DetectNow(ctx context.Context) (connected []string, failed []DetectFailure, err error) {
 	cfgs := h.detectSubscriptions(ctx, true)
 	h.mu.Lock()
 	_, haveOllama := h.clients["ollama"]
@@ -319,33 +328,16 @@ func (h *Hub) DetectNow(ctx context.Context) ([]string, error) {
 			cfgs = append(cfgs, cfg)
 		}
 	}
-	var names []string
-	var firstErr error
 	for _, cfg := range cfgs {
 		if _, err := h.AddProvider(ctx, cfg, ""); err != nil {
 			h.opts.Logf("hub: %s not connected: %s", cfg.Name, omnillm.Describe("en", err))
-			if firstErr == nil {
-				firstErr = err
-			}
+			failed = append(failed, DetectFailure{Kind: string(cfg.Kind), Err: err})
 			continue
 		}
-		names = append(names, programName(cfg.Kind))
+		connected = append(connected, string(cfg.Kind))
 	}
-	if len(names) == 0 && firstErr != nil {
-		return nil, firstErr
+	if err := ctx.Err(); err != nil {
+		return connected, failed, err
 	}
-	return names, nil
-}
-
-// programName is the program a source runs, as people know it.
-func programName(k provider.Kind) string {
-	switch k {
-	case provider.ClaudeCode:
-		return "Claude Code"
-	case provider.Codex:
-		return "Codex"
-	case provider.Ollama:
-		return "Ollama"
-	}
-	return string(k)
+	return connected, failed, nil
 }

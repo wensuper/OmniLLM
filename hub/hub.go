@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -338,10 +339,16 @@ func prepare(c *provider.Client) {
 func (h *Hub) AddProvider(ctx context.Context, cfg provider.Config, apiKey string) ([]omnillm.ModelInfo, error) {
 	apiKey = strings.TrimSpace(apiKey)
 	if err := cfg.Validate(); err != nil {
-		return nil, &omnillm.Error{Code: omnillm.CodeBadRequest, Msg: "bad_model", Detail: err.Error()}
+		return nil, &omnillm.Error{Code: omnillm.CodeBadRequest, Msg: omnillm.MsgBadSource, Detail: err.Error()}
 	}
+	if !sourceName.MatchString(cfg.Name) && !h.connected(cfg.Name) {
+		// A new name only; one connected before keeps working with a new key.
+		return nil, &omnillm.Error{Code: omnillm.CodeBadRequest, Msg: omnillm.MsgBadSource, Detail: "provider: bad name"}
+	}
+	// A key cut short or pasted with a line break is caught here, before
+	// any request is sent with it.
 	if cfg.NeedsKey && (len(apiKey) < 8 || len(apiKey) > 512 || strings.ContainsAny(apiKey, " \t\r\n")) {
-		return nil, &omnillm.Error{Code: omnillm.CodeCredentialProblem, Msg: omnillm.MsgCredentialBad, Args: []string{cfg.Name, redact.Last4(apiKey)}}
+		return nil, &omnillm.Error{Code: omnillm.CodeCredentialProblem, Msg: omnillm.MsgKeyMalformed}
 	}
 	c, err := provider.New(cfg, h.opts.Transport, h.lim)
 	if err != nil {
@@ -405,6 +412,16 @@ func (h *Hub) AddProvider(ctx context.Context, cfg provider.Config, apiKey strin
 	}
 	h.opts.Logf("hub: provider %s connected with %d models", cfg.Name, len(added))
 	return added, nil
+}
+
+// sourceName is a model source's name as the owner types it ("groq").
+var sourceName = regexp.MustCompile(`^[A-Za-z0-9-]{1,40}$`)
+
+// connected reports whether a source of that name is connected now.
+func (h *Hub) connected(name string) bool {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return h.clients[name] != nil
 }
 
 // RemoveProvider deletes the key and the provider's models.
@@ -596,8 +613,11 @@ func (h *Hub) info(m Model) omnillm.ModelInfo {
 		// weekly probe) reports which one, it is the family alone.
 		mi.DisplayName, mi.Latest = subscriptionModelName(provider.ClaudeCode, m.Upstream), true
 	case provider.Codex:
-		// Codex's replies do not name their model.
-		mi.DisplayName = subscriptionModelName(provider.Codex, m.Upstream)
+		// Codex's replies do not name their model, and the hub runs it
+		// with --ignore-user-config and no -m: the model in the owner's
+		// ~/.codex/config.toml is not the one that answers. So no
+		// Version, only Codex's own newest default.
+		mi.DisplayName, mi.Latest = subscriptionModelName(provider.Codex, m.Upstream), true
 	}
 	// The version the provider last said it answered with ("Claude Opus"
 	// behind the alias "opus" is "Claude Opus 5.5" today).

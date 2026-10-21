@@ -211,6 +211,11 @@ type ModelInfo struct {
 	// "ChatGPT (Codex)" in its own language from it; DisplayName holds
 	// the English form for screens that do not.
 	Kind string `json:"kind,omitempty"`
+	// Version is the exact model a Codex source runs ("gpt-5.1-codex"),
+	// set only when the hub itself passes that model to Codex; a screen
+	// then names it "ChatGPT (Codex · gpt-5.1-codex)". Empty with Latest:
+	// Codex's own newest default.
+	Version string `json:"version,omitempty"`
 	// Renamed: DisplayName is the owner's own name for the model, to be
 	// shown as it is (no suffix, no translation).
 	Renamed bool `json:"renamed,omitempty"`

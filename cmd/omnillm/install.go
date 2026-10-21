@@ -44,6 +44,7 @@ type Status struct {
 	Version         string `json:"version,omitempty"`
 	Providers       int    `json:"providers"`
 	Devices         int    `json:"devices"`
+	Online          int    `json:"online"` // devices connected now
 	RelayConfigured bool   `json:"relay_configured"`
 	RelayUp         bool   `json:"relay_up"`
 	Console         bool   `json:"console"`
@@ -105,7 +106,7 @@ func installCmd(args []string) {
 	}
 	st, ok := waitRunning(15 * time.Second)
 	if !ok {
-		die(say(t("OmniLLM 没有启动起来。日志在 ", "OmniLLM did not start. Its log is at ") + filepath.Join(dir, "hub.log")))
+		die(say(t("OmniLLM 没有启动起来。日志在 ", "OmniLLM didn’t start. Its log is at ") + filepath.Join(dir, "hub.log")))
 	}
 	if st.Providers == 0 {
 		// A local model needs no key and sends nothing off the machine.
@@ -164,17 +165,33 @@ func nextStep(st Status) string {
 	case !st.Running:
 		return notRunning()
 	case st.Providers == 0 && st.Headless:
-		return t("下一步：这台机器没有浏览器。请在这台机器的终端里亲自运行 omnillm hub provider add anthropic（或 openai、openai-compatible），然后在提示时粘贴 API Key；API Key 不要发到聊天里。",
-			"Next: this machine has no browser. In this machine’s terminal, run omnillm hub provider add anthropic (or openai, openai-compatible) yourself and paste the API key when asked; don’t send the key in a chat.")
+		// No browser here: a key is typed in this terminal, never sent in a chat.
+		return t("下一步：接入一个模型（选一种）：\n"+
+			"· 有 Claude 订阅：在终端运行 claude，输入 /login\n"+
+			"· 有 ChatGPT 订阅：在终端运行 codex login\n"+
+			"· 有 API Key：在这台机器的终端里亲自运行 omnillm hub provider add anthropic（或 openai、openai-compatible），在提示时粘贴；API Key 不要发到聊天里",
+			"Next: connect a model (pick one):\n"+
+				"· Claude subscription: in Terminal run claude, then type /login\n"+
+				"· ChatGPT subscription: run codex login\n"+
+				"· API key: in this machine’s terminal, run omnillm hub provider add anthropic (or openai, openai-compatible) yourself and paste the key when asked; don’t send it in a chat")
 	case st.Providers == 0:
-		return fmt.Sprintf(t("下一步：接入一个模型来源。用 Claude 订阅的，在%s上安装 Claude Code，在终端运行 claude 并输入 /login 登录；用 ChatGPT 订阅的，安装 Codex 并运行 codex login。然后运行 omnillm status，会自动接上。也可以在控制台里粘贴 API Key（omnillm open），或安装 Ollama 用本机模型。",
-			"Next: connect a model source. With a Claude subscription, install Claude Code on %s, run claude in Terminal and type /login; with a ChatGPT subscription, install Codex and run codex login. Then run omnillm status: it connects by itself. Or paste an API key in the console (omnillm open), or install Ollama for models that run on %[1]s."), thisMachine())
+		// One command a line: the person picks the one that fits.
+		if zh() {
+			return "下一步：接入一个模型（选一种）：\n" +
+				"· 有 Claude 订阅：在终端运行 claude，输入 /login\n" +
+				"· 有 ChatGPT 订阅：在终端运行 codex login\n" +
+				"· 有 API Key 或想用免费的本机模型：运行 omnillm open，在“模型”里接入"
+		}
+		return onMachine("Next: connect a model (pick one):\n" +
+			"· Claude subscription: in Terminal run claude, then type /login\n" +
+			"· ChatGPT subscription: run codex login\n" +
+			"· API key or a free model on %s: run omnillm open and connect it under “Models”")
 	case !st.RelayConfigured:
-		return fmt.Sprintf(t("已经可以在%s上用。要让其他设备连进来，需要先设置远程连接。",
-			"Ready on %s. To let other devices connect, set up remote access first."), thisMachine())
+		return onMachine(t("已经可以在 %s 上用。要让其他设备连进来，需要先设置远程连接。",
+			"Ready on %s. To let other devices connect, set up remote access first."))
 	case !st.RelayUp:
-		return fmt.Sprintf(t("远程连接断开，设备暂时连不上；OmniLLM 会自己重连。请检查%s的网络。",
-			"Remote access is down, so devices can’t connect now; OmniLLM keeps retrying. Check %s’s network."), thisMachine())
+		return onMachine(t("远程连接断开，设备暂时连不上；OmniLLM 会自己重连。请检查 %s 的网络。",
+			"Remote access is down, so devices can’t connect now; OmniLLM keeps retrying. Check %s’s network."))
 	case st.Devices == 0:
 		return t("下一步：在控制台的“设备”里点“添加设备”，添加手机或其他电脑。", "Next: under “Devices” in the console, choose “Add device” to add a phone or another computer.")
 	}
@@ -183,6 +200,20 @@ func nextStep(st Status) string {
 			"All set. Run omnillm open, or click the OmniLLM icon in the menu bar, to open the console.")
 	}
 	return t("一切正常。运行 omnillm open 打开控制台。", "All set. Run omnillm open to open the console.")
+}
+
+// hanGap is a space left between two Chinese characters when "这台电脑"
+// fills "在 %s 上".
+var hanGap = regexp.MustCompile(`(\p{Han}) (\p{Han})`)
+
+// onMachine fills format's %s with thisMachine, spaced as Chinese is
+// written: "在这台 Mac 上", "在这台电脑上".
+func onMachine(format string) string {
+	s := fmt.Sprintf(format, thisMachine())
+	if zh() {
+		s = hanGap.ReplaceAllString(s, "$1$2")
+	}
+	return s
 }
 
 // thisMachine is how next-step texts name the machine OmniLLM runs on.
@@ -285,7 +316,7 @@ func installService(home, bin, dir string, env map[string]string) (string, error
 		// here leaves the hub working, so it is reported, not fatal.
 		if !headless() {
 			if err := installTray(home, bin, dir); err != nil {
-				fmt.Fprintln(os.Stderr, t("菜单栏图标没装上：", "The menu bar icon was not set up: ")+err.Error())
+				fmt.Fprintln(os.Stderr, t("菜单栏图标没装上：", "The menu bar icon wasn’t set up: ")+err.Error())
 			}
 		}
 		return "launchd", nil

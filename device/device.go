@@ -227,6 +227,7 @@ type Device struct {
 	dialMu sync.Mutex
 	tools  chan struct{}
 	lastOK atomic.Int64 // unix nanos of the hub's last answer
+	name   atomic.Value // string: this device's name on the hub, from the last models reply
 }
 
 // Open loads the saved pairing. Connecting happens on first use.
@@ -270,6 +271,11 @@ func Open(ctx context.Context, opts Options) (*Device, error) {
 
 // ID is this device's ID on the hub.
 func (d *Device) ID() string { return d.id }
+
+// Name is this device's name as the hub last gave it (with the models; the
+// owner can rename it on the Mac). "" until the hub has said, or from a hub
+// too old to send it.
+func (d *Device) Name() string { n, _ := d.name.Load().(string); return n }
 
 // Close drops the connection.
 func (d *Device) Close() error {
@@ -622,6 +628,9 @@ func (d *Device) models(ctx context.Context) ([]omnillm.ModelInfo, error) {
 	}
 	if env.T == proto.TChatError {
 		return nil, wireErr(env)
+	}
+	if env.Name != "" {
+		d.name.Store(env.Name)
 	}
 	for i := range env.Models {
 		env.Models[i].Locality = omnillm.Remote

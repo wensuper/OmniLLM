@@ -258,3 +258,13 @@ details[open] > summary::before { transform: translateY(-3px) rotate(45deg); }
 @media (prefers-reduced-motion: reduce) { .live-dot.paused { background: var(--warn); opacity: 1; box-shadow: 0 0 0 3px var(--warn-soft); }
 .live-dot.wait { animation: none; } }
 .primary { box-shadow: none; } /* flat, as in NEXA */
+/* In-page dialog: a card over a dimmed page; Cancel left, the action right
+   (red when it deletes). */
+.ask { width: min(340px, calc(100vw - 32px)); margin: auto; padding: 20px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--ink); box-shadow: var(--shadow-2); }
+.ask::backdrop { background: rgba(8,9,18,.45); }
+@media (prefers-color-scheme: dark) { .ask::backdrop { background: rgba(0,0,0,.6); } }
+.ask p { margin: 0 0 18px; text-wrap: pretty; }
+.ask-btns { display: flex; gap: 10px; }
+.ask-btns button { flex: 1; min-width: 0; max-width: none; }
+.ask-btns .primary.bad { background: var(--danger); border-color: var(--danger); color: var(--surface); }
+.ask-btns .primary.bad:active { background: var(--danger); opacity: .85; }

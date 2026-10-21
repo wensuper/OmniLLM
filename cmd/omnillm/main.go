@@ -109,21 +109,29 @@ func describe(err error) string {
 	return msg
 }
 
-func usage() {
-	fmt.Fprint(os.Stderr, t(`用法：
+// usageText is the short list of everyday commands, or with all every
+// command (hub, devices, relay admin).
+func usageText(all bool) string {
+	if all {
+		return t(`用法：
   omnillm install                    一步装好：主机作为后台服务运行，打开控制台
   omnillm open                       打开本机控制台
   omnillm status                     查看主机状态
+  omnillm update [--check]           更新到最新版本（主机默认会在空闲时自己更新）
+  omnillm update --auto on|off       打开或关闭主机的自动更新
+  omnillm uninstall [--purge]        停止并移除后台服务（--purge 连数据和 Key 一起删）
+  omnillm tray                       把菜单栏图标找回来
+  omnillm version                    显示版本
   omnillm hub run                    启动主机（前台运行）
   omnillm hub provider add <openai|anthropic|ollama|openai-compatible> [--name N] [--base-url U]
                                      接入模型来源（API Key 从标准输入读，不写在命令行里）
   omnillm hub providers | models | devices | apps | usage | audit
   omnillm hub pair [--name N] [--models a,b] [--budget-usd 5] [--background-only]
-  omnillm hub revoke <设备ID>        立即移除设备
+  omnillm hub revoke <名字或ID>      立即移除设备
   omnillm hub device set <名字或ID> [--name N] [--paused true|false] [--budget-usd X | --no-limit] [--models a,b | --all-models]
                                      改设备的名字、开启或暂停、每天额度、能用的模型
   omnillm hub app add <名字>         给不能嵌入库的程序发一枚应用令牌
-  omnillm hub app rm <ID>
+  omnillm hub app rm <名字或ID>      移除应用，它的令牌立即失效
   omnillm hub model set <ID> [--price-in X --price-out Y] [--name 显示名] [--human-only true|false]
   omnillm hub region confirm         确认主机所在地区变化并恢复调用
   omnillm connect pair               在这台设备上输入主机给的配对文字
@@ -138,16 +146,21 @@ func usage() {
   omnillm install                    one step: run the hub as a background service, open the console
   omnillm open                       open the local console
   omnillm status                     show the hub’s status
+  omnillm update [--check]           update to the newest version (the hub also updates itself when idle)
+  omnillm update --auto on|off       turn the hub’s automatic updates on or off
+  omnillm uninstall [--purge]        stop and remove the background service (--purge: data and keys too)
+  omnillm tray                       bring back the menu bar icon
+  omnillm version                    show the version
   omnillm hub run                    run the hub (foreground)
   omnillm hub provider add <openai|anthropic|ollama|openai-compatible> [--name N] [--base-url U]
                                      connect a model source (the API key is read from stdin, never argv)
   omnillm hub providers | models | devices | apps | usage | audit
   omnillm hub pair [--name N] [--models a,b] [--budget-usd 5] [--background-only]
-  omnillm hub revoke <device-id>     remove a device now
+  omnillm hub revoke <name-or-id>    remove a device now
   omnillm hub device set <name-or-id> [--name N] [--paused true|false] [--budget-usd X | --no-limit] [--models a,b | --all-models]
                                      rename a device, pause or resume it, change its daily limit or models
-  omnillm hub app add <name>         token for a program that cannot embed the library
-  omnillm hub app rm <id>
+  omnillm hub app add <name>         token for a program that can’t embed the library
+  omnillm hub app rm <name-or-id>    remove an app; its token stops working at once
   omnillm hub model set <id> [--price-in X --price-out Y] [--name display] [--human-only true|false]
   omnillm hub region confirm         accept the hub’s new region and resume calls
   omnillm connect pair               enter the hub’s pairing text on this device
@@ -158,16 +171,50 @@ func usage() {
   omnillm connect forget             remove this device (from your Mac too)
   omnillm relay --listen :443 --autocert relay.example.com --hub-token-hash HEX
   omnillm relay token                make a hub registration token and its hash
-`))
+`)
+	}
+	return t(`用法：
+  omnillm install                    一步装好：主机作为后台服务运行，打开控制台
+  omnillm open                       打开本机控制台
+  omnillm status                     查看主机状态
+  omnillm update [--check]           更新到最新版本（主机默认会在空闲时自己更新）
+  omnillm uninstall [--purge]        停止并移除后台服务（--purge 连数据和 Key 一起删）
+  omnillm tray                       把菜单栏图标找回来
+  omnillm version                    显示版本
+  omnillm help --all                 所有命令（主机、设备、远程连接管理）
+`, `Usage:
+  omnillm install                    one step: run the hub as a background service, open the console
+  omnillm open                       open the local console
+  omnillm status                     show the hub’s status
+  omnillm update [--check]           update to the newest version (the hub also updates itself when idle)
+  omnillm uninstall [--purge]        stop and remove the background service (--purge: data and keys too)
+  omnillm tray                       bring back the menu bar icon
+  omnillm version                    show the version
+  omnillm help --all                 all commands (hub, devices, relay admin)
+`)
+}
+
+// usage is for a command that isn't one: the short list, exit 2.
+func usage() {
+	fmt.Fprint(os.Stderr, usageText(false))
 	os.Exit(2)
+}
+
+// helpCmd is `omnillm help [--all]` (and omnillm alone): the list, exit 0.
+func helpCmd(args []string) {
+	all := len(args) > 0 && (args[0] == "--all" || args[0] == "-a" || args[0] == "all")
+	fmt.Print(usageText(all))
 }
 
 func main() {
 	log.SetFlags(0)
 	if len(os.Args) < 2 {
-		usage()
+		helpCmd(nil)
+		return
 	}
 	switch os.Args[1] {
+	case "help", "-h", "--help":
+		helpCmd(os.Args[2:])
 	case "hub":
 		hubCmd(os.Args[2:])
 	case "connect":
@@ -206,7 +253,7 @@ func openCmd() {
 		os.Exit(1)
 	}
 	if err := openLogin(url); err != nil {
-		fmt.Printf(t("在%s的浏览器里打开（2 分钟内有效，只能用一次）：\n", "Open this in a browser on %s (valid 2 minutes, single use):\n"), thisMachine())
+		fmt.Print(onMachine(t("在 %s 的浏览器里打开（2 分钟内有效，只能用一次）：\n", "Open this in a browser on %s (valid 2 minutes, single use):\n")))
 		fmt.Println(url)
 		return
 	}
@@ -500,10 +547,10 @@ func callOr(sock string, req control.Request, empty string) {
 func hubRun(dir, sock string, args []string) {
 	log.SetFlags(log.LstdFlags) // a service log needs times
 	fs := flag.NewFlagSet("hub run", flag.ExitOnError)
-	relayURL := fs.String("relay", os.Getenv("OMNILLM_RELAY"), "relay URL (wss://…; default the project's; off: none)")
+	relayURL := fs.String("relay", os.Getenv("OMNILLM_RELAY"), "relay URL (wss://…; default the project’s; off: none)")
 	api := fs.String("api", "", "serve the local API for app tokens on this loopback address, e.g. 127.0.0.1:8765")
 	consoleAddr := fs.String("console", "127.0.0.1:8770", "serve the local console on this loopback address (empty: off)")
-	webApp := fs.String("web-app", "", "web client the pairing QR code opens (default: the project's)")
+	webApp := fs.String("web-app", "", "web client the pairing QR code opens (default: the project’s)")
 	_ = fs.Parse(args)
 	switch *relayURL {
 	case "":
@@ -567,7 +614,7 @@ func hubRun(dir, sock string, args []string) {
 		// once its port is really ours.
 		cln, err := console.Listen(*consoleAddr)
 		if err != nil {
-			log.Printf(t("控制台没能启动：%v", "Console did not start: %v"), err)
+			log.Printf(t("控制台没能启动：%v", "Console didn’t start: %v"), err)
 		} else {
 			con, err = console.New(h, cln.Addr().String())
 			if err != nil {
@@ -653,7 +700,13 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 			}
 			ps, _ := h.Providers(ctx)
 			ds, _ := h.Devices(ctx)
-			st := map[string]any{"running": true, "version": version, "providers": len(ps), "devices": len(ds),
+			online := 0
+			for _, d := range ds {
+				if d.Online {
+					online++
+				}
+			}
+			st := map[string]any{"running": true, "version": version, "providers": len(ps), "devices": len(ds), "online": online,
 				"relay_configured": relayURL != "", "relay_up": h.RelayUp(), "console": con != nil}
 			return c.Send(control.Reply{Event: "ok", Data: jsonData(st)})
 		case "provider.add":
@@ -674,7 +727,7 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 			if err != nil {
 				return hubSay(err)
 			}
-			return c.Send(control.Reply{Event: "ok", Text: fmt.Sprintf(t("已接入 %s，%d 个模型可用。", "Connected %s: %d models available."), cfg.Name, len(ms))})
+			return c.Send(control.Reply{Event: "ok", Text: connectedText(cfg.Name, len(ms))})
 		case "providers":
 			ps, err := h.Providers(ctx)
 			if err != nil {
@@ -747,10 +800,19 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 			}
 			return c.Send(control.Reply{Event: "ok", Text: fmt.Sprintf(t("已更新“%s”。", "Updated “%s”."), d.Name)})
 		case "revoke":
-			if err := h.Revoke(ctx, a["id"]); err != nil {
+			// By name or ID, as device set finds it.
+			ds, err := h.Devices(ctx)
+			if err != nil {
+				return err
+			}
+			d, err := findDevice(ds, a["id"])
+			if err != nil {
+				return err
+			}
+			if err := h.Revoke(ctx, d.ID); err != nil {
 				return hubSay(err)
 			}
-			return c.Send(control.Reply{Event: "ok", Text: t("已移除，立即生效。", "Removed. Effective now.")})
+			return c.Send(control.Reply{Event: "ok", Text: fmt.Sprintf(t("已移除“%s”，立即生效。", "Removed “%s”. Effective now."), d.Name)})
 		case "app.add":
 			app, tok, err := h.AddApp(ctx, a["name"], nil, 0)
 			if err != nil {
@@ -760,10 +822,18 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 				"已为“%s”创建令牌（只显示这一次，请保存好）：\n%s\n这个应用只能做后台调用，每天额度 %s。",
 				"Token for “%s” (shown once, keep it safe):\n%s\nThis app makes background calls only; daily limit %s."), app.Name, tok, usd(app.Budget))})
 		case "app.rm":
-			if err := h.RevokeApp(ctx, a["id"]); err != nil {
+			as, err := h.Apps(ctx)
+			if err != nil {
 				return err
 			}
-			return c.Send(control.Reply{Event: "ok", Text: t("已移除。", "Removed.")})
+			app, err := findApp(as, a["id"])
+			if err != nil {
+				return err
+			}
+			if err := h.RevokeApp(ctx, app.ID); err != nil {
+				return hubSay(err)
+			}
+			return c.Send(control.Reply{Event: "ok", Text: fmt.Sprintf(t("已移除“%s”。", "Removed “%s”."), app.Name)})
 		case "model.set":
 			var u hub.ModelUpdate
 			if n := a["name"]; n != "" {
@@ -799,6 +869,15 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 		}
 		return errors.New("unknown command")
 	}
+}
+
+// connectedText is what provider add says: "Connected groq: 1 model
+// available."
+func connectedText(name string, n int) string {
+	if zh() {
+		return fmt.Sprintf("已接入 %s，%d 个模型可用。", name, n)
+	}
+	return fmt.Sprintf("Connected %s: %s available.", name, plural(n, "model"))
 }
 
 func usd(micro int64) string {
@@ -838,7 +917,7 @@ func pairOp(ctx context.Context, h *hub.Hub, c *control.Conn, a map[string]strin
 	}
 	if err := c.Send(control.Reply{Event: "info", Text: fmt.Sprintf(t(
 		"手机或平板：用相机扫上面的二维码。电脑或服务器：运行 omnillm connect pair，粘贴下面这段配对文字（%s 前有效，只能用一次；不要发给别人，也不要贴到聊天里）：\n\n%s\n",
-		"Phone or tablet: scan the QR code above with the camera. Computer or server: run omnillm connect pair and paste this pairing text (valid until %s, single use; do not send it to anyone or paste it into a chat):\n\n%s\n"),
+		"Phone or tablet: scan the QR code above with the camera. Computer or server: run omnillm connect pair and paste this pairing text (valid until %s, single use; don’t send it to anyone or paste it into a chat):\n\n%s\n"),
 		p.Expires.Format("15:04"), p.Code)}); err != nil {
 		return err
 	}
@@ -1008,7 +1087,7 @@ func relayCmd(args []string) {
 	}
 	fs := flag.NewFlagSet("relay", flag.ExitOnError)
 	listen := fs.String("listen", ":443", "")
-	domain := fs.String("autocert", "", "get a TLS certificate for this domain from Let's Encrypt")
+	domain := fs.String("autocert", "", "get a TLS certificate for this domain from Let’s Encrypt")
 	cache := fs.String("cert-cache", dataDir("relay-certs"), "")
 	certFile := fs.String("tls-cert", "", "")
 	keyFile := fs.String("tls-key", "", "")
@@ -1016,7 +1095,7 @@ func relayCmd(args []string) {
 	behindProxy := fs.Bool("behind-tls-proxy", false, "plain HTTP on loopback behind a TLS reverse proxy")
 	var hashes, origins multi
 	fs.Var(&hashes, "hub-token-hash", "sha256 of an allowed hub token (repeatable)")
-	fs.Var(&origins, "web-origin", "origin of a web client allowed to open device mailboxes (repeatable; default the project's)")
+	fs.Var(&origins, "web-origin", "origin of a web client allowed to open device mailboxes (repeatable; default the project’s)")
 	_ = fs.Parse(args)
 	opts := relay.Options{Open: *open, TrustProxy: *behindProxy, Logf: func(f string, a ...any) { log.Printf(f, a...) }}
 	if len(origins) > 0 {

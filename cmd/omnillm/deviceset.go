@@ -99,24 +99,41 @@ func deviceUpdate(a map[string]string) (name *string, budget *int64, paused *boo
 // findDevice finds a device by its ID, or by its name (exactly, or ignoring
 // case when only one matches).
 func findDevice(ds []hub.Device, q string) (hub.Device, error) {
+	return findNamed(ds, q, func(d hub.Device) (string, string) { return d.ID, d.Name },
+		t("没有叫“%s”的设备。运行 omnillm hub devices 查看。", "No device is called “%s”. Run omnillm hub devices to see them."),
+		t("有几台设备都叫“%s”（大小写不同）。请照 omnillm hub devices 里的写法写出名字。",
+			"Several devices are called “%s” (in different case). Write the name exactly as omnillm hub devices shows it."))
+}
+
+// findApp is findDevice for apps.
+func findApp(as []hub.App, q string) (hub.App, error) {
+	return findNamed(as, q, func(a hub.App) (string, string) { return a.ID, a.Name },
+		t("没有叫“%s”的应用。运行 omnillm hub apps 查看。", "No app is called “%s”. Run omnillm hub apps to see them."),
+		t("有几个应用都叫“%s”（大小写不同）。请照 omnillm hub apps 里的写法写出名字。",
+			"Several apps are called “%s” (in different case). Write the name exactly as omnillm hub apps shows it."))
+}
+
+// findNamed finds the one item whose ID or name is q (the name exactly, or
+// ignoring case when only one matches); none and several say so.
+func findNamed[T any](items []T, q string, idName func(T) (string, string), none, several string) (T, error) {
+	var zero T
 	q = strings.TrimSpace(q)
-	for _, d := range ds {
-		if d.ID == q || d.Name == q {
-			return d, nil
+	for _, x := range items {
+		if id, name := idName(x); id == q || name == q {
+			return x, nil
 		}
 	}
-	var found []hub.Device
-	for _, d := range ds {
-		if strings.EqualFold(d.Name, q) {
-			found = append(found, d)
+	var found []T
+	for _, x := range items {
+		if _, name := idName(x); strings.EqualFold(name, q) {
+			found = append(found, x)
 		}
 	}
 	switch len(found) {
 	case 1:
 		return found[0], nil
 	case 0:
-		return hub.Device{}, sayf(t("没有叫“%s”的设备。运行 omnillm hub devices 查看。", "No device is called “%s”. Run omnillm hub devices to see them."), q)
+		return zero, sayf(none, q)
 	}
-	return hub.Device{}, sayf(t("有几台设备都叫“%s”（大小写不同）。请照 omnillm hub devices 里的写法写出名字。",
-		"Several devices are called “%s” (in different case). Write the name exactly as omnillm hub devices shows it."), q)
+	return zero, sayf(several, q)
 }

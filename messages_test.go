@@ -2,6 +2,7 @@ package omnillm
 
 import (
 	"errors"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -116,15 +117,26 @@ func TestWaitsAreInTheReadersLanguage(t *testing.T) {
 	if got := Describe("zh", old); strings.Contains(got, "minutes") || !strings.Contains(got, "约 6 小时") || !strings.HasPrefix(got, "Claude 订阅") {
 		t.Fatal(got)
 	}
-	pace := &Error{Code: CodeBusy, Msg: MsgSubscriptionPace, RetryAfter: 20 * time.Minute}
-	if got := Describe("zh", pace); !strings.Contains(got, "约 20 分钟后再试") {
+	space := &Error{Code: CodeBusy, Msg: MsgSubscriptionPace, RetryAfter: 20 * time.Minute}
+	if got := Describe("zh", space); !strings.Contains(got, "约 20 分钟后再试") {
 		t.Fatal(got)
 	}
 	up := &Error{Code: CodeBusy, Msg: MsgBusyUpstream, Args: []string{"openai"}, RetryAfter: 30 * time.Second}
-	if got := Describe("en", up); got != "OpenAI asked us to wait. Try again in about 30 seconds." {
+	if got := Describe("en", up); got != "OpenAI is busy right now. Try again in about 30 seconds." {
 		t.Fatal(got)
 	}
-	if got := Describe("zh", &Error{Code: CodeBusy, Msg: MsgBusyPace, Args: []string{"codex"}, RetryAfter: time.Minute}); !strings.Contains(got, "为了让 ChatGPT 订阅的用量") || !strings.Contains(got, "约 60 秒后再试") {
+	if got := Describe("zh", up); got != "OpenAI 那边正忙，约 30 秒后再试。" {
+		t.Fatal(got)
+	}
+	pace := &Error{Code: CodeBusy, Msg: MsgBusyPace, Args: []string{"codex"}, RetryAfter: time.Minute}
+	if got := Describe("zh", pace); got != "订阅按一个人聊天的节奏使用，两次请求之间要隔开一点。约 60 秒后再试。" {
+		t.Fatal(got)
+	}
+	if got := Describe("en", pace); got != "Subscriptions are used at one person’s chatting pace, so requests are spaced out. Try again in about 60 seconds." {
+		t.Fatal(got)
+	}
+	// The subscription is still sent first; it never fills the wait.
+	if got := Describe("en", &Error{Code: CodeBusy, Msg: MsgBusyPace, Args: []string{"codex", "1 minute"}}); !strings.HasSuffix(got, "Try again in 1 minute.") {
 		t.Fatal(got)
 	}
 }
@@ -228,6 +240,46 @@ func TestDeviceAndAppMessagesAreApart(t *testing.T) {
 	for _, k := range []string{MsgSubscriptionPace, MsgSubscriptionLimit} {
 		if s := Text("zh", k); !strings.Contains(s, "你的 Mac 上的模型") || strings.Contains(s, "本机") {
 			t.Errorf("%s zh: %q", k, s)
+		}
+	}
+}
+
+func TestSourceAndKeyMessages(t *testing.T) {
+	for _, c := range []struct{ key, zh, en string }{
+		{MsgBadSource, "名字只能用英文字母、数字和 -（不要空格）；接口地址要以 https:// 开头。", "Use letters, digits and - for the name (no spaces), and an address starting with https://."},
+		{MsgKeyMalformed, "这不像完整的 API Key。到服务商网站重新复制一次，再粘贴。", "That doesn’t look like a complete API key. Copy it again from the provider’s site and paste it."},
+		{MsgNoChatModel, "这台 Mac 上的 Ollama 里没有能对话的模型（只有向量 / 重排模型）。在终端运行 ollama pull qwen3 下载一个。", "Ollama on this Mac has no chat model (only embedding or rerank models). Run ollama pull qwen3 in Terminal to get one."},
+		{MsgPairingExpired, "这个二维码或配对文字已过期或已用过。在 Mac 上重新点“添加设备”。", "This QR code or pairing text expired or was already used. Choose “Add device” on your Mac again."},
+		{MsgPairingFailed, "这个二维码或配对文字已过期或已用过。在 Mac 上重新点“添加设备”。", "This QR code or pairing text expired or was already used. Choose “Add device” on your Mac again."},
+	} {
+		if got := Text("zh", c.key); got != c.zh {
+			t.Errorf("%s zh: %q", c.key, got)
+		}
+		if got := Text("en", c.key); got != c.en {
+			t.Errorf("%s en: %q", c.key, got)
+		}
+	}
+	if s := Text("zh", MsgRegionChanged); !strings.Contains(s, "已暂停使用模型") {
+		t.Fatal(s)
+	}
+}
+
+// zh: a space between a Latin word (or a placeholder) and Chinese; en:
+// contractions, as people write.
+var (
+	latinThenHan = regexp.MustCompile(`[A-Za-z0-9%][\p{Han}]|[\p{Han}][A-Za-z0-9]`)
+	uncontracted = regexp.MustCompile(`\b(does not|do not|is not|are not|cannot|could not|did not|was not|will not|would not|has not|have not)\b`)
+)
+
+func TestSpacingAndContractions(t *testing.T) {
+	for k, v := range texts {
+		// "%s后" is left: the waits it takes end in Chinese ("约 3 小时").
+		zh := strings.ReplaceAll(v[0], "%s后", "")
+		if m := latinThenHan.FindString(zh); m != "" {
+			t.Errorf("%s zh: no space in %q (%q)", k, m, v[0])
+		}
+		if m := uncontracted.FindString(v[1]); m != "" {
+			t.Errorf("%s en: %q", k, m)
 		}
 	}
 }

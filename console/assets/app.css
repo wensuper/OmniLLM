@@ -16,6 +16,7 @@
   --focus: 0 0 0 1px var(--accent), 0 0 0 4px rgba(114,77,231,.24);
   color-scheme: light;
   --r-xs: 4px; --r-s: 6px; --radius: 10px; --r-l: 12px;
+  --seg-on: #FFFFFF; /* the pressed segment of a segmented control */
   --font: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
   --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
 }
@@ -32,6 +33,7 @@
     --shadow-1: 0 0 0 1px rgba(255,255,255,.04);
     --shadow-2: 0 1px 0 rgba(255,255,255,.03) inset, 0 14px 36px -14px rgba(0,0,0,.75);
     --focus: 0 0 0 1px var(--accent), 0 0 0 4px rgba(155,138,255,.30);
+    --seg-on: #27303E;
     color-scheme: dark;
   }
 }
@@ -47,6 +49,7 @@
   --shadow-1: 0 0 0 1px rgba(255,255,255,.04);
   --shadow-2: 0 1px 0 rgba(255,255,255,.03) inset, 0 14px 36px -14px rgba(0,0,0,.75);
   --focus: 0 0 0 1px var(--accent), 0 0 0 4px rgba(155,138,255,.30);
+  --seg-on: #27303E;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -125,14 +128,21 @@ div.codebox > .code, div.codebox > .cmd { padding-right: 72px; margin: 0; }
 .skip-line { margin: 12px 0 0; }
 .small-btn { padding: 4px 10px; min-height: 28px; font-size: 12px; }
 .codebox > .code { font-family: var(--mono); font-size: 12px; word-break: break-all; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-s); padding: 10px; user-select: all; }
-.sas { font-family: var(--mono); font-size: 34px; font-weight: 600; letter-spacing: .18em; margin: 8px 0; color: var(--ink); }
+/* The Mac's six digits, in the same tile as on the phone. */
+.sas { display: inline-block; font-family: var(--mono); font-size: 34px; font-weight: 600; line-height: 1.2; letter-spacing: .12em; margin: 8px 0; padding: 10px 20px; color: var(--ink); background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-l); }
 /* A question or notice, as NEXA's chips: a warn hairline all round and a
    16 px warn icon before the text. */
 .confirm, .banner { position: relative; background: var(--warn-soft); border: 1px solid var(--warn-line); border-radius: var(--r-l); color: var(--ink); }
 .confirm::before, .banner::before { content: ""; position: absolute; left: 16px; width: 16px; height: 16px; background: var(--warn-hi);
   -webkit-mask: var(--warn-icon) center / contain no-repeat; mask: var(--warn-icon) center / contain no-repeat; }
 :root { --warn-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 1.8 14.8 13.9H1.2Z' fill='none' stroke='%23000' stroke-width='1.5' stroke-linejoin='round'/%3E%3Cpath d='M8 6.2v3.6' stroke='%23000' stroke-width='1.5' stroke-linecap='round'/%3E%3Ccircle cx='8' cy='11.8' r='.95'/%3E%3C/svg%3E"); }
-.confirm { padding: 16px 16px 16px 44px; }
+.confirm { padding: 16px 16px 16px 44px; max-width: 520px; }
+.confirm .sas { display: block; width: max-content; max-width: 100%; }
+/* Confirming: the question is the panel; its chip is the only frame, the
+   panel's x in the chip's top-right corner. */
+.pair-panel.confirming { border: 0; padding: 0; background: none; }
+.confirm.has-x { padding-right: 48px; }
+.confirm .close-x { top: 8px; right: 8px; }
 .confirm::before { top: 19px; }
 .confirm > p:first-child { margin-bottom: 4px; }
 .confirm .actions { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -169,6 +179,8 @@ div.codebox > .code, div.codebox > .cmd { padding-right: 72px; margin: 0; }
 .tab { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-l); padding: 16px; overflow-x: auto; box-shadow: var(--shadow-1); }
 .row-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
 .row-head button { margin-top: 0; }
+/* The tab's main action is on the right of its head row, on every tab. */
+.row-head button.primary { margin-left: auto; }
 table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 8px; }
 th { text-align: left; color: var(--muted); font-weight: 500; font-size: 13px; padding: 8px; border-bottom: 1px solid var(--line); }
 td { padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; overflow-wrap: anywhere; }
@@ -212,6 +224,9 @@ input.switch { min-height: 0; padding: 0; }
 .switch:checked::after { left: 16px; background: var(--accent-ink); }
 .switch:focus-visible { outline: 0; box-shadow: var(--focus); }
 .switch:disabled { opacity: .45; cursor: not-allowed; }
+/* On but not changeable (a subscription is always chat-only): still reads
+   as on, only quieter; the knob stays solid. */
+.switch:checked:disabled, .switch:checked:disabled:hover { opacity: 1; background: color-mix(in srgb, var(--accent) 55%, var(--surface)); border-color: transparent; }
 .toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); white-space: nowrap; cursor: pointer; }
 /* The add-device panel closes with the x in its corner. */
 .pair-panel { position: relative; border: 1px solid var(--line); border-radius: var(--r-l); padding: 16px 56px 16px 16px; margin-top: 12px; background: var(--surface); }
@@ -272,9 +287,9 @@ td.nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Today / Yesterday / Last 7 days, as NEXA's segmented control: the
    chosen one raised on a sunken track. */
 .seg { display: inline-flex; gap: 2px; padding: 2px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-s); margin-bottom: 12px; }
-.seg button { border: 0; border-radius: var(--r-xs); min-height: 28px; padding: 3px 12px; background: transparent; color: var(--muted); }
+.seg button { border: 0; border-radius: var(--r-xs); min-height: 28px; padding: 3px 12px; background: transparent; color: var(--ink-2); }
 .seg button:hover:not(:disabled) { background: transparent; color: var(--ink); }
-.seg button[aria-pressed="true"], .seg button[aria-pressed="true"]:hover:not(:disabled) { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-1), 0 0 0 1px var(--line); }
+.seg button[aria-pressed="true"], .seg button[aria-pressed="true"]:hover:not(:disabled) { background: var(--seg-on); color: var(--ink); box-shadow: var(--shadow-1), 0 0 0 1px var(--line); }
 /* Editing a row: the amount and "No limit" on one line, Save and Cancel
    together; fixed column widths so nothing moves. */
 .budget-line { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -384,3 +399,19 @@ button.danger-text:hover:not(:disabled) { background: none; text-decoration: und
 }
 @media (max-width: 600px) { .usage-table td.nm { white-space: normal; } }
 @media (max-width: 600px) { .confirm .actions button { flex: 1 1 100%; } }
+/* Round 4: text that stays on one line; sources stacked on a phone; the
+   apps chip on its own line there, with the warn icon. */
+.nowrap { white-space: nowrap; }
+.providers-table td.src .tag { margin-top: 4px; }
+@media (max-width: 600px) {
+  .providers-table thead, .providers-table td.how { display: none; }
+  .providers-table, .providers-table tbody { display: block; }
+  .providers-table tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 12px; border-bottom: 1px solid var(--line); }
+  .providers-table td { border-bottom: 0; }
+  .providers-table td.actions { padding-right: 0; }
+  .providers-table .narrow-only { display: block; }
+  .apps-table .nm-line .brk { flex-basis: 100%; height: 0; }
+  .apps-table .nm-line .tag.warn-tag { display: inline-flex; align-items: center; gap: 6px; white-space: normal; }
+  .apps-table .nm-line .tag.warn-tag::before { content: ""; flex: none; width: 16px; height: 16px; background: var(--warn-hi);
+    -webkit-mask: var(--warn-icon) center / contain no-repeat; mask: var(--warn-icon) center / contain no-repeat; }
+}

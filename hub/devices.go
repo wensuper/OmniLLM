@@ -172,7 +172,7 @@ func (h *Hub) UpdateDevice(ctx context.Context, id string, name *string, budget 
 		d.Paused = *paused
 	}
 	if models != nil {
-		ms, err := h.checkModels(ctx, *models, false)
+		ms, err := h.checkModels(ctx, *models, false, d.Models)
 		if err != nil {
 			return d, err
 		}
@@ -422,9 +422,10 @@ func (h *Hub) endPairing(p *pairing, err error) {
 	p.done <- pairResult{err: err}
 }
 
-// cleanName keeps a device name printable and short.
-// uniqueName returns name, or name with the lowest number from 2 up that
-// none of names already is (case does not count).
+// uniqueName returns name, or "name (2)" with the lowest number from 2 up
+// that none of names already is (case does not count). A number already
+// used the older way ("iPhone 2") is skipped too, so two devices never
+// read as the same one; names given that way stay as they are.
 func uniqueName(name string, names []string) string {
 	taken := make(map[string]bool, len(names))
 	for _, n := range names {
@@ -434,8 +435,8 @@ func uniqueName(name string, names []string) string {
 		return name
 	}
 	for i := 2; ; i++ {
-		n := fmt.Sprintf("%s %d", name, i)
-		if !taken[strings.ToLower(n)] {
+		n := fmt.Sprintf("%s (%d)", name, i)
+		if !taken[strings.ToLower(n)] && !taken[strings.ToLower(fmt.Sprintf("%s %d", name, i))] {
 			return n
 		}
 	}
@@ -463,6 +464,7 @@ func appNames(apps []App, skip string) []string {
 	return out
 }
 
+// cleanName keeps a device name printable and short.
 func cleanName(s string) string {
 	var b strings.Builder
 	for _, r := range s {
@@ -624,10 +626,22 @@ func (h *Hub) finishPairing(ctx context.Context, p *pairing, sess *e2e.Session, 
 
 // checkModels is a device's or app's model list as the owner set it: every
 // id must exist, each once; nil (all models) for an empty list. Apps make
-// background calls only, so chat-only models are not theirs.
-func (h *Hub) checkModels(ctx context.Context, ids []string, forApp bool) ([]string, error) {
+// background calls only, so chat-only models are not newly theirs. had is
+// the list before: what is on it stays without the checks (whether a model
+// can be used is decided again at every call).
+func (h *Hub) checkModels(ctx context.Context, ids []string, forApp bool, had []string) ([]string, error) {
 	var out []string
 	for _, id := range ids {
+		if contains(had, id) {
+			// Already on its list: kept as it is, even when it can't be
+			// used now (its source removed, or chat-only for an app), so
+			// saving other changes never drops what the owner didn't
+			// switch off.
+			if !contains(out, id) {
+				out = append(out, id)
+			}
+			continue
+		}
 		m, err := h.getModel(ctx, id)
 		if err != nil {
 			return nil, &omnillm.Error{Code: omnillm.CodeBadRequest, Msg: omnillm.MsgUnknownModel}
@@ -855,7 +869,7 @@ func (h *Hub) UpdateApp(ctx context.Context, id string, name *string, budget *in
 		a.Paused = *paused
 	}
 	if models != nil {
-		ms, err := h.checkModels(ctx, *models, true)
+		ms, err := h.checkModels(ctx, *models, true, a.Models)
 		if err != nil {
 			return a, err
 		}

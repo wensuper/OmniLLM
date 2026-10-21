@@ -147,7 +147,7 @@ func TestConfirmNamesTheDevice(t *testing.T) {
 	for _, d := range devs {
 		names = append(names, d.Name)
 	}
-	if len(names) != 3 || names[0] != "Kitchen iPad" || names[1] != "Kitchen iPad 2" || names[2] != "iPhone" {
+	if len(names) != 3 || names[0] != "Kitchen iPad" || names[1] != "Kitchen iPad (2)" || names[2] != "iPhone" {
 		t.Fatalf("names %q", names)
 	}
 }

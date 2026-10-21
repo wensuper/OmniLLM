@@ -141,15 +141,15 @@ func TestDuplicateAppNamesAreToldApart(t *testing.T) {
 	for _, a := range apps {
 		names[a.ID] = a.Name
 	}
-	if names["aaaa"] != "my-script" || names["bbbb"] != "my-script 2" || names["cccc"] != "my-script 3" {
+	if names["aaaa"] != "my-script" || names["bbbb"] != "my-script (2)" || names["cccc"] != "my-script (3)" {
 		t.Fatalf("names %v", names)
 	}
 	var kept hub.App
-	if err := store.GetJSON(ctx, st, "app/cccc", &kept); err != nil || kept.Name != "my-script 3" {
+	if err := store.GetJSON(ctx, st, "app/cccc", &kept); err != nil || kept.Name != "my-script (3)" {
 		t.Fatalf("the new name was not kept: %+v %v", kept, err)
 	}
 	a, _, err := h.AddApp(ctx, "My-Script", nil, 0)
-	if err != nil || a.Name != "My-Script 4" {
+	if err != nil || a.Name != "My-Script (4)" {
 		t.Fatalf("new app %q %v", a.Name, err)
 	}
 }

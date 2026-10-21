@@ -42,6 +42,7 @@ func main() {
 		"check":      js.FuncOf(check),
 		"leave":      js.FuncOf(leave),
 		"pairCancel": js.FuncOf(pairCancel),
+		"name":       js.FuncOf(name),
 	}
 	js.Global().Set("omnillm", js.ValueOf(api))
 	js.Global().Call("dispatchEvent", js.Global().Get("Event").New("omnillm-ready"))
@@ -127,7 +128,9 @@ func check(_ js.Value, a []js.Value) any {
 	})
 }
 
-// pair(text, name, onCode) → state JSON.
+// pair(text, name, onCode) → {state, name}: the state JSON and the name
+// the Mac gave this device (it may differ from the one asked for: "iPhone
+// (2)" next to another iPhone).
 func pair(_ js.Value, a []js.Value) any {
 	text, name, onCode := a[0].String(), a[1].String(), a[2]
 	return promise(func() (any, error) {
@@ -137,11 +140,15 @@ func pair(_ js.Value, a []js.Value) any {
 		pairStop = cancel
 		mu.Unlock()
 		defer cancel()
-		_, err := device.Pair(ctx, device.Options{Secrets: s}, text, name, func(code string) { onCode.Invoke(code) })
+		info, err := device.Pair(ctx, device.Options{Secrets: s}, text, name, func(code string) { onCode.Invoke(code) })
 		if err != nil {
 			return nil, err
 		}
-		return exportState(s)
+		st, err := exportState(s)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]any{"state": st, "name": info.Name}, nil
 	})
 }
 
@@ -240,10 +247,35 @@ func models(_ js.Value, _ []js.Value) any {
 			// latest, kind and renamed let the page word the name in its
 			// own language ("(latest)", "ChatGPT (Codex)").
 			out = append(out, map[string]any{"id": m.ID, "name": m.DisplayName, "provider": m.Provider, "humanOnly": m.HumanOnly, "onHost": m.OnHost,
-				"latest": m.Latest, "kind": m.Kind, "renamed": m.Renamed})
+				"latest": m.Latest, "kind": m.Kind, "renamed": m.Renamed, "version": version(m)})
 		}
 		return out, nil
 	})
+}
+
+// version is the exact model a Codex subscription runs when the hub says
+// ("gpt-5.1-codex"), read from the wire form so a hub that doesn't send it
+// leaves it "".
+func version(m omnillm.ModelInfo) string {
+	b, err := json.Marshal(m)
+	if err != nil {
+		return ""
+	}
+	var w struct {
+		Version string `json:"version"`
+	}
+	_ = json.Unmarshal(b, &w)
+	return w.Version
+}
+
+// name() is this device's name on the Mac as the last models() call
+// returned it (the owner may have renamed it there); "" when not known.
+func name(_ js.Value, _ []js.Value) any {
+	d, err := current()
+	if err != nil {
+		return ""
+	}
+	return d.Name()
 }
 
 // chat(id, model, messagesJSON, onDelta) → {in, out, finish}. onDelta is

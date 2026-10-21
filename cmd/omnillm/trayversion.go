@@ -338,3 +338,27 @@ func (s updateState) installed(err error, have string) (next updateState, restar
 	s.Failed = true
 	return s, false
 }
+
+// restartFailed: the new program is installed but the menu couldn't run
+// it. The offer stays, marked failed, so the menu shows the failure line
+// with the log instead of looking up to date.
+func (s updateState) restartFailed(offered string) updateState {
+	s.Installing, s.Latest, s.Failed = "", offered, true
+	return s
+}
+
+// noteLog adds a line to the update log, for the failure line to point at.
+func noteLog(path, format string, a ...any) {
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	fmt.Fprintf(f, "omnillm tray: "+format+"\n", a...)
+}
+
+// countsLine is the menu's counts line: devices (how many online now) and
+// model sources.
+func countsLine(st Status) string {
+	return fmt.Sprintf(t("设备 %d 台（%d 台在线）· 模型来源 %d 个", "Devices: %d (%d online) · Model sources: %d"), st.Devices, st.Online, st.Providers)
+}

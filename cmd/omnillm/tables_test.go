@@ -46,7 +46,7 @@ func TestDevicesTable(t *testing.T) {
 		t.Fatal(err)
 	}
 	lines := strings.Split(got, "\n")
-	if len(lines) != 3 || !strings.HasPrefix(lines[0], "名字") || !strings.Contains(lines[0], "每天额度") || !strings.Contains(lines[0], "最近使用") {
+	if len(lines) != 3 || !strings.HasPrefix(lines[0], "名字") || !strings.Contains(lines[0], "每天额度") || !strings.Contains(lines[0], "最近在线") {
 		t.Fatal(got)
 	}
 	if !strings.Contains(lines[1], "$5.00") || !strings.Contains(lines[1], "今天 ") || strings.Contains(got, `"ID"`) {
@@ -122,7 +122,7 @@ func TestDevicesTableWithOnlineAndSpend(t *testing.T) {
 		t.Fatal(err)
 	}
 	lines := strings.Split(got, "\n")
-	if !strings.Contains(lines[0], "Status") || !strings.Contains(lines[0], "Today / daily limit") {
+	if !strings.Contains(lines[0], "Status") || !strings.Contains(lines[0], "Today / daily limit") || !strings.Contains(lines[0], "Last seen") {
 		t.Fatal(got)
 	}
 	if !strings.Contains(lines[1], " On ") || !strings.Contains(lines[1], "$1.25 / $5.00") || !strings.Contains(lines[1], "● Online") {
@@ -144,6 +144,9 @@ func TestModelNameInTheTerminalsLanguage(t *testing.T) {
 		{"en", omnillm.ModelInfo{DisplayName: "Claude Opus 5.5", Kind: "claude-code"}, "Claude Opus 5.5"},
 		{"zh", omnillm.ModelInfo{DisplayName: "ChatGPT (Codex)", Kind: "codex"}, "ChatGPT（Codex）"},
 		{"en", omnillm.ModelInfo{DisplayName: "ChatGPT (Codex)", Kind: "codex"}, "ChatGPT (Codex)"},
+		{"zh", omnillm.ModelInfo{DisplayName: "ChatGPT (Codex)", Kind: "codex", Latest: true}, "ChatGPT（Codex）"},
+		{"en", omnillm.ModelInfo{DisplayName: "ChatGPT (Codex)", Kind: "codex", Latest: true}, "ChatGPT (Codex)"},
+		{"en", omnillm.ModelInfo{DisplayName: "ChatGPT (Codex)", Kind: "codex", Version: "gpt-5.1-codex"}, "ChatGPT (Codex · gpt-5.1-codex)"},
 		{"zh", omnillm.ModelInfo{DisplayName: "我的 GPT", Kind: "codex", Renamed: true}, "我的 GPT"},
 		{"zh", omnillm.ModelInfo{DisplayName: "写作", Latest: true, Renamed: true}, "写作"},
 		{"en", omnillm.ModelInfo{DisplayName: "gpt-5", Kind: "openai"}, "gpt-5"},
