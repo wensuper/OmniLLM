@@ -39,9 +39,9 @@ const T = {
     noModels: "这台设备现在没有能用的模型。在 Mac 的控制台里接入模型，或在“设备”里给它开放模型。", noModelsOpt: "没有可用的模型",
     modelGone: "原来的模型已从你的 Mac 上移除，换成了 {0}",
     grpSub: "订阅（不另花钱）", grpKey: "API Key", grpLocal: "你的 Mac 上", latest: "（最新版）", codex: "ChatGPT（Codex · 最新版）", codexV: "ChatGPT（Codex · {0}）",
-    forget: "移除这台设备", forgetQ: "这里的对话会删掉。以后要用，在 Mac 上重新添加。", removing: "正在移除……",
+    forget: "移除这台设备", forgetQ: "这里的对话会删除。以后要用，在 Mac 上重新添加。", removing: "正在移除……",
     forgetFar: "这台设备已移除，对话已删除。你的 Mac 现在连不上，之后记得在 Mac 的“设备”里也移除它。",
-    close: "关闭", deleteChat: "删除这个对话", deleteChatQ: "删除对话“{0}”？", chatsLocal: "对话保存在这台设备上。用订阅模型（Claude、ChatGPT）时，你的 Mac 会保留对话，一天没用就删掉，方便接着聊。", searchChats: "搜索对话", noMatch: "没有找到",
+    close: "关闭", deleteChat: "删除这个对话", deleteChatQ: "删除对话“{0}”？", chatsLocal: "对话保存在这台设备上。用订阅模型（Claude、ChatGPT）时，你的 Mac 也会留一份，方便接着聊；一天没用，Mac 上的那份就会删除。", searchChats: "搜索对话", noMatch: "没有找到",
     addHome: "添加到主屏幕", addHomeTip: "点浏览器的“分享”按钮，选“添加到主屏幕”。第一次从主屏幕打开时，需要再扫一次码。",
     deviceLine: "这台设备：{0}", empty: "有什么可以帮你？", cut: "（回复太长被截断了。发“继续”让它接着写。）", stopped: "（已停止）",
     today: "今天", copy: "复制", copied: "已复制", again: "重新回答", againWith: "用 {0} 再答一次", thinking: "正在思考",
@@ -51,7 +51,7 @@ const T = {
     switchedTo: "换成了 {0}", newContent: "↓ 新内容", waitReply: "等这条回答完成，或先点停止。",
     liveOn: "在线：你的 Mac 连得上，模型可以用", liveOff: "离线：现在连不上你的 Mac", liveWait: "正在连接你的 Mac……",
     volatile: "这个浏览器不能安全地保存配对，所以只在这个页面打开时有效；关掉后要在 Mac 上重新添加。换用 Safari 或 Chrome 可以一直保存。",
-    removedHere: "这台设备已从你的 Mac 上移除，这里的对话也已清除。要再用，在 Mac 上点“添加设备”再扫一次。",
+    removedHere: "这台设备已从你的 Mac 上移除，这里的对话也已删除。要再用，在 Mac 上点“添加设备”再扫一次。",
     otherTab: "OmniLLM 已在另一个标签页打开。", useHere: "在这里用",
   },
   en: {
@@ -83,7 +83,7 @@ const T = {
     grpSub: "Subscriptions (no extra cost)", grpKey: "API key", grpLocal: "On your Mac", latest: " (latest)", codex: "ChatGPT (Codex · latest)", codexV: "ChatGPT (Codex · {0})",
     forget: "Remove this device", forgetQ: "Chats here will be deleted. To use this device later, add it on your Mac again.", removing: "Removing…",
     forgetFar: "This device was removed and its chats deleted. Your Mac can’t be reached right now, so remove it under “Devices” on your Mac later too.",
-    close: "Close", deleteChat: "Delete this chat", deleteChatQ: "Delete the chat “{0}”?", chatsLocal: "Chats are kept on this device. With subscription models (Claude, ChatGPT), your Mac keeps a chat until it goes unused for a day, so it can continue it.", searchChats: "Search chats", noMatch: "No matching chats",
+    close: "Close", deleteChat: "Delete this chat", deleteChatQ: "Delete the chat “{0}”?", chatsLocal: "Chats are kept on this device. With subscription models (Claude, ChatGPT), your Mac also keeps a copy so it can continue the chat; it deletes that copy after a day without use.", searchChats: "Search chats", noMatch: "No matching chats",
     addHome: "Add to Home Screen", addHomeTip: "Tap the browser’s “Share” button and choose “Add to Home Screen”. The first time it’s opened from the Home Screen, you’ll scan the QR code once more.",
     deviceLine: "This device: {0}", empty: "How can I help?", cut: "(The reply was cut off. Send “continue” to have it go on.)", stopped: "(stopped)",
     today: "Today", copy: "Copy", copied: "Copied", again: "Answer again", againWith: "Answer again with {0}", thinking: "Thinking",
@@ -93,7 +93,7 @@ const T = {
     switchedTo: "Switched to {0}", newContent: "↓ New", waitReply: "Wait for this reply, or tap Stop first.",
     liveOn: "Online: your Mac answers; models are ready", liveOff: "Offline: your Mac can’t be reached now", liveWait: "Connecting to your Mac…",
     volatile: "This browser can’t keep the pairing safely, so it only lasts while this page is open; after closing it, add the device on your Mac again. Safari or Chrome keep it.",
-    removedHere: "This device was removed from your Mac and its chats here were cleared. To use it again, choose “Add device” on your Mac and scan again.",
+    removedHere: "This device was removed from your Mac and its chats here were deleted. To use it again, choose “Add device” on your Mac and scan again.",
     otherTab: "OmniLLM is open in another tab.", useHere: "Use here",
   },
 };
@@ -111,7 +111,9 @@ function quoted(e, s) {
 }
 document.querySelectorAll("[data-t]").forEach((e) => { quoted(e, t(e.dataset.t)); });
 document.querySelectorAll("[data-ta]").forEach((e) => { e.setAttribute("aria-label", t(e.dataset.ta)); });
-function show(id) { document.querySelectorAll(".screen").forEach((s) => { s.hidden = s.id !== id; }); }
+// Every screen opens at its top (the welcome page kept the chat's or the
+// paste box's scroll, cutting off a notice placed at the top).
+function show(id) { document.querySelectorAll(".screen").forEach((s) => { s.hidden = s.id !== id; if (!s.hidden) s.scrollTop = 0; }); window.scrollTo(0, 0); }
 
 // ---------- storage: IndexedDB, encrypted with a key the page cannot export ----------
 const idb = (() => {
@@ -408,6 +410,7 @@ function welcomeNote(key) {
   $("no-hub").hidden = !!key;
   if (key) { $("get-hub").hidden = true; $("no-hub").setAttribute("aria-expanded", "false"); }
   if (key && !MOUSE_ONLY) $("paste").open = false;
+  if (key) { $("welcome").scrollTop = 0; window.scrollTo(0, 0); $("welcome-note").tabIndex = -1; $("welcome-note").focus({ preventScroll: true }); }
 }
 
 // ---------- pairing ----------

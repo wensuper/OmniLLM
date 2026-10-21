@@ -662,7 +662,7 @@ async function startPair(area, onDone, closable) {
       asked = true;
       // Only the question now: the QR code and the computer steps are done
       // with, and the owner's eyes go straight to the number.
-      const c = el("div", undefined, "confirm");
+      const c = el("div", undefined, "confirm pair-q"); // a normal request, not a warning
       c.append(el("p", t("pairConfirmQ", st.device_name)), el("div", String(st.code).replace(/^(\d{3})(\d{3})$/, "$1 $2"), "sas"));
       // The owner may name the device while confirming.
       const nid = "pair-name-" + p.id.slice(0, 8);
@@ -730,7 +730,7 @@ function howText(web) {
 function loopback(web) {
   let h;
   try { h = new URL(web).hostname.toLowerCase(); } catch (_) { return false; }
-  return h === "localhost" || h.endsWith(".localhost") || /^127\.\d+\.\d+\.\d+$/.test(h) || h === "[::1]" || h === "::1";
+  return h === "localhost" || h.endsWith(".localhost") || /^127\.\d+\.\d+\.\d+$/.test(h) || h === "0.0.0.0" || h === "[::1]" || h === "::1";
 }
 
 // ---------- dashboard ----------
@@ -831,13 +831,13 @@ function nameCell(tr, name, paused, online, spent, seen) {
   if (paused) line.append(el("span", t("pausedChip"), "tag paused-tag"));
   td.append(line);
   if (spent) {
-    const sub = el("div", undefined, "nm-sub narrow-only");
-    // Each part stays whole, its "·" before it: a line too narrow breaks
-    // between them and starts with "· ", never ends with it.
-    const dot = (s) => el("span", "· " + s, "nowrap");
-    if (online) sub.append(el("span", "", "dot-on"), el("span", t("online"), "nowrap"), " ", dot(spent));
-    else if (seen !== undefined) sub.append(el("span", timeWords(seen), "nowrap"), " ", dot(spent));
-    else sub.append(el("span", spent, "nowrap"));
+    const sub = el("div", undefined, "nm-sub narrow-only parts");
+    // Each part stays whole; the "·" is drawn between parts on one line
+    // (CSS), so a wrapped line never starts or ends with it.
+    const part = (s) => el("span", s, "nowrap part");
+    if (online) { const on = part(t("online")); on.prepend(el("span", "", "dot-on")); sub.append(on, part(spent)); }
+    else if (seen !== undefined) sub.append(part(timeWords(seen)), part(spent));
+    else sub.append(part(spent));
     td.append(sub);
   }
   td.title = name;
@@ -1068,10 +1068,10 @@ function editDialog(kind, x) {
   const info = [t("infoAdded", inLine(timeWords(x.Created)))];
   if (!isApp) info.push(x.Online ? t("online") : t("infoSeen", inLine(timeWords(x.LastSeen))));
   info.push(t("infoSpent", money(u ? u.micro_usd : 0)));
-  // Each "label value" stays on one line, its "·" before it: a line that
-  // breaks starts with "· ", never ends with it.
-  const meta = el("p", undefined, "muted small dlg-info");
-  info.forEach((s, i) => { if (i) meta.append(" "); meta.append(el("span", (i ? "· " : "") + s, "nowrap")); });
+  // Each "label value" stays whole; the "·" is drawn between parts on one
+  // line (CSS), so a wrapped line never starts or ends with it.
+  const meta = el("p", undefined, "muted small dlg-info parts");
+  info.forEach((s) => meta.append(el("span", s, "nowrap part")));
   basics.append(nl, name, meta);
   // Status: on, or paused.
   const status = section(d.body, t("secStatus"));

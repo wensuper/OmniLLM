@@ -479,3 +479,25 @@ a.chip-link:focus-visible { outline: 0; box-shadow: var(--focus); }
 .codebox > .code.one-line { white-space: pre; word-break: normal; overflow-x: auto; scrollbar-width: thin; }
 /* Models: the two switch headers keep apart ("只能手动对话" / "在设备上显示"). */
 .models-table th.sw { padding-inline: 12px; }
+/* Round 8: the copy button sits beside the command (a scrolling box can't
+   keep text out from under an overlaid button). */
+div.codebox:has(> .one-line) { display: flex; align-items: flex-start; gap: 8px; }
+div.codebox > .code.one-line { flex: 1; min-width: 0; padding-right: 10px; }
+div.codebox:has(> .one-line) .copy { position: static; flex: none; margin-top: 6px; }
+/* Parts of a line: a gap between them, and the "·" only between two parts
+   on the same line (a wrapped part starts its line without it). */
+.parts { display: flex; flex-wrap: wrap; column-gap: 6px; row-gap: 2px; overflow: hidden; }
+.parts > .part + .part::before { content: "·"; margin-left: -6px; margin-right: 6px; display: inline-block; width: 0; transform: translateX(-3px); }
+.parts .dot-on { margin-right: 6px; }
+/* Inline commands in sentences stay whole. */
+p code, li code, .pair-how code { white-space: nowrap; }
+/* A device asking to join is a normal request: neutral card, violet edge, no warning icon. */
+.confirm.pair-q { background: var(--surface); border-color: var(--accent); padding-left: 16px; }
+.confirm.pair-q::before { display: none; }
+/* The final remove is solid red. */
+.dialog-foot button.danger.yes, .confirm-remove button.danger:last-child { background: var(--danger); border-color: var(--danger); color: var(--surface); }
+/* The just-added row is visibly tinted in light mode too. */
+.devices-table tr.fresh { background: color-mix(in srgb, var(--accent) 14%, var(--surface)); }
+/* Under a device's name on a phone: time and spend on their own lines, no "·". */
+.nm-sub.parts { flex-direction: column; align-items: flex-start; }
+.nm-sub.parts > .part + .part::before { content: none; }
