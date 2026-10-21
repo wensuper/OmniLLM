@@ -49,14 +49,14 @@ func TestHelpShortAndAll(t *testing.T) {
 
 func TestConnectedText(t *testing.T) {
 	t.Setenv("OMNILLM_LANG", "en")
-	if got := connectedText("groq", 1); got != "Connected groq: 1 model available." {
+	if got := connectedText(lang(), "groq", 1); got != "Connected groq: 1 model available." {
 		t.Fatal(got)
 	}
-	if got := connectedText("groq", 3); got != "Connected groq: 3 models available." {
+	if got := connectedText(lang(), "groq", 3); got != "Connected groq: 3 models available." {
 		t.Fatal(got)
 	}
 	t.Setenv("OMNILLM_LANG", "zh")
-	if got := connectedText("groq", 1); got != "已接入 groq，1 个模型可用。" {
+	if got := connectedText(lang(), "groq", 1); got != "已接入 groq，1 个模型可用。" {
 		t.Fatal(got)
 	}
 }

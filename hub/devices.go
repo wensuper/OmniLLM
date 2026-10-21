@@ -99,19 +99,23 @@ func (h *Hub) listDevices(ctx context.Context) ([]Device, error) {
 func (h *Hub) Devices(ctx context.Context) ([]Device, error) {
 	h.deviceMu.Lock()
 	devs, err := h.listDevices(ctx)
-	var seen []string
+	names := make([]string, len(devs))
 	for i, d := range devs {
-		if n := uniqueName(d.Name, seen); n != d.Name {
-			// Rename the stored record only: the last-seen time stays
-			// under its own key.
-			if rec, gerr := h.getDevice(ctx, d.ID); gerr == nil {
-				rec.Name = n
-				if store.PutJSON(ctx, h.opts.Store, "device/"+d.ID, rec) == nil {
-					devs[i].Name = n
-				}
+		names[i] = d.Name
+	}
+	for i, d := range devs {
+		n, ok := renumber(names, i)
+		if !ok {
+			continue
+		}
+		// Rename the stored record only: the last-seen time stays under
+		// its own key.
+		if rec, gerr := h.getDevice(ctx, d.ID); gerr == nil {
+			rec.Name = n
+			if store.PutJSON(ctx, h.opts.Store, "device/"+d.ID, rec) == nil {
+				devs[i].Name, names[i] = n, n
 			}
 		}
-		seen = append(seen, devs[i].Name)
 	}
 	h.deviceMu.Unlock()
 	h.mu.Lock()
@@ -461,6 +465,27 @@ func uniqueName(name string, names []string) string {
 			return n
 		}
 	}
+}
+
+// renumber says what names[i] becomes when an earlier name is the same
+// (case does not count): the lowest "name (N)" that no other name is,
+// later ones included, so a name the owner chose ("iPhone (2)") is never
+// taken by a clash. ok is false when names[i] stays as it is.
+func renumber(names []string, i int) (string, bool) {
+	clash := false
+	for _, n := range names[:i] {
+		if strings.EqualFold(n, names[i]) {
+			clash = true
+			break
+		}
+	}
+	if !clash {
+		return names[i], false
+	}
+	others := make([]string, 0, len(names)-1)
+	others = append(others, names[:i]...)
+	others = append(others, names[i+1:]...)
+	return uniqueName(names[i], others), true
 }
 
 // deviceNames lists the devices' names, leaving out the one with id skip.
@@ -838,15 +863,17 @@ func (h *Hub) Apps(ctx context.Context) ([]App, error) {
 	if err != nil {
 		return nil, err
 	}
-	var seen []string
+	names := make([]string, len(apps))
 	for i, a := range apps {
-		if n := uniqueName(a.Name, seen); n != a.Name {
+		names[i] = a.Name
+	}
+	for i, a := range apps {
+		if n, ok := renumber(names, i); ok {
 			a.Name = n
 			if store.PutJSON(ctx, h.opts.Store, "app/"+a.ID, a) == nil {
-				apps[i] = a
+				apps[i], names[i] = a, n
 			}
 		}
-		seen = append(seen, apps[i].Name)
 	}
 	return apps, nil
 }

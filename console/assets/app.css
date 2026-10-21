@@ -226,7 +226,8 @@ input.switch { min-height: 0; padding: 0; }
 .switch { appearance: none; -webkit-appearance: none; width: 32px; height: 18px; border-radius: 999px; background: var(--surface-3); border: 1px solid var(--line-strong); position: relative; cursor: pointer; flex: none; margin: 0; vertical-align: middle; transition: background .15s, border-color .15s; }
 .switch::after { content: ""; position: absolute; left: 2px; top: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--muted); transition: left .15s, background .15s; }
 .switch:checked, .switch:checked:hover { background: var(--accent); border-color: var(--accent); }
-.switch:checked::after { left: 16px; background: var(--accent-ink); }
+/* The knob of an on switch is white in both themes (--surface in light). */
+.switch:checked::after { left: 16px; background: #FFFFFF; }
 .switch:focus-visible { outline: 0; box-shadow: var(--focus); }
 .switch:disabled { opacity: .45; cursor: not-allowed; }
 /* On but not changeable (a subscription is always chat-only): still reads
@@ -432,3 +433,43 @@ a.chip-link:focus-visible { outline: 0; box-shadow: var(--focus); }
 .toast-act { background: none; border: 0; padding: 0; min-height: 0; color: inherit; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
 .toast-act:hover:not(:disabled) { background: none; }
 #login-needed p:empty { display: none; }
+/* Round 6. The web page a computer's browser opens: a link with Copy. */
+.web-url { white-space: nowrap; }
+.web-link { color: var(--accent-text); font-weight: 500; text-decoration: none; overflow-wrap: anywhere; }
+.web-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.web-link:focus-visible { outline: 0; box-shadow: var(--focus); border-radius: var(--r-xs); }
+.web-url .small-btn { margin: 0 2px 0 6px; padding: 0 8px; min-height: 22px; vertical-align: 1px; }
+/* Devices: how many, muted, left of "Add device". */
+#devices-count { flex: 1 1 auto; }
+/* The device just added: lit up for 2 s. */
+.devices-table tr td { transition: background .4s; }
+.devices-table tr.fresh td { background: var(--accent-soft); }
+@media (max-width: 600px) { .devices-table tr { transition: background .4s; } .devices-table tr.fresh { background: var(--accent-soft); } .devices-table tr.fresh td { background: none; } }
+/* Models it can use: the switch before each name, indented under "All
+   models", with softer lines between the rows. */
+.model-pick { margin-left: 16px; }
+.pick-row { justify-content: flex-start; gap: 10px; border-bottom-color: color-mix(in srgb, var(--line) 55%, transparent); }
+.pick-row .switch { margin-top: 1px; }
+.pick-row.off { cursor: default; }
+.pick-row.off .pick-name { color: var(--muted); }
+.pick-note { margin: 0; }
+/* Remove (and other questions) asked as the warn chip, as the pairing
+   question is: a warn hairline all round and the 16 px warn icon. */
+.foot-q, .row-ask p { position: relative; background: var(--warn-soft); border: 1px solid var(--warn-line); border-radius: var(--r-l); color: var(--ink); padding: 10px 12px 10px 36px; }
+.foot-q::before, .row-ask p::before { content: ""; position: absolute; left: 12px; top: 13px; width: 16px; height: 16px; background: var(--warn-hi);
+  -webkit-mask: var(--warn-icon) center / contain no-repeat; mask: var(--warn-icon) center / contain no-repeat; }
+/* Usage: on a phone-width window the removed ones' line is short. */
+.wide-only { display: inline; }
+@media (max-width: 600px) {
+  .usage-table .wide-only { display: none; }
+  .usage-table .narrow-only { display: inline; }
+}
+/* A toast never runs wider than the window: a long name in it is cut
+   short ("…"), the sentence around it stays. */
+.toast { max-width: min(480px, calc(100% - 32px)); }
+.toast-msg { min-width: 0; }
+.toast-msg.has-name { display: flex; white-space: pre; }
+.toast-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* A device's second line on a phone wraps between its parts, never clips. */
+.nm-sub { white-space: normal; }
+.toast-act { flex: none; white-space: nowrap; }

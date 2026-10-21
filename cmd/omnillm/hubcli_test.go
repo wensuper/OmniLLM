@@ -24,32 +24,32 @@ import (
 func TestFindNamedRefusesSharedNames(t *testing.T) {
 	t.Setenv("OMNILLM_LANG", "en")
 	ds := []hub.Device{{ID: "d1", Name: "iPhone"}, {ID: "d2", Name: "iPhone"}, {ID: "d3", Name: "iPad"}}
-	_, err := findDevice(ds, "iPhone")
+	_, err := findDevice(lang(), ds, "iPhone")
 	if err == nil || describe(err) != "Several devices are called “iPhone”. Use the ID: d1, d2" {
 		t.Fatalf("%v", err)
 	}
-	if d, err := findDevice(ds, "d2"); err != nil || d.ID != "d2" {
+	if d, err := findDevice(lang(), ds, "d2"); err != nil || d.ID != "d2" {
 		t.Fatalf("by ID: %v %v", d, err)
 	}
 	t.Setenv("OMNILLM_LANG", "zh")
 	as := []hub.App{{ID: "a1", Name: "backup"}, {ID: "a2", Name: "backup"}}
-	if _, err := findApp(as, "backup"); err == nil || describe(err) != "有几个应用都叫“backup”。请用 ID：a1、a2" {
+	if _, err := findApp(lang(), as, "backup"); err == nil || describe(err) != "有几个应用都叫“backup”。请用 ID：a1、a2" {
 		t.Fatalf("%v", err)
 	}
 	// An exact name wins over one that differs only in case.
-	if a, err := findApp([]hub.App{{ID: "a1", Name: "Notes"}, {ID: "a2", Name: "notes"}}, "Notes"); err != nil || a.ID != "a1" {
+	if a, err := findApp(lang(), []hub.App{{ID: "a1", Name: "Notes"}, {ID: "a2", Name: "notes"}}, "Notes"); err != nil || a.ID != "a1" {
 		t.Fatalf("%v %v", a, err)
 	}
 	// A model by the name the table shows, or the one it goes by.
 	ms := []hub.ModelView{{ModelInfo: omnillm.ModelInfo{ID: "claude-code/sonnet", DisplayName: "Claude Sonnet", Latest: true}}}
 	for _, q := range []string{"claude-code/sonnet", "Claude Sonnet", "Claude Sonnet（最新版）", "claude sonnet"} {
-		if m, err := findModel(ms, q); err != nil || m.ID != "claude-code/sonnet" {
+		if m, err := findModel(lang(), ms, q); err != nil || m.ID != "claude-code/sonnet" {
 			t.Errorf("%q: %v", q, err)
 		}
 	}
 	ps := []hub.ProviderInfo{{Name: "claude-code", Kind: provider.ClaudeCode}, {Name: "groq", Kind: provider.OpenAICompatible, DisplayName: "groq"}}
 	for q, want := range map[string]string{"Claude 订阅": "claude-code", "claude-code": "claude-code", "GROQ": "groq"} {
-		if p, err := findProvider(ps, q); err != nil || p.Name != want {
+		if p, err := findProvider(lang(), ps, q); err != nil || p.Name != want {
 			t.Errorf("%q: %v %v", q, p.Name, err)
 		}
 	}
@@ -88,12 +88,12 @@ func TestModelSetArgs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	name, shown, u, err := modelUpdate(a)
+	name, shown, u, err := modelUpdate(lang(), a)
 	if err != nil || name == nil || *name != "" || shown == nil || *shown || u != (hub.ModelUpdate{}) {
 		t.Fatalf("%v %v %v %+v %v", a, name, shown, u, err)
 	}
 	a, _ = modelSetArgs("x", []string{"--price-in", "3", "--price-out", "15", "--human-only", "true"})
-	name, shown, u, err = modelUpdate(a)
+	name, shown, u, err = modelUpdate(lang(), a)
 	if err != nil || name != nil || shown != nil || *u.PriceIn != 3 || *u.PriceOut != 15 || !*u.HumanOnly {
 		t.Fatalf("%v %+v %v", a, u, err)
 	}
@@ -314,7 +314,7 @@ func TestModelSetGoesThroughThePreferences(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, data, _ = run("apps", nil)
-	if table, _ := appsTable(data); !strings.Contains(table, "Paused") || !strings.Contains(table, "No limit") || !strings.Contains(table, app.ID) {
+	if table, _ := appsTable(data); !strings.Contains(table, "Paused") || !strings.Contains(table, "no limit") || !strings.Contains(table, app.ID) {
 		t.Fatal(table)
 	}
 	text, _, err := run("provider.rm", map[string]string{"name": "Ollama (this Mac)"})

@@ -35,7 +35,7 @@ const T = {
     grpSub: "订阅（不另花钱）", grpKey: "API Key", grpLocal: "你的 Mac 上", latest: "（最新版）", codex: "ChatGPT（Codex · 最新版）", codexV: "ChatGPT（Codex · {0}）",
     forget: "移除这台设备", forgetQ: "这里的对话会删掉。以后要用，在 Mac 上重新添加。", removing: "正在移除……",
     forgetFar: "这台设备已移除，对话已删除。你的 Mac 现在连不上，之后记得在 Mac 的“设备”里也移除它。",
-    close: "关闭", deleteChat: "删除这个对话", deleteChatQ: "删除对话“{0}”？", chatsLocal: "对话只保存在这台设备上。", searchChats: "搜索对话", noMatch: "没有找到",
+    close: "关闭", deleteChat: "删除这个对话", deleteChatQ: "删除对话“{0}”？", chatsLocal: "对话保存在这台设备上。用订阅模型（Claude、ChatGPT）聊天时，你的 Mac 会把对话留一天，方便接着聊。", searchChats: "搜索对话", noMatch: "没有找到",
     addHome: "添加到主屏幕", addHomeTip: "点浏览器的“分享”按钮，选“添加到主屏幕”。第一次从主屏幕打开时，需要再扫一次码。",
     deviceLine: "这台设备：{0}", empty: "有什么可以帮你？", cut: "（回复太长被截断了。发“继续”让它接着写。）", stopped: "（已停止）",
     today: "今天", copy: "复制", copied: "已复制", again: "重新回答", againWith: "用 {0} 再答一次", thinking: "正在思考",
@@ -71,7 +71,7 @@ const T = {
     grpSub: "Subscriptions (no extra cost)", grpKey: "API key", grpLocal: "On your Mac", latest: " (latest)", codex: "ChatGPT (Codex · latest)", codexV: "ChatGPT (Codex · {0})",
     forget: "Remove this device", forgetQ: "Chats here will be deleted. To use this device later, add it on your Mac again.", removing: "Removing…",
     forgetFar: "This device was removed and its chats deleted. Your Mac can’t be reached right now, so remove it under “Devices” on your Mac later too.",
-    close: "Close", deleteChat: "Delete this chat", deleteChatQ: "Delete the chat “{0}”?", chatsLocal: "Chats are kept on this device only.", searchChats: "Search chats", noMatch: "No matching chats",
+    close: "Close", deleteChat: "Delete this chat", deleteChatQ: "Delete the chat “{0}”?", chatsLocal: "Chats are kept on this device. With subscription models (Claude, ChatGPT), your Mac keeps a chat for a day so it can continue it.", searchChats: "Search chats", noMatch: "No matching chats",
     addHome: "Add to Home Screen", addHomeTip: "Tap the browser’s “Share” button and choose “Add to Home Screen”. The first time it’s opened from the Home Screen, you’ll scan the QR code once more.",
     deviceLine: "This device: {0}", empty: "How can I help?", cut: "(The reply was cut off. Send “continue” to have it go on.)", stopped: "(stopped)",
     today: "Today", copy: "Copy", copied: "Copied", again: "Answer again", againWith: "Answer again with {0}", thinking: "Thinking",
@@ -334,8 +334,12 @@ addEventListener("hashchange", () => {
 });
 
 // ---------- welcome ----------
-// With the paste box open, its Add button is the one to press.
+// With the paste box open, its Add button is the one to press. It waits
+// until the box holds pairing text (it starts with omnillm3-).
 $("paste-text").placeholder = t("pastePh");
+function pasteReady() { $("paste-go").disabled = !$("paste-text").value.trim().match(/^omnillm\d-/); }
+$("paste-text").addEventListener("input", pasteReady);
+pasteReady();
 $("paste").addEventListener("toggle", () => {
   const open = $("paste").open;
   $("paste-go").className = open ? "primary" : "secondary";
@@ -354,7 +358,7 @@ function welcomeNote(key) {
 // ---------- pairing ----------
 $("paste-go").addEventListener("click", () => {
   const v = $("paste-text").value.trim();
-  if (!v) return;
+  if (!/^omnillm\d-/.test(v)) return;
   pair(v);
 });
 $("pair-retry").addEventListener("click", () => { show(S.device ? "chat" : "welcome"); });

@@ -23,6 +23,7 @@ import (
 	"math"
 	"net"
 	"net/http"
+	"net/url"
 	"runtime"
 	"strconv"
 	"strings"
@@ -875,8 +876,21 @@ func (s *Server) pairStart(w http.ResponseWriter, r *http.Request) {
 	svg, _ := qrcode.SVG(p.Link)
 	writeJSON(w, map[string]any{
 		"id": id, "code": p.Code, "expires": p.Expires,
-		"qr": "data:image/svg+xml;base64," + base64.StdEncoding.EncodeToString([]byte(svg)),
+		// The web page the QR code opens, for a computer's browser: the
+		// link's origin only (the pairing secret is in its fragment).
+		"web": linkOrigin(p.Link),
+		"qr":  "data:image/svg+xml;base64," + base64.StdEncoding.EncodeToString([]byte(svg)),
 	})
+}
+
+// linkOrigin is the scheme and host of a pairing link ("https://omni.example"),
+// or "" when it is not a web address.
+func linkOrigin(link string) string {
+	u, err := url.Parse(link)
+	if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" {
+		return ""
+	}
+	return u.Scheme + "://" + u.Host
 }
 
 // pairCancel ends an "add device" the owner closed: the code stops

@@ -26,8 +26,10 @@ import (
 	"time"
 
 	"github.com/wensuper/OmniLLM/device"
+	"github.com/wensuper/OmniLLM/hub"
 	"github.com/wensuper/OmniLLM/internal/control"
 	"github.com/wensuper/OmniLLM/internal/e2e"
+	"github.com/wensuper/OmniLLM/internal/provider"
 	"github.com/wensuper/OmniLLM/internal/relaylink"
 )
 
@@ -57,8 +59,33 @@ type Status struct {
 	RegionPaused bool `json:"region_paused,omitempty"`
 	// Headless: no display on this machine, so the console cannot be
 	// opened here and the person types a key in the terminal instead.
-	Headless bool   `json:"headless"`
-	Next     string `json:"next"` // the one thing to do next, for a person
+	Headless bool `json:"headless"`
+	// Problems are the model sources that need the owner now (signed
+	// out, at the usage limit), as the console's problem chips show them.
+	Problems []SourceProblem `json:"problems,omitempty"`
+	Next     string          `json:"next"` // the one thing to do next, for a person
+}
+
+// SourceProblem is a model source that needs the owner: Problem is
+// "login" (signed out) or "limit" (at its usage limit until ResetsAt,
+// unix seconds).
+type SourceProblem struct {
+	Name        string        `json:"name"`
+	Kind        provider.Kind `json:"kind"`
+	DisplayName string        `json:"display_name,omitempty"`
+	Problem     string        `json:"problem"`
+	ResetsAt    int64         `json:"resets_at,omitempty"`
+}
+
+// attention is the "需要处理：" / "Needs attention:" line of each source
+// that has a problem, worded as the console's problem chips.
+func attention(ps []SourceProblem, now time.Time) string {
+	var lines []string
+	for _, p := range ps {
+		info := hub.ProviderInfo{Name: p.Name, Kind: p.Kind, DisplayName: p.DisplayName, Problem: p.Problem, ResetsAt: p.ResetsAt}
+		lines = append(lines, fmt.Sprintf(t("需要处理：%s — %s", "Needs attention: %s — %s"), sourceNameIn(lang(), info), problemText(info, now)))
+	}
+	return strings.Join(lines, "\n")
 }
 
 func installCmd(args []string) {
@@ -116,7 +143,7 @@ func installCmd(args []string) {
 	}
 	if st.Providers == 0 {
 		// A local model needs no key and sends nothing off the machine.
-		_ = control.Call(filepath.Join(dir, "control.sock"), control.Request{Op: "ollama.auto"}, func(control.Reply) (bool, bool) { return false, false })
+		_ = ctl(filepath.Join(dir, "control.sock"), control.Request{Op: "ollama.auto"}, func(control.Reply) (bool, bool) { return false, false })
 		st, _ = waitRunning(time.Second)
 	}
 	st = waitRelay(st, 10*time.Second)
@@ -171,35 +198,38 @@ func nextStep(st Status) string {
 	case st.RegionPaused:
 		s := onMachine(t("%s 所在的地区变了，已暂停使用模型。确认是你本人换了地方，运行 omnillm hub region confirm 恢复。",
 			"%s’s region changed; models are paused. If you moved, run omnillm hub region confirm to turn them back on."))
-		return strings.ToUpper(s[:1]) + s[1:] // "This Mac’s region …"
+		return upperFirst(s) // "This Mac’s region …"
 	case st.Providers == 0 && st.Headless:
 		// No browser here: a key is typed in this terminal, never sent in a chat.
-		return t("下一步：接入一个模型（选一种）：\n"+
-			"· 有 Claude 订阅：在终端运行 claude，输入 /login\n"+
-			"· 有 ChatGPT 订阅：在终端运行 codex login\n"+
+		return fmt.Sprintf(t("下一步：接入一个模型（选一种）：\n"+
+			"· 有 Claude 订阅：%[1]s运行 claude，输入 /login\n"+
+			"· 有 ChatGPT 订阅：%[1]s运行 codex login\n"+
 			"· 有 API Key：在这台机器的终端里亲自运行 omnillm hub provider add anthropic（或 openai、openai-compatible），在提示时粘贴；API Key 不要发到聊天里",
 			"Next: connect a model (pick one):\n"+
-				"· Claude subscription: in Terminal run claude, then type /login\n"+
-				"· ChatGPT subscription: in Terminal run codex login\n"+
-				"· API key: in this machine’s terminal, run omnillm hub provider add anthropic (or openai, openai-compatible) yourself and paste the key when asked; don’t send it in a chat")
+				"· Claude subscription: %[1]s, run claude, then type /login\n"+
+				"· ChatGPT subscription: %[1]s, run codex login\n"+
+				"· API key: in this machine’s terminal, run omnillm hub provider add anthropic (or openai, openai-compatible) yourself and paste the key when asked; don’t send it in a chat"), inTerminal())
 	case st.Providers == 0:
 		// One command a line: the person picks the one that fits.
 		if zh() {
-			return "下一步：接入一个模型（选一种）：\n" +
-				"· 有 Claude 订阅：在终端运行 claude，输入 /login\n" +
-				"· 有 ChatGPT 订阅：在终端运行 codex login\n" +
-				"· 有 API Key 或想用免费的本机模型：运行 omnillm open，在“模型”里接入"
+			return fmt.Sprintf("下一步：接入一个模型（选一种）：\n"+
+				"· 有 Claude 订阅：%[1]s运行 claude，输入 /login\n"+
+				"· 有 ChatGPT 订阅：%[1]s运行 codex login\n"+
+				"· 有 API Key 或想用免费的本机模型：运行 omnillm open，在“模型”里接入", inTerminal())
 		}
-		return onMachine("Next: connect a model (pick one):\n" +
-			"· Claude subscription: in Terminal run claude, then type /login\n" +
-			"· ChatGPT subscription: in Terminal run codex login\n" +
-			"· API key or a free model on %s: run omnillm open and connect it under “Models”")
+		return fmt.Sprintf("Next: connect a model (pick one):\n"+
+			"· Claude subscription: %[1]s, run claude, then type /login\n"+
+			"· ChatGPT subscription: %[1]s, run codex login\n"+
+			"· API key or a free model on %[2]s: run omnillm open and connect it under “Models”", inTerminal(), thisMachine())
 	case !st.RelayConfigured:
 		return onMachine(t("已经可以在 %s 上用。要让其他设备连进来，需要先设置远程连接。",
 			"Ready on %s. To let other devices connect, set up remote access first."))
 	case !st.RelayUp:
 		return onMachine(t("远程连接断开，设备暂时连不上；OmniLLM 会自己重连。请检查 %s 的网络。",
 			"Remote access is down, so devices can’t connect now; OmniLLM keeps retrying. Check %s’s network."))
+	case len(st.Problems) > 0:
+		// A model source that stopped working comes before adding more.
+		return attention(st.Problems, time.Now())
 	case st.Devices == 0:
 		return t("下一步：在控制台的“设备”里点“添加设备”，添加手机或其他电脑。", "Next: under “Devices” in the console, choose “Add device” to add a phone or another computer.")
 	}
@@ -216,20 +246,25 @@ var hanGap = regexp.MustCompile(`(\p{Han}) (\p{Han})`)
 
 // onMachine fills format's %s with thisMachine, spaced as Chinese is
 // written: "在这台 Mac 上", "在这台电脑上".
-func onMachine(format string) string {
-	s := fmt.Sprintf(format, thisMachine())
-	if zh() {
+func onMachine(format string) string { return onMachineIn(lang(), format) }
+
+// onMachineIn is onMachine in language l.
+func onMachineIn(l, format string) string {
+	s := fmt.Sprintf(format, thisMachineIn(l))
+	if l == "zh" {
 		s = hanGap.ReplaceAllString(s, "$1$2")
 	}
 	return s
 }
 
 // thisMachine is how next-step texts name the machine OmniLLM runs on.
-func thisMachine() string {
+func thisMachine() string { return thisMachineIn(lang()) }
+
+func thisMachineIn(l string) string {
 	if runtime.GOOS == "darwin" {
-		return t("这台 Mac", "this Mac")
+		return tl(l, "这台 Mac", "this Mac")
 	}
-	return t("这台电脑", "this computer")
+	return tl(l, "这台电脑", "this computer")
 }
 
 // installBinary copies this executable to ~/.local/bin/omnillm (0755), so
@@ -586,7 +621,7 @@ func queryStatus() (Status, bool) {
 	var st Status
 	sock := filepath.Join(dataDir("hub"), "control.sock")
 	ok := false
-	err := control.Call(sock, control.Request{Op: "status"}, func(r control.Reply) (bool, bool) {
+	err := ctl(sock, control.Request{Op: "status"}, func(r control.Reply) (bool, bool) {
 		if json.Unmarshal(r.Data, &st) == nil {
 			ok = true
 		}
@@ -624,7 +659,7 @@ func waitRelay(st Status, d time.Duration) Status {
 
 func loginURL() (string, error) {
 	var url string
-	err := control.Call(filepath.Join(dataDir("hub"), "control.sock"), control.Request{Op: "console.login"},
+	err := ctl(filepath.Join(dataDir("hub"), "control.sock"), control.Request{Op: "console.login"},
 		func(r control.Reply) (bool, bool) { url = r.Text; return false, false })
 	if err != nil || !strings.HasPrefix(url, "http://127.0.0.1:") {
 		return "", errors.New("no console")

@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -25,14 +26,16 @@ type deviceRow struct {
 	Created        time.Time
 	LastSeen       time.Time `json:",omitempty"`
 	Models         []string  `json:",omitempty"`
+	// Usable is how many models it can use now (newer hubs only).
+	Usable *int `json:",omitempty"`
 	// Online and SpentMicroUSD (today) come from newer hubs only.
 	Online        *bool  `json:",omitempty"`
 	SpentMicroUSD *int64 `json:",omitempty"`
 }
 
 // devicesTable is the table `omnillm hub devices` prints: name, on or
-// paused, today's spend / daily limit, last seen (online, or relative
-// local time).
+// paused, today's spend / daily limit, the models it can use, last seen
+// (online, or relative local time), ID.
 func devicesTable(data []byte, now time.Time) (string, error) {
 	var rows []deviceRow
 	if err := json.Unmarshal(data, &rows); err != nil {
@@ -41,30 +44,47 @@ func devicesTable(data []byte, now time.Time) (string, error) {
 	if len(rows) == 0 {
 		return t("还没有设备。", "No devices yet."), nil
 	}
-	out := [][]string{{t("名字", "Name"), t("状态", "Status"), t("今天 / 每天额度", "Today / daily limit"), t("最近在线", "Last seen"), "ID"}}
+	out := [][]string{{t("名字", "Name"), t("状态", "Status"), t("今天 / 每天额度", "Today / daily limit"), t("能用的模型", "Models"), t("最近在线", "Last seen"), "ID"}}
 	for _, r := range rows {
-		state := t("开启", "On")
-		if r.Paused {
-			state = t("已暂停", "Paused")
-		}
-		limit := r.Budget
-		if r.BudgetMicroUSD != nil {
-			limit = limitText(*r.BudgetMicroUSD)
-		}
-		if r.SpentMicroUSD != nil {
-			if r.BudgetMicroUSD != nil && *r.BudgetMicroUSD == hub.NoLimit {
-				limit = fmt.Sprintf(t("%s · 不设上限", "%s · no limit"), usd(*r.SpentMicroUSD))
-			} else {
-				limit = usd(*r.SpentMicroUSD) + " / " + limit
-			}
-		}
 		last := whenText(r.LastSeen, now)
 		if r.Online != nil && *r.Online {
 			last = t("● 在线", "● Online")
 		}
-		out = append(out, []string{r.Name, state, limit, last, r.ID})
+		out = append(out, []string{r.Name, stateText(r.Paused), spendText(r.Budget, r.BudgetMicroUSD, r.SpentMicroUSD), modelsText(r.Models, r.Usable), last, r.ID})
 	}
 	return table(out), nil
+}
+
+// spendText is the "today / daily limit" cell: "$1.25 / $5.00", "$0.00 ·
+// no limit"; just the limit from a hub that doesn't send the spend.
+func spendText(budget string, budgetMicro, spent *int64) string {
+	limit := budget
+	if budgetMicro != nil {
+		limit = limitText(*budgetMicro)
+	}
+	if spent == nil {
+		return limit
+	}
+	if budgetMicro != nil && *budgetMicro == hub.NoLimit {
+		return fmt.Sprintf(t("%s · 不设上限", "%s · no limit"), usd(*spent))
+	}
+	return usd(*spent) + " / " + limit
+}
+
+// modelsText is the models cell: every model, how many, or none usable
+// now (the ones it was given are gone, or are not for it).
+func modelsText(models []string, usable *int) string {
+	n := len(models)
+	if usable != nil {
+		n = *usable
+	}
+	switch {
+	case n == 0 && (usable != nil || len(models) > 0):
+		return t("没有能用的", "None usable")
+	case len(models) == 0:
+		return t("全部", "All")
+	}
+	return fmt.Sprintf(t("%d 个", "%d"), n)
 }
 
 // stateText is a device's or app's switch: on or paused.
@@ -83,11 +103,13 @@ type appRow struct {
 	BudgetMicroUSD *int64   `json:",omitempty"`
 	Paused         bool     `json:",omitempty"`
 	Models         []string `json:",omitempty"`
+	Usable         *int     `json:",omitempty"` // newer hubs only
 	SpentMicroUSD  *int64   `json:",omitempty"` // today
 }
 
-// appsTable is the table `omnillm hub apps` prints: name, on or paused,
-// today's spend, daily limit, ID.
+// appsTable is the table `omnillm hub apps` prints, laid out as the
+// devices table: name, on or paused, today's spend / daily limit, the
+// models it can use, ID.
 func appsTable(data []byte) (string, error) {
 	var rows []appRow
 	if err := json.Unmarshal(data, &rows); err != nil {
@@ -96,16 +118,9 @@ func appsTable(data []byte) (string, error) {
 	if len(rows) == 0 {
 		return t("还没有应用。", "No apps yet."), nil
 	}
-	out := [][]string{{t("名字", "Name"), t("状态", "Status"), t("今天", "Today"), t("每天额度", "Daily limit"), "ID"}}
+	out := [][]string{{t("名字", "Name"), t("状态", "Status"), t("今天 / 每天额度", "Today / daily limit"), t("能用的模型", "Models"), "ID"}}
 	for _, r := range rows {
-		limit, spent := r.Budget, "—"
-		if r.BudgetMicroUSD != nil {
-			limit = limitText(*r.BudgetMicroUSD)
-		}
-		if r.SpentMicroUSD != nil {
-			spent = usd(*r.SpentMicroUSD)
-		}
-		out = append(out, []string{r.Name, stateText(r.Paused), spent, limit, r.ID})
+		out = append(out, []string{r.Name, stateText(r.Paused), spendText(r.Budget, r.BudgetMicroUSD, r.SpentMicroUSD), modelsText(r.Models, r.Usable), r.ID})
 	}
 	return table(out), nil
 }
@@ -129,7 +144,7 @@ func modelsTable(data []byte) (string, error) {
 	}
 	out := [][]string{{t("名字", "Name"), t("来源", "Source"), t("只能手动对话", "Chat only"), t("在设备上显示", "Shown on devices"), "ID"}}
 	for _, m := range ms {
-		out = append(out, []string{modelName(m.ModelInfo), sourceLabel(provider.Kind(m.Kind), m.Provider), yes(m.HumanOnly), yes(!m.Hidden), m.ID})
+		out = append(out, []string{modelName(m.ModelInfo), sourceLabelIn(lang(), provider.Kind(m.Kind), m.Provider), yes(m.HumanOnly), yes(!m.Hidden), m.ID})
 	}
 	return table(out), nil
 }
@@ -154,21 +169,22 @@ func providersTable(data []byte, now time.Time) (string, error) {
 			how = t("API Key …", "API key …") + p.KeyLast4
 		case p.Local:
 			how = onMachine(t("只在 %s 上", "%s only"))
-			how = strings.ToUpper(how[:1]) + how[1:] // "This Mac only"
+			how = upperFirst(how) // "This Mac only"
 		}
-		out = append(out, []string{sourceName(p), how, problemText(p, now)})
+		out = append(out, []string{sourceNameIn(lang(), p), how, problemText(p, now)})
 	}
 	return table(out), nil
 }
 
-// problemText is a source's state: fine, or what to do about it.
+// problemText is a source's state: fine, or what to do about it, as the
+// console's problem chips say it.
 func problemText(p hub.ProviderInfo, now time.Time) string {
 	switch p.Problem {
 	case provider.ProblemLogin:
 		if p.Kind == provider.Codex {
-			return t("登录已失效：在终端运行 codex login", "Signed out: in Terminal, run codex login")
+			return fmt.Sprintf(t("登录已失效：%s运行 codex login", "Signed out: %s, run codex login"), inTerminal())
 		}
-		return t("登录已失效：在终端运行 claude，再输入 /login", "Signed out: in Terminal, run claude, then type /login")
+		return fmt.Sprintf(t("登录已失效：%s运行 claude，再输入 /login", "Signed out: %s, run claude, then type /login"), inTerminal())
 	case provider.ProblemLimit:
 		if wait := time.Unix(p.ResetsAt, 0).Sub(now); p.ResetsAt > 0 && wait > 0 {
 			return fmt.Sprintf(t("用量到上限，%s后恢复", "Usage limit reached; back in %s"), omnillm.RoundDuration(lang(), wait))
@@ -178,31 +194,44 @@ func problemText(p hub.ProviderInfo, now time.Time) string {
 	return t("正常", "OK")
 }
 
-// sourceName is a model source as people call it: "Claude 订阅" /
-// "Claude subscription", "Ollama（这台 Mac）" / "Ollama (this Mac)".
-func sourceName(p hub.ProviderInfo) string {
+// inTerminal is where a command is typed: the Terminal app on a Mac, a
+// terminal elsewhere.
+func inTerminal() string {
+	if runtime.GOOS == "darwin" {
+		return t("在终端", "in Terminal")
+	}
+	return t("在终端里", "in a terminal")
+}
+
+// sourceNameIn is a model source as people call it, in language l:
+// "Claude 订阅" / "Claude subscription", "Ollama（这台 Mac）" /
+// "Ollama (this Mac)".
+func sourceNameIn(l string, p hub.ProviderInfo) string {
 	name := p.DisplayName
 	if name == "" {
 		name = p.Name
 	}
-	return sourceLabel(p.Kind, name)
+	return sourceLabelIn(l, p.Kind, name)
 }
 
-func sourceLabel(k provider.Kind, name string) string {
+func sourceLabelIn(l string, k provider.Kind, name string) string {
 	switch k {
 	case provider.ClaudeCode:
-		return t("Claude 订阅", "Claude subscription")
+		return tl(l, "Claude 订阅", "Claude subscription")
 	case provider.Codex:
-		return t("ChatGPT 订阅（Codex）", "ChatGPT subscription (Codex)")
+		return tl(l, "ChatGPT 订阅（Codex）", "ChatGPT subscription (Codex)")
 	case provider.Ollama:
-		return onMachine(t("Ollama（%s）", "Ollama (%s)"))
+		return onMachineIn(l, tl(l, "Ollama（%s）", "Ollama (%s)"))
 	}
 	return name
 }
 
-func limitText(micro int64) string {
+// limitText is a daily limit in the terminal's language.
+func limitText(micro int64) string { return limitTextIn(lang(), micro) }
+
+func limitTextIn(l string, micro int64) string {
 	if micro == hub.NoLimit {
-		return t("不设上限", "No limit")
+		return tl(l, "不设上限", "No limit")
 	}
 	return usd(micro)
 }
@@ -212,16 +241,19 @@ func limitText(micro int64) string {
 // it runs when the hub names one and "latest" when not (as the phone and
 // console say it), and a model whose version is not known yet marked as
 // the latest.
-func modelName(m omnillm.ModelInfo) string {
+func modelName(m omnillm.ModelInfo) string { return modelNameIn(lang(), m) }
+
+// modelNameIn is modelName in language l.
+func modelNameIn(l string, m omnillm.ModelInfo) string {
 	switch {
 	case m.Renamed:
 		return m.DisplayName
 	case m.Kind == "codex" && m.Version != "":
-		return fmt.Sprintf(t("ChatGPT（Codex · %s）", "ChatGPT (Codex · %s)"), m.Version)
+		return fmt.Sprintf(tl(l, "ChatGPT（Codex · %s）", "ChatGPT (Codex · %s)"), m.Version)
 	case m.Kind == "codex":
-		return t("ChatGPT（Codex · 最新版）", "ChatGPT (Codex · latest)")
+		return tl(l, "ChatGPT（Codex · 最新版）", "ChatGPT (Codex · latest)")
 	case m.Latest:
-		return m.DisplayName + t("（最新版）", " (latest)")
+		return m.DisplayName + tl(l, "（最新版）", " (latest)")
 	}
 	return m.DisplayName
 }
@@ -260,10 +292,10 @@ func whenText(at, now time.Time) string {
 	return t(fmt.Sprintf("%d月%d日", at.Month(), at.Day()), at.Format("Jan 2"))
 }
 
-// usageTable is what `omnillm hub usage` prints, as the console shows it:
-// one line per device or app by name, busiest first, removed ones folded
-// into one line, the total last.
-func usageTable(data []byte) (string, error) {
+// usageTable is what `omnillm hub usage --day day` prints, as the console
+// shows it: one line per device or app by name, busiest first, removed
+// ones folded into one line, the total last.
+func usageTable(data []byte, day string) (string, error) {
 	var spends []hub.Spend
 	if err := json.Unmarshal(data, &spends); err != nil {
 		return "", err
@@ -284,7 +316,7 @@ func usageTable(data []byte) (string, error) {
 			gone.OutputTokens += s.OutputTokens
 		default:
 			if s.Who == "host" {
-				s.Name = t("这台 Mac", "This Mac")
+				s.Name = upperFirst(thisMachine())
 			} else if s.Name == "" {
 				s.Name = s.Who
 			}
@@ -292,6 +324,12 @@ func usageTable(data []byte) (string, error) {
 		}
 	}
 	if len(rows) == 0 && goneN == 0 {
+		switch day {
+		case "yesterday":
+			return t("昨天没有用过。", "Nothing was used yesterday."), nil
+		case "7d":
+			return t("最近 7 天没有用过。", "Nothing was used in the last 7 days."), nil
+		}
 		return t("今天还没有用过。", "Nothing used yet today."), nil
 	}
 	sort.SliceStable(rows, func(i, j int) bool { return rows[i].Calls > rows[j].Calls })
@@ -303,7 +341,14 @@ func usageTable(data []byte) (string, error) {
 		rows = append(rows, gone)
 	}
 	if total != nil {
-		total.Name = t("今天合计", "Total today")
+		switch day {
+		case "yesterday":
+			total.Name = t("昨天合计", "Total yesterday")
+		case "7d":
+			total.Name = t("最近 7 天合计", "Total, last 7 days")
+		default:
+			total.Name = t("今天合计", "Total today")
+		}
 		rows = append(rows, *total)
 	}
 	out := [][]string{{t("名字", "Name"), t("次数", "Calls"), t("花费", "Spend"), t("Token（发出 / 收到）", "Tokens (in / out)")}}

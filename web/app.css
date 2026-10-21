@@ -8,7 +8,7 @@
   --ink: #131524; --ink-2: #3E4155; --muted: #5F6275;
   --accent: #724DE7; --accent-2: #7F66E9; --accent-ink: #FFFFFF; --accent-text: #6851C3; --accent-soft: rgba(114,77,231,.10);
   --user: rgba(114,77,231,.10);
-  --ok: #0A8F47; --ok-soft: rgba(10,143,71,.18); --ok-ink: #097E40; --warn: #8C5E08; --warn-soft: rgba(171,116,10,.11); --warn-line: rgba(171,116,10,.26);
+  --ok: #0A8F47; --ok-soft: rgba(10,143,71,.18); --ok-ink: #097E40; --warn: #8C5E08; --warn-hi: #AB740A; --warn-soft: rgba(171,116,10,.11); --warn-line: rgba(171,116,10,.26);
   --danger: #B3260E; --bad-soft: rgba(208,47,20,.11);
   --glow: 0 0 0 1px rgba(114,77,231,.25), 0 6px 24px -8px rgba(114,77,231,.35);
   --shadow-1: 0 1px 2px rgba(14,20,32,.06);
@@ -27,7 +27,7 @@
     --ink: #EDEEF5; --ink-2: #C1C3D1; --muted: #9497A8;
     --accent: #9B8AFF; --accent-2: #BAB3FD; --accent-ink: #0B0820; --accent-text: #BAB3FD; --accent-soft: rgba(155,138,255,.15);
     --user: rgba(155,138,255,.15);
-    --ok: #4BDE81; --ok-soft: rgba(75,222,129,.20); --ok-ink: #8CEAA6; --warn: #FEC675; --warn-soft: rgba(254,189,91,.13); --warn-line: rgba(254,189,91,.30);
+    --ok: #4BDE81; --ok-soft: rgba(75,222,129,.20); --ok-ink: #8CEAA6; --warn: #FEC675; --warn-hi: #FEBD5B; --warn-soft: rgba(254,189,91,.13); --warn-line: rgba(254,189,91,.30);
     --danger: #FF9E84; --bad-soft: rgba(253,104,68,.13);
     --glow: 0 0 0 1px rgba(155,138,255,.35), 0 8px 30px -10px rgba(155,138,255,.55);
     --shadow-1: 0 0 0 1px rgba(255,255,255,.04);
@@ -55,6 +55,7 @@ h1 { font-size: 21px; font-weight: 600; letter-spacing: -.02em; line-height: 1.3
 .primary:active { background: var(--accent-2); border-color: var(--accent-2); }
 .secondary { background: var(--surface); color: var(--ink); }
 .secondary:active { background: var(--surface-2); }
+.primary:disabled, .secondary:disabled { opacity: .45; cursor: default; box-shadow: none; }
 .link { background: none; border: 0; color: var(--accent-text); padding: 6px 0; cursor: pointer; text-align: left; font-weight: 500; }
 .danger { color: var(--danger); }
 .paste { width: 100%; max-width: 320px; text-align: left; color: var(--muted); }
@@ -66,19 +67,23 @@ h1 { font-size: 21px; font-weight: 600; letter-spacing: -.02em; line-height: 1.3
 @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
 .via { margin: 0; overflow-wrap: anywhere; }
 .welcome-note { width: 100%; }
-/* State notices: NEXA's chip (a warn hairline all round) with a warn icon. */
-.warn { background: var(--warn-soft); color: var(--warn); border: 1px solid var(--warn-line); border-radius: var(--r); padding: 10px 12px 10px 36px; margin: 0; text-align: left; position: relative; }
+/* State notices: NEXA's chip (a warn hairline all round) with a warn icon;
+   the text is ink, as in the console. */
+.warn { background: var(--warn-soft); color: var(--ink); border: 1px solid var(--warn-line); border-radius: var(--r); padding: 10px 12px 10px 36px; margin: 0; text-align: left; position: relative; }
 /* The icon sits left of the text (text may hold nowrap names, so no flex). */
 .warn::before, .warn-note::before, .msg .note::before { position: absolute; left: 12px; top: 13px; margin-top: 0 !important; }
-.warn::before, .warn-note::before, .banner::before, .msg .note::before { content: ""; flex: none; width: 16px; height: 16px; margin-top: 3px; background: currentColor;
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7.5v5.5M12 16.5h.01'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7.5v5.5M12 16.5h.01'/%3E%3C/svg%3E") center / contain no-repeat; }
+.warn::before, .warn-note::before, .banner::before, .msg .note::before { content: ""; flex: none; width: 16px; height: 16px; margin-top: 3px; background: var(--warn-hi);
+  -webkit-mask: var(--warn-icon) center / contain no-repeat; mask: var(--warn-icon) center / contain no-repeat; }
+/* The console's and NEXA's warn triangle. */
+:root { --warn-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 1.8 14.8 13.9H1.2Z' fill='none' stroke='%23000' stroke-width='1.5' stroke-linejoin='round'/%3E%3Cpath d='M8 6.2v3.6' stroke='%23000' stroke-width='1.5' stroke-linecap='round'/%3E%3Ccircle cx='8' cy='11.8' r='.95'/%3E%3C/svg%3E"); }
 /* Quoted UI names (“添加设备”) never break inside. */
 .q { white-space: nowrap; }
 #pair-ask { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; }
-/* The six digits: plain and neutral; the decision is made on the Mac. */
+/* The six digits: plain and neutral; the decision is made on the Mac. The
+   console's type: the system font with tabular numbers. */
 /* Pairing: ask, connecting and the six digits share one top anchor. */
 #pairing { justify-content: flex-start; padding-top: max(18vh, env(safe-area-inset-top)); }
-.sas { font: 600 44px/1.2 var(--mono); letter-spacing: 0.08em; padding: 12px 24px; color: var(--ink); background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-l); }
+.sas { font: 600 44px/1.2 var(--font); font-variant-numeric: tabular-nums; letter-spacing: .08em; padding: 12px 24px; color: var(--ink); background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-l); }
 .pair-wait { display: flex; align-items: center; gap: 8px; margin: 0; }
 .spinner.sm { width: 16px; height: 16px; border-width: 2px; }
 #pair-mismatch { text-align: center; }
@@ -100,7 +105,7 @@ h1 { font-size: 21px; font-weight: 600; letter-spacing: -.02em; line-height: 1.3
 .plus::before, .plus::after { content: ""; position: absolute; left: 11px; top: 19px; width: 18px; height: 2px; background: var(--ink); border-radius: 1px; }
 .plus::after { transform: rotate(90deg); }
 .banner .link { flex: none; white-space: nowrap; }
-.banner { background: var(--warn-soft); color: var(--warn); border: 1px solid var(--warn-line); border-radius: var(--r); margin: 8px 12px 0; padding: 8px 12px; font-size: 14px; display: flex; gap: 8px; align-items: flex-start; }
+.banner { background: var(--warn-soft); color: var(--ink); border: 1px solid var(--warn-line); border-radius: var(--r); margin: 8px 12px 0; padding: 8px 12px; font-size: 14px; display: flex; gap: 8px; align-items: flex-start; }
 .banner > span { flex: 1; min-width: 0; }
 .banner .link { padding: 0; }
 .log { flex: 1; overflow-y: auto; padding: 16px 12px; display: flex; flex-direction: column; gap: 12px; -webkit-overflow-scrolling: touch; }
@@ -118,7 +123,7 @@ h1 { font-size: 21px; font-weight: 600; letter-spacing: -.02em; line-height: 1.3
 .msg.assistant { background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-1); border-bottom-left-radius: var(--r-xs); }
 .msg pre { background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-s); padding: 10px; overflow-x: auto; margin: 8px 0; }
 .msg code { font: 13px/1.45 var(--mono); }
-.msg .note { position: relative; width: fit-content; max-width: 100%; color: var(--warn); background: var(--warn-soft); border: 1px solid var(--warn-line); border-radius: var(--r); font-size: 13px; margin: 8px 0 0; padding: 4px 10px 4px 30px; }
+.msg .note { position: relative; width: fit-content; max-width: 100%; color: var(--ink); background: var(--warn-soft); border: 1px solid var(--warn-line); border-radius: var(--r); font-size: 13px; margin: 8px 0 0; padding: 4px 10px 4px 30px; }
 .msg .note::before { left: 9px; top: 7px; margin-top: 0; }
 .note.err { color: var(--danger); font-size: 14px; text-align: center; }
 .copy { position: absolute; right: 8px; bottom: -22px; background: none; border: 0; color: var(--muted); font-size: 12px; cursor: pointer; }
@@ -175,7 +180,7 @@ h1 { font-size: 21px; font-weight: 600; letter-spacing: -.02em; line-height: 1.3
 #chat-list .meta { font-size: 12px; color: var(--muted); font-weight: 400; }
 #chat-list button.cur { background: var(--accent-soft); color: var(--accent-text); font-weight: 500; }
 .drawer-foot { border-top: 1px solid var(--line); padding-top: 10px; display: flex; flex-direction: column; gap: 2px; }
-.warn-note { background: var(--warn-soft); color: var(--warn); border: 1px solid var(--warn-line); border-radius: var(--r); padding: 8px 12px 8px 36px; font-size: 14px; position: relative; }
+.warn-note { background: var(--warn-soft); color: var(--ink); border: 1px solid var(--warn-line); border-radius: var(--r); padding: 8px 12px 8px 36px; font-size: 14px; position: relative; }
 .warn-note::before { top: 11px; margin-top: 0; }
 .search { width: 100%; margin: 0 0 12px; border: 1px solid var(--line-2); border-radius: var(--r-s); padding: 8px 10px; background: var(--surface-2); font: 16px var(--font); color: var(--ink); -webkit-appearance: none; appearance: none; }
 .search::placeholder { color: var(--muted); }
@@ -191,7 +196,7 @@ h1 { font-size: 21px; font-weight: 600; letter-spacing: -.02em; line-height: 1.3
 .hero { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-bottom: 6px; }
 .hero .logo { margin-bottom: 10px; }
 .hero-name { font-size: 28px; font-weight: 600; line-height: 1.15; letter-spacing: -.025em; color: var(--ink); }
-.hero-sub { font-size: 12px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase;
+.hero-sub { font-size: 13px; font-weight: 500; letter-spacing: .03em;
   background: linear-gradient(90deg, var(--accent-text), var(--cyan)); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .boot-mark { width: 56px; height: 56px; filter: drop-shadow(0 10px 24px rgba(114,77,231,.35)); }
 :root { --cyan: #0B8FAE; }

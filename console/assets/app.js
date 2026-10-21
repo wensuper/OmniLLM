@@ -22,10 +22,10 @@ const T = {
     w1Title: "先接入一个模型",
     w1Claude: "我有 Claude 订阅",
     w1Claude1: "在{here}上安装 Claude Code。",
-    w1Claude2: "在终端运行 `claude` 并登录。",
+    w1Claude2: "在终端运行 `claude` 并登录。", w1Claude2Other: "在终端里运行 `claude` 并登录。",
     w1Codex: "我有 ChatGPT 订阅",
     w1Codex1: "在{here}上安装 Codex。",
-    w1Codex2: "在终端运行 `codex login`。",
+    w1Codex2: "在终端运行 `codex login`。", w1Codex2Other: "在终端里运行 `codex login`。",
     w1Key: "我有 API Key",
     w1Free: "想免费：安装 Ollama，用{here}上的模型。",
     recheck: "重新检查", recheckNone: "还没发现已登录的订阅，也没发现{here}上的模型。", recheckNoMore: "没有发现别的已登录订阅或{here}上的模型。", connectedNames: "已接入 {0}。",
@@ -49,18 +49,19 @@ const T = {
     enabled: "开启", pausedChip: "已暂停", pausedToast: "已暂停“{0}”", resumedToast: "已开启“{0}”",
     online: "在线", todayAt: "今天 {0}", yesterdayAt: "昨天 {0}",
     editDevice: "编辑设备 · {0}", editApp: "编辑应用 · {0}", secStatus: "状态", secModels: "可用模型",
-    infoAdded: "添加于{0}", infoSeen: "最近在线 {0}", infoSpent: "今天已用 {0}",
+    infoAdded: "{0} 添加", infoSeen: "最近在线：{0}", infoSpent: "今天已用 {0}",
     pauseHint: "关掉即暂停：这台设备马上停用，配对和设置都保留。", pauseHintApp: "关掉即暂停：这个应用马上停用，令牌和设置都保留。",
     limitHint: "只受{whole}每天总额度（{0}）限制。", limitHintNone: "{whole}也没有总额度。", allModels: "全部模型（以后接入的新模型也自动可用）",
-    grpSub: "订阅", grpKey: "API Key", grpLocal: "{Here}", pickOne: "至少选一个模型。", appNoSub: "订阅模型只能手动对话，应用用不了。",
+    grpSub: "订阅", grpKey: "API Key", grpLocal: "{Here}", pickOne: "至少选一个模型。", appNoHuman: "应用用不了只能手动对话的模型",
     hiddenTag: "不在设备上显示", appNoModels: "没有能用的模型", appNoModelsBody: "现在接入的模型应用都用不了。先接入 API Key 或{here}上的模型。",
     appNoModelsTip: "接入 API Key 或{here}上的模型后就能用", devNoModelsBody: "它能用的模型都已移除或不在设备上显示。打开“全部模型”，或在下面选几个。",
     removeDevice: "移除设备", removeApp: "移除应用",
     discardQ: "放弃没保存的修改？", discard: "放弃", keepEditing: "继续编辑",
     providers: "模型来源", keyLast4: "接入方式", subLogin: "订阅登录（只留在{here}上）",
-    problemLogin: "登录已失效：在终端运行 claude，再输入 /login", problemLoginCodex: "登录已失效：在终端运行 codex login",
+    problemLogin: "登录已失效：在终端运行 claude，再输入 /login", problemLoginOther: "登录已失效：在终端里运行 claude，再输入 /login",
+    problemLoginCodex: "登录已失效：在终端运行 codex login", problemLoginCodexOther: "登录已失效：在终端里运行 codex login",
     problemLimit: "用量到上限，约 {0}后恢复", problemLimitNow: "用量到上限，稍后恢复", hours: "{0} 小时", hour: "1 小时", minutes: "{0} 分钟", minute: "1 分钟",
-    noDevices: "还没有设备。点“添加设备”。",
+    noDevices: "还没有设备。点“添加设备”。", deviceCount: "{0} 台设备", deviceCountOne: "1 台设备", always: "始终",
     appsBody: "给脚本和其他不能直接嵌入 OmniLLM 的程序用。应用只能做后台调用，只能用 API Key 和{here}上的模型。",
     usageBody: "按{here}的时间计。花费按公布的价格估算，没有公布价格的按偏高估；订阅和{here}上的模型不花钱。",
     rangeToday: "今天", rangeYesterday: "昨天", rangeWeek: "最近 7 天",
@@ -68,19 +69,20 @@ const T = {
     emptyToday: "今天还没有用过。", emptyYesterday: "昨天没有用过。", emptyWeek: "最近 7 天没有用过。",
     byModel: "按模型", modelsGone: "已移除的模型", byModelEarlier: "没有按模型记的记录",
     who: "设备或应用", spend: "花费", calls: "次数", tokens: "Token（发出 / 收到）",
-    usageHost: "{Here}", usageGone: "已移除的设备和应用", goneCount: "（{0} 个）", usageGoneOne: "{0}（已移除）",
+    usageHost: "{Here}", usageGone: "已移除的设备和应用", usageGoneShort: "已移除", goneCount: "（{0} 个）", usageGoneOne: "{0}（已移除）",
     capLine: "{whole}每天总额度：{0}", capLabel: "{whole}每天总额度", capNone: "{whole}每天总额度：不设上限", capEdit: "修改", noApps: "还没有应用。",
     modelsBody: "“只能手动对话”的模型只给在手机、电脑上聊天的人用，脚本和应用调用不了。订阅模型一直是这样，免得账号被当成自动化调用。",
     codexName: "ChatGPT（Codex · 最新版）", codexVer: "ChatGPT（Codex · {0}）", latest: "（最新版）",
     remove: "移除", removeConfirm: "移除“{0}”？它会立刻用不了。",
-    removeConfirmDevice: "移除“{0}”？它会马上断开，那台设备上的对话也会清除；要再用得重新添加。",
+    removeConfirmDevice: "移除“{0}”？它会马上断开，那台设备上的对话也会清除。要再用，得重新添加。",
     removed: "已移除", connected: "已接入，{0} 个模型可用", connectedOne: "已接入，1 个模型可用", saved: "已保存",
     local: "只在{here}上", remote: "云端", localChip: "{Here}", sub: "订阅",
     todayOf: "{0} / {1}", todayNoLimit: "{0} · 不设上限",
     pairPhone: "手机或平板：用相机扫这个二维码，不用装任何东西。{0} 前有效，只能用一次。",
     pairComputer: "电脑或服务器（没有摄像头）",
     pairComputerNew: "那台电脑还没装 OmniLLM 的话，在它上面运行这一行，装完会提示粘贴配对文字（只用来聊天，不常驻后台）：",
-    pairComputerHow: "已经装好的，运行 `omnillm connect pair`，粘贴下面这段配对文字；或者在那台电脑的浏览器里打开 OmniLLM 网页，把配对文字粘贴进去。不要发给别人，也不要贴到聊天里。",
+    pairComputerHow: "已经装好的，运行 `omnillm connect pair`，粘贴下面这段配对文字；或者在那台电脑的浏览器里打开 {url}，把配对文字粘贴进去。不要发给别人，也不要贴到聊天里。",
+    pairComputerHowNoWeb: "已经装好的，运行 `omnillm connect pair`，粘贴下面这段配对文字。不要发给别人，也不要贴到聊天里。",
     pairWait: "等待设备连接……",
     pairConfirmQ: "设备“{0}”请求加入。它屏幕上显示的数字是这个吗？",
     pairYes: "一致，添加", pairNo: "不一致，拒绝", pairLeft: "手机那边取消了，或者连接断了。",
@@ -111,10 +113,10 @@ const T = {
     w1Title: "First, connect a model",
     w1Claude: "I have a Claude subscription",
     w1Claude1: "Install Claude Code on {here}.",
-    w1Claude2: "In Terminal, run `claude` and log in.",
+    w1Claude2: "In Terminal, run `claude` and log in.", w1Claude2Other: "In a terminal, run `claude` and log in.",
     w1Codex: "I have a ChatGPT subscription",
     w1Codex1: "Install Codex on {here}.",
-    w1Codex2: "In Terminal, run `codex login`.",
+    w1Codex2: "In Terminal, run `codex login`.", w1Codex2Other: "In a terminal, run `codex login`.",
     w1Key: "I have an API key",
     w1Free: "Want it free? Install Ollama to use models on {here}.",
     recheck: "Check again", recheckNone: "No signed-in subscription or model on {here} found yet.", recheckNoMore: "No other signed-in subscription or model on {here} found.", connectedNames: "Connected {0}.",
@@ -138,18 +140,19 @@ const T = {
     enabled: "On", pausedChip: "Paused", pausedToast: "Paused “{0}”", resumedToast: "Turned on “{0}”",
     online: "Online", todayAt: "Today {0}", yesterdayAt: "Yesterday {0}",
     editDevice: "Edit device · {0}", editApp: "Edit app · {0}", secStatus: "Status", secModels: "Models it can use",
-    infoAdded: "Added {0}", infoSeen: "Last seen {0}", infoSpent: "Spent today {0}",
+    infoAdded: "Added {0}", infoSeen: "Last seen: {0}", infoSpent: "Spent today {0}",
     pauseHint: "Turn off to pause: the device stops at once; its pairing and settings are kept.", pauseHintApp: "Turn off to pause: the app stops at once; its token and settings are kept.",
     limitHint: "Only the daily total for {here} ({0}) applies.", limitHintNone: "{Here} has no daily total either.", allModels: "All models (including ones added later)",
-    grpSub: "Subscriptions", grpKey: "API key", grpLocal: "{Here}", pickOne: "Choose at least one model.", appNoSub: "Subscription models are chat-only; apps can’t use them.",
+    grpSub: "Subscriptions", grpKey: "API key", grpLocal: "{Here}", pickOne: "Choose at least one model.", appNoHuman: "Apps can’t use chat-only models",
     hiddenTag: "Hidden on devices", appNoModels: "No usable models", appNoModelsBody: "None of the connected models work for apps. Connect an API key or a model on {here} first.",
     appNoModelsTip: "Works once you connect an API key or a model on {here}", devNoModelsBody: "All the models it could use were removed or hidden on devices. Turn on “All models” or choose some below.",
     removeDevice: "Remove device", removeApp: "Remove app",
     discardQ: "Discard unsaved changes?", discard: "Discard", keepEditing: "Keep editing",
     providers: "Model sources", keyLast4: "Connected with", subLogin: "Subscription login (stays on {here})",
-    problemLogin: "Signed out: in Terminal, run claude, then type /login", problemLoginCodex: "Signed out: in Terminal, run codex login",
+    problemLogin: "Signed out: in Terminal, run claude, then type /login", problemLoginOther: "Signed out: in a terminal, run claude, then type /login",
+    problemLoginCodex: "Signed out: in Terminal, run codex login", problemLoginCodexOther: "Signed out: in a terminal, run codex login",
     problemLimit: "Usage limit reached; back in about {0}", problemLimitNow: "Usage limit reached; back soon", hours: "{0} hours", hour: "1 hour", minutes: "{0} minutes", minute: "1 minute",
-    noDevices: "No devices yet. Choose “Add device”.",
+    noDevices: "No devices yet. Choose “Add device”.", deviceCount: "{0} devices", deviceCountOne: "1 device", always: "Always",
     appsBody: "For scripts and other programs that can’t embed OmniLLM. Apps make background calls only, with API keys and models on {here}.",
     usageBody: "Days follow {here}’s clock. Spend is estimated from published prices (on the high side where none is published); subscriptions and models on {here} cost nothing.",
     rangeToday: "Today", rangeYesterday: "Yesterday", rangeWeek: "Last 7 days",
@@ -157,7 +160,7 @@ const T = {
     emptyToday: "Nothing used yet today.", emptyYesterday: "Nothing was used yesterday.", emptyWeek: "Nothing used in the last 7 days.",
     byModel: "By model", modelsGone: "Removed models", byModelEarlier: "Not recorded by model",
     who: "Device or app", spend: "Spend", calls: "Calls", tokens: "Tokens (in / out)",
-    usageHost: "{Here}", usageGone: "Removed devices and apps", goneCount: "({0})", usageGoneOne: "{0} (removed)",
+    usageHost: "{Here}", usageGone: "Removed devices and apps", usageGoneShort: "Removed", goneCount: "({0})", usageGoneOne: "{0} (removed)",
     capLine: "Daily total for {here}: {0}", capLabel: "Daily total for {here}", capNone: "Daily total for {here}: no limit", capEdit: "Change", noApps: "No apps yet.",
     modelsBody: "Chat-only models are for people chatting on a phone or computer; scripts and apps can’t use them. Subscription models are always chat-only, so the account isn’t flagged as automated.",
     codexName: "ChatGPT (Codex · latest)", codexVer: "ChatGPT (Codex · {0})", latest: " (latest)",
@@ -169,7 +172,8 @@ const T = {
     pairPhone: "Phone or tablet: scan this QR code with the camera; nothing to install. Valid until {0}, single use.",
     pairComputer: "Computer or server (no camera)",
     pairComputerNew: "Not installed there yet? Run this line on that computer; it asks for the pairing text when done (chat only; nothing stays running):",
-    pairComputerHow: "Already installed: run `omnillm connect pair` and paste this pairing text, or open the OmniLLM web page in that computer’s browser and paste the pairing text there. Don’t send it to anyone or paste it into a chat.",
+    pairComputerHow: "Already installed: run `omnillm connect pair` and paste this pairing text, or open {url} in that computer’s browser and paste the pairing text there. Don’t send it to anyone or paste it into a chat.",
+    pairComputerHowNoWeb: "Already installed: run `omnillm connect pair` and paste this pairing text. Don’t send it to anyone or paste it into a chat.",
     pairWait: "Waiting for the device…",
     pairConfirmQ: "“{0}” wants to join. Does its screen show this number?",
     pairYes: "Matches, add", pairNo: "Doesn’t match — refuse", pairLeft: "The device cancelled or lost its connection.",
@@ -308,12 +312,14 @@ function loggedOut() {
 }
 
 let toastTimer;
-// toast says something for a moment; act ({ label, run }) adds a button
-// (Undo) and keeps it up for 5 s.
+// toast says something for a moment (text, or the nodes of named());
+// act ({ label, run }) adds a button (Undo) and keeps it up for 5 s.
 function toast(msg, err, act) {
   if (signedOut) return; // the login panel already says what to do
   const n = $("toast");
-  n.textContent = msg;
+  n.textContent = "";
+  n.append(el("span", undefined, "toast-msg" + (Array.isArray(msg) ? " has-name" : "")));
+  n.firstChild.append(...(Array.isArray(msg) ? msg : [msg]));
   n.className = "toast" + (err ? " err" : "");
   if (act) {
     const b = el("button", act.label, "toast-act"); b.type = "button";
@@ -326,6 +332,12 @@ function toast(msg, err, act) {
 }
 
 const money = (micro) => "$" + (micro / 1e6).toFixed(2);
+// named: a sentence with a device's name in it ("Paused “…”"), the name a
+// node of its own so a long one is cut short ("…") instead of the sentence.
+function named(key, name) {
+  const [a, b] = t(key, "\u0000").split("\u0000");
+  return [a, el("span", name, "toast-name"), b];
+}
 
 let S = null;
 
@@ -628,7 +640,7 @@ async function startPair(area, onDone, closable) {
   more.append(el("summary", t("pairComputer")));
   const install = "curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh -o omnillm-install.sh && sh omnillm-install.sh --device";
   more.append(rich(el("p"), t("pairComputerNew")), codeBox(install),
-    rich(el("p"), t("pairComputerHow")), codeBox(p.code));
+    howText(p.web), codeBox(p.code));
   right.append(more);
   box.append(left, right);
   area.append(box);
@@ -682,7 +694,7 @@ async function startPair(area, onDone, closable) {
       curPair = null;
       area.textContent = "";
       area.append(el("p", t("pairDone", st.device_name)));
-      toast(t("pairDone", st.device_name));
+      toast(named("pairDone", st.device_name));
       onDone && onDone(st.device_id);
     }
     if (st.state === "failed") {
@@ -694,6 +706,21 @@ async function startPair(area, onDone, closable) {
       else ended(t("pairFailed", st.message || ""), true);
     }
   }, 1000);
+}
+
+// howText: how an installed computer pairs: the command, or the web page
+// the QR code opens (its address as a link, with Copy) in its browser.
+// Without that page's address, only the command.
+function howText(web) {
+  const p = el("p", undefined, "pair-how");
+  if (!/^https?:\/\/[^\s#?]+$/.test(web || "")) return rich(p, t("pairComputerHowNoWeb"));
+  const [a, b] = t("pairComputerHow").split("{url}");
+  const link = el("a", web, "web-link");
+  link.href = web; link.target = "_blank"; link.rel = "noopener noreferrer";
+  const url = el("span", undefined, "web-url");
+  url.append(link, copyBtn(web, el("button", t("copy"), "secondary small-btn")));
+  p.append(rich(el("span"), a), url, rich(el("span"), b));
+  return p;
 }
 
 // ---------- dashboard ----------
@@ -786,8 +813,8 @@ function seenText(td, online, iso) {
 // nameCell: a device's or app's name, with a "Paused" chip when it is.
 // On a phone-width window the row stacks: the name, and under it what it
 // spent today against its limit, after a green dot and "Online ·" while
-// it is online.
-function nameCell(tr, name, paused, online, spent) {
+// it is online, or when it was last seen (seen, a device's) while not.
+function nameCell(tr, name, paused, online, spent, seen) {
   const td = cell(tr, "", "nm");
   const line = el("div", undefined, "nm-line");
   line.append(el("span", name, "nm-text"));
@@ -795,8 +822,10 @@ function nameCell(tr, name, paused, online, spent) {
   td.append(line);
   if (spent) {
     const sub = el("div", undefined, "nm-sub narrow-only");
-    if (online) sub.append(el("span", "", "dot-on"), t("online") + " · ");
-    sub.append(spent);
+    // Each part stays whole; a line too narrow breaks between them.
+    if (online) sub.append(el("span", "", "dot-on"), el("span", t("online"), "nowrap"), " · ");
+    else if (seen !== undefined) sub.append(el("span", timeWords(seen), "nowrap"), " · ");
+    sub.append(el("span", spent, "nowrap"));
     td.append(sub);
   }
   td.title = name;
@@ -816,11 +845,11 @@ function pauseSwitch(tr, label, path, id, paused) {
     try {
       await api(path, { id, paused: !sw.checked });
     } catch (e) { sw.checked = !sw.checked; sw.disabled = false; toast(e.message, true); return; }
-    if (sw.checked) toast(t("resumedToast", label));
+    if (sw.checked) toast(named("resumedToast", label));
     else {
       // Paused by a slip of the finger: Undo turns it on again.
-      toast(t("pausedToast", label), false, { label: t("undo"), run: async () => {
-        try { await api(path, { id, paused: false }); toast(t("resumedToast", label)); await refresh(); } catch (e) { toast(e.message, true); }
+      toast(named("pausedToast", label), false, { label: t("undo"), run: async () => {
+        try { await api(path, { id, paused: false }); toast(named("resumedToast", label)); await refresh(); } catch (e) { toast(e.message, true); }
       } });
     }
     try { await refresh(); } catch (_) { sw.disabled = false; }
@@ -828,13 +857,20 @@ function pauseSwitch(tr, label, path, id, paused) {
   td.append(sw);
 }
 
+// fresh: the device just added, lit up (--accent-soft) until its time is
+// up, through the redraws that follow while it comes online.
+let fresh = { id: "", until: 0 };
 function renderDevices() {
   const tb = $("devices");
   tb.textContent = "";
+  const n = S.devices.length;
+  $("devices-count").textContent = n ? (n === 1 ? t("deviceCountOne") : t("deviceCount", num(n))) : "";
   for (const d of S.devices) {
     const tr = el("tr", undefined, d.Paused ? "paused" : "");
+    tr.dataset.id = d.ID;
+    if (d.ID === fresh.id && Date.now() < fresh.until) tr.classList.add("fresh");
     const spent = spentText("device/" + d.ID, d.BudgetMicroUSD);
-    const nc = nameCell(tr, d.Name, d.Paused, d.Online, spent);
+    const nc = nameCell(tr, d.Name, d.Paused, d.Online, spent, d.LastSeen);
     // Nothing on its list is left for it (removed, or kept off devices).
     if (!deviceHasModels(d)) nc.firstChild.append(el("span", "", "brk narrow-only"), el("span", t("appNoModels"), "tag warn-tag"));
     seenText(cell(tr, "", "seen"), d.Online, d.LastSeen);
@@ -859,6 +895,8 @@ function moneyInput(value, label) {
   wrap.append(cur, amt);
   return [wrap, amt];
 }
+// amount: what a money field starts with: "5.00".
+const amount = (micro) => (micro / 1e6).toFixed(2);
 // dollars reads an amount; anything unreadable is sent as 0, which the
 // hub refuses with its own sentence.
 function dollars(v) { const n = Number(String(v).trim().replace(",", ".")); return Number.isFinite(n) ? n : 0; }
@@ -873,7 +911,7 @@ function renderCap() {
   b.addEventListener("click", () => {
     box.textContent = "";
     const f = el("div", undefined, "cap-edit");
-    const [wrap, amt] = moneyInput(v === NO_LIMIT ? "20" : String(v / 1e6), t("capLabel"));
+    const [wrap, amt] = moneyInput(amount(v === NO_LIMIT ? 20e6 : v), t("capLabel"));
     amt.disabled = v === NO_LIMIT;
     const sw = el("input"); sw.type = "checkbox"; sw.className = "switch"; sw.checked = v === NO_LIMIT;
     const lab = el("label", undefined, "toggle"); lab.append(sw, el("span", t("noLimit")));
@@ -993,10 +1031,13 @@ const usableByApp = (m) => !(m.human_only || m.group === "sub");
 function appHasModels(a) {
   return S.models.some((m) => usableByApp(m) && (!(a.Models || []).length || a.Models.includes(m.id)));
 }
+// usableByDevice: a device gets the models shown on devices; one that
+// only makes background calls (a server, a script) no chat-only ones.
+const usableByDevice = (d, m) => !m.hidden && (!d.BackgroundOnly || usableByApp(m));
 // deviceHasModels: a device can use at least one model: one on its list
-// (or any, with all models) that is shown on devices.
+// (or any, with all models) that it can use.
 function deviceHasModels(d) {
-  return S.models.some((m) => !m.hidden && (!(d.Models || []).length || d.Models.includes(m.id)));
+  return S.models.some((m) => usableByDevice(d, m) && (!(d.Models || []).length || d.Models.includes(m.id)));
 }
 
 // editDialog: everything about one device or app in one place: its name,
@@ -1028,7 +1069,7 @@ function editDialog(kind, x) {
   // Daily limit.
   const lim = section(d.body, t("budget"));
   const unl = x.BudgetMicroUSD === NO_LIMIT;
-  const [wrap, amt] = moneyInput(unl ? "5" : String(x.BudgetMicroUSD / 1e6), t("budgetLabel"));
+  const [wrap, amt] = moneyInput(amount(unl ? 5e6 : x.BudgetMicroUSD), t("budgetLabel"));
   amt.disabled = unl;
   const nolim = el("input"); nolim.type = "checkbox"; nolim.className = "switch"; nolim.checked = unl;
   const nll = el("label", undefined, "toggle"); nll.append(nolim, el("span", t("noLimit")));
@@ -1036,9 +1077,10 @@ function editDialog(kind, x) {
   const lhint = el("p", S.daily_total_micro_usd === NO_LIMIT ? t("limitHintNone") : t("limitHint", money(S.daily_total_micro_usd)), "muted small");
   lim.append(line, lhint);
   // Models it can use: all (also later ones), or the ones switched on. A
-  // device never gets a model kept off devices; an app never a chat-only one.
+  // device never gets a model kept off devices; an app (or a device that
+  // makes background calls only) never a chat-only one.
   const msec = section(d.body, t("secModels"));
-  const usable = (m) => isApp ? usableByApp(m) : !m.hidden;
+  const usable = (m) => isApp ? usableByApp(m) : usableByDevice(x, m);
   if (isApp && !S.models.some(usableByApp)) msec.append(el("p", t("appNoModelsBody"), "warn-note"));
   if (!isApp && !deviceHasModels(x)) msec.append(el("p", t("devNoModelsBody"), "warn-note"));
   const allSw = el("input"); allSw.type = "checkbox"; allSw.className = "switch"; allSw.checked = !(x.Models || []).length;
@@ -1050,21 +1092,24 @@ function editDialog(kind, x) {
     if (!ms.length) continue;
     const grp = el("div", undefined, "pick-group");
     grp.append(el("div", label, "pick-label"));
-    if (isApp && g === "sub") grp.append(el("p", t("appNoSub"), "muted small"));
     for (const m of ms) {
+      // The switch first, then the name; in an app's list a chat-only
+      // model says so, and why it can't be switched on.
       const row = el("label", undefined, "pick-row");
       const nm = el("span", modelName(m), "pick-name");
-      if (m.human_only || g === "sub") nm.append(" ", el("span", t("humanOnly"), "tag"));
+      if (isApp && !usableByApp(m)) { nm.append(" ", el("span", t("humanOnly"), "tag")); row.title = t("appNoHuman"); }
       if (!isApp && m.hidden) nm.append(" ", el("span", t("hiddenTag"), "tag paused-tag"));
       const sw = el("input"); sw.type = "checkbox"; sw.className = "switch";
       sw.disabled = !usable(m);
       sw.checked = usable(m) && (x.Models || []).includes(m.id);
-      row.append(nm, sw);
+      if (sw.disabled) row.classList.add("off");
+      row.append(sw, nm);
       grp.append(row);
       picks.push([m.id, sw]);
     }
     list.append(grp);
   }
+  if (isApp && S.models.some((m) => !usableByApp(m))) list.prepend(el("p", t("appNoHuman"), "muted small pick-note"));
   const pickHint = el("p", t("pickOne"), "err-text small");
   msec.append(all, list, pickHint);
   // Foot: Remove on the left; it asks in the foot first.
@@ -1206,14 +1251,16 @@ function renderModels() {
   for (const m of S.models) {
     const tr = el("tr");
     const name = modelName(m);
-    const nc = cell(tr, isSub(m) ? withDot(name, t("sub")) : name, "nm");
+    // The sources table below says which are subscriptions.
+    const nc = cell(tr, name, "nm");
     // On a phone the chip sits under the name (its own column is hidden).
     nc.append(el("br", undefined, "narrow-only"), vendorChip(m)); nc.lastChild.classList.add("narrow-only");
     cell(tr, "").append(vendorChip(m));
-    const ho = switchCell(tr, !!m.human_only || isSub(m), t("humanOnly") + " " + name, async (box) => {
+    // A subscription is chat-only always: a word, not a switch that can't move.
+    if (isSub(m)) { const c = cell(tr, "", "sw"); c.append(el("span", t("always"), "muted small")); c.title = t("subAlways"); }
+    else switchCell(tr, !!m.human_only, t("humanOnly") + " " + name, async (box) => {
       try { await api("models/set", { id: m.id, human_only: box.checked }); toast(t("saved")); } catch (e) { box.checked = !box.checked; toast(e.message, true); }
     });
-    if (isSub(m)) { ho.disabled = true; ho.title = t("subAlways"); ho.parentNode.title = t("subAlways"); }
     switchCell(tr, !m.hidden, t("showOnDevices") + " " + name, async (box) => {
       try { await api("models/set", { id: m.id, shown: box.checked }); toast(t("saved")); m.hidden = !box.checked; } catch (e) { box.checked = !box.checked; toast(e.message, true); }
     });
@@ -1314,12 +1361,18 @@ function renderUsage() {
     rows.push({ ...u, label: u.who === "host" ? t("usageHost") : (u.name || u.who), paused: paused.has(u.who) });
   }
   rows.sort((a, b) => b.calls - a.calls);
-  if (gone.n) rows.push({ ...gone, label: gone.n === 1 && gone.name ? t("usageGoneOne", gone.name) : t("usageGone"), count: gone.n === 1 && gone.name ? 0 : gone.n, muted: true });
+  if (gone.n) {
+    const one = gone.n === 1 && gone.name;
+    rows.push({ ...gone, label: one ? t("usageGoneOne", gone.name) : t("usageGone"), count: one ? 0 : gone.n, short: one ? "" : t("usageGoneShort"), muted: true });
+  }
   const line = (u, into, cls) => {
     const tr = el("tr", undefined, cls);
-    const c = cell(tr, u.label, u.muted ? "muted nm" : "nm");
-    // "Removed devices and apps (23)": the count never breaks off.
-    if (u.count) c.append(lang === "zh" ? "" : " ", el("span", t("goneCount", u.count), "nowrap"));
+    const c = cell(tr, "", u.muted ? "muted nm" : "nm");
+    // "Removed devices and apps (23)": the count never breaks off. On a
+    // phone-width window the removed ones' line is short: "Removed (23)".
+    if (u.short) c.append(el("span", u.label, "wide-only"), el("span", u.short, "narrow-only"));
+    else c.append(u.label);
+    if (u.count) c.append(lang === "zh" ? "" : " ", el("span", t("goneCount", num(u.count)), "nowrap"));
     if (u.paused) c.append(" ", el("span", t("pausedChip"), "tag paused-tag"));
     cell(tr, num(u.calls), "num");
     cell(tr, money(u.micro_usd), "num");
@@ -1369,13 +1422,22 @@ $("add-device").addEventListener("click", () => startPair($("pair-dash"), (id) =
 
 // afterPair: the new device opens its session a moment after it is
 // added; look again (every second, for up to 10 s) until it shows online.
+// The first redraw that has it scrolls its row into view and lights it up
+// for 2 s.
 function afterPair(id) {
-  let n = 0;
+  let n = 0, shown = false;
   const look = async () => {
     // The owner started something meanwhile (editing, adding another
     // device): don't redraw under them; just look again in a second.
     if (busy()) { if (++n < 10 && !signedOut) setTimeout(look, 1000); return; }
+    if (!shown) fresh = { id, until: Date.now() + 2000 };
     try { await refresh(); } catch (_) { return; }
+    const row = !shown && document.querySelector('#devices tr[data-id="' + CSS.escape(id) + '"]');
+    if (row) {
+      shown = true;
+      row.scrollIntoView({ block: "center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+      setTimeout(() => { fresh = { id: "", until: 0 }; document.querySelectorAll("#devices tr.fresh").forEach((r) => r.classList.remove("fresh")); }, 2000);
+    }
     const d = S.devices.find((x) => x.ID === id);
     if (d && !d.Online && ++n < 10 && !signedOut) setTimeout(look, 1000);
   };

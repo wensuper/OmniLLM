@@ -371,6 +371,11 @@ func TestPairingThroughTheConsole(t *testing.T) {
 	if !strings.HasPrefix(qr, "data:image/svg+xml;base64,") || !strings.HasPrefix(pairText, "omnillm3-") {
 		t.Fatalf("pairing payload %v", out)
 	}
+	// The page a computer's browser opens: the QR link's origin, without
+	// the pairing secret.
+	if web, _ := out["web"].(string); web != strings.TrimSuffix(hub.DefaultWebAppURL, "/") {
+		t.Fatalf("web %q", web)
+	}
 	sas := make(chan string, 1)
 	devErr := make(chan error, 1)
 	sec := secret.NewMemory()

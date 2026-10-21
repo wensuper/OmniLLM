@@ -25,6 +25,9 @@ type Request struct {
 	Args map[string]string `json:"args,omitempty"`
 	// Secret carries a value that must not appear in argv (API keys).
 	Secret string `json:"secret,omitempty"`
+	// Lang is the caller's language ("zh" or "en"): the hub writes its
+	// replies in it. Empty: the hub's own.
+	Lang string `json:"lang,omitempty"`
 }
 
 // Reply is one line back. Event "confirm" asks the client a yes/no

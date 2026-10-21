@@ -73,7 +73,7 @@ func TestUsageTable(t *testing.T) {
 		{Who: "host", Calls: 2},
 		{Who: "device/a", Name: "iPhone", Calls: 5, MicroUSD: 2_000_000},
 	})
-	got, err := usageTable(b)
+	got, err := usageTable(b, "today")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,7 +98,7 @@ func TestUsageTable(t *testing.T) {
 func TestUsageTableGroupsThousands(t *testing.T) {
 	t.Setenv("OMNILLM_LANG", "zh")
 	b, _ := json.Marshal([]hub.Spend{{Who: "device/a", Name: "iPhone", Calls: 1234, MicroUSD: 1_234_567_890, InputTokens: 1_234_567, OutputTokens: 89}})
-	got, err := usageTable(b)
+	got, err := usageTable(b, "today")
 	if err != nil {
 		t.Fatal(err)
 	}

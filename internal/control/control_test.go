@@ -124,3 +124,23 @@ func TestClientDisconnectCancelsHandler(t *testing.T) {
 		t.Fatal("handler kept running after the client left")
 	}
 }
+
+// The caller's language reaches the handler.
+func TestRequestCarriesTheCallersLanguage(t *testing.T) {
+	sock := filepath.Join(shortDir(t), "c.sock")
+	ln, err := Listen(sock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go Serve(ctx, ln, func(ctx context.Context, c *Conn, req Request) error {
+		return c.Send(Reply{Event: "ok", Text: req.Lang})
+	})
+	for _, lang := range []string{"zh", "en", ""} {
+		var got string
+		if err := Call(sock, Request{Op: "x", Lang: lang}, func(r Reply) (bool, bool) { got = r.Text; return false, false }); err != nil || got != lang {
+			t.Errorf("%q: %q %v", lang, got, err)
+		}
+	}
+}
