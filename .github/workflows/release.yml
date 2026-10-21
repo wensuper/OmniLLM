@@ -5,18 +5,7 @@ on:
 permissions:
   contents: read
 jobs:
-  # Tests run without any write or signing permission.
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-        with: { persist-credentials: false }
-      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
-        with: { go-version-file: go.mod }
-      - run: go test -race -count=1 ./...
-      - run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
   release:
-    needs: test
     # macOS: the Mac binaries are built with cgo (menu bar icon); Linux ones
     # are cross-compiled without it.
     runs-on: macos-latest
@@ -24,7 +13,16 @@ jobs:
     permissions:
       contents: write   # create the release
       id-token: write   # keyless cosign signing
+      actions: read     # see that CI passed for this commit
     steps:
+      # The tests ran in CI on this very commit (ci.yml: vet, race tests,
+      # staticcheck, govulncheck); running them again here took 3 of the
+      # release's 6 minutes (zc 2026-10-21). Tag only after CI is green.
+      - name: CI passed for this commit
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          n=$(gh api "repos/${{ github.repository }}/actions/workflows/ci.yml/runs?head_sha=${{ github.sha }}&status=success" -q .total_count)
+          [ "$n" -gt 0 ] || { echo "CI has not passed for ${{ github.sha }}: tag after CI is green."; exit 1; }
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with: { fetch-depth: 0, persist-credentials: false }
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
