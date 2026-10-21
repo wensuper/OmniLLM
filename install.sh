@@ -1,8 +1,12 @@
 #!/bin/sh
-# OmniLLM installer (macOS, Linux). No sudo, no questions.
+# OmniLLM installer (macOS, Linux). No sudo, no questions. Installs, or
+# updates what is installed (settings are kept).
 #
-#   curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh -o omnillm-install.sh
-#   sh omnillm-install.sh
+#   curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh -s -- --device   # a server that only uses a hub
+#
+# Everything runs from main at the very end, so a download cut off halfway
+# runs nothing.
 #
 # 1. Downloads the latest release for this computer and checks its SHA-256
 #    against checksums.txt; if cosign is installed, also checks that
@@ -11,6 +15,8 @@
 # 2. Runs "omnillm install": copies itself to ~/.local/bin, starts the hub
 #    as a background service for this user, opens the local console.
 set -eu
+
+main() {
 
 REPO="wensuper/OmniLLM"
 # Fixed on purpose: no environment variable can point this at another
@@ -124,4 +130,15 @@ else
 fi
 
 chmod 0755 "$bin"
+new=$("$bin" version 2>/dev/null | sed 's/^omnillm //') || new=""
+old=""
+[ -x "$HOME/.local/bin/omnillm" ] && old=$("$HOME/.local/bin/omnillm" version 2>/dev/null | sed 's/^omnillm //') || true
+if [ -n "$old" ] && [ "$old" = "$new" ]; then
+  say "$(t "已经是最新版本 ${new}，重新安装一遍（设置都保留）。" "Already on the newest version ($new); installing it again (settings are kept).")"
+elif [ -n "$old" ]; then
+  say "$(t "正在从 ${old} 更新到 ${new}（设置都保留）。" "Updating from $old to $new (settings are kept).")"
+fi
 "$bin" install "$@"
+}
+
+main "$@"

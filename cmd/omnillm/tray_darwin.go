@@ -154,7 +154,13 @@ func trayReady() {
 		go func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
 			defer cancel()
-			installDone <- runInstaller(ctx, updateClient(), logPath)
+			logf, err := os.OpenFile(logPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
+			if err != nil {
+				installDone <- err
+				return
+			}
+			defer logf.Close()
+			installDone <- update(ctx, dataDir("hub"), "hub", logf, true)
 		}()
 	}
 	showUpdate()

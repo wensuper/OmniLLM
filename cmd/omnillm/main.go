@@ -114,6 +114,8 @@ func usage() {
   omnillm install                    一步装好：主机作为后台服务运行，打开控制台
   omnillm open                       打开本机控制台
   omnillm status                     查看主机状态
+  omnillm update [--check]           更新到最新版本（主机默认会在空闲时自己更新）
+  omnillm update --auto on|off       打开或关闭主机的自动更新
   omnillm hub run                    启动主机（前台运行）
   omnillm hub provider add <openai|anthropic|ollama|openai-compatible> [--name N] [--base-url U]
                                      接入模型来源（API Key 从标准输入读，不写在命令行里）
@@ -138,6 +140,8 @@ func usage() {
   omnillm install                    one step: run the hub as a background service, open the console
   omnillm open                       open the local console
   omnillm status                     show the hub’s status
+  omnillm update [--check]           update to the newest version (the hub also updates itself when idle)
+  omnillm update --auto on|off       turn the hub’s automatic updates on or off
   omnillm hub run                    run the hub (foreground)
   omnillm hub provider add <openai|anthropic|ollama|openai-compatible> [--name N] [--base-url U]
                                      connect a model source (the API key is read from stdin, never argv)
@@ -182,6 +186,8 @@ func main() {
 		uninstallCmd(os.Args[2:])
 	case "status":
 		statusCmd(os.Args[2:])
+	case "update", "upgrade":
+		updateCmd(os.Args[2:])
 	case "tray":
 		trayCmd()
 	case "version":
@@ -598,6 +604,7 @@ func hubRun(dir, sock string, args []string) {
 			}
 		}()
 	}
+	go autoUpdate(ctx, h, dir)
 	log.Print(t("OmniLLM 已启动。", "OmniLLM is running."))
 	if *relayURL == "" {
 		log.Print(t("没有设置远程连接（--relay），其他设备暂时连不上。", "Remote access not set up (--relay); other devices can’t connect yet."))
@@ -942,6 +949,7 @@ func connectCmd(args []string) {
 		_ = fs.Parse(args[1:])
 		// Ctrl-C stops a reply, not the chat: only SIGTERM ends it.
 		stop()
+		deviceUpdateHint(dir)
 		cctx, cstop := signal.NotifyContext(context.Background(), syscall.SIGTERM)
 		defer cstop()
 		d := openDevice(cctx, sec, dir)
@@ -964,6 +972,7 @@ func connectCmd(args []string) {
 			}
 			images = append(images, im)
 		}
+		deviceUpdateHint(dir)
 		d := openDevice(ctx, sec, dir)
 		defer d.Close()
 		if *model == "" {

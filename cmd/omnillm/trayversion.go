@@ -192,37 +192,57 @@ func latestRelease(ctx context.Context, c *http.Client) (string, error) {
 	return tag, nil
 }
 
-// runInstaller downloads the official installer into a private temporary
-// folder and runs it as a person would (sh install.sh), with its output in
-// logPath. It checks checksums and the signature itself and starts the hub
-// and the menu bar icon again, so this process is replaced when it works.
-// It runs in its own session, so the installer outlives this process.
-func runInstaller(ctx context.Context, c *http.Client, logPath string) error {
+// runInstaller downloads the official installer into dir and runs it as a
+// person would (sh install.sh ARGS), with its output in logw. It checks
+// checksums and the signature itself and starts the hub (and the menu bar
+// icon) again. detached: the installer runs in its own session, and under
+// systemd in its own unit, so it outlives this process when it restarts
+// the service this process belongs to (systemd would stop every process in
+// the service, and the service's /tmp is private, hence dir).
+func runInstaller(ctx context.Context, c *http.Client, dir string, args []string, logw io.Writer, detached bool) error {
 	script, err := get(ctx, c, installerURL, 1<<20)
 	if err != nil {
 		return err
 	}
-	dir, err := os.MkdirTemp("", "omnillm-update-")
-	if err != nil {
+	work := filepath.Join(dir, "update-installer")
+	_ = os.RemoveAll(work)
+	if err := os.MkdirAll(work, 0o700); err != nil {
 		return err
 	}
-	defer os.RemoveAll(dir)
-	_ = os.Chmod(dir, 0o700)
-	p := filepath.Join(dir, "install.sh")
+	p := filepath.Join(work, "install.sh")
 	if err := os.WriteFile(p, script, 0o600); err != nil {
 		return err
 	}
-	logf, err := os.OpenFile(logPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
-	if err != nil {
-		return err
+	fmt.Fprintf(logw, "omnillm %s: update started %s\n", version, time.Now().Format(time.RFC3339))
+	if detached && os.Getenv("INVOCATION_ID") != "" {
+		if _, err := exec.LookPath("systemd-run"); err == nil {
+			// A transient unit inherits nothing: hand over the settings
+			// the installer writes into the service again.
+			run := []string{"--user", "--collect", "--quiet", "--unit", "omnillm-update-" + strconv.FormatInt(time.Now().Unix(), 10),
+				"--setenv=OMNILLM_NO_BROWSER=1"}
+			for _, kv := range os.Environ() {
+				if strings.HasPrefix(kv, "OMNILLM_") || strings.HasPrefix(kv, "LANG=") || strings.HasPrefix(kv, "LC_ALL=") {
+					run = append(run, "--setenv="+kv)
+				}
+			}
+			log := filepath.Join(dir, "update.log")
+			run = append(run, "/bin/sh", "-c", `exec /bin/sh "$0" "$@" >>"`+log+`" 2>&1`, p)
+			run = append(run, args...)
+			out, err := exec.CommandContext(ctx, "systemd-run", run...).CombinedOutput()
+			if err != nil {
+				return fmt.Errorf("systemd-run: %v: %s", err, strings.TrimSpace(string(out)))
+			}
+			return nil
+		}
 	}
-	defer logf.Close()
-	fmt.Fprintf(logf, "omnillm %s: update started %s\n", version, time.Now().Format(time.RFC3339))
-	cmd := exec.CommandContext(ctx, "/bin/sh", p)
-	cmd.Dir = dir
+	defer os.RemoveAll(work)
+	cmd := exec.CommandContext(ctx, "/bin/sh", append([]string{p}, args...)...)
+	cmd.Dir = work
 	cmd.Env = append(os.Environ(), "OMNILLM_NO_BROWSER=1")
-	cmd.Stdout, cmd.Stderr = logf, logf
-	detach(cmd)
+	cmd.Stdout, cmd.Stderr = logw, logw
+	if detached {
+		detach(cmd)
+	}
 	return cmd.Run()
 }
 

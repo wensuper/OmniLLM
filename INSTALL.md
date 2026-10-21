@@ -26,7 +26,7 @@ OmniLLM makes this computer the **hub**, the only place that talks to model prov
 ~/.local/bin/omnillm status --json
 ```
 
-- If it prints JSON with `"running": true`, it is installed. Skip to Step 3.
+- If it prints JSON with `"running": true`, it is installed. If the person asked to update it, run `~/.local/bin/omnillm update` and report what it prints (it says when it is already up to date). Otherwise skip to Step 3.
 - If the command is missing, or `"running": false`, continue to Step 2.
 
 ## Step 2 — Install
@@ -79,13 +79,17 @@ Then stop. Don't change any OmniLLM settings unless the person asks.
 
 | Symptom | What to do |
 |---|---|
-| You aren't allowed to run the installer (your permission settings or sandbox refuse it) | Tell the person that nothing was installed, and that they can allow this one command or run `sh omnillm-install.sh` themselves. Don't work around the refusal. |
+| You aren't allowed to run the installer (your permission settings or sandbox refuse it) | Tell the person that nothing was installed, and that they can allow this one command or run the install command from the README themselves (`curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh`). Don't work around the refusal. |
 | `checksum mismatch` or `signature check failed` | Stop. Tell the person the download didn't verify and should not be installed. Don't retry with checks disabled. |
 | `do not run as root` | Run the installer as the normal user, without sudo. |
 | `The hub did not start` | Show the last 30 lines of the log: macOS `~/Library/Application Support/OmniLLM/hub/hub.log`, Linux `~/.config/OmniLLM/hub/hub.log`. The service is named `dev.omnillm.hub` (launchd) or `omnillm-hub` (systemd user service: `systemctl --user status omnillm-hub`). |
 | `The data folder path is too long` | Set `OMNILLM_HOME=~/.omnillm` for the install command and run it again. |
 | The console says the login link expired | Run `~/.local/bin/omnillm open` again; each link works once, for 2 minutes. |
 | No browser on this machine (a server) | See the `headless` row in Step 3. The console listens only on this machine's `127.0.0.1`. |
+
+## Updates
+
+The hub updates itself: it checks for a new release a few minutes after it starts and every 6 hours, and installs it once nobody has used it for 10 minutes. `omnillm update` updates now; `omnillm update --auto off` turns automatic updates off. Don't set up cron jobs or other schedules for updates. A machine set up with `--device` has no background service and is updated with `omnillm update`.
 
 ## Uninstall
 

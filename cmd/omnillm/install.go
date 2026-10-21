@@ -52,23 +52,29 @@ type Status struct {
 	// opened here and the person types a key in the terminal instead.
 	Headless bool   `json:"headless"`
 	Next     string `json:"next"` // the one thing to do next, for a person
+	// Update: a newer release this hub has not installed yet.
+	Update string `json:"update,omitempty"`
 }
 
 func installCmd(args []string) {
-	noOpen, deviceOnly := false, false
+	noOpen, deviceOnly, hubOnly := false, false, false
 	for _, a := range args {
 		switch a {
 		case "--no-open":
 			noOpen = true
 		case "--device":
 			deviceOnly = true
+		case "--hub":
+			hubOnly = true
 		}
 	}
 	if os.Geteuid() == 0 {
 		// Root would leave root-owned files in the person's home folder.
 		die(say(t("不要用 root 或 sudo 运行：OmniLLM 只为当前用户安装。", "Don’t run this as root or with sudo: OmniLLM installs for the current user only.")))
 	}
-	if deviceOnly {
+	// Running the installer again on a machine set up as a device only
+	// (a server) updates that, rather than turning it into a hub.
+	if deviceOnly || (!hubOnly && role() == "device") {
 		installDevice()
 		return
 	}
@@ -79,6 +85,7 @@ func installCmd(args []string) {
 	if err != nil {
 		die(err)
 	}
+	prev := keepPrevious(home)
 	bin, err := installBinary(home)
 	if err != nil {
 		die(err)
@@ -104,8 +111,30 @@ func installCmd(args []string) {
 		die(err)
 	}
 	st, ok := waitRunning(15 * time.Second)
+	if !ok && prev != "" {
+		// An update that does not start: go back to the version that
+		// ran, and never install this one again on its own.
+		if err := os.Rename(bin+".prev", bin); err == nil {
+			if _, err := installService(home, bin, dir, env); err == nil {
+				if _, ok := waitRunning(15 * time.Second); ok {
+					u := readUpdate(dir)
+					u.Skip, u.Error = version, version
+					writeUpdate(dir, u)
+					die(sayf(t("新版本 %s 没有启动起来，已经退回到 %s，一切照旧。日志在 %s", "Version %s did not start, so OmniLLM went back to %s; everything works as before. The log is at %s"),
+						version, prev, filepath.Join(dir, "hub.log")))
+				}
+			}
+		}
+	}
 	if !ok {
 		die(say(t("OmniLLM 没有启动起来。日志在 ", "OmniLLM did not start. Its log is at ") + filepath.Join(dir, "hub.log")))
+	}
+	if u := readUpdate(dir); u.Error != "" || sameVersion(u.Skip, version) {
+		u.Error = ""
+		if sameVersion(u.Skip, version) {
+			u.Skip = "" // installed on purpose: it runs
+		}
+		writeUpdate(dir, u)
 	}
 	if st.Providers == 0 {
 		// A local model needs no key and sends nothing off the machine.
@@ -115,7 +144,12 @@ func installCmd(args []string) {
 	st = waitRelay(st, 10*time.Second)
 	st.Service = service
 	st.Headless = headless()
-	fmt.Println(t("OmniLLM 已安装，在后台运行（登录时自动启动）。", "OmniLLM is installed and runs in the background; it starts at login."))
+	switch {
+	case prev != "":
+		fmt.Printf(t("OmniLLM 已从 %s 更新到 %s，在后台运行，设置都在。\n", "OmniLLM is updated from %s to %s and runs in the background; your settings are kept.\n"), prev, version)
+	default:
+		fmt.Println(t("OmniLLM 已安装，在后台运行（登录时自动启动），以后会自己更新。", "OmniLLM is installed and runs in the background; it starts at login and updates itself."))
+	}
 	if !noOpen && !st.Headless {
 		if url, err := loginURL(); err == nil && openLogin(url) == nil {
 			fmt.Println(t("控制台已在浏览器里打开。", "The console is open in your browser."))
@@ -191,6 +225,33 @@ func thisMachine() string {
 		return t("这台 Mac", "this Mac")
 	}
 	return t("这台电脑", "this computer")
+}
+
+// keepPrevious keeps the installed program as omnillm.prev before a
+// different version replaces it, so an update that does not start can go
+// back. It returns that version, "" when there is nothing to go back to.
+func keepPrevious(home string) string {
+	dst := filepath.Join(home, ".local", "bin", "omnillm")
+	self, err := os.Executable()
+	if err != nil {
+		return ""
+	}
+	if self, _ = filepath.EvalSymlinks(self); self == dst || !exists(dst) {
+		return ""
+	}
+	out, err := exec.Command(dst, "version").Output()
+	if err != nil {
+		return ""
+	}
+	v := strings.TrimPrefix(strings.TrimSpace(string(out)), "omnillm ")
+	if v == version {
+		return ""
+	}
+	in, err := os.ReadFile(dst)
+	if err != nil || os.WriteFile(dst+".prev.new", in, 0o755) != nil || os.Rename(dst+".prev.new", dst+".prev") != nil {
+		return ""
+	}
+	return v
 }
 
 // installBinary copies this executable to ~/.local/bin/omnillm (0755), so
@@ -599,6 +660,9 @@ func statusCmd(args []string) {
 	st = waitRelay(st, 5*time.Second)
 	st.Headless = headless()
 	st.Next = nextStep(st)
+	if ok {
+		st.Update = readUpdate(dataDir("hub")).newer(version)
+	}
 	for _, a := range args {
 		if a == "--json" {
 			b, _ := json.Marshal(st)
@@ -612,6 +676,9 @@ func statusCmd(args []string) {
 	}
 	fmt.Println(runningLine(st))
 	fmt.Println(runnable(st.Next))
+	if l := statusUpdateLine(readUpdate(dataDir("hub"))); l != "" {
+		fmt.Println(l)
+	}
 }
 
 func uninstallCmd(args []string) {

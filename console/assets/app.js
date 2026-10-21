@@ -557,7 +557,7 @@ async function startPair(area, onDone, closable) {
   right.append(state);
   const more = el("details", undefined, "pair-more");
   more.append(el("summary", t("pairComputer")));
-  const install = "curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh -o omnillm-install.sh && sh omnillm-install.sh --device";
+  const install = "curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh -s -- --device";
   more.append(rich(el("p"), t("pairComputerNew")), codeBox(install),
     rich(el("p"), t("pairComputerHow")), codeBox(p.code));
   right.append(more);
