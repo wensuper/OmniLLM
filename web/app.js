@@ -19,7 +19,8 @@ const T = {
     welcomeTitle1: "你 Mac 上的 AI，", welcomeTitle2: "现在也在这台设备上",
     step1: "点 Mac 菜单栏里的 OmniLLM 图标", step2: "选“添加设备…”", step3: "扫 Mac 屏幕上的二维码",
     e2eChip: "端到端加密", noHub: "还没有 OmniLLM？先在电脑上装好",
-    getHubTitle: "先在你的 Mac 上装好 OmniLLM", getHubBody: "在 Mac 的“终端”里粘贴下面这一行，按回车，大约一分钟装好，然后回到这里扫码。",
+    getHubTitle: "先在你的 Mac 上装好 OmniLLM", getHubBody: "在 Mac 上按 ⌘+空格，输入“终端”后回车，粘贴下面这一行再按回车。大约一分钟装好，然后回到这里扫码。", getHubLongPress: "请长按上面这一行复制。",
+    step3Paste: "在 Mac 的“添加设备”里展开“电脑或服务器（没有摄像头）”，复制配对文字粘贴到下面",
     getHubShare: "把这一步发到电脑", getHubCopy: "复制命令", getHubGuide: "查看完整的安装说明", getHubCopied: "已复制。在 Mac 的“终端”里粘贴运行。",
     getHubSend: "在 Mac 上安装 OmniLLM：在“终端”里运行这一行",
     scan: "扫描二维码", pasteInstead: "扫不了码？粘贴配对文字", pastePh: "粘贴配对文字（以 omnillm3- 开头）", add: "添加", cancel: "取消", back: "返回",
@@ -59,7 +60,8 @@ const T = {
     welcomeTitle1: "The AI on your Mac, ", welcomeTitle2: "now on this device",
     step1: "Click the OmniLLM icon in your Mac’s menu bar", step2: "Choose “Add device…”", step3: "Scan the QR code on your Mac’s screen",
     e2eChip: "End-to-end encrypted", noHub: "No OmniLLM yet? Set it up on your computer first",
-    getHubTitle: "First, set up OmniLLM on your Mac", getHubBody: "Paste this line into Terminal on your Mac and press Return. It takes about a minute; then come back here and scan.",
+    getHubTitle: "First, set up OmniLLM on your Mac", getHubBody: "On your Mac, press ⌘-Space, type “Terminal” and press Return, then paste this line and press Return. It takes about a minute; then come back here and scan.", getHubLongPress: "Touch and hold the line above to copy it.",
+    step3Paste: "In “Add device” on your Mac, open “Computer or server (no camera)” and copy the pairing text into the box below",
     getHubShare: "Send this to my computer", getHubCopy: "Copy command", getHubGuide: "Full setup guide", getHubCopied: "Copied. Paste it into Terminal on your Mac.",
     getHubSend: "Install OmniLLM on your Mac: run this line in Terminal",
     scan: "Scan QR code", pasteInstead: "Can’t scan? Paste the pairing text", pastePh: "Paste the pairing text (starts with omnillm3-)", add: "Add", cancel: "Cancel", back: "Back",
@@ -347,7 +349,10 @@ $("paste").addEventListener("toggle", () => {
 });
 // A computer (mouse, no camera pointed at a screen) pastes the pairing
 // text; scanning stays for phones and tablets.
-if (matchMedia("(pointer: fine)").matches && !matchMedia("(any-pointer: coarse)").matches) $("paste").open = true;
+if (matchMedia("(pointer: fine)").matches && !matchMedia("(any-pointer: coarse)").matches) {
+  $("paste").open = true;
+  quoted(document.querySelector('[data-t="step3"]'), t("step3Paste"));
+}
 // No hub yet: how to set one up, without leaving the page. The phone
 // can't run the command, so the first choice sends it to the computer.
 const INSTALL_CMD = "curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh";
@@ -356,13 +361,19 @@ $("no-hub").addEventListener("click", () => {
   const open = $("get-hub").hidden;
   $("get-hub").hidden = !open;
   $("no-hub").setAttribute("aria-expanded", String(open));
+  // Instant: a smooth scroll is skipped by some browsers, and then the tap looks dead.
+  if (open) $("get-hub").scrollIntoView({ block: "nearest" });
 });
+// Where the phone can share, sending it to the computer is the way.
 $("get-share").hidden = !navigator.share;
+if (navigator.share) $("get-share").className = "primary";
 $("get-share").addEventListener("click", () => {
   navigator.share({ title: "OmniLLM", text: t("getHubSend") + "\n" + INSTALL_CMD, url: GUIDE_URL }).catch(() => {});
 });
 $("get-copy").addEventListener("click", () => {
-  navigator.clipboard.writeText(INSTALL_CMD).then(() => toastText(t("getHubCopied")), () => {});
+  const fail = () => { getSelection().selectAllChildren(document.querySelector(".wl-cmd")); toastText(t("getHubLongPress")); };
+  if (!navigator.clipboard) return fail();
+  navigator.clipboard.writeText(INSTALL_CMD).then(() => toastText(t("getHubCopied")), fail);
 });
 // welcomeNote: a calm notice at the top of the welcome screen (removed,
 // or remove it on the Mac too); the paste box folded so it reads first.
@@ -375,6 +386,10 @@ function welcomeNote(key) {
 }
 
 // ---------- pairing ----------
+// Add waits for something to add.
+const pasteReady = () => { $("paste-go").disabled = !$("paste-text").value.trim(); };
+$("paste-text").addEventListener("input", pasteReady);
+pasteReady();
 $("paste-go").addEventListener("click", () => {
   const v = $("paste-text").value.trim();
   if (!v) return;

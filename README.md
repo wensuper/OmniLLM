@@ -39,6 +39,8 @@ omnillm update
 
 Mac 上也可以点菜单栏的 OmniLLM 图标 →「检查更新…」。不想自动更新，运行 `omnillm update --auto off`。
 
+> 装的是 0.2.0-alpha.21 或更早的版本？那时还不会自己更新：再运行一次上面的安装命令（设置都保留），之后就不用管了。
+
 ## 常用命令
 
 刚装完的那个终端窗口还不认识 `omnillm`：新开一个终端窗口，或者在命令前加上 `~/.local/bin/`。
@@ -72,7 +74,7 @@ OmniLLM makes one computer (the **hub**) the only place that holds your LLM acco
 2. Connect a model: a logged-in Claude Code or Codex connects by itself; otherwise paste an API key in the console that opens, or install Ollama.
 3. Add your phone: *Devices → Add device* in the console (or the OmniLLM menu bar icon → *Add device…*), scan the QR code with the phone’s camera, check that the 6 digits match, then choose *Matches, add* on the computer.
 
-Updates install by themselves while nobody is using the hub. Run `omnillm update` to update now, or `omnillm update --auto off` to turn automatic updates off.
+Updates install by themselves while nobody is using the hub. Run `omnillm update` to update now, or `omnillm update --auto off` to turn automatic updates off. On 0.2.0-alpha.21 or earlier, run the install command once more (settings are kept); after that it updates itself.
 
 Contributions are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md). Report vulnerabilities privately per [SECURITY.md](SECURITY.md).
 

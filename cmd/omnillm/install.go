@@ -836,7 +836,7 @@ func installDevice() {
 	}
 	tty, err := os.Open("/dev/tty")
 	if err != nil {
-		fmt.Println(runnable(t("下一步：在你的 Mac 上点“添加设备”，然后在这里运行 omnillm connect pair，粘贴配对文字。", "Next: choose “Add device” on your Mac, then run omnillm connect pair here and paste the pairing text.")))
+		fmt.Println(runnable(t("下一步：在主机的控制台里点“添加设备”，展开“电脑或服务器（没有摄像头）”复制配对文字，然后在这里运行 omnillm connect pair 粘贴。", "Next: in your hub’s console choose “Add device”, open “Computer or server (no camera)” and copy the pairing text, then run omnillm connect pair here and paste it.")))
 		return
 	}
 	tty.Close()

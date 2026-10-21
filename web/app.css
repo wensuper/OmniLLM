@@ -304,10 +304,13 @@ body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-i
   background: color-mix(in srgb, var(--surface) 85%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); text-align: left; }
 .wl-get p { margin: 0; }
 .wl-get-title { font-weight: 600; }
-.wl-cmd { display: block; font: 12.5px/1.5 var(--mono); padding: 10px 12px; border-radius: var(--r-s); background: var(--surface-2); border: 1px solid var(--line); color: var(--ink); overflow-wrap: anywhere; user-select: all; -webkit-user-select: all; }
+.wl-cmd { display: block; font: 12.5px/1.5 var(--mono); padding: 10px 12px; border-radius: var(--r-s); background: var(--surface-2); border: 1px solid var(--line); color: var(--ink); white-space: nowrap; overflow-x: auto; user-select: all; -webkit-user-select: all; }
 .wl-get-actions { display: flex; gap: 8px; }
-.wl-get-actions .secondary { flex: 1; min-height: 44px; padding: 8px 12px; font-size: 15px; }
-.wl-guide { color: var(--accent-text); font-size: 14px; text-decoration: none; }
+.wl-get-actions .secondary, .wl-get-actions .primary { flex: 1; min-height: 44px; padding: 8px 12px; font-size: 15px; max-width: none; }
+.wl-guide { color: var(--accent-text); font-size: 14px; text-decoration: none; min-height: 44px; display: flex; align-items: center; }
+.welcome .paste summary { padding: 10px 0; }
+.wl-link::after { content: ""; display: inline-block; width: 7px; height: 7px; margin-left: 8px; border: solid currentColor; border-width: 0 1.5px 1.5px 0; transform: translateY(-3px) rotate(45deg); transition: transform .15s; }
+.wl-link[aria-expanded="true"]::after { transform: translateY(1px) rotate(-135deg); }
 
 /* The picture: Mac in the middle, devices on a slow orbit, data moving
    along the lines. Decorative; motion stops for reduced motion. */
@@ -343,3 +346,4 @@ body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-i
   .wl-orbit { width: 440px; }
   .welcome .paste summary, .wl-link { text-align: left; align-self: flex-start; }
 }
+.primary:disabled, .secondary:disabled { opacity: .45; cursor: default; box-shadow: none; }

@@ -226,7 +226,7 @@ func updateCmd(args []string) {
 	r := role()
 	if r == "" {
 		die(say(t("这台电脑上还没有安装 OmniLLM。安装方法见 https://github.com/wensuper/OmniLLM#quick-start",
-			"OmniLLM isn’t set up on this computer yet. See https://github.com/wensuper/OmniLLM#quick-start")))
+			"OmniLLM isn’t installed on this computer yet. See https://github.com/wensuper/OmniLLM#quick-start")))
 	}
 	dir := dataDir(r)
 	if err := os.MkdirAll(dir, 0o700); err != nil {
