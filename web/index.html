@@ -66,7 +66,8 @@
   <section id="chat" class="screen chat" hidden>
     <header class="bar">
       <button id="menu" class="icon" aria-label="Menu"><span></span></button>
-      <select id="model" aria-label="Model"></select>
+      <!-- The dot: green while the Mac answers, grey while it can't be reached. -->
+      <div class="model-wrap"><span id="live-dot" class="live-dot" role="img"></span><select id="model" aria-label="Model"></select></div>
       <button id="new" class="icon plus" aria-label="New chat"></button>
     </header>
     <div id="banner" class="banner" role="status" hidden></div>

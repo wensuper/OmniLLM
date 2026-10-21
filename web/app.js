@@ -30,7 +30,7 @@ const T = {
     noModels: "主机上还没有可用的模型。", forget: "断开这台设备", forgetQ: "断开后，这台设备不能再用你 Mac 上的模型；对话记录也会从这台设备上删掉。Mac 的设备列表里它还在，记得在那里也移除。确定吗？", close: "关闭", deleteChat: "删除这个对话", deleteChatQ: "删除对话“{0}”？",
     addHome: "添加到主屏幕", addHomeTip: "点浏览器的“分享”按钮，选“添加到主屏幕”。从主屏幕打开时需要再扫一次码。",
     deviceLine: "这台设备：{0}", sub: "订阅", empty: "有什么可以帮你？", cut: "（回复被截断）", stopped: "（已停止）",
-    today: "今天", copy: "复制", copied: "已复制",
+    today: "今天", copy: "复制", copied: "已复制", thinking: "正在思考", waited: "{0} 秒", switchedTo: "换成了 {0}", liveOn: "在线：你的 Mac 连得上，模型可以用", liveOff: "离线：现在连不上你的 Mac", liveWait: "正在连接你的 Mac……",
     volatile: "这个浏览器不能安全地保存配对，所以只在这个页面打开时有效；关掉后要在主机上重新添加。换用 Safari 或 Chrome 可以一直保存。",
     removedHere: "这台设备已在主机上被移除，对话记录也已从这台设备上清除。需要的话，在主机上重新添加。",
   },
@@ -54,7 +54,7 @@ const T = {
     noModels: "The hub has no models yet.", forget: "Disconnect this device", forgetQ: "This device will no longer use your Mac's models, and its chats are deleted from it. It still shows in the Mac's device list; remove it there too. Continue?", close: "Close", deleteChat: "Delete this chat", deleteChatQ: "Delete the chat \"{0}\"?",
     addHome: "Add to Home Screen", addHomeTip: "Tap the browser's Share button and choose Add to Home Screen. Opened from the Home Screen, it asks for the code once more.",
     deviceLine: "This device: {0}", sub: "subscription", empty: "How can I help?", cut: "(reply cut off)", stopped: "(stopped)",
-    today: "Today", copy: "Copy", copied: "Copied",
+    today: "Today", copy: "Copy", copied: "Copied", thinking: "Thinking", waited: "{0}s", switchedTo: "Switched to {0}", liveOn: "Online: your Mac answers; models are ready", liveOff: "Offline: your Mac can't be reached now", liveWait: "Connecting to your Mac…",
     volatile: "This browser can't keep the pairing safely, so it only lasts while this page is open; after closing it, add the device on the hub again. Safari or Chrome keep it.",
     removedHere: "This device was removed on the hub, and its conversations were cleared from it. Add it again on the hub if you need it.",
   },
@@ -210,6 +210,23 @@ function deviceName() {
   throw new Error("mixed build");
 })();
 
+// New versions: the service worker caches the new files and takes over;
+// an open page (phones keep tabs for weeks) then reloads itself as soon as
+// no reply is on its way, keeping what was typed.
+const UP = { ready: false };
+function watchUpdates() {
+  if (!navigator.serviceWorker) return;
+  navigator.serviceWorker.addEventListener("controllerchange", () => { UP.ready = true; reloadIfIdle(); });
+  const check = () => navigator.serviceWorker.getRegistration().then((r) => r && r.update()).catch(() => {});
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) check(); });
+  setInterval(check, 30 * 60 * 1000);
+}
+function reloadIfIdle() {
+  if (!UP.ready || S.busy || (S.pending && S.pending.length)) return;
+  try { sessionStorage.setItem("omnillm.draft", $("input").value); } catch {}
+  location.reload();
+}
+
 $("boot-retry").addEventListener("click", cleanReload);
 
 (async function main() {
@@ -222,6 +239,7 @@ $("boot-retry").addEventListener("click", cleanReload);
     history.replaceState(null, "", location.pathname + location.search);
   }
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+  watchUpdates();
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
   bootWatch();
   try { await startWasm(); } catch (e) { bootFailed(t("bootError") + String(e && e.message || e)); return; }
@@ -237,6 +255,7 @@ $("boot-retry").addEventListener("click", cleanReload);
   try {
     S.device = await unseal("device");
     S.chats = (await unseal("chats")) || [];
+    for (const c of S.chats) for (const m of c.messages) delete m.live; // a reply cut by a reload is no longer on its way
   } catch (e) { bootFailed(t("bootError") + String(e && e.message || e)); return; }
   B.done = true; clearTimeout(B.timer);
   if (S.device && !link) return openChat();
@@ -389,6 +408,7 @@ async function openChat() {
   $("device-line").textContent = t("deviceLine", S.device.name);
   $("install-tip").hidden = isStandalone;
   if (!S.cur) S.cur = S.chats[0] || newChat();
+  try { const d = sessionStorage.getItem("omnillm.draft"); if (d) { $("input").value = d; sessionStorage.removeItem("omnillm.draft"); grow(); } } catch {}
   renderList(); renderLog(); sendState();
   await connect();
 }
@@ -400,6 +420,7 @@ function connect() {
     if (!navigator.onLine) { setOnline(false, t("noNetwork")); return; }
     const sel = $("model");
     if (!S.models.length) { sel.textContent = ""; const o = el("option", t("loadingModels")); o.value = ""; sel.append(o); }
+    liveDot("wait");
     try {
       // Open once per pairing: reopening closes the old device, and with it
       // a reply still on its way (the network coming back fires "online"
@@ -447,8 +468,16 @@ $("model").addEventListener("change", () => { localStorageSet("model", $("model"
 function localStorageGet(k) { try { return localStorage.getItem("omnillm." + k); } catch { return null; } }
 function localStorageSet(k, v) { try { localStorage.setItem("omnillm." + k, v); } catch {} }
 
+// liveDot: green when the Mac answered (models listed), grey when it
+// can't be reached, pulsing grey while connecting.
+function liveDot(state) {
+  const d = $("live-dot"); d.className = "live-dot " + state;
+  const label = t(state === "on" ? "liveOn" : state === "off" ? "liveOff" : "liveWait");
+  d.title = label; d.setAttribute("aria-label", label);
+}
 function setOnline(ok, why) {
   S.online = ok;
+  liveDot(ok && S.models.length ? "on" : "off");
   const b = $("banner");
   b.hidden = ok; b.textContent = "";
   if (!ok) {
@@ -471,28 +500,60 @@ $("new").addEventListener("click", () => { if (S.busy) return; S.cur = newChat()
 function renderLog() {
   const log = $("log"); log.textContent = "";
   if (!S.cur.messages.length) log.append(el("p", t("empty"), "empty"));
-  for (const m of S.cur.messages) log.append(bubble(m));
+  // A line where the chat changes model, so who answered what stays clear.
+  let lastBy = "";
+  for (const m of S.cur.messages) {
+    if (m.role === "assistant" && m.by) {
+      if (lastBy && m.by !== lastBy) {
+        const line = el("div", undefined, "switch-line"); line.append(el("span", t("switchedTo", m.by))); log.lastElementChild.before(line);
+      }
+      lastBy = m.by;
+    }
+    log.append(bubble(m));
+  }
   log.scrollTop = log.scrollHeight;
 }
 
 // bubble renders a message; fenced code becomes <pre>, the rest stays text.
+// A reply says first which model is writing it; until its first words
+// arrive it shows that model thinking (an orbiting core, as in the logo).
 function bubble(m) {
   const b = el("div", undefined, "msg " + m.role);
+  if (m.role === "assistant" && m.by) {
+    const who = el("div", undefined, "who");
+    who.append(el("span", "", "who-dot"), el("span", m.by, "by"));
+    b.append(who);
+  }
   if (m.images && m.images.length) {
     const pics = el("div", undefined, "pics");
     for (const im of m.images) { const i = el("img"); i.alt = t("imageTitle"); i.src = "data:" + im.mime + ";base64," + im.data; pics.append(i); }
     b.append(pics);
   }
-  fill(b, m.content);
+  const body = el("div", undefined, "body");
+  b.append(body);
+  if (m.live && !m.content) body.append(thinking());
+  else fill(body, m.content);
+  if (m.live && m.content) { const last = body.lastElementChild; (last && last.tagName === "P" ? last : body).append(el("span", "", "caret")); }
   if (m.note) b.append(el("p", m.note, "note"));
-  // Which model wrote this reply, so a chat that switched models stays clear.
-  if (m.role === "assistant" && m.by) b.append(el("span", m.by, "by"));
-  if (m.role === "assistant" && m.content) {
+  if (m.role === "assistant" && m.content && !m.live) {
     const cp = el("button", t("copy"), "copy"); cp.type = "button";
     cp.addEventListener("click", () => { navigator.clipboard.writeText(m.content).then(() => { cp.textContent = t("copied"); setTimeout(() => { cp.textContent = t("copy"); }, 1200); }); });
     b.append(cp);
   }
   return b;
+}
+function thinking() {
+  const w = el("div", undefined, "thinking");
+  const orb = el("span", "", "orb"); orb.setAttribute("aria-hidden", "true");
+  const dots = el("span", undefined, "dots"); dots.setAttribute("aria-hidden", "true");
+  dots.append(el("i"), el("i"), el("i"));
+  const secs = el("span", "", "waited");
+  w.append(orb, el("span", t("thinking"), "think-text"), dots, secs);
+  w.setAttribute("role", "status");
+  const t0 = S.sentAt || Date.now();
+  const tick = () => { if (!w.isConnected) return; const s = Math.floor((Date.now() - t0) / 1000); if (s >= 5) secs.textContent = t("waited", s); setTimeout(tick, 1000); };
+  setTimeout(tick, 1000);
+  return w;
 }
 function fill(b, text) {
   const parts = text.split(/```/);
@@ -589,10 +650,11 @@ $("composer").addEventListener("submit", async (e) => {
   chat.model = model;
   if (!chat.title) chat.title = text.slice(0, 40) || t("imageTitle");
   chat.messages.push(images.length ? { role: "user", content: text, images } : { role: "user", content: text });
-  const reply = { role: "assistant", content: "", by: modelName(model) };
+  const reply = { role: "assistant", content: "", by: modelName(model), live: true };
+  S.sentAt = Date.now();
   chat.messages.push(reply);
   renderLog(); renderList();
-  const log = $("log"), node = log.lastElementChild;
+  const log = $("log"); let node = log.lastElementChild;
   const id = crypto.randomUUID(); S.busy = id; busyUI(true);
   // Images go with the latest two turns that have them; older ones are
   // named in the text, so a long chat with pictures keeps working.
@@ -603,7 +665,7 @@ $("composer").addEventListener("submit", async (e) => {
     return { role: m.role, content: (m.content ? m.content + "\n" : "") + "[" + m.images.length + " earlier image(s)]" };
   });
   let raf = 0;
-  const flush = () => { raf = 0; node.textContent = ""; fill(node, reply.content); log.scrollTop = log.scrollHeight; };
+  const flush = () => { raf = 0; const nb = bubble(reply); node.replaceWith(nb); node = nb; log.scrollTop = log.scrollHeight; };
   try {
     const r = await omnillm.chat(id, model, JSON.stringify(msgs), (d) => { reply.content += d; if (!raf) raf = requestAnimationFrame(flush); });
     if (r.finish === "length") reply.note = t("cut");
@@ -617,7 +679,9 @@ $("composer").addEventListener("submit", async (e) => {
     }
     if (!reply.content) { chat.messages.pop(); if (err && err.code !== "cancelled") { chat.messages.pop(); input.value = text; grow(); S.pending = images; renderPending(); } }
   } finally {
+    delete reply.live;
     S.busy = null; busyUI(false);
+    setTimeout(reloadIfIdle, 1500); // a new version waited for this reply
     // Removed meanwhile (unpaired): nothing left to show or save.
     if (!S.device) return;
     renderLog();
