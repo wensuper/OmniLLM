@@ -31,6 +31,7 @@ import (
 	"github.com/wensuper/OmniLLM/internal/e2e"
 	"github.com/wensuper/OmniLLM/internal/provider"
 	"github.com/wensuper/OmniLLM/internal/relaylink"
+	"github.com/wensuper/OmniLLM/store"
 )
 
 const (
@@ -708,6 +709,13 @@ func uninstallCmd(args []string) {
 		_ = exec.Command("systemctl", "--user", "daemon-reload").Run()
 	}
 	fmt.Println(t("后台服务已停止并移除。", "The background service is stopped and removed."))
+	// Conversations kept for subscription chats go every time: they are
+	// the only conversation text the hub leaves on disk (design §13.4).
+	if st, err := store.OpenFile(filepath.Join(dataDir("hub"), "state.json")); err == nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		hub.ForgetChats(ctx, st)
+		cancel()
+	}
 	if purge {
 		sec := secrets(dataDir("hub"), "omnillm-hub")
 		ctx, stop := signalCtx()
@@ -733,7 +741,7 @@ func uninstallCmd(args []string) {
 // purgeDirs is what --purge deletes: only the folders OmniLLM creates,
 // never their parent (OMNILLM_HOME may point anywhere, even at $HOME).
 func purgeDirs() []string {
-	return []string{dataDir("hub"), dataDir("device"), dataDir("relay-certs"), dataDir("codex-home")}
+	return []string{dataDir("hub"), dataDir("device"), dataDir("relay-certs"), dataDir("codex-home"), dataDir("claude-chats")}
 }
 
 // installDevice sets this machine up as a device only (a server that uses
