@@ -119,12 +119,6 @@ details.key-choice > summary { color: var(--ink); font-size: 16px; font-weight: 
 #recheck { margin-top: 12px; }
 code { font-family: var(--mono); font-size: .92em; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-xs); padding: 0 4px; }
 
-.pair { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 24px; align-items: start; margin-top: 12px; }
-.pair img { width: 100%; max-width: 300px; background: #fff; border-radius: var(--r-l); border: 1px solid var(--line); image-rendering: pixelated; padding: 10px; box-sizing: border-box; }
-.pair-qr p { margin: 8px 0 0; }
-.pair-more { margin-top: 8px; }
-.pair-more summary { cursor: pointer; color: var(--accent-text); font-weight: 500; padding: 4px 0; }
-.pair-more .codebox { margin: 6px 0 12px; }
 /* A command or pairing text with its Copy button in the corner. */
 .codebox { position: relative; }
 div.codebox > .code, div.codebox > .cmd { padding-right: 72px; margin: 0; }
@@ -143,9 +137,6 @@ div.codebox > .code, div.codebox > .cmd { padding-right: 72px; margin: 0; }
 :root { --warn-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 1.8 14.8 13.9H1.2Z' fill='none' stroke='%23000' stroke-width='1.5' stroke-linejoin='round'/%3E%3Cpath d='M8 6.2v3.6' stroke='%23000' stroke-width='1.5' stroke-linecap='round'/%3E%3Ccircle cx='8' cy='11.8' r='.95'/%3E%3C/svg%3E"); }
 .confirm { padding: 16px 16px 16px 44px; max-width: 520px; }
 .confirm .sas { display: block; width: max-content; max-width: 100%; }
-/* Confirming: the question is the panel; its chip is the only frame, the
-   panel's x in the chip's top-right corner. */
-.pair-panel.confirming { border: 0; padding: 0; background: none; }
 .confirm.has-x { padding-right: 48px; }
 .confirm .close-x { top: 8px; right: 8px; }
 .confirm::before { top: 19px; }
@@ -205,8 +196,6 @@ td.mdl .some-models { color: var(--accent-text); font-weight: 600; }
 
 @media (max-width: 600px) {
   .panel { padding: 18px; }
-  .pair { grid-template-columns: minmax(0, 1fr); }
-  .pair img { max-width: 280px; }
   .cards { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .cards .card:first-child { grid-column: 1 / -1; }
   table.narrow-hide2 th:nth-child(2), table.narrow-hide2 td:nth-child(2) { display: none; }
@@ -238,8 +227,6 @@ input.switch { min-height: 0; padding: 0; }
 .switch:checked:disabled, .switch:checked:disabled:hover { opacity: 1; background: color-mix(in srgb, var(--accent) 55%, var(--surface)); border-color: transparent; }
 .toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); white-space: nowrap; cursor: pointer; }
 /* The add-device panel closes with the x in its corner. */
-.pair-panel { position: relative; border: 1px solid var(--line); border-radius: var(--r-l); padding: 16px 56px 16px 16px; margin-top: 12px; background: var(--surface); }
-.pair-panel .pair, .pair-panel .confirm { margin-top: 0; }
 .close-x { position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; min-height: 0; padding: 0; border: 0; border-radius: var(--r-s); background: transparent; color: var(--muted); cursor: pointer; z-index: 1; }
 .close-x::before, .close-x::after { content: ""; position: absolute; left: 9px; top: 15px; width: 14px; height: 1.6px; background: currentColor; border-radius: 1px; transform: rotate(45deg); }
 .close-x::after { transform: rotate(-45deg); }
@@ -270,7 +257,6 @@ td.muted { color: var(--muted); }
 td:first-child { overflow-wrap: normal; word-break: keep-all; }
 @media (max-width: 600px) {
   .narrow-hide { display: none; }
-  .pair-panel { padding: 44px 16px 16px; }
   tr.editing td { display: block; border-bottom: 0; padding: 6px 8px; }
   tr.editing { display: block; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
   tr.editing td.actions { text-align: left; }
@@ -495,10 +481,7 @@ div.codebox:has(> .one-line) .copy { position: static; flex: none; margin-top: 6
 .parts { column-gap: 14px; } /* a clear gap between parts instead of a "·" that would dangle when a line wraps */
 .parts .dot-on { margin-right: 6px; }
 /* Inline commands in sentences stay whole. */
-p code, li code, .pair-how code { white-space: nowrap; }
-/* A device asking to join is a normal request: neutral card, violet edge, no warning icon. */
-.confirm.pair-q { background: var(--surface); border-color: var(--accent); padding-left: 16px; }
-.confirm.pair-q::before { display: none; }
+p code, li code { white-space: nowrap; }
 /* The final remove is solid red. */
 .dialog-foot button.danger.yes, .confirm-remove button.danger:last-child { background: var(--danger); border-color: var(--danger); color: var(--surface); }
 /* The just-added row is visibly tinted in light mode too. */
@@ -565,3 +548,87 @@ p code, li code, .pair-how code { white-space: nowrap; }
 .co-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--r-s); }
 .co-name { font-weight: 600; overflow-wrap: anywhere; }
 .co-only { flex-basis: 100%; color: var(--danger, var(--warn)); font-size: 13px; }
+
+/* Add device (design §3.2): phone | computer switch; the code, link or
+   6 digits on the left, changing in place; three steps, a live status line
+   and the yes or no on the right. */
+.pair-panel { position: relative; border: 1px solid var(--line); border-radius: var(--r-l); padding: 18px 20px 20px; margin-top: 12px; background: var(--surface); }
+.pair-title { margin: 0 40px 14px 0; font-size: 16px; font-weight: 650; }
+.pair-seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--line); max-width: 100%; }
+.pair-seg button { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 6px 14px; border: 0; border-radius: 7px; background: transparent; color: var(--muted); font-weight: 500; cursor: pointer; }
+.pair-seg button:hover { color: var(--ink); }
+.pair-seg button[aria-selected="true"] { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.18), 0 0 0 1px var(--line); }
+.pair-seg svg { width: 16px; height: 16px; flex: none; }
+.pair { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 28px; align-items: start; margin-top: 18px; }
+.pair-hero { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.pair-card { position: relative; width: 240px; height: 240px; box-sizing: border-box; border-radius: 16px; }
+.pair-qr { background: #fff; display: grid; place-items: center; }
+.pair-qr img { width: 200px; height: 200px; image-rendering: pixelated; }
+.pair-qr .cor { position: absolute; width: 24px; height: 24px; border: 3px solid var(--accent); }
+.pair-qr .tl { top: -6px; left: -6px; border-right: 0; border-bottom: 0; border-radius: 12px 0 0 0; }
+.pair-qr .tr { top: -6px; right: -6px; border-left: 0; border-bottom: 0; border-radius: 0 12px 0 0; }
+.pair-qr .bl { bottom: -6px; left: -6px; border-right: 0; border-top: 0; border-radius: 0 0 0 12px; }
+.pair-qr .br { bottom: -6px; right: -6px; border-left: 0; border-top: 0; border-radius: 0 0 12px 0; }
+.pair-link, .pair-digits { border: 1px solid var(--line); background: var(--surface-2); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 20px; text-align: center; }
+.pair-ic { width: 52px; height: 52px; padding: 12px; box-sizing: border-box; border-radius: 14px; background: var(--accent-soft); color: var(--accent-text); }
+.pair-url { font: 12.5px var(--mono); color: var(--ink-2); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pair-link button.primary { width: 100%; margin-top: 0; }
+.pair-digits { gap: 8px; }
+.pair-digits .sas { margin: 0; padding: 0; border: 0; background: none; font-size: 40px; letter-spacing: .06em; }
+.pair-dev { color: var(--ink-2); font-size: 13px; max-width: 100%; overflow-wrap: anywhere; }
+.pair-card.ended > :not(.pair-veil) { filter: blur(3px) grayscale(1); opacity: .45; }
+.pair-veil { position: absolute; inset: 0; border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 16px; text-align: center; background: color-mix(in srgb, var(--surface) 72%, transparent); color: var(--ink); }
+.pair-veil button.primary { margin-top: 0; }
+.pair-timer { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.pair-timer b { color: var(--ink-2); font-variant-numeric: tabular-nums; font-weight: 600; }
+.ring { width: 18px; height: 18px; flex: none; }
+.ring circle:first-child { stroke: var(--line-2); }
+.ring circle:last-child { stroke: var(--accent); }
+.pair-hero > button.link { font-size: 13px; }
+.pair-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.pair-steps li { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 12px; padding: 12px 14px; border-radius: var(--r-l); border: 1px solid transparent; color: var(--muted); }
+.pair-steps .n { width: 28px; height: 28px; box-sizing: border-box; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; border: 1.5px solid var(--line-2); }
+.pair-steps .n svg { width: 14px; height: 14px; stroke-width: 3; }
+.pair-steps h3 { margin: 2px 0; font-size: 15px; font-weight: 600; color: var(--ink-2); }
+.pair-steps p { margin: 0; font-size: 13.5px; }
+.pair-steps li.now { background: var(--accent-soft); border-color: var(--agent-line); color: var(--ink-2); }
+.pair-steps li.now .n { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.pair-steps li.now h3 { color: var(--ink); }
+/* Done steps keep only their title, so the question fits on a phone screen. */
+.pair-steps li.ok p { display: none; }
+.pair-steps li.ok .n { background: var(--ok-soft); border-color: var(--ok); color: var(--ok-ink); }
+.pair-status { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding: 10px 14px; border-radius: var(--radius); background: var(--surface-2); font-size: 13.5px; color: var(--ink-2); }
+.pair-status.err { color: var(--bad, var(--danger)); }
+.pulse { width: 9px; height: 9px; flex: none; border-radius: 50%; background: var(--accent); }
+.pair-name { margin-top: 14px; }
+.pair-name input { width: 100%; max-width: 320px; }
+.pair-side .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.pair-side .actions button { margin-top: 0; min-height: 36px; }
+.pair-cli { margin-top: 14px; }
+.pair-cli > button.link { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; }
+.pair-cli > button.link:hover { color: var(--accent-text); }
+.pair-cli .chev { display: inline-block; transition: transform .2s; }
+.pair-cli.open .chev { transform: rotate(90deg); }
+.pair-cli ol { margin: 10px 0 0; padding: 12px 14px 12px 32px; border: 1px solid var(--line); border-radius: var(--r-l); display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; font-size: 13.5px; color: var(--ink-2); }
+.pair-cli > ol:first-child { margin-top: 0; }
+.pair-cli li b { display: block; font-weight: 600; color: var(--ink); }
+.pair-cli .hint { display: block; margin-top: 2px; font-size: 12.5px; color: var(--muted); }
+.copyrow { display: flex; align-items: center; gap: 8px; margin-top: 6px; padding: 5px 5px 5px 12px; border: 1px solid var(--line); border-radius: var(--r-s); background: var(--surface-2); font: 12.5px var(--mono); color: var(--ink); }
+.copyrow span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.copyrow .copy { flex: none; font-family: var(--font); }
+.offscreen { position: fixed; left: -9999px; top: 0; opacity: 0; }
+@media (prefers-reduced-motion: no-preference) {
+  .pulse { animation: pair-pulse 1.6s infinite; }
+  .pair-steps li { transition: background .2s, border-color .2s; }
+}
+@keyframes pair-pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 60%, transparent); } 70% { box-shadow: 0 0 0 9px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+@media (max-width: 600px) {
+  .pair-panel { padding: 16px; }
+  .pair { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .pair-seg { display: flex; }
+  .pair-seg button { flex: 1; justify-content: center; padding: 6px 8px; }
+  .pair-hero { scroll-margin-top: 72px; }
+  .pair-card.pair-digits { height: auto; padding: 24px 16px; }
+  /* Narrow: the shortened command wraps, so its end (--device) stays in sight. */
+  .copyrow span { white-space: normal; overflow-wrap: anywhere; }
+}

@@ -100,16 +100,24 @@ const T = {
     removed: "已移除", connected: "已接入，{0} 个模型可用", connectedOne: "已接入，1 个模型可用", saved: "已保存",
     local: "只在{here}上", remote: "云端", localChip: "{Here}", sub: "订阅",
     todayOf: "{0} / {1}", todayNoLimit: "{0} · 不设上限",
-    pairPhone: "手机或平板：用相机扫这个二维码，不用装任何东西。{0} 前有效，只能用一次。",
-    pairComputer: "电脑或服务器（没有摄像头）",
-    pairComputerNew: "那台电脑还没装 OmniLLM 的话，在它上面运行这一行，装完会提示粘贴配对文字（只用来聊天，不常驻后台）：",
-    pairComputerHow: "已经装好的，运行 `omnillm connect pair`，粘贴下面这段配对文字；或者在那台电脑的浏览器里打开 {url}，把配对文字粘贴进去。不要发给别人，也不要贴到聊天里。",
-    pairComputerHowNoWeb: "已经装好的，运行 `omnillm connect pair`，粘贴下面这段配对文字。不要发给别人，也不要贴到聊天里。",
-    pairWait: "等待设备连接……",
-    pairConfirmQ: "设备“{0}”请求加入。它屏幕上显示的数字是这个吗？",
-    pairYes: "一致，添加", pairNo: "不一致，拒绝", pairLeft: "手机那边取消了，或者连接断了。",
-    pairDone: "已添加“{0}”", pairFailed: "配对没有完成：{0}", pairRelayDrop: "远程连接断了，这次添加没完成。网络恢复后点“换一个二维码”。",
-    pairDenied: "已拒绝。", pairExpired: "这个二维码已过期。", pairNew: "换一个二维码", qrAlt: "添加设备的二维码",
+    pairTabPhone: "手机或平板", pairTabComputer: "电脑或服务器",
+    pairP1: "用手机相机扫这个码", pairP1d: "iPhone 用相机，安卓用相机或浏览器扫码，不用装 App。",
+    pairP2: "手机上点“添加”", pairP2d: "会打开 OmniLLM 网页，问你要不要添加到{here}。",
+    pairL1: "在那台电脑的浏览器里打开链接", pairL1d: "复制链接，自己带到那台电脑上打开。链接相当于钥匙，别发给别人。",
+    pairL2: "那台电脑上点“添加”", pairL2d: "会打开 OmniLLM 网页，问你要不要添加到{here}。",
+    pairK1: "在那台电脑的终端里运行下面的命令", pairK1d: "已经装了 OmniLLM 也运行这条，不用 sudo。",
+    pairK2: "它要配对文字时，粘贴下面这段", pairK2d: "配对文字相当于钥匙，别发给别人。",
+    pairS3: "核对 6 位数", pairS3d: "两边会出现同样的 6 位数，一样就在这里点“一致，添加”。",
+    pairWaitPhone: "等你用手机扫码……", pairWaitLink: "等那台电脑打开链接……", pairWaitCli: "等那台电脑连上……",
+    pairConfirmQ: "“{0}”请求加入。它屏幕上的数字和这里的一样吗？", pairHere: "{Here}上的数字",
+    pairExpiresIn: "{0} 后过期 · 只能用一次", copyLink: "复制链接", linkCopied: "已复制，去那台电脑打开", copyFailed: "复制不了，请用二维码或命令行",
+    pairCliHero: "在那台电脑的终端里连接", pairCliToggle: "那台电脑没有浏览器？用命令行",
+    pairCmd1: "在那台电脑的终端里运行", pairCmd1d: "已经装了也运行这条，不用 sudo",
+    pairCmd2: "它要配对文字时，粘贴这段，回车", pairCmd2d: "粘贴后终端里看不到字，是正常的",
+    pairYes: "一致，添加", pairNo: "不一致，不添加", pairLeft: "手机那边取消了，或者连接断了。",
+    pairDone: "已添加“{0}”", pairFailed: "配对没有完成：{0}", pairRelayDrop: "远程连接断了，这次没有添加。网络恢复后再换一个。",
+    pairDenied: "没有添加：你选了不一致。", pairExpired: "二维码过期了", pairExpiredLink: "链接过期了", pairExpiredText: "配对文字过期了", pairEnded: "这次没有添加",
+    pairExpiredSay: "过期了，换一个就行。", pairNew: "换一个二维码", pairNewLink: "换一个链接", pairNewText: "换一段配对文字", qrAlt: "添加设备的二维码",
     pairStartOffline: "远程连接现在没有连上，生成不了二维码。", retry: "重试",
     close: "关闭", edit: "编辑", save: "保存", cancel: "取消", noLimit: "不设上限",
     budgetLabel: "每天额度（美元）",
@@ -213,16 +221,24 @@ const T = {
     removed: "Removed", connected: "Connected: {0} models available", connectedOne: "Connected: 1 model available", saved: "Saved",
     local: "{Here} only", remote: "Cloud", localChip: "{Here}", sub: "subscription",
     todayOf: "{0} / {1}", todayNoLimit: "{0} · no limit",
-    pairPhone: "Phone or tablet: scan this QR code with the camera; nothing to install. Valid until {0}, single use.",
-    pairComputer: "Computer or server (no camera)",
-    pairComputerNew: "Not installed there yet? Run this line on that computer; it asks for the pairing text when done (chat only; nothing stays running):",
-    pairComputerHow: "Already installed: run `omnillm connect pair` and paste this pairing text, or open {url} in that computer’s browser and paste the pairing text there. Don’t send it to anyone or paste it into a chat.",
-    pairComputerHowNoWeb: "Already installed: run `omnillm connect pair` and paste this pairing text. Don’t send it to anyone or paste it into a chat.",
-    pairWait: "Waiting for the device…",
-    pairConfirmQ: "“{0}” wants to join. Does its screen show this number?",
-    pairYes: "Matches, add", pairNo: "Doesn’t match — refuse", pairLeft: "The device cancelled or lost its connection.",
-    pairDone: "Added “{0}”", pairFailed: "Pairing didn’t finish: {0}", pairRelayDrop: "Remote access dropped, so this device wasn’t added. Once the network is back, choose “New QR code”.",
-    pairDenied: "Refused.", pairExpired: "This QR code has expired.", pairNew: "New QR code", qrAlt: "QR code for adding a device",
+    pairTabPhone: "Phone or tablet", pairTabComputer: "Computer or server",
+    pairP1: "Scan this code with your phone’s camera", pairP1d: "On iPhone use the Camera; on Android the camera or a browser. No app to install.",
+    pairP2: "Tap “Add” on the phone", pairP2d: "The OmniLLM web page opens and asks to add the phone to {here}.",
+    pairL1: "Open the link in that computer’s browser", pairL1d: "Copy the link and take it to that computer yourself. It works like a key: don’t send it to anyone.",
+    pairL2: "Choose “Add” on that computer", pairL2d: "The OmniLLM web page opens and asks to add it to {here}.",
+    pairK1: "Run the command below in that computer’s terminal", pairK1d: "Run it even if OmniLLM is already installed. No sudo.",
+    pairK2: "When it asks for the pairing text, paste the text below", pairK2d: "The pairing text works like a key: don’t send it to anyone.",
+    pairS3: "Check the 6 digits", pairS3d: "Both sides show the same 6 digits. If they match, choose “Matches, add” here.",
+    pairWaitPhone: "Waiting for your phone to scan…", pairWaitLink: "Waiting for that computer to open the link…", pairWaitCli: "Waiting for that computer to connect…",
+    pairConfirmQ: "“{0}” wants to join. Does its screen show the same number as here?", pairHere: "The number on {here}",
+    pairExpiresIn: "Expires in {0} · single use", copyLink: "Copy link", linkCopied: "Copied: open it on that computer", copyFailed: "Can’t copy here; use the QR code or the command line",
+    pairCliHero: "Connect from that computer’s terminal", pairCliToggle: "No browser on that computer? Use the command line",
+    pairCmd1: "Run this in that computer’s terminal", pairCmd1d: "Run it even if OmniLLM is already installed. No sudo.",
+    pairCmd2: "When it asks for the pairing text, paste this and press Return", pairCmd2d: "Nothing shows while you paste; that’s normal.",
+    pairYes: "Matches, add", pairNo: "Doesn’t match, don’t add", pairLeft: "The device cancelled or lost its connection.",
+    pairDone: "Added “{0}”", pairFailed: "Pairing didn’t finish: {0}", pairRelayDrop: "Remote access dropped, so this device wasn’t added. Once the network is back, make a new one.",
+    pairDenied: "Not added: you said it doesn’t match.", pairExpired: "The QR code expired", pairExpiredLink: "The link expired", pairExpiredText: "The pairing text expired", pairEnded: "Not added this time",
+    pairExpiredSay: "It expired; just make a new one.", pairNew: "New QR code", pairNewLink: "New link", pairNewText: "New pairing text", qrAlt: "QR code for adding a device",
     pairStartOffline: "Remote access isn’t connected right now, so no QR code can be made.", retry: "Retry",
     close: "Close", edit: "Edit", save: "Save", cancel: "Cancel", noLimit: "No limit",
     budgetLabel: "Daily limit (USD)",
@@ -713,21 +729,29 @@ function stopPair() { if (pairTimer) { clearInterval(pairTimer); pairTimer = nul
 // counts starts and closes, so a pairing whose start answers after the
 // panel was closed (or started again) is dropped instead of shown.
 let curPair = null, pairGen = 0;
+// pairRedraw draws the open panel again in a new language; null when none is open.
+let pairRedraw = null;
 function cancelPair() { if (curPair) { api("pair/cancel", { id: curPair }).catch(() => {}); curPair = null; } }
 function closePair(area) {
   pairGen++;
+  pairRedraw = null;
   stopPair();
   cancelPair();
   $("add-device").hidden = false;
   area.textContent = "";
-  area.classList.remove("pair-panel", "confirming");
+  area.classList.remove("pair-panel");
 }
 
-// startPair shows "add device" in area: a QR code for phones, pairing text
-// for computers, then the owner's yes or no. closable: the dashboard's
-// panel with its x. onDone gets the new device's id.
+// startPair shows "add device" in area. Two ways, one at a time: a phone
+// scans the QR code; a computer opens the same link in its browser (the
+// command line is folded away for one without a browser). The left side
+// changes in place (code or link, then the 6 digits); the right side is
+// three steps, a live status line and, at the end, the owner's yes or no.
+// closable: the dashboard's panel with its title and x. onDone gets the
+// new device's id.
 async function startPair(area, onDone, closable) {
   const gen = ++pairGen;
+  pairRedraw = null;
   stopPair();
   cancelPair();
   if (closable) {
@@ -737,23 +761,20 @@ async function startPair(area, onDone, closable) {
   // fresh empties the area but keeps the panel's x.
   const fresh = () => {
     area.textContent = "";
-    area.classList.remove("confirming");
     if (!closable) return;
     const x = el("button", "", "close-x"); x.type = "button"; x.setAttribute("aria-label", t("close")); x.title = t("close");
     x.addEventListener("click", () => closePair(area));
     area.append(x);
   };
-  // ended: no device this time (the code expired, was refused, or could
-  // not be made). Say so in place and offer a new code right there, instead
-  // of sending the owner back to "Add device".
-  const ended = (msg, isErr, label) => {
+  const again = () => startPair(area, onDone, closable);
+  // startFailed: no code could be made. Say why and offer to try again.
+  const startFailed = (msg) => {
     stopPair();
-    cancelPair();
     fresh();
-    const again = el("button", label || t("pairNew"), "primary");
-    again.type = "button";
-    again.addEventListener("click", () => startPair(area, onDone, closable));
-    area.append(el("p", msg, isErr ? "err-text" : ""), again);
+    const b = el("button", t("retry"), "primary");
+    b.type = "button";
+    b.addEventListener("click", again);
+    area.append(el("p", msg, "err-text"), b);
   };
   fresh();
   if (!S.relay_configured) {
@@ -771,7 +792,7 @@ async function startPair(area, onDone, closable) {
       try { r = await api("relay"); } catch (_) { return; }
       if (gen !== pairGen) return;
       S.relay_up = r.relay_up; S.relay_configured = r.relay_configured;
-      if (r.relay_up || !r.relay_configured) { renderStatus(); startPair(area, onDone, closable); return; }
+      if (r.relay_up || !r.relay_configured) { renderStatus(); again(); return; }
       if (Date.now() - since > 15000) w.textContent = t("relayDown");
     }, 1000);
     return;
@@ -781,55 +802,115 @@ async function startPair(area, onDone, closable) {
     if (gen !== pairGen || e.status === 401) return;
     // The hub's own sentence for a missing relay promises a reconnect that
     // this button is the way to; say plainly why there is no code.
-    ended(e.status === undefined ? t("hubDown") : e.code === "hub_offline" ? t("pairStartOffline") : e.message, true, t("retry"));
+    startFailed(e.status === undefined ? t("hubDown") : e.code === "hub_offline" ? t("pairStartOffline") : e.message);
     return;
   }
   if (gen !== pairGen) { api("pair/cancel", { id: p.id }).catch(() => {}); return; }
   curPair = p.id;
-  const expires = new Date(p.expires).getTime();
-  // Phones first: a big QR code and one sentence. Computers and servers
-  // (no camera) open the section below it.
-  const box = el("div", undefined, "pair");
-  const exp = new Date(p.expires).toLocaleTimeString(lang === "zh" ? "zh-CN" : "en-US", { timeStyle: "short" });
-  const left = el("div", undefined, "pair-qr");
-  const img = el("img");
-  img.alt = t("qrAlt");
-  img.src = p.qr;
-  left.append(img, el("p", t("pairPhone", exp), "muted small"));
-  const right = el("div");
-  const state = el("p", t("pairWait"), "muted");
-  right.append(state);
-  const more = el("details", undefined, "pair-more");
-  more.append(el("summary", t("pairComputer")));
-  const install = "curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh -s -- --device";
-  more.append(rich(el("p"), t("pairComputerNew")), codeBox(install, true),
-    howText(p.web), codeBox(p.code));
-  right.append(more);
-  box.append(left, right);
-  area.append(box);
-  let asked = false;
-  pairTimer = setInterval(async () => {
-    let st;
-    try { st = await api("pair/state?id=" + encodeURIComponent(p.id)); } catch (e) {
-      if (gen !== pairGen) return;
-      if (e.status === 404) { ended(t("pairExpired")); return; } // gone on the hub: expired
-      if (e.status === undefined) return; // the hub isn't answering: the banner says so; keep asking
-      if (e.status !== 401) ended(e.message, true, t("retry"));
-      return;
+  const started = Date.now(), expires = new Date(p.expires).getTime();
+  // A link another computer can open; a hub whose web page is its own
+  // address (localhost) has none, and computers use the command line.
+  const link = /^https?:\/\/[^\s]+#/.test(p.link || "") && !loopback(p.link) ? p.link : "";
+  // phase: wait (for the device), confirm (the owner's yes or no), ended
+  // (expired, refused, or lost: a new code is one click away).
+  let phase = "wait", ask = null, endKind = "", endMsg = "", endErr = false, cliOpen = false, nameVal = null;
+  let clock = null, arc = null;
+  const way = () => (pairTab === "phone" ? "phone" : link ? "link" : "cli");
+  const tick = () => {
+    if (!clock) return;
+    const left = Math.max(0, expires - Date.now());
+    const s = Math.ceil(left / 1000);
+    clock.textContent = Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+    arc.setAttribute("stroke-dashoffset", String(RING * (1 - left / Math.max(1, expires - started))));
+  };
+  const draw = () => {
+    fresh();
+    clock = arc = null;
+    if (closable) area.append(el("h2", t("addDevice"), "pair-title"));
+    if (phase !== "confirm") area.append(pairTabs(() => draw()));
+    const body = el("div", undefined, "pair");
+    const hero = el("div", undefined, "pair-hero");
+    const side = el("div", undefined, "pair-side");
+    body.append(hero, side);
+    area.append(body);
+    const w = way();
+    if (phase === "confirm") {
+      const d = el("div", undefined, "pair-card pair-digits");
+      d.append(el("span", t("pairHere"), "muted small"), el("div", String(ask.code).replace(/^(\d{3})(\d{3})$/, "$1 $2"), "sas"), el("span", ask.device_name, "pair-dev"));
+      hero.append(d);
+    } else {
+      const card = el("div", undefined, "pair-card");
+      if (w === "phone") {
+        card.classList.add("pair-qr");
+        const img = el("img");
+        img.alt = t("qrAlt");
+        img.src = p.qr;
+        card.append(img);
+        for (const c of ["tl", "tr", "bl", "br"]) card.append(el("i", undefined, "cor " + c));
+      } else if (w === "link") {
+        card.classList.add("pair-link");
+        const btn = el("button", t("copyLink"), "primary");
+        btn.type = "button";
+        btn.addEventListener("click", async () => {
+          if (!(await copyText(link))) { btn.textContent = t("copyFailed"); return; }
+          btn.textContent = t("linkCopied");
+          setTimeout(() => { btn.textContent = t("copyLink"); }, 2500);
+        });
+        card.append(icon(ICONS.web, "pair-ic"), el("span", link.replace(/^https?:\/\//, "").split("#")[0].replace(/\/$/, "") + "/#pair=…", "pair-url"), btn);
+      } else {
+        card.classList.add("pair-link");
+        card.append(icon(ICONS.term, "pair-ic"), el("span", t("pairCliHero"), "pair-url"));
+      }
+      if (phase === "ended") {
+        card.classList.add("ended");
+        const v = el("div", undefined, "pair-veil");
+        const b = el("button", t(w === "phone" ? "pairNew" : w === "link" ? "pairNewLink" : "pairNewText"), "primary");
+        b.type = "button";
+        b.addEventListener("click", again);
+        v.append(el("b", endKind === "expired" ? t(w === "phone" ? "pairExpired" : w === "link" ? "pairExpiredLink" : "pairExpiredText") : t("pairEnded")), b);
+        card.append(v);
+      }
+      hero.append(card);
+      if (phase === "wait") {
+        const row = el("div", undefined, "pair-timer");
+        const r = ring();
+        arc = r.arc;
+        clock = el("b");
+        const [a, b] = t("pairExpiresIn", "\u0000").split("\u0000");
+        const txt = el("span");
+        txt.append(a, clock, b);
+        row.append(r.svg, txt);
+        const n = el("button", t(w === "phone" ? "pairNew" : w === "link" ? "pairNewLink" : "pairNewText"), "link");
+        n.type = "button";
+        n.addEventListener("click", again);
+        hero.append(row, n);
+        tick();
+      }
     }
-    if (gen !== pairGen) return;
-    if (st.state === "waiting" && Date.now() > expires) { ended(t("pairExpired")); return; }
-    if (st.state === "confirm" && !asked) {
-      asked = true;
-      // Only the question now: the QR code and the computer steps are done
-      // with, and the owner's eyes go straight to the number.
-      const c = el("div", undefined, "confirm pair-q"); // a normal request, not a warning
-      c.append(el("p", t("pairConfirmQ", st.device_name)), el("div", String(st.code).replace(/^(\d{3})(\d{3})$/, "$1 $2"), "sas"));
+    const steps = { phone: ["pairP1", "pairP2"], link: ["pairL1", "pairL2"], cli: ["pairK1", "pairK2"] }[w].concat("pairS3");
+    const cur = phase === "confirm" ? 2 : 0;
+    const ol = el("ol", undefined, "pair-steps");
+    steps.forEach((k, i) => {
+      const li = el("li", undefined, i < cur ? "ok" : i === cur ? "now" : "");
+      const n = el("span", i < cur ? "" : String(i + 1), "n");
+      if (i < cur) n.append(icon(ICONS.check));
+      const tx = el("div");
+      tx.append(el("h3", t(k)), el("p", t(k + "d")));
+      li.append(n, tx);
+      ol.append(li);
+    });
+    side.append(ol);
+    const status = el("div", undefined, "pair-status" + (phase === "ended" && endErr ? " err" : ""));
+    if (phase !== "ended") status.append(el("span", undefined, "pulse"));
+    status.append(el("span", phase === "confirm" ? t("pairConfirmQ", ask.device_name)
+      : phase === "ended" ? endMsg : t({ phone: "pairWaitPhone", link: "pairWaitLink", cli: "pairWaitCli" }[w])));
+    side.append(status);
+    if (phase === "confirm") {
       // The owner may name the device while confirming.
       const nid = "pair-name-" + p.id.slice(0, 8);
       const nl = el("label", t("name")); nl.htmlFor = nid;
-      const nameIn = el("input"); nameIn.id = nid; nameIn.maxLength = 64; nameIn.value = st.device_name || "";
-      c.append(nl, nameIn);
+      const nameIn = el("input"); nameIn.id = nid; nameIn.maxLength = 64; nameIn.value = nameVal ?? (ask.device_name || "");
+      nameIn.addEventListener("input", () => { nameVal = nameIn.value; });
       const actions = el("div", undefined, "actions");
       const yes = el("button", t("pairYes"), "primary");
       const no = el("button", t("pairNo"), "secondary");
@@ -842,19 +923,69 @@ async function startPair(area, onDone, closable) {
       no.addEventListener("click", () => decide(false));
       nameIn.addEventListener("keydown", (e) => { if (e.key === "Enter" && !composing(e) && !yes.disabled) decide(true); });
       actions.append(no, yes);
-      c.append(actions);
-      box.hidden = true;
-      // The question is the panel now: its chip is the only frame, with
-      // the panel's x in the chip's corner.
-      const x = closable && area.querySelector(":scope > .close-x");
-      if (x) { area.classList.add("confirming"); c.classList.add("has-x"); c.append(x); }
-      area.append(c);
-      c.scrollIntoView({ block: "center" });
+      side.append(el("div", undefined, "pair-name"), actions);
+      side.querySelector(".pair-name").append(nl, nameIn);
+      // On a phone the digits sit above the question: bring them into view.
+      if (matchMedia("(max-width: 600px)").matches) hero.scrollIntoView({ block: "start" }); else area.scrollIntoView({ block: "nearest" });
       yes.focus({ preventScroll: true });
     }
+    if (phase === "wait" && w !== "phone") {
+      // The command line: folded behind one quiet line when the browser
+      // link is there, open when it is the only way.
+      const cli = el("div", undefined, "pair-cli" + (cliOpen || !link ? " open" : ""));
+      if (link) {
+        const tg = el("button", t("pairCliToggle"), "link");
+        tg.type = "button";
+        tg.setAttribute("aria-expanded", String(cliOpen));
+        tg.append(el("span", "›", "chev"));
+        tg.addEventListener("click", () => { cliOpen = !cliOpen; draw(); });
+        cli.append(tg);
+      }
+      if (cliOpen || !link) {
+        const ol2 = el("ol");
+        const item = (k, shown, full) => {
+          const li = el("li");
+          li.append(el("b", t(k)), el("span", t(k + "d"), "hint"), copyRow(shown, full));
+          ol2.append(li);
+        };
+        item("pairCmd1", "curl -fsSL …/install.sh | sh -s -- --device", PAIR_INSTALL);
+        item("pairCmd2", p.code.slice(0, 18) + " … " + p.code.slice(-8), p.code);
+        cli.append(ol2);
+      }
+      side.append(cli);
+    }
+  };
+  const end = (kind, msg, isErr) => {
+    stopPair();
+    cancelPair();
+    phase = "ended"; endKind = kind; endMsg = msg; endErr = !!isErr;
+    draw();
+  };
+  draw();
+  pairRedraw = () => { if (gen === pairGen) draw(); };
+  pairTimer = setInterval(async () => {
+    tick();
+    let st;
+    try { st = await api("pair/state?id=" + encodeURIComponent(p.id)); } catch (e) {
+      if (gen !== pairGen) return;
+      if (e.status === 404) { end("expired", t("pairExpiredSay")); return; } // gone on the hub: expired
+      if (e.status === undefined) return; // the hub isn't answering: the banner says so; keep asking
+      if (e.status !== 401) end("failed", e.message, true);
+      return;
+    }
+    // Two polls may overlap: only the first one past the end acts.
+    if (gen !== pairGen || phase === "ended" || !pairTimer) return;
+    if (st.state === "waiting" && Date.now() > expires) { end("expired", t("pairExpiredSay")); return; }
+    if (st.state === "confirm" && phase === "wait") {
+      phase = "confirm";
+      ask = st;
+      draw();
+    }
     if (st.state === "done") {
+      pairGen++; // a slower poll still in flight finds this pairing over
       stopPair();
       curPair = null;
+      pairRedraw = null;
       area.textContent = "";
       area.append(el("p", t("pairDone", st.device_name)));
       toast(named("pairDone", st.device_name));
@@ -862,30 +993,91 @@ async function startPair(area, onDone, closable) {
     }
     if (st.state === "failed") {
       curPair = null;
-      if (st.reason === "denied") ended(t("pairDenied"));
-      else if (st.reason === "left") ended(t("pairLeft"));
-      else if (st.reason === "relay") ended(t("pairRelayDrop"), true);
-      else if (st.reason === "expired") ended(t("pairExpired"));
-      else ended(t("pairFailed", st.message || ""), true);
+      if (st.reason === "denied") end("denied", t("pairDenied"));
+      else if (st.reason === "left") end("left", t("pairLeft"));
+      else if (st.reason === "relay") end("relay", t("pairRelayDrop"), true);
+      else if (st.reason === "expired") end("expired", t("pairExpiredSay"));
+      else end("failed", t("pairFailed", st.message || ""), true);
     }
   }, 1000);
 }
 
-// howText: how an installed computer pairs: the command, or the web page
-// the QR code opens (its address as a link, with Copy) in its browser.
-// Without that page's address, or when it is this computer's own
-// (localhost, 127.x, ::1: another computer can't open it), only the command.
-function howText(web) {
-  const p = el("p", undefined, "pair-how");
-  if (!/^https?:\/\/[^\s#?]+$/.test(web || "") || loopback(web)) return rich(p, t("pairComputerHowNoWeb"));
-  const [a, b] = t("pairComputerHow").split("{url}");
-  const link = el("a", web, "web-link");
-  link.href = web; link.target = "_blank"; link.rel = "noopener noreferrer";
-  const url = el("span", undefined, "web-url");
-  url.append(link, copyBtn(web, el("button", t("copy"), "secondary small-btn")));
-  p.append(rich(el("span"), a), url, rich(el("span"), b));
-  return p;
+// pairTab: the way "add device" shows, phone (QR code) or computer (a link
+// for its browser); kept while the page is open.
+let pairTab = "phone";
+const PAIR_INSTALL = "curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh -s -- --device";
+
+// pairTabs: the phone | computer switch above the panel.
+function pairTabs(redraw) {
+  const seg = el("div", undefined, "pair-seg");
+  seg.setAttribute("role", "tablist");
+  for (const [k, key, ic] of [["phone", "pairTabPhone", ICONS.phone], ["computer", "pairTabComputer", ICONS.computer]]) {
+    const b = el("button");
+    b.type = "button";
+    b.setAttribute("role", "tab");
+    b.setAttribute("aria-selected", String(pairTab === k));
+    b.append(icon(ic), t(key));
+    b.addEventListener("click", () => { if (pairTab !== k) { pairTab = k; redraw(); } });
+    seg.append(b);
+  }
+  return seg;
 }
+
+// copyText puts text on the clipboard, falling back to the old copy
+// command where the Clipboard API is missing; false when neither works.
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); return true; } catch (_) { /* below */ }
+  const ta = el("textarea");
+  ta.value = text;
+  ta.setAttribute("readonly", "");
+  ta.className = "offscreen";
+  document.body.append(ta);
+  ta.select();
+  let ok = false;
+  try { ok = document.execCommand("copy"); } catch (_) { ok = false; }
+  ta.remove();
+  return ok;
+}
+
+// copyRow: one line shown shortened (the middle left out, both ends kept,
+// so "--device" stays in sight), with Copy copying all of it.
+function copyRow(shown, full) {
+  const r = el("div", undefined, "copyrow");
+  const s = el("span", shown);
+  s.title = full;
+  r.append(s, copyBtn(full));
+  return r;
+}
+
+// Small line icons, drawn as SVG elements (the page sets no HTML).
+const ICONS = {
+  phone: [["rect", { x: 7, y: 2.5, width: 10, height: 19, rx: 2.5 }], ["path", { d: "M11 18.5h2" }]],
+  computer: [["rect", { x: 3, y: 4, width: 18, height: 12, rx: 2 }], ["path", { d: "M8 20h8M12 16v4" }]],
+  web: [["circle", { cx: 12, cy: 12, r: 9 }], ["path", { d: "M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18" }]],
+  term: [["rect", { x: 3, y: 4, width: 18, height: 16, rx: 2 }], ["path", { d: "M7 9l3 3-3 3M12 15h5" }]],
+  check: [["path", { d: "M5 12.5l4.5 4.5L19 7.5" }]],
+};
+function svg(tag, attrs) {
+  const n = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, String(v));
+  return n;
+}
+function icon(parts, cls) {
+  const s = svg("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": 2, "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true" });
+  if (cls) s.setAttribute("class", cls);
+  for (const [tag, a] of parts) s.append(svg(tag, a));
+  return s;
+}
+// ring: the countdown circle; its arc shrinks as the code runs out.
+const RING = 2 * Math.PI * 7;
+function ring() {
+  const s = svg("svg", { viewBox: "0 0 18 18", class: "ring", "aria-hidden": "true" });
+  s.append(svg("circle", { cx: 9, cy: 9, r: 7, fill: "none", stroke: "var(--line-2, var(--line))", "stroke-width": 2.4 }));
+  const arc = svg("circle", { cx: 9, cy: 9, r: 7, fill: "none", stroke: "var(--accent)", "stroke-width": 2.4, "stroke-linecap": "round", "stroke-dasharray": RING, "stroke-dashoffset": 0, transform: "rotate(-90 9 9)" });
+  s.append(arc);
+  return { svg: s, arc };
+}
+
 // loopback: the address names this computer itself (localhost, 127.x,
 // ::1), which only a browser here can open.
 function loopback(web) {
@@ -1860,6 +2052,7 @@ appForm.addEventListener("submit", async (ev) => {
 function useLang(l) {
   lang = l; store("omnillm.lang", lang); applyLang();
   if (S) { renderStatus(); if (!$("dash").hidden) showDash(); }
+  if (pairRedraw) pairRedraw();
 }
 // followLang takes the hub's choice when it differs from the page's; true
 // when it redrew.

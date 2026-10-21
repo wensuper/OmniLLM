@@ -971,10 +971,12 @@ func (s *Server) pairStart(w http.ResponseWriter, r *http.Request) {
 	svg, _ := qrcode.SVG(p.Link)
 	writeJSON(w, map[string]any{
 		"id": id, "code": p.Code, "expires": p.Expires,
-		// The web page the QR code opens, for a computer's browser: the
-		// link's origin only (the pairing secret is in its fragment).
-		"web": linkOrigin(p.Link),
-		"qr":  "data:image/svg+xml;base64," + base64.StdEncoding.EncodeToString([]byte(svg)),
+		// The web page the QR code opens: its origin, and the whole link
+		// (the pairing secret is in its fragment) for "Copy link", which a
+		// computer opens in its browser. No link when it is not a web page.
+		"web":  linkOrigin(p.Link),
+		"link": webLink(p.Link),
+		"qr":   "data:image/svg+xml;base64," + base64.StdEncoding.EncodeToString([]byte(svg)),
 	})
 }
 
@@ -986,6 +988,14 @@ func linkOrigin(link string) string {
 		return ""
 	}
 	return u.Scheme + "://" + u.Host
+}
+
+// webLink is link when it is a web address, otherwise "".
+func webLink(link string) string {
+	if linkOrigin(link) == "" {
+		return ""
+	}
+	return link
 }
 
 // pairCancel ends an "add device" the owner closed: the code stops

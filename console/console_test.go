@@ -376,6 +376,10 @@ func TestPairingThroughTheConsole(t *testing.T) {
 	if web, _ := out["web"].(string); web != strings.TrimSuffix(hub.DefaultWebAppURL, "/") {
 		t.Fatalf("web %q", web)
 	}
+	// "Copy link": the same link the QR code holds, secret in the fragment.
+	if link, _ := out["link"].(string); !strings.HasPrefix(link, strings.TrimSuffix(hub.DefaultWebAppURL, "/")+"/#pair=") {
+		t.Fatalf("link %q", link)
+	}
 	sas := make(chan string, 1)
 	devErr := make(chan error, 1)
 	sec := secret.NewMemory()

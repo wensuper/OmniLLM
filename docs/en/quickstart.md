@@ -117,20 +117,24 @@ A few notes:
 
 ## Step 4: Add a Linux server or another computer
 
-Machines without a camera use **pairing text** instead of a QR code. The server gets just the program: no background service, and no sudo.
+A computer with a browser needs nothing installed:
 
-1. In the hub’s console, click *Add device* and expand *Computer or server (no camera)*.
-2. On that machine, run the line shown on the page:
+1. In the hub’s console, click *Add device*, pick *Computer or server*, and click *Copy link*.
+2. Open the link in that computer’s browser (carry it over yourself; it works like a key, so don’t send it to anyone) and choose *Add*.
+3. As with a phone, check that the 6-digit numbers on both sides match, then click *Matches, add* on the hub.
+
+A server without a browser uses the command line. It gets just the program: no background service, and no sudo.
+
+1. In the hub’s console, click *Add device*, pick *Computer or server*, and click *Use the command line* at the bottom.
+2. On that machine, run the line shown on the page (even if the program is already installed):
 
    ```bash
    curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh -s -- --device
    ```
 
    When it finishes, it asks you to paste the pairing text. (When an AI assistant or a script runs the install, there’s no prompt; run `omnillm connect pair` afterward and paste it then.)
-3. Copy the pairing text from the console (it starts with `omnillm3-`) and paste it there. You carry the pairing text over yourself, for example by pasting it over SSH. Don’t send it to anyone or paste it into a chat.
+3. Copy the pairing text from the console (it starts with `omnillm3-`), paste it there, and press Return. Nothing shows while you paste; that’s normal. You carry the pairing text over yourself, for example by pasting it over SSH. Don’t send it to anyone or paste it into a chat.
 4. As with a phone, check that the 6-digit numbers on both sides match, then click *Matches, add* on the hub.
-
-On a machine that already has the program, just run `~/.local/bin/omnillm connect pair` and paste the pairing text.
 
 The server has no background service and doesn’t update itself. When a new version is out, `omnillm connect` mentions it; run `omnillm update`.
 
