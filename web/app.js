@@ -17,8 +17,11 @@ const T = {
     bootSlow: "载入停了 20 秒没有进展，停在“{0}”。点下面的按钮清掉缓存重新载入；网络慢的话也可以换个网络再试。",
     bootCrashed: "程序意外停止了。点下面的按钮清掉缓存重新载入。", bootError: "载入失败：", bootRetry: "重新载入",
     welcomeTitle1: "你 Mac 上的 AI，", welcomeTitle2: "现在也在这台设备上",
-    step1: "在 Mac 上打开 OmniLLM", step2: "点“添加设备”", step3: "用这台设备扫屏幕上的二维码",
-    e2eChip: "端到端加密", noHub: "还没有 OmniLLM？3 步装好 →",
+    step1: "点 Mac 菜单栏里的 OmniLLM 图标", step2: "选“添加设备…”", step3: "扫 Mac 屏幕上的二维码",
+    e2eChip: "端到端加密", noHub: "还没有 OmniLLM？先在电脑上装好",
+    getHubTitle: "先在你的 Mac 上装好 OmniLLM", getHubBody: "在 Mac 的“终端”里粘贴下面这一行，按回车，大约一分钟装好，然后回到这里扫码。",
+    getHubShare: "把这一步发到电脑", getHubCopy: "复制命令", getHubGuide: "查看完整的安装说明", getHubCopied: "已复制。在 Mac 的“终端”里粘贴运行。",
+    getHubSend: "在 Mac 上安装 OmniLLM：在“终端”里运行这一行",
     scan: "扫描二维码", pasteInstead: "扫不了码？粘贴配对文字", pastePh: "粘贴配对文字（以 omnillm3- 开头）", add: "添加", cancel: "取消", back: "返回",
     scanHint: "把 Mac 屏幕上的二维码放进框里", camDenied: "没有拿到摄像头权限。可以改用下面的“粘贴配对文字”。",
     pairTitle: "添加这台设备", pairConnecting: "正在连接你的 Mac……",
@@ -54,8 +57,11 @@ const T = {
     bootSlow: "Loading has made no progress for 20 seconds, stuck at “{0}”. Tap below to clear the cache and load again; on a slow network, another network may help.",
     bootCrashed: "The program stopped unexpectedly. Tap below to clear the cache and load again.", bootError: "Loading failed: ", bootRetry: "Load again",
     welcomeTitle1: "The AI on your Mac, ", welcomeTitle2: "now on this device",
-    step1: "Open OmniLLM on your Mac", step2: "Choose “Add device”", step3: "Scan the QR code on its screen with this device",
-    e2eChip: "End-to-end encrypted", noHub: "No OmniLLM yet? Set it up in 3 steps →",
+    step1: "Click the OmniLLM icon in your Mac’s menu bar", step2: "Choose “Add device…”", step3: "Scan the QR code on your Mac’s screen",
+    e2eChip: "End-to-end encrypted", noHub: "No OmniLLM yet? Set it up on your computer first",
+    getHubTitle: "First, set up OmniLLM on your Mac", getHubBody: "Paste this line into Terminal on your Mac and press Return. It takes about a minute; then come back here and scan.",
+    getHubShare: "Send this to my computer", getHubCopy: "Copy command", getHubGuide: "Full setup guide", getHubCopied: "Copied. Paste it into Terminal on your Mac.",
+    getHubSend: "Install OmniLLM on your Mac: run this line in Terminal",
     scan: "Scan QR code", pasteInstead: "Can’t scan? Paste the pairing text", pastePh: "Paste the pairing text (starts with omnillm3-)", add: "Add", cancel: "Cancel", back: "Back",
     scanHint: "Point at the QR code on your Mac’s screen", camDenied: "No camera access. Use “Paste the pairing text” below instead.",
     pairTitle: "Add this device", pairConnecting: "Connecting to your Mac…",
@@ -336,7 +342,27 @@ $("paste-text").placeholder = t("pastePh");
 $("paste").addEventListener("toggle", () => {
   const open = $("paste").open;
   $("paste-go").className = open ? "primary" : "secondary";
-  $("scan").className = open ? "secondary" : "primary";
+  $("scan").classList.toggle("primary", !open);
+  $("scan").classList.toggle("secondary", open);
+});
+// A computer (mouse, no camera pointed at a screen) pastes the pairing
+// text; scanning stays for phones and tablets.
+if (matchMedia("(pointer: fine)").matches && !matchMedia("(any-pointer: coarse)").matches) $("paste").open = true;
+// No hub yet: how to set one up, without leaving the page. The phone
+// can't run the command, so the first choice sends it to the computer.
+const INSTALL_CMD = "curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh";
+const GUIDE_URL = "https://github.com/wensuper/OmniLLM#quick-start";
+$("no-hub").addEventListener("click", () => {
+  const open = $("get-hub").hidden;
+  $("get-hub").hidden = !open;
+  $("no-hub").setAttribute("aria-expanded", String(open));
+});
+$("get-share").hidden = !navigator.share;
+$("get-share").addEventListener("click", () => {
+  navigator.share({ title: "OmniLLM", text: t("getHubSend") + "\n" + INSTALL_CMD, url: GUIDE_URL }).catch(() => {});
+});
+$("get-copy").addEventListener("click", () => {
+  navigator.clipboard.writeText(INSTALL_CMD).then(() => toastText(t("getHubCopied")), () => {});
 });
 // welcomeNote: a calm notice at the top of the welcome screen (removed,
 // or remove it on the Mac too); the paste box folded so it reads first.

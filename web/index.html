@@ -32,7 +32,7 @@
       <div class="wl-top">
         <!-- Brand: the name and the slogan (the brand's own words, never translated). -->
         <div class="wl-brand"><img src="icon.svg" alt="" width="28" height="28"><span>OmniLLM</span></div>
-        <span class="wl-chip"><span class="wl-chip-dot" aria-hidden="true"></span><span data-t="e2eChip"></span></span>
+        <span class="wl-chip"><span class="wl-chip-lock" aria-hidden="true"></span><span data-t="e2eChip"></span></span>
       </div>
       <div class="wl-main">
         <div class="wl-copy">
@@ -52,6 +52,17 @@
               <button id="paste-go" class="secondary" data-t="add"></button>
             </details>
             <p id="welcome-err" class="err" role="alert"></p>
+            <button id="no-hub" type="button" class="wl-link" data-t="noHub" aria-expanded="false" aria-controls="get-hub"></button>
+            <div id="get-hub" class="wl-get" hidden>
+              <p class="wl-get-title" data-t="getHubTitle"></p>
+              <p class="muted small" data-t="getHubBody"></p>
+              <code class="wl-cmd">curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh</code>
+              <div class="wl-get-actions">
+                <button id="get-share" type="button" class="secondary" data-t="getHubShare"></button>
+                <button id="get-copy" type="button" class="secondary" data-t="getHubCopy"></button>
+              </div>
+              <a class="wl-guide" href="https://github.com/wensuper/OmniLLM#quick-start" target="_blank" rel="noopener" data-t="getHubGuide"></a>
+            </div>
           </div>
         </div>
         <!-- Picture only: the Mac in the middle, this device and others around it, an encrypted line between. -->
@@ -68,17 +79,14 @@
             <path d="M160 160L160 42" class="wl-beam"/>
             <path d="M160 160L262 219" class="wl-beam wl-beam-2"/>
             <path d="M160 160L58 219" class="wl-beam wl-beam-3"/>
-            <path d="M160 160L218 89" class="wl-beam wl-beam-4"/>
             <g class="wl-node wl-node-me" transform="translate(160 42)"><circle r="17"/><rect x="-5" y="-8" width="10" height="16" rx="2"/></g>
             <g class="wl-node" transform="translate(262 219)"><circle r="14"/><rect x="-7" y="-5" width="14" height="10" rx="1.5"/></g>
             <g class="wl-node" transform="translate(58 219)"><circle r="14"/><rect x="-6" y="-7" width="12" height="14" rx="1.5"/></g>
-            <g class="wl-node wl-node-sm" transform="translate(218 89)"><circle r="8"/></g>
           </g>
           <image href="icon.svg" x="128" y="128" width="64" height="64"/>
           <g class="wl-lock" transform="translate(206 128)"><rect x="-13" y="-13" width="26" height="26" rx="8"/><path d="M-4.5 -1v-3a4.5 4.5 0 0 1 9 0v3M-6 -1h12v8h-12z"/></g>
         </svg>
       </div>
-      <p class="wl-foot"><a class="wl-link" href="https://github.com/wensuper/OmniLLM#quick-start" target="_blank" rel="noopener" data-t="noHub"></a></p>
     </div>
   </section>
 

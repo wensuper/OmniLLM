@@ -226,7 +226,7 @@ func updateCmd(args []string) {
 	r := role()
 	if r == "" {
 		die(say(t("这台电脑上还没有安装 OmniLLM。安装方法见 https://github.com/wensuper/OmniLLM#quick-start",
-			"OmniLLM isn't set up on this computer yet. See https://github.com/wensuper/OmniLLM#quick-start")))
+			"OmniLLM isn’t set up on this computer yet. See https://github.com/wensuper/OmniLLM#quick-start")))
 	}
 	dir := dataDir(r)
 	if err := os.MkdirAll(dir, 0o700); err != nil {
@@ -257,12 +257,12 @@ func updateCmd(args []string) {
 	latest, err := latestRelease(cctx, updateClient())
 	cancel()
 	if err != nil {
-		die(say(t("连不上 GitHub，查不到新版本。请检查网络后再试。", "Can't reach GitHub to look for a new version. Check the network and try again.")))
+		die(say(t("连不上 GitHub，查不到新版本。请检查网络后再试。", "Can’t reach GitHub to look for a new version. Check the network and try again.")))
 	}
 	u.Latest, u.CheckedAt = latest, time.Now()
 	writeUpdate(dir, u)
 	if compareVersions(latest, version) <= 0 {
-		fmt.Println(t("已经是最新版本。", "You're up to date."))
+		fmt.Println(t("已经是最新版本。", "You’re up to date."))
 		return
 	}
 	if *check {
@@ -270,6 +270,9 @@ func updateCmd(args []string) {
 		return
 	}
 	fmt.Printf(t("正在更新到 %s：下载、核对、安装……\n", "Updating to %s: downloading, verifying, installing…\n"), plain(latest))
+	if r == "hub" {
+		fmt.Println(t("OmniLLM 会重启几秒，手机上正在出的回答会中断。", "OmniLLM restarts for a few seconds; a reply on its way to your phone is cut off."))
+	}
 	logPath := filepath.Join(dir, "update.log")
 	logf, err := os.OpenFile(logPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
 	if err != nil {
@@ -285,13 +288,13 @@ func updateCmd(args []string) {
 		if errors.As(err, &s) {
 			die(err)
 		}
-		die(sayf(t("更新没有完成，原来的版本照常在用。完整记录在 %s", "The update didn't finish; the version you had keeps working. The full log is at %s"), logPath))
+		die(sayf(t("更新没有完成，原来的版本照常在用。完整记录在 %s", "The update didn’t finish; the version you had keeps working. The full log is at %s"), logPath))
 	}
 	home, _ := os.UserHomeDir()
 	now, _ := installedVersion(ctx, filepath.Join(home, ".local", "bin", "omnillm"))
 	if now == "" || compareVersions(now, version) <= 0 {
 		fmt.Fprintln(os.Stderr, tail(logPath, 12))
-		die(sayf(t("更新没有生效，原来的版本照常在用。完整记录在 %s", "The update didn't take; the version you had keeps working. The full log is at %s"), logPath))
+		die(sayf(t("更新没有生效，原来的版本照常在用。完整记录在 %s", "The update didn’t take; the version you had keeps working. The full log is at %s"), logPath))
 	}
 	u = readUpdate(dir)
 	u.Error = ""
@@ -480,7 +483,7 @@ func statusUpdateLine(u updateFile) string {
 	case v == "":
 		return ""
 	case sameVersion(u.Error, v):
-		return runnable(fmt.Sprintf(t("新版本 %s 自动更新没有成功，运行 omnillm update 再试一次。", "The automatic update to %s didn't work; run omnillm update to try again."), v))
+		return runnable(fmt.Sprintf(t("新版本 %s 自动更新没有成功，运行 omnillm update 再试一次。", "The automatic update to %s didn’t work; run omnillm update to try again."), v))
 	case u.Manual || devBuild(version):
 		return runnable(fmt.Sprintf(t("有新版本 %s。运行 omnillm update 更新。", "Version %s is out. Run omnillm update to install it."), v))
 	}

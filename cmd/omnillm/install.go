@@ -25,6 +25,8 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/term"
+
 	"github.com/wensuper/OmniLLM/device"
 	"github.com/wensuper/OmniLLM/internal/control"
 	"github.com/wensuper/OmniLLM/internal/e2e"
@@ -76,8 +78,8 @@ func installCmd(args []string) {
 	// (a server) updates that, rather than turning it into a hub.
 	if deviceOnly || (!hubOnly && role() == "device") {
 		if !deviceOnly {
-			fmt.Println(runnable(t("这台机器之前设置成了设备（用别处的主机），按设备更新。要把它改成主机，运行 omnillm install --hub。",
-				"This machine was set up as a device (using a hub elsewhere), so it is updated as one. To make it a hub instead, run omnillm install --hub.")))
+			fmt.Println(runnable(t("这台机器用的是另一台电脑上的 OmniLLM，所以按设备更新。想让这台机器自己当主机，运行 omnillm install --hub。",
+				"This machine uses OmniLLM on another computer, so it was updated as a device. To make this machine the hub, run omnillm install --hub.")))
 		}
 		installDevice()
 		return
@@ -130,7 +132,7 @@ func installCmd(args []string) {
 					u.Skip = version
 					u.failed(version)
 					writeUpdate(dir, u)
-					die(sayf(t("新版本 %s 没有启动起来，已经退回到 %s，一切照旧。日志在 %s", "Version %s did not start, so OmniLLM went back to %s; everything works as before. The log is at %s"),
+					die(sayf(t("新版本 %s 没能启动，已自动换回 %s，一切照常。以后不会再自动装 %[1]s。\n（想帮忙排查：日志在 %s）", "Version %s didn’t start, so OmniLLM went back to %s; everything works as before, and %[1]s won’t be installed automatically again.\n(To help find out why: the log is at %s)"),
 						version, prev, filepath.Join(dir, "hub.log")))
 				}
 			}
@@ -177,7 +179,11 @@ func installCmd(args []string) {
 	st.Next = nextStep(st)
 	fmt.Println(runnable(st.Next))
 	b, _ := json.Marshal(st)
-	fmt.Println("OMNILLM_STATUS " + string(b))
+	// For an AI agent running the install (INSTALL.md): its output is not
+	// a terminal. A person at a terminal has just read the same in words.
+	if !term.IsTerminal(int(os.Stdout.Fd())) {
+		fmt.Println("OMNILLM_STATUS " + string(b))
+	}
 }
 
 // headless reports a machine without a display (a server, an SSH session).
@@ -720,6 +726,17 @@ func loginURL() (string, error) {
 }
 
 func statusCmd(args []string) {
+	if role() == "" && !exists(dataDir("hub")) {
+		st := Status{Next: t("这台电脑上还没有安装 OmniLLM。安装方法见 https://github.com/wensuper/OmniLLM#quick-start",
+			"OmniLLM isn’t installed on this computer yet. See https://github.com/wensuper/OmniLLM#quick-start")}
+		if len(args) > 0 && args[0] == "--json" {
+			b, _ := json.Marshal(st)
+			fmt.Println(string(b))
+		} else {
+			fmt.Println(st.Next)
+		}
+		os.Exit(1)
+	}
 	st, ok := queryStatus()
 	st.Running = ok
 	st = waitRelay(st, 5*time.Second)

@@ -59,7 +59,7 @@ func TestStatusUpdateLine(t *testing.T) {
 	if l := statusUpdateLine(updateFile{Latest: "v0.2.0-alpha.22", Manual: true}); !strings.Contains(l, "omnillm update") || strings.Contains(l, "by itself") {
 		t.Errorf("manual: %q", l)
 	}
-	if l := statusUpdateLine(updateFile{Latest: "v0.2.0-alpha.22", Error: "v0.2.0-alpha.22"}); !strings.Contains(l, "didn't work") {
+	if l := statusUpdateLine(updateFile{Latest: "v0.2.0-alpha.22", Error: "v0.2.0-alpha.22"}); !strings.Contains(l, "didn’t work") {
 		t.Errorf("failed: %q", l)
 	}
 }

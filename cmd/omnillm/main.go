@@ -116,6 +116,7 @@ func usage() {
   omnillm status                     查看主机状态
   omnillm update [--check]           更新到最新版本（主机默认会在空闲时自己更新）
   omnillm update --auto on|off       打开或关闭主机的自动更新
+  omnillm uninstall [--purge]        停止并移除后台服务（--purge 连数据和 Key 一起删）
   omnillm hub run                    启动主机（前台运行）
   omnillm hub provider add <openai|anthropic|ollama|openai-compatible> [--name N] [--base-url U]
                                      接入模型来源（API Key 从标准输入读，不写在命令行里）
@@ -142,6 +143,7 @@ func usage() {
   omnillm status                     show the hub’s status
   omnillm update [--check]           update to the newest version (the hub also updates itself when idle)
   omnillm update --auto on|off       turn the hub’s automatic updates on or off
+  omnillm uninstall [--purge]        stop and remove the background service (--purge: data and keys too)
   omnillm hub run                    run the hub (foreground)
   omnillm hub provider add <openai|anthropic|ollama|openai-compatible> [--name N] [--base-url U]
                                      connect a model source (the API key is read from stdin, never argv)
