@@ -503,3 +503,8 @@ p code, li code, .pair-how code { white-space: nowrap; }
 .nm-sub.parts > .part + .part::before { content: none; }
 /* Under a device's name on a phone: each part on its own line. */
 .nm-sub.parts > .part { display: block; }
+/* Time and spend under a device's name are for phone widths only: the
+   later ".parts" display must not bring them back on a wide window,
+   where the Last seen and Today columns show them. */
+.devices-table .nm-sub.narrow-only, .apps-table .nm-sub.narrow-only { display: none; }
+@media (max-width: 600px) { .devices-table .nm-sub.narrow-only, .apps-table .nm-sub.narrow-only { display: flex; } }

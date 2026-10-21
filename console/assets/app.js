@@ -55,6 +55,7 @@ const T = {
     grpSub: "订阅", grpKey: "API Key", grpLocal: "{Here}", pickOne: "至少选一个模型。", appNoHuman: "应用用不了只能手动对话的模型",
     hiddenTag: "不在设备上显示", appNoModels: "没有能用的模型", appNoModelsBody: "现在接入的模型应用都用不了。先接入 API Key 或{here}上的模型。",
     appNoModelsTip: "接入 API Key 或{here}上的模型后就能用", devNoModelsBody: "它能用的模型都已移除或不在设备上显示。打开“全部模型”，或在下面选几个。",
+    devNoModelsBg: "这台设备只给程序和脚本用，可它能选的模型都设成了“只能手动对话”。在下面换一个模型，或在“模型”里关掉那个模型的“只能手动对话”。",
     removeDevice: "移除设备", removeApp: "移除应用",
     discardQ: "放弃没保存的修改？", discard: "放弃", keepEditing: "继续编辑",
     providers: "模型来源", keyLast4: "接入方式", subLogin: "订阅登录（只留在{here}上）",
@@ -146,6 +147,7 @@ const T = {
     grpSub: "Subscriptions", grpKey: "API key", grpLocal: "{Here}", pickOne: "Choose at least one model.", appNoHuman: "Apps can’t use chat-only models",
     hiddenTag: "Hidden on devices", appNoModels: "No usable models", appNoModelsBody: "None of the connected models work for apps. Connect an API key or a model on {here} first.",
     appNoModelsTip: "Works once you connect an API key or a model on {here}", devNoModelsBody: "All the models it could use were removed or hidden on devices. Turn on “All models” or choose some below.",
+    devNoModelsBg: "This device is for programs and scripts only, but every model it may use is set to “Chat only”. Choose another model below, or turn off “Chat only” for that model under “Models”.",
     removeDevice: "Remove device", removeApp: "Remove app",
     discardQ: "Discard unsaved changes?", discard: "Discard", keepEditing: "Keep editing",
     providers: "Model sources", keyLast4: "Connected with", subLogin: "Subscription login (stays on {here})",
@@ -884,7 +886,11 @@ function renderDevices() {
     const spent = spentText("device/" + d.ID, d.BudgetMicroUSD);
     const nc = nameCell(tr, d.Name, d.Paused, d.Online, spent, d.LastSeen);
     // Nothing on its list is left for it (removed, or kept off devices).
-    if (!deviceHasModels(d)) nc.firstChild.append(el("span", "", "brk narrow-only"), el("span", t("appNoModels"), "tag warn-tag"));
+    if (!deviceHasModels(d)) {
+      const tag = el("span", t("appNoModels"), "tag warn-tag");
+      tag.title = t(devNoModelsWhy(d));
+      nc.firstChild.append(el("span", "", "brk narrow-only"), tag);
+    }
     seenText(cell(tr, "", "seen"), d.Online, d.LastSeen);
     cell(tr, spent, "spent");
     pauseSwitch(tr, d.Name, "devices/update", d.ID, d.Paused);
@@ -1048,6 +1054,13 @@ function appHasModels(a) {
 const usableByDevice = (d, m) => !m.hidden && (!d.BackgroundOnly || usableByApp(m));
 // deviceHasModels: a device can use at least one model: one on its list
 // (or any, with all models) that it can use.
+// devNoModelsWhy: why a device has nothing to use. A device for programs
+// only gets no "chat only" model: that is the usual reason when its
+// models are still there.
+function devNoModelsWhy(d) {
+  const listed = S.models.filter((m) => !m.hidden && (!(d.Models || []).length || d.Models.includes(m.id)));
+  return d.BackgroundOnly && listed.length ? "devNoModelsBg" : "devNoModelsBody";
+}
 function deviceHasModels(d) {
   return S.models.some((m) => usableByDevice(d, m) && (!(d.Models || []).length || d.Models.includes(m.id)));
 }
@@ -1094,7 +1107,7 @@ function editDialog(kind, x) {
   const msec = section(d.body, t("secModels"));
   const usable = (m) => isApp ? usableByApp(m) : usableByDevice(x, m);
   if (isApp && !S.models.some(usableByApp)) msec.append(el("p", t("appNoModelsBody"), "warn-note"));
-  if (!isApp && !deviceHasModels(x)) msec.append(el("p", t("devNoModelsBody"), "warn-note"));
+  if (!isApp && !deviceHasModels(x)) msec.append(el("p", t(devNoModelsWhy(x)), "warn-note"));
   const allSw = el("input"); allSw.type = "checkbox"; allSw.className = "switch"; allSw.checked = !(x.Models || []).length;
   const all = el("label", undefined, "toggle wrap"); all.append(allSw, el("span", t("allModels")));
   const list = el("div", undefined, "model-pick");
