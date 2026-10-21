@@ -18,7 +18,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -172,13 +171,39 @@ func updateLock(dir string) (release func(), ok bool) {
 		if err := os.Link(tmp, p); err == nil {
 			return func() { _ = os.Remove(p) }, true
 		}
-		st, serr := os.Stat(p)
-		if serr != nil || (holderAlive(p) && time.Since(st.ModTime()) < 20*time.Minute) {
+		if _, serr := os.Stat(p); serr != nil || lockHeld(p) {
 			return nil, false
 		}
 		_ = os.Remove(p)
 	}
 	return nil, false
+}
+
+// lockHeld: an update holds the lock now. Every update ends with its
+// holder gone (the installer replaces the hub, the menu bar, or exits), so
+// a lock is stale once its holder has stopped; a process lock older than
+// the longest install is stale too (the system may have given its PID to
+// another program meanwhile). A systemd unit is asked directly.
+func lockHeld(p string) bool {
+	if !holderAlive(p) {
+		return false
+	}
+	if b, err := os.ReadFile(p); err == nil && strings.HasPrefix(strings.TrimSpace(string(b)), "unit:") {
+		return true
+	}
+	st, err := os.Stat(p)
+	return err == nil && time.Since(st.ModTime()) < 20*time.Minute
+}
+
+// lockTo hands the lock to the process (or "unit:NAME") that carries the
+// install on, so lockHeld follows it rather than its starter, which the
+// install is about to restart.
+func lockTo(dir, holder string) {
+	p := filepath.Join(dir, "update.lock")
+	tmp := p + ".to"
+	if os.WriteFile(tmp, []byte(holder+"\n"), 0o600) == nil {
+		_ = os.Rename(tmp, p)
+	}
 }
 
 // holderAlive: the process that took the lock still runs. A hub that
@@ -200,16 +225,23 @@ func holderAlive(lock string) bool {
 	return err == nil && p.Signal(syscall.Signal(0)) == nil
 }
 
-// update installs the newest release over this one. log receives the
-// installer's output; detached runs the installer in its own session (and
-// on Linux, under systemd, in its own unit) so it outlives this process,
-// which it replaces.
-func update(ctx context.Context, dir, r string, logw io.Writer, detached bool) error {
+// update installs the newest release over this one, with the installer's
+// output in update.log (started afresh only once the lock is ours, so a
+// blocked attempt never wipes the log of the install that runs); detached
+// runs the installer in its own session (and on Linux, under systemd, in
+// its own unit) so it outlives this process, which it replaces.
+func update(ctx context.Context, dir, r string, detached bool) error {
 	release, ok := updateLock(dir)
 	if !ok {
 		return errLocked
 	}
-	err := runInstaller(ctx, updateClient(), dir, installerArgs(r), logw, detached)
+	logw, err := os.OpenFile(filepath.Join(dir, "update.log"), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
+	if err != nil {
+		release()
+		return err
+	}
+	defer logw.Close()
+	err = runInstaller(ctx, updateClient(), dir, installerArgs(r), logw, detached)
 	if !errors.Is(err, errHandedOff) {
 		release()
 	}
@@ -283,19 +315,17 @@ func updateCmd(args []string) {
 		fmt.Println(runnable(fmt.Sprintf(t("有新版本 %s。运行 omnillm update 更新。", "Version %s is out. Run omnillm update to install it."), plain(latest))))
 		return
 	}
+	if lockHeld(filepath.Join(dir, "update.lock")) {
+		die(say(t("另一个更新正在进行，过几分钟再试。", "Another update is already running; try again in a few minutes.")))
+	}
 	fmt.Printf(t("正在更新到 %s：下载、核对、安装……\n", "Updating to %s: downloading, verifying, installing…\n"), plain(latest))
 	if r == "hub" {
 		fmt.Println(t("OmniLLM 会重启几秒，正在进行的回答会中断。", "OmniLLM restarts for a few seconds; a reply in progress is cut off."))
 	}
 	logPath := filepath.Join(dir, "update.log")
-	logf, err := os.OpenFile(logPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
-	if err != nil {
-		die(err)
-	}
 	ictx, icancel := context.WithTimeout(ctx, 15*time.Minute)
-	err = update(ictx, dir, r, logf, false)
+	err = update(ictx, dir, r, false)
 	icancel()
-	logf.Close()
 	if errors.Is(err, errLocked) {
 		die(say(t("另一个更新正在进行，过几分钟再试。", "Another update is already running; try again in a few minutes.")))
 	}
@@ -420,15 +450,9 @@ func autoUpdate(ctx context.Context, h *hub.Hub, dir string) {
 			wait = autoRetry
 		case "install":
 			log.Printf("hub: updating %s → %s (automatic)", version, u.Latest)
-			logf, err := os.OpenFile(filepath.Join(dir, "update.log"), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
-			if err != nil {
-				wait = autoRetry
-				continue
-			}
 			ictx, cancel := context.WithTimeout(ctx, 15*time.Minute)
-			err = update(ictx, dir, "hub", logf, true)
+			err := update(ictx, dir, "hub", true)
 			cancel()
-			logf.Close()
 			switch {
 			case errors.Is(err, errHandedOff), errors.Is(err, errLocked):
 				// The installer runs in its own unit and restarts us (if

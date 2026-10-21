@@ -369,10 +369,16 @@ if (MOUSE_ONLY) {
 // Step 3 says what to do with the box that is open.
 const step3 = () => quoted(document.querySelector('[data-t="step3"]'), t($("paste").open ? "step3Paste" : "step3"));
 step3();
+// Only a box the person opened takes the focus: opened for them (no
+// camera), the keyboard would cover the message saying why.
+let pasteByHand = false;
+document.querySelector("#paste summary").addEventListener("click", () => { pasteByHand = true; });
 $("paste").addEventListener("toggle", () => {
   step3();
+  const byHand = pasteByHand;
+  pasteByHand = false;
   // Opened by a tap: bring the box into view and type into it.
-  if ($("paste").open && !MOUSE_ONLY) {
+  if ($("paste").open && byHand && !MOUSE_ONLY) {
     $("paste-text").scrollIntoView({ block: "center" });
     $("paste-text").focus({ preventScroll: true });
   }

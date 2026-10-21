@@ -104,7 +104,7 @@ func trayReady() {
 	starting := false // a launchctl kickstart is under way
 	show := func() {
 		st, ok := queryStatus()
-		up.HubUpdating = up.Installing == "" && holderAlive(lockPath)
+		up.HubUpdating = up.Installing == "" && lockHeld(lockPath)
 		updating := up.Installing != "" || up.HubUpdating
 		head.SetTitle(statusLine(st, ok, updating, startFailed))
 		if !ok {
@@ -186,13 +186,7 @@ func trayReady() {
 		go func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
 			defer cancel()
-			logf, err := os.OpenFile(logPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
-			if err != nil {
-				installDone <- err
-				return
-			}
-			defer logf.Close()
-			installDone <- update(ctx, dataDir("hub"), "hub", logf, true)
+			installDone <- update(ctx, dataDir("hub"), "hub", true)
 		}()
 	}
 	up = up.fromHub(version, readUpdate(dataDir("hub")))
@@ -224,7 +218,7 @@ func trayReady() {
 				}
 			case <-ver.ClickedCh:
 				if installClick && up.Installing == "" {
-					if holderAlive(lockPath) {
+					if lockHeld(lockPath) {
 						// Someone else is installing already.
 						up.HubUpdating = true
 						showUpdate()

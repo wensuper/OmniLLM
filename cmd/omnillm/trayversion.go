@@ -224,10 +224,17 @@ func runInstaller(ctx context.Context, c *http.Client, dir string, args []string
 	cmd.Dir = work
 	cmd.Env = append(os.Environ(), "OMNILLM_NO_BROWSER=1", "OMNILLM_UPDATE_TO="+readUpdate(dir).Latest)
 	cmd.Stdout, cmd.Stderr = logw, logw
-	if detached {
-		detach(cmd)
+	if !detached {
+		return cmd.Run()
 	}
-	return cmd.Run()
+	detach(cmd)
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	// The installer restarts this hub (or menu bar): from here the lock
+	// names the installer, so it reads as held for as long as it runs.
+	lockTo(dir, strconv.Itoa(cmd.Process.Pid))
+	return cmd.Wait()
 }
 
 // errHandedOff: the installer runs on in its own systemd unit, which now
@@ -260,7 +267,7 @@ func runInUnit(ctx context.Context, dir, work, script string, args []string) err
 		return fmt.Errorf("systemd-run: %v: %s", err, strings.TrimSpace(string(out)))
 	}
 	// The unit owns the lock from here (holderAlive asks systemd).
-	_ = os.WriteFile(filepath.Join(dir, "update.lock"), []byte("unit:"+unit+"\n"), 0o600)
+	lockTo(dir, "unit:"+unit)
 	return errHandedOff
 }
 

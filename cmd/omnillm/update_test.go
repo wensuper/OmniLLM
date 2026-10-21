@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -169,5 +170,29 @@ func TestNoteHandedOff(t *testing.T) {
 	}
 	if exists(dir + "/update.status") {
 		t.Fatal("status file read twice")
+	}
+}
+
+func TestLockHeldFollowsItsHolder(t *testing.T) {
+	dir := t.TempDir()
+	p := dir + "/update.lock"
+	lockTo(dir, strconv.Itoa(os.Getpid()))
+	if !lockHeld(p) {
+		t.Fatal("a fresh lock held by a running process isn't held")
+	}
+	// The same PID an hour later may be another program by now.
+	old := time.Now().Add(-time.Hour)
+	_ = os.Chtimes(p, old, old)
+	if lockHeld(p) {
+		t.Fatal("an hour-old process lock still counts as held")
+	}
+	lockTo(dir, "999999999")
+	if lockHeld(p) {
+		t.Fatal("a lock whose holder is gone counts as held")
+	}
+	if r, ok := updateLock(dir); !ok {
+		t.Fatal("a stale lock blocks the next update")
+	} else {
+		r()
 	}
 }
