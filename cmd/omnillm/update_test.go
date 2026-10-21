@@ -50,16 +50,16 @@ func TestStatusUpdateLine(t *testing.T) {
 	old := version
 	version = "0.2.0-alpha.21"
 	defer func() { version = old }()
-	if l := statusUpdateLine(updateFile{Latest: "v0.2.0-alpha.21"}); l != "" {
+	if l := statusUpdateLine(version, updateFile{Latest: "v0.2.0-alpha.21"}); l != "" {
 		t.Errorf("up to date, got %q", l)
 	}
-	if l := statusUpdateLine(updateFile{Latest: "v0.2.0-alpha.22"}); !strings.Contains(l, "installs by itself") {
+	if l := statusUpdateLine(version, updateFile{Latest: "v0.2.0-alpha.22"}); !strings.Contains(l, "installs by itself") {
 		t.Errorf("auto: %q", l)
 	}
-	if l := statusUpdateLine(updateFile{Latest: "v0.2.0-alpha.22", Manual: true}); !strings.Contains(l, "omnillm update") || strings.Contains(l, "by itself") {
+	if l := statusUpdateLine(version, updateFile{Latest: "v0.2.0-alpha.22", Manual: true}); !strings.Contains(l, "omnillm update") || strings.Contains(l, "by itself") {
 		t.Errorf("manual: %q", l)
 	}
-	if l := statusUpdateLine(updateFile{Latest: "v0.2.0-alpha.22", Error: "v0.2.0-alpha.22"}); !strings.Contains(l, "didn’t work") {
+	if l := statusUpdateLine(version, updateFile{Latest: "v0.2.0-alpha.22", Error: "v0.2.0-alpha.22"}); !strings.Contains(l, "didn’t work") {
 		t.Errorf("failed: %q", l)
 	}
 }

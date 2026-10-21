@@ -207,7 +207,7 @@ func holderAlive(lock string) bool {
 func update(ctx context.Context, dir, r string, logw io.Writer, detached bool) error {
 	release, ok := updateLock(dir)
 	if !ok {
-		return say(t("另一个更新正在进行，请过几分钟再看。", "Another update is already running; check again in a few minutes."))
+		return errLocked
 	}
 	err := runInstaller(ctx, updateClient(), dir, installerArgs(r), logw, detached)
 	if !errors.Is(err, errHandedOff) {
@@ -216,13 +216,23 @@ func update(ctx context.Context, dir, r string, logw io.Writer, detached bool) e
 	return err
 }
 
+// errLocked: another update is running. Nothing failed; try again later.
+var errLocked = errors.New("update: another update is running")
+
 // ---------------- omnillm update ----------------
 
 func updateCmd(args []string) {
-	fs := flag.NewFlagSet("update", flag.ExitOnError)
+	// Never ExitOnError: it stops at the first plain word, and then
+	// "omnillm update check" would run a real update.
+	fs := flag.NewFlagSet("update", flag.ContinueOnError)
 	check := fs.Bool("check", false, "only check for a new version")
 	auto := fs.String("auto", "", "on|off: whether the hub updates itself")
-	_ = fs.Parse(args)
+	if err := parseFlags(fs, args); err != nil {
+		dieArgs(err)
+	}
+	if *auto != "" && *auto != "on" && *auto != "off" {
+		dieArgs(say(t("--auto 只能是 on 或 off。", "--auto must be on or off.")))
+	}
 	r := role()
 	if r == "" {
 		die(say(t("这台电脑上还没有安装 OmniLLM。安装方法见 https://github.com/wensuper/OmniLLM#quick-start",
@@ -243,7 +253,7 @@ func updateCmd(args []string) {
 	case "":
 	case "on", "off":
 		if r != "hub" {
-			die(say(t("自动更新只用在主机上。这台机器上运行 omnillm update 就能更新。", "Automatic updates are for the hub. On this machine, run omnillm update to update.")))
+			die(say(runnable(t("这台电脑只当设备用，不会自己更新；要更新，运行 omnillm update。", "This computer is set up as a device and doesn’t update by itself; run omnillm update to update it."))))
 		}
 		u.Manual = *auto == "off"
 		writeUpdate(dir, u)
@@ -253,8 +263,6 @@ func updateCmd(args []string) {
 			fmt.Println(t("已打开自动更新：有新版本时，OmniLLM 会在没人使用时自己更新。", "Automatic updates are on: OmniLLM installs a new version by itself while nobody is using it."))
 		}
 		return
-	default:
-		usage()
 	}
 	ctx, stop := signalCtx()
 	defer stop()
@@ -288,6 +296,9 @@ func updateCmd(args []string) {
 	err = update(ictx, dir, r, logf, false)
 	icancel()
 	logf.Close()
+	if errors.Is(err, errLocked) {
+		die(say(t("另一个更新正在进行，过几分钟再试。", "Another update is already running; try again in a few minutes.")))
+	}
 	if err != nil {
 		fmt.Fprintln(os.Stderr, tail(logPath, 12))
 		var s sayErr
@@ -419,9 +430,10 @@ func autoUpdate(ctx context.Context, h *hub.Hub, dir string) {
 			cancel()
 			logf.Close()
 			switch {
-			case errors.Is(err, errHandedOff):
-				// The installer runs in its own unit and restarts us; if
-				// it fails, the next round reads its result.
+			case errors.Is(err, errHandedOff), errors.Is(err, errLocked):
+				// The installer runs in its own unit and restarts us (if
+				// it fails, the next round reads its result), or another
+				// update is under way: look again shortly.
 				wait = autoRetry
 			case err != nil:
 				// Success restarts the service, which ends this process
@@ -486,14 +498,14 @@ func deviceUpdateHint(dir string) {
 
 // statusUpdateLine is omnillm status's line about updates, "" when there
 // is nothing to say.
-func statusUpdateLine(u updateFile) string {
-	v := plain(u.newer(version))
+func statusUpdateLine(cur string, u updateFile) string {
+	v := plain(u.newer(cur))
 	switch {
 	case v == "":
 		return ""
 	case sameVersion(u.Error, v):
 		return runnable(fmt.Sprintf(t("新版本 %s 自动更新没有成功，运行 omnillm update 再试一次。", "The automatic update to %s didn’t work; run omnillm update to try again."), v))
-	case u.Manual || devBuild(version):
+	case u.Manual || devBuild(cur):
 		return runnable(fmt.Sprintf(t("有新版本 %s。运行 omnillm update 更新。", "Version %s is out. Run omnillm update to install it."), v))
 	}
 	return runnable(fmt.Sprintf(t("有新版本 %s，会在没人使用时自动更新；想现在更新，运行 omnillm update。", "Version %s is out and installs by itself while nobody is using OmniLLM; to update now, run omnillm update."), v))

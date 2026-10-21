@@ -169,7 +169,7 @@ func installCmd(args []string) {
 					u.Skip = version
 					u.failed(version)
 					writeUpdate(dir, u)
-					die(sayf(t("新版本 %s 没能启动，已自动换回 %s，一切照常。以后不会再自动装 %[1]s。\n（想帮忙排查：日志在 %s）", "Version %s didn’t start, so OmniLLM went back to %s; everything works as before, and %[1]s won’t be installed automatically again.\n(To help find out why: the log is at %s)"),
+					die(sayf(t("新版本 %s 没能启动，已自动换回 %s，一切照常。以后不会再自动装 %[1]s。\n（想帮忙排查：日志在 %[3]s）", "Version %s didn’t start, so OmniLLM went back to %s; everything works as before, and %[1]s won’t be installed automatically again.\n(To help find out why: the log is at %[3]s)"),
 						version, prev, filepath.Join(dir, "hub.log")))
 				}
 			}
@@ -178,16 +178,19 @@ func installCmd(args []string) {
 	if !ok {
 		die(say(t("OmniLLM 没有启动起来。日志在 ", "OmniLLM didn’t start. Its log is at ") + filepath.Join(dir, "hub.log")))
 	}
-	upgraded := prev != "" && compareVersions(version, prev) > 0
-	if u := readUpdate(dir); u.Error != "" || sameVersion(u.Skip, version) || (upgraded && u.newer(version) != "") {
+	// An update that installed a program naming an older version than
+	// the release it went for: don't go for that release again and again.
+	short := ""
+	if want := os.Getenv("OMNILLM_UPDATE_TO"); want != "" && compareVersions(version, want) < 0 {
+		short = want
+	}
+	if u := readUpdate(dir); u.Error != "" || sameVersion(u.Skip, version) || short != "" {
 		u.Error = ""
 		if sameVersion(u.Skip, version) {
 			u.Skip = "" // installed on purpose: it runs
 		}
-		if upgraded && u.newer(version) != "" {
-			// Updated, yet the release still looks newer (its program
-			// names another version): don't reinstall it every round.
-			u.failed(u.Latest)
+		if short != "" {
+			u.failed(short)
 		}
 		writeUpdate(dir, u)
 	}
@@ -840,7 +843,11 @@ func statusCmd(args []string) {
 	st.Headless = headless()
 	st.Next = nextStep(st)
 	hu := readUpdate(dataDir("hub"))
-	st.Update = plain(hu.newer(version))
+	running := version
+	if st.Version != "" {
+		running = st.Version // the hub that runs, not this program
+	}
+	st.Update = plain(hu.newer(running))
 	st.UpdateFailed = st.Update != "" && sameVersion(hu.Error, st.Update)
 	for _, a := range args {
 		if a == "--json" {
@@ -851,14 +858,14 @@ func statusCmd(args []string) {
 	}
 	if !ok {
 		fmt.Println(runnable(st.Next))
-		if l := statusUpdateLine(hu); l != "" {
+		if l := statusUpdateLine(running, hu); l != "" {
 			fmt.Println(l)
 		}
 		os.Exit(1)
 	}
 	fmt.Println(runningLine(st))
 	fmt.Println(runnable(st.Next))
-	if l := statusUpdateLine(hu); l != "" {
+	if l := statusUpdateLine(running, hu); l != "" {
 		fmt.Println(l)
 	}
 }

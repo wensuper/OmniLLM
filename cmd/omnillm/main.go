@@ -235,8 +235,8 @@ func usageText(all bool) string {
   omnillm install                    一步装好：主机作为后台服务运行，打开控制台
   omnillm open                       打开本机控制台
   omnillm status                     查看主机状态
-  omnillm update [--check]           更新到最新版本（主机默认会在空闲时自己更新）
-  omnillm update --auto on|off       打开或关闭主机的自动更新
+  omnillm update [--check] [--auto on|off]
+                                     更新到最新版本（主机默认会在空闲时自己更新）；--auto 开关自动更新
   omnillm uninstall [--purge]        停止并移除后台服务（--purge 连数据和 API Key 一起删）
   omnillm tray                       把菜单栏图标找回来
   omnillm version                    显示版本
@@ -274,8 +274,8 @@ func usageText(all bool) string {
   omnillm install                    one step: run the hub as a background service, open the console
   omnillm open                       open the local console
   omnillm status                     show the hub’s status
-  omnillm update [--check]           update to the newest version (the hub also updates itself when idle)
-  omnillm update --auto on|off       turn the hub’s automatic updates on or off
+  omnillm update [--check] [--auto on|off]
+                                     update to the newest version (the hub also updates itself when idle); --auto turns that on or off
   omnillm uninstall [--purge]        stop and remove the background service (--purge also deletes data and API keys)
   omnillm tray                       bring back the menu bar icon
   omnillm version                    show the version
@@ -315,7 +315,8 @@ func usageText(all bool) string {
   omnillm install                    一步装好：主机作为后台服务运行，打开控制台
   omnillm open                       打开本机控制台
   omnillm status                     查看主机状态
-  omnillm update [--check]           更新到最新版本（主机默认会在空闲时自己更新）
+  omnillm update [--check] [--auto on|off]
+                                     更新到最新版本（主机默认会在空闲时自己更新）
   omnillm uninstall [--purge]        停止并移除后台服务（--purge 连数据和 API Key 一起删）
   omnillm tray                       把菜单栏图标找回来
   omnillm version                    显示版本
@@ -324,7 +325,8 @@ func usageText(all bool) string {
   omnillm install                    one step: run the hub as a background service, open the console
   omnillm open                       open the local console
   omnillm status                     show the hub’s status
-  omnillm update [--check]           update to the newest version (the hub also updates itself when idle)
+  omnillm update [--check] [--auto on|off]
+                                     update to the newest version (the hub also updates itself when idle)
   omnillm uninstall [--purge]        stop and remove the background service (--purge also deletes data and API keys)
   omnillm tray                       bring back the menu bar icon
   omnillm version                    show the version
