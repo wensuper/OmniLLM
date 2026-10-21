@@ -81,6 +81,22 @@ type sayErr string
 
 func (e sayErr) Error() string { return string(e) }
 
+// usageErr is a command typed in a form it doesn't have: the person gets
+// every command's form (subUsage); the text is the one line about it.
+type usageErr string
+
+func (e usageErr) Error() string { return string(e) }
+
+// dieArgs is die for what a command's arguments gave: a form it doesn't
+// have prints the full help, exit 2.
+func dieArgs(err error) {
+	var u usageErr
+	if errors.As(err, &u) {
+		subUsage()
+	}
+	die(err)
+}
+
 func say(s string) error                 { return sayErr(s) }
 func sayf(format string, a ...any) error { return sayErr(fmt.Sprintf(format, a...)) }
 
@@ -102,6 +118,10 @@ func describe(err error) string {
 	if errors.As(err, &s) {
 		return string(s)
 	}
+	var u usageErr
+	if errors.As(err, &u) {
+		return string(u)
+	}
 	msg := omnillm.Describe(lang(), err)
 	if e := omnillm.AsError(err); e.Code == omnillm.CodeInternal {
 		msg += "\n  (" + err.Error() + ")"
@@ -119,20 +139,28 @@ func usageText(all bool) string {
   omnillm status                     查看主机状态
   omnillm update [--check]           更新到最新版本（主机默认会在空闲时自己更新）
   omnillm update --auto on|off       打开或关闭主机的自动更新
-  omnillm uninstall [--purge]        停止并移除后台服务（--purge 连数据和 Key 一起删）
+  omnillm uninstall [--purge]        停止并移除后台服务（--purge 连数据和 API Key 一起删）
   omnillm tray                       把菜单栏图标找回来
   omnillm version                    显示版本
   omnillm hub run                    启动主机（前台运行）
   omnillm hub provider add <openai|anthropic|ollama|openai-compatible> [--name N] [--base-url U]
                                      接入模型来源（API Key 从标准输入读，不写在命令行里）
-  omnillm hub providers | models | devices | apps | usage | audit
+  omnillm hub provider rm <来源>     移除模型来源
+  omnillm hub providers | models | devices | apps | usage [--json]
+                                     列出来（--json 输出原始数据）
+  omnillm hub audit
   omnillm hub pair [--name N] [--models a,b] [--budget-usd 5] [--background-only]
-  omnillm hub revoke <名字或ID>      立即移除设备
+  omnillm hub revoke <名字或ID>      立即移除设备（名字里有空格或括号时加引号：omnillm hub revoke "iPhone (2)"）
   omnillm hub device set <名字或ID> [--name N] [--paused true|false] [--budget-usd X | --no-limit] [--models a,b | --all-models]
                                      改设备的名字、开启或暂停、每天额度、能用的模型
   omnillm hub app add <名字>         给不能嵌入库的程序发一枚应用令牌
+  omnillm hub app set <名字或ID> [--name N] [--paused true|false] [--budget-usd X | --no-limit] [--models a,b | --all-models]
+                                     改应用的名字、开启或暂停、每天额度、能用的模型
   omnillm hub app rm <名字或ID>      移除应用，它的令牌立即失效
-  omnillm hub model set <ID> [--price-in X --price-out Y] [--name 显示名] [--human-only true|false]
+  omnillm hub model set <名字或ID> [--name 新名字] [--shown true|false] [--human-only true|false] [--price-in X --price-out Y]
+                                     改名（--name "" 恢复原名）、是否在设备上显示、只能手动对话、价格
+  omnillm hub daily-total <美元> | --no-limit
+                                     整台 Mac 每天总额度
   omnillm hub region confirm         确认主机所在地区变化并恢复调用
   omnillm connect pair               在这台设备上输入主机给的配对文字
   omnillm connect run [--listen 127.0.0.1:8766]
@@ -148,20 +176,28 @@ func usageText(all bool) string {
   omnillm status                     show the hub’s status
   omnillm update [--check]           update to the newest version (the hub also updates itself when idle)
   omnillm update --auto on|off       turn the hub’s automatic updates on or off
-  omnillm uninstall [--purge]        stop and remove the background service (--purge: data and keys too)
+  omnillm uninstall [--purge]        stop and remove the background service (--purge also deletes data and API keys)
   omnillm tray                       bring back the menu bar icon
   omnillm version                    show the version
   omnillm hub run                    run the hub (foreground)
   omnillm hub provider add <openai|anthropic|ollama|openai-compatible> [--name N] [--base-url U]
                                      connect a model source (the API key is read from stdin, never argv)
-  omnillm hub providers | models | devices | apps | usage | audit
+  omnillm hub provider rm <source>   remove a model source
+  omnillm hub providers | models | devices | apps | usage [--json]
+                                     list them (--json: the raw data)
+  omnillm hub audit
   omnillm hub pair [--name N] [--models a,b] [--budget-usd 5] [--background-only]
-  omnillm hub revoke <name-or-id>    remove a device now
+  omnillm hub revoke <name-or-id>    remove a device now (quote a name with spaces or brackets: omnillm hub revoke "iPhone (2)")
   omnillm hub device set <name-or-id> [--name N] [--paused true|false] [--budget-usd X | --no-limit] [--models a,b | --all-models]
                                      rename a device, pause or resume it, change its daily limit or models
   omnillm hub app add <name>         token for a program that can’t embed the library
+  omnillm hub app set <name-or-id> [--name N] [--paused true|false] [--budget-usd X | --no-limit] [--models a,b | --all-models]
+                                     rename an app, pause or resume it, change its daily limit or models
   omnillm hub app rm <name-or-id>    remove an app; its token stops working at once
-  omnillm hub model set <id> [--price-in X --price-out Y] [--name display] [--human-only true|false]
+  omnillm hub model set <name-or-id> [--name new-name] [--shown true|false] [--human-only true|false] [--price-in X --price-out Y]
+                                     rename (--name "" restores the original), show on devices, chat only, prices
+  omnillm hub daily-total <usd> | --no-limit
+                                     daily total for this Mac
   omnillm hub region confirm         accept the hub’s new region and resume calls
   omnillm connect pair               enter the hub’s pairing text on this device
   omnillm connect run [--listen 127.0.0.1:8766]
@@ -178,7 +214,7 @@ func usageText(all bool) string {
   omnillm open                       打开本机控制台
   omnillm status                     查看主机状态
   omnillm update [--check]           更新到最新版本（主机默认会在空闲时自己更新）
-  omnillm uninstall [--purge]        停止并移除后台服务（--purge 连数据和 Key 一起删）
+  omnillm uninstall [--purge]        停止并移除后台服务（--purge 连数据和 API Key 一起删）
   omnillm tray                       把菜单栏图标找回来
   omnillm version                    显示版本
   omnillm help --all                 所有命令（主机、设备、远程连接管理）
@@ -187,7 +223,7 @@ func usageText(all bool) string {
   omnillm open                       open the local console
   omnillm status                     show the hub’s status
   omnillm update [--check]           update to the newest version (the hub also updates itself when idle)
-  omnillm uninstall [--purge]        stop and remove the background service (--purge: data and keys too)
+  omnillm uninstall [--purge]        stop and remove the background service (--purge also deletes data and API keys)
   omnillm tray                       bring back the menu bar icon
   omnillm version                    show the version
   omnillm help --all                 all commands (hub, devices, relay admin)
@@ -197,6 +233,13 @@ func usageText(all bool) string {
 // usage is for a command that isn't one: the short list, exit 2.
 func usage() {
 	fmt.Fprint(os.Stderr, usageText(false))
+	os.Exit(2)
+}
+
+// subUsage is for a hub or connect command used wrongly: every command,
+// so the right form is there to copy, on stderr, exit 2.
+func subUsage() {
+	fmt.Fprint(os.Stderr, usageText(true))
 	os.Exit(2)
 }
 
@@ -375,7 +418,7 @@ func signalCtx() (context.Context, context.CancelFunc) {
 
 func hubCmd(args []string) {
 	if len(args) == 0 {
-		usage()
+		subUsage()
 	}
 	dir := dataDir("hub")
 	sock := filepath.Join(dir, "control.sock")
@@ -383,8 +426,12 @@ func hubCmd(args []string) {
 	case "run":
 		hubRun(dir, sock, args[1:])
 	case "provider":
+		if len(args) >= 3 && args[1] == "rm" {
+			call(sock, control.Request{Op: "provider.rm", Args: map[string]string{"name": strings.Join(args[2:], " ")}})
+			return
+		}
 		if len(args) < 3 || args[1] != "add" {
-			usage()
+			subUsage()
 		}
 		fs := flag.NewFlagSet("provider add", flag.ExitOnError)
 		name := fs.String("name", "", "")
@@ -396,13 +443,30 @@ func hubCmd(args []string) {
 			key = readSecret(t("粘贴 API Key（不会显示）：", "Paste the API key (not shown): "))
 		}
 		call(sock, control.Request{Op: "provider.add", Args: map[string]string{"kind": kind, "name": *name, "base_url": *base}, Secret: key})
-	case "devices":
-		printTable(sock, control.Request{Op: args[0]}, func(b []byte) (string, error) { return devicesTable(b, time.Now()) })
-	case "usage":
-		printTable(sock, control.Request{Op: args[0]}, usageTable)
-	case "apps":
-		callOr(sock, control.Request{Op: args[0]}, t("还没有应用。", "No apps yet."))
-	case "providers", "models", "audit":
+	case "devices", "apps", "models", "providers", "usage":
+		// A table for people; --json, the hub's data as it is.
+		raw := len(args) == 2 && args[1] == "--json"
+		if len(args) > 1 && !raw {
+			subUsage()
+		}
+		var render func([]byte) (string, error)
+		switch args[0] {
+		case "devices":
+			render = func(b []byte) (string, error) { return devicesTable(b, time.Now()) }
+		case "apps":
+			render = appsTable
+		case "models":
+			render = modelsTable
+		case "providers":
+			render = func(b []byte) (string, error) { return providersTable(b, time.Now()) }
+		case "usage":
+			render = usageTable
+		}
+		if raw {
+			render = indentJSON
+		}
+		printTable(sock, control.Request{Op: args[0]}, render)
+	case "audit":
 		call(sock, control.Request{Op: args[0]})
 	case "pair":
 		fs := flag.NewFlagSet("pair", flag.ExitOnError)
@@ -413,51 +477,70 @@ func hubCmd(args []string) {
 		_ = fs.Parse(args[1:])
 		call(sock, control.Request{Op: "pair", Args: map[string]string{"name": *name, "models": *models, "budget_usd": fmt.Sprint(*budget), "background_only": fmt.Sprint(*bg)}})
 	case "revoke":
-		if len(args) != 2 {
-			usage()
+		// The name may be typed unquoted: "hub revoke iPhone 2".
+		if len(args) < 2 {
+			subUsage()
 		}
-		call(sock, control.Request{Op: "revoke", Args: map[string]string{"id": args[1]}})
+		call(sock, control.Request{Op: "revoke", Args: map[string]string{"id": strings.Join(args[1:], " ")}})
 	case "device":
 		if len(args) < 3 || args[1] != "set" {
-			usage()
+			subUsage()
 		}
-		a, err := deviceSetArgs(args[2], args[3:])
+		a, err := deviceSetArgs(splitTarget(args[2:]))
 		if err != nil {
-			die(err)
+			dieArgs(err)
 		}
 		call(sock, control.Request{Op: "device.set", Args: a})
 	case "app":
-		if len(args) != 3 {
-			usage()
+		if len(args) < 3 {
+			subUsage()
 		}
 		switch args[1] {
 		case "add":
-			call(sock, control.Request{Op: "app.add", Args: map[string]string{"name": args[2]}})
+			call(sock, control.Request{Op: "app.add", Args: map[string]string{"name": strings.Join(args[2:], " ")}})
 		case "rm":
-			call(sock, control.Request{Op: "app.rm", Args: map[string]string{"id": args[2]}})
+			call(sock, control.Request{Op: "app.rm", Args: map[string]string{"id": strings.Join(args[2:], " ")}})
+		case "set":
+			a, err := appSetArgs(splitTarget(args[2:]))
+			if err != nil {
+				dieArgs(err)
+			}
+			call(sock, control.Request{Op: "app.set", Args: a})
 		default:
-			usage()
+			subUsage()
 		}
 	case "model":
 		if len(args) < 3 || args[1] != "set" {
-			usage()
+			subUsage()
 		}
-		fs := flag.NewFlagSet("model set", flag.ExitOnError)
-		pin := fs.Float64("price-in", -1, "")
-		pout := fs.Float64("price-out", -1, "")
-		disp := fs.String("name", "", "")
-		human := fs.String("human-only", "", "true or false; omit to leave unchanged")
-		_ = fs.Parse(args[3:])
-		call(sock, control.Request{Op: "model.set", Args: map[string]string{"id": args[2], "price_in": fmt.Sprint(*pin),
-			"price_out": fmt.Sprint(*pout), "name": *disp, "human_only": *human}})
+		a, err := modelSetArgs(splitTarget(args[2:]))
+		if err != nil {
+			dieArgs(err)
+		}
+		call(sock, control.Request{Op: "model.set", Args: a})
+	case "daily-total":
+		v, err := dailyTotalArgs(args[1:])
+		if err != nil {
+			dieArgs(err)
+		}
+		call(sock, control.Request{Op: "daily_total.set", Args: map[string]string{"micro_usd": strconv.FormatInt(v, 10)}})
 	case "region":
 		if len(args) != 2 || args[1] != "confirm" {
-			usage()
+			subUsage()
 		}
 		call(sock, control.Request{Op: "region.confirm"})
 	default:
-		usage()
+		subUsage()
 	}
+}
+
+// indentJSON is --json: the hub's data, indented.
+func indentJSON(b []byte) (string, error) {
+	var out bytes.Buffer
+	if err := json.Indent(&out, b, "", "  "); err != nil {
+		return string(b), nil
+	}
+	return out.String(), nil
 }
 
 func readSecret(prompt string) string {
@@ -706,8 +789,10 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 					online++
 				}
 			}
+			_, _, paused := h.RegionStatus()
 			st := map[string]any{"running": true, "version": version, "providers": len(ps), "devices": len(ds), "online": online,
-				"relay_configured": relayURL != "", "relay_up": h.RelayUp(), "console": con != nil}
+				"relay_configured": relayURL != "", "relay_up": h.RelayUp(), "console": con != nil, "os": runtime.GOOS,
+				"region_paused": paused}
 			return c.Send(control.Reply{Event: "ok", Data: jsonData(st)})
 		case "provider.add":
 			cfg, err := provider.Default(provider.Kind(a["kind"]))
@@ -735,7 +820,8 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 			}
 			return c.Send(control.Reply{Event: "ok", Data: jsonData(ps)})
 		case "models":
-			ms, err := h.Models(ctx)
+			// With the owner's names and choices, as the console shows them.
+			ms, err := h.OwnerModels(ctx)
 			if err != nil {
 				return err
 			}
@@ -763,10 +849,17 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 			if err != nil {
 				return err
 			}
-			type row struct{ ID, Name, Budget string }
-			var rows []row
+			spent := map[string]int64{}
+			if u, err := h.Usage(ctx, ""); err == nil {
+				for _, s := range u {
+					spent[s.Who] = s.MicroUSD
+				}
+			}
+			var rows []appRow
 			for _, x := range as {
-				rows = append(rows, row{x.ID, x.Name, limitText(x.Budget)})
+				b, sp := x.Budget, spent["app/"+x.ID]
+				rows = append(rows, appRow{ID: x.ID, Name: x.Name, Budget: limitText(x.Budget), BudgetMicroUSD: &b, Paused: x.Paused,
+					Models: x.Models, SpentMicroUSD: &sp})
 			}
 			return c.Send(control.Reply{Event: "ok", Data: jsonData(rows)})
 		case "usage":
@@ -812,7 +905,7 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 			if err := h.Revoke(ctx, d.ID); err != nil {
 				return hubSay(err)
 			}
-			return c.Send(control.Reply{Event: "ok", Text: fmt.Sprintf(t("已移除“%s”，立即生效。", "Removed “%s”. Effective now."), d.Name)})
+			return c.Send(control.Reply{Event: "ok", Text: fmt.Sprintf(t("已移除“%s”，它会立刻用不了。", "Removed “%s”; it stops working at once."), d.Name)})
 		case "app.add":
 			app, tok, err := h.AddApp(ctx, a["name"], nil, 0)
 			if err != nil {
@@ -834,36 +927,77 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 				return hubSay(err)
 			}
 			return c.Send(control.Reply{Event: "ok", Text: fmt.Sprintf(t("已移除“%s”。", "Removed “%s”."), app.Name)})
-		case "model.set":
-			var u hub.ModelUpdate
-			if n := a["name"]; n != "" {
-				u.DisplayName = &n
+		case "app.set":
+			as, err := h.Apps(ctx)
+			if err != nil {
+				return err
 			}
-			if a["price_in"] != "-1" || a["price_out"] != "-1" {
-				pi, err1 := strconv.ParseFloat(a["price_in"], 64)
-				po, err2 := strconv.ParseFloat(a["price_out"], 64)
-				if err1 != nil || err2 != nil || pi < 0 || po < 0 {
-					return say(t("请同时给出 --price-in 和 --price-out（美元/百万 token）。", "Give both --price-in and --price-out (USD per million tokens)."))
-				}
-				u.PriceIn, u.PriceOut = &pi, &po
+			app, err := findApp(as, a["app"])
+			if err != nil {
+				return err
 			}
-			switch a["human_only"] {
-			case "true":
-				v := true
-				u.HumanOnly = &v
-			case "false":
-				v := false
-				u.HumanOnly = &v
+			name, budget, paused, models, err := deviceUpdate(a)
+			if err != nil {
+				return err
 			}
-			if err := h.SetModel(ctx, a["id"], u); err != nil {
+			app, err = h.UpdateApp(ctx, app.ID, name, budget, paused, models)
+			if err != nil {
 				return hubSay(err)
 			}
+			return c.Send(control.Reply{Event: "ok", Text: fmt.Sprintf(t("已更新“%s”。", "Updated “%s”."), app.Name)})
+		case "model.set":
+			// --name and --shown are the console's rename and "show on
+			// devices"; the rest changes the model itself.
+			ms, err := h.OwnerModels(ctx)
+			if err != nil {
+				return err
+			}
+			m, err := findModel(ms, a["model"])
+			if err != nil {
+				return err
+			}
+			name, shown, u, err := modelUpdate(a)
+			if err != nil {
+				return err
+			}
+			if u != (hub.ModelUpdate{}) {
+				if err := h.SetModel(ctx, m.ID, u); err != nil {
+					return hubSay(err)
+				}
+			}
+			if name != nil || shown != nil {
+				if err := h.SetModelPref(ctx, m.ID, name, shown); err != nil {
+					return hubSay(err)
+				}
+			}
 			return c.Send(control.Reply{Event: "ok", Text: t("已更新。", "Updated.")})
+		case "provider.rm":
+			ps, err := h.Providers(ctx)
+			if err != nil {
+				return err
+			}
+			p, err := findProvider(ps, a["name"])
+			if err != nil {
+				return err
+			}
+			if err := h.RemoveProvider(ctx, p.Name); err != nil {
+				return hubSay(err)
+			}
+			return c.Send(control.Reply{Event: "ok", Text: fmt.Sprintf(t("已移除“%s”，它的模型不再能用。", "Removed “%s”; its models can’t be used any more."), sourceName(p))})
+		case "daily_total.set":
+			v, err := strconv.ParseInt(a["micro_usd"], 10, 64)
+			if err != nil {
+				return say(t("每天总额度不对。", "That daily total isn’t valid."))
+			}
+			if err := h.SetDailyTotal(ctx, v); err != nil {
+				return hubSay(err)
+			}
+			return c.Send(control.Reply{Event: "ok", Text: dailyTotalText(v)})
 		case "region.confirm":
 			if err := h.ConfirmRegion(ctx); err != nil {
 				return err
 			}
-			return c.Send(control.Reply{Event: "ok", Text: t("已确认，恢复调用。", "Confirmed; calls resume.")})
+			return c.Send(control.Reply{Event: "ok", Text: t("已确认，模型恢复使用。", "Confirmed; models are back on.")})
 		case "pair":
 			return pairOp(ctx, h, c, a)
 		}
@@ -878,6 +1012,18 @@ func connectedText(name string, n int) string {
 		return fmt.Sprintf("已接入 %s，%d 个模型可用。", name, n)
 	}
 	return fmt.Sprintf("Connected %s: %s available.", name, plural(n, "model"))
+}
+
+// dailyTotalText is what daily-total says it set.
+func dailyTotalText(v int64) string {
+	amount := usd(v)
+	if v == hub.NoLimit {
+		amount = t("不设上限", "no limit")
+	}
+	if runtime.GOOS == "darwin" {
+		return fmt.Sprintf(t("整台 Mac 每天总额度：%s。", "Daily total for this Mac: %s."), amount)
+	}
+	return fmt.Sprintf(t("整台电脑每天总额度：%s。", "Daily total for this computer: %s."), amount)
 }
 
 func usd(micro int64) string {
@@ -932,7 +1078,7 @@ func pairOp(ctx context.Context, h *hub.Hub, c *control.Conn, a map[string]strin
 
 func connectCmd(args []string) {
 	if len(args) == 0 {
-		usage()
+		subUsage()
 	}
 	dir := dataDir("device")
 	if err := os.MkdirAll(dir, 0o700); err != nil {
@@ -1033,7 +1179,7 @@ func connectCmd(args []string) {
 		fs.Var(&imagePaths, "image", "attach an image file (repeatable)")
 		_ = fs.Parse(args[1:])
 		if fs.NArg() == 0 && len(imagePaths) == 0 {
-			usage()
+			subUsage()
 		}
 		var images []omnillm.Image
 		for _, p := range imagePaths {
@@ -1070,7 +1216,7 @@ func connectCmd(args []string) {
 			fmt.Print(c.Text)
 		}
 	default:
-		usage()
+		subUsage()
 	}
 }
 

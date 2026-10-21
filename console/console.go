@@ -23,6 +23,7 @@ import (
 	"math"
 	"net"
 	"net/http"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -506,6 +507,8 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 		"relay_up": s.hub.RelayUp(), "relay_configured": s.hub.RelayConfigured(),
 		"daily_total_micro_usd": s.hub.DailyTotal(),
 		"region":                map[string]any{"confirmed": confirmed, "seen": seen, "paused": paused},
+		// The page says "this Mac" on macOS and "this computer" elsewhere.
+		"os": runtime.GOOS,
 	})
 }
 

@@ -49,6 +49,12 @@ type Status struct {
 	RelayUp         bool   `json:"relay_up"`
 	Console         bool   `json:"console"`
 	Service         string `json:"service,omitempty"` // launchd | systemd | none
+	// OS is the hub's operating system (runtime.GOOS: "darwin", "linux",
+	// …), so a screen can say "this Mac" or "this computer".
+	OS string `json:"os,omitempty"`
+	// RegionPaused: the hub's region changed and models are paused until
+	// the owner confirms (omnillm hub region confirm).
+	RegionPaused bool `json:"region_paused,omitempty"`
 	// Headless: no display on this machine, so the console cannot be
 	// opened here and the person types a key in the terminal instead.
 	Headless bool   `json:"headless"`
@@ -146,10 +152,8 @@ func notRunning() string {
 
 // runningLine is the first line of omnillm status.
 func runningLine(st Status) string {
-	if zh() {
-		return fmt.Sprintf("OmniLLM 在运行（%s）。模型来源 %d 个，设备 %d 台。", st.Version, st.Providers, st.Devices)
-	}
-	return fmt.Sprintf("OmniLLM is running (%s). %s, %s.", st.Version, plural(st.Providers, "model source"), plural(st.Devices, "device"))
+	return fmt.Sprintf(t("OmniLLM 在运行（%s）。设备 %d 台（%d 台在线），模型来源 %d 个。",
+		"OmniLLM is running (%s). Devices: %d (%d online), model sources: %d."), st.Version, st.Devices, st.Online, st.Providers)
 }
 
 // plural is "1 device" / "2 devices".
@@ -164,6 +168,10 @@ func nextStep(st Status) string {
 	switch {
 	case !st.Running:
 		return notRunning()
+	case st.RegionPaused:
+		s := onMachine(t("%s 所在的地区变了，已暂停使用模型。确认是你本人换了地方，运行 omnillm hub region confirm 恢复。",
+			"%s’s region changed; models are paused. If you moved, run omnillm hub region confirm to turn them back on."))
+		return strings.ToUpper(s[:1]) + s[1:] // "This Mac’s region …"
 	case st.Providers == 0 && st.Headless:
 		// No browser here: a key is typed in this terminal, never sent in a chat.
 		return t("下一步：接入一个模型（选一种）：\n"+
@@ -172,7 +180,7 @@ func nextStep(st Status) string {
 			"· 有 API Key：在这台机器的终端里亲自运行 omnillm hub provider add anthropic（或 openai、openai-compatible），在提示时粘贴；API Key 不要发到聊天里",
 			"Next: connect a model (pick one):\n"+
 				"· Claude subscription: in Terminal run claude, then type /login\n"+
-				"· ChatGPT subscription: run codex login\n"+
+				"· ChatGPT subscription: in Terminal run codex login\n"+
 				"· API key: in this machine’s terminal, run omnillm hub provider add anthropic (or openai, openai-compatible) yourself and paste the key when asked; don’t send it in a chat")
 	case st.Providers == 0:
 		// One command a line: the person picks the one that fits.
@@ -184,7 +192,7 @@ func nextStep(st Status) string {
 		}
 		return onMachine("Next: connect a model (pick one):\n" +
 			"· Claude subscription: in Terminal run claude, then type /login\n" +
-			"· ChatGPT subscription: run codex login\n" +
+			"· ChatGPT subscription: in Terminal run codex login\n" +
 			"· API key or a free model on %s: run omnillm open and connect it under “Models”")
 	case !st.RelayConfigured:
 		return onMachine(t("已经可以在 %s 上用。要让其他设备连进来，需要先设置远程连接。",

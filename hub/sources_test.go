@@ -79,7 +79,7 @@ func TestDetectNowReportsKindsAndFailures(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	t.Setenv("CODEX_HOME", t.TempDir())
 	ctx := context.Background()
-	h, err := New(ctx, Options{Secrets: secret.NewMemory(), Store: failingStore{store.NewMemory(), "provider/claude-code"}})
+	h, err := New(ctx, Options{Secrets: secret.NewMemory(), Store: failingStore{store.NewMemory(), "provider/claude-code"}, Transport: noOllama})
 	if err != nil {
 		t.Fatal(err)
 	}

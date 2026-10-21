@@ -315,7 +315,8 @@ type DetectFailure struct {
 // that are not connected yet are connected now. It returns the kinds of
 // what it connected ("claude-code", "codex", "ollama"; the page names
 // them in its language) and, separately, what was found but could not be
-// connected, each with its error. Finding nothing is not an error; err is
+// connected, each with its error (a running Ollama with no chat model is
+// one, MsgNoChatModel). Finding nothing is not an error; err is
 // set only when the request itself ended (ctx).
 func (h *Hub) DetectNow(ctx context.Context) (connected []string, failed []DetectFailure, err error) {
 	cfgs := h.detectSubscriptions(ctx, true)
@@ -326,6 +327,11 @@ func (h *Hub) DetectNow(ctx context.Context) (connected []string, failed []Detec
 		if ids, err := h.DetectOllama(ctx); err == nil && len(ChatModels(ids)) > 0 {
 			cfg, _ := provider.Default(provider.Ollama)
 			cfgs = append(cfgs, cfg)
+		} else if err == nil && len(ids) > 0 {
+			// Running, but with embedding or rerank models only: found,
+			// and the owner is told what to pull.
+			failed = append(failed, DetectFailure{Kind: string(provider.Ollama),
+				Err: &omnillm.Error{Code: omnillm.CodeBadRequest, Msg: omnillm.MsgNoChatModel}})
 		}
 	}
 	for _, cfg := range cfgs {

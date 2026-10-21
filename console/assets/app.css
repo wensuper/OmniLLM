@@ -17,6 +17,7 @@
   color-scheme: light;
   --r-xs: 4px; --r-s: 6px; --radius: 10px; --r-l: 12px;
   --seg-on: #FFFFFF; /* the pressed segment of a segmented control */
+  --dash-ink: #566174; --dash-line: #A9B2C1; /* a paused (off) state: dashed grey */
   --font: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
   --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
 }
@@ -34,6 +35,7 @@
     --shadow-2: 0 1px 0 rgba(255,255,255,.03) inset, 0 14px 36px -14px rgba(0,0,0,.75);
     --focus: 0 0 0 1px var(--accent), 0 0 0 4px rgba(155,138,255,.30);
     --seg-on: #27303E;
+    --dash-ink: #A9B3C2; --dash-line: #4A5566;
     color-scheme: dark;
   }
 }
@@ -50,6 +52,7 @@
   --shadow-2: 0 1px 0 rgba(255,255,255,.03) inset, 0 14px 36px -14px rgba(0,0,0,.75);
   --focus: 0 0 0 1px var(--accent), 0 0 0 4px rgba(155,138,255,.30);
   --seg-on: #27303E;
+  --dash-ink: #A9B3C2; --dash-line: #4A5566;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -99,8 +102,9 @@ button.primary:disabled { background: var(--surface-3); border-color: var(--line
 .steps { display: flex; gap: 8px; list-style: none; padding: 0; margin: 0 0 24px; counter-reset: s; }
 .steps li { counter-increment: s; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--muted); font-size: 13px; padding-top: 8px; border-top: 3px solid var(--line); }
 .steps li::before { content: counter(s) " · "; }
-/* The current step is ink, not purple: purple is only for what can be pressed. */
-.steps li.now { color: var(--ink); border-top-color: var(--ink); font-weight: 600; }
+/* The current step: an accent bar over its name; done steps green; the
+   ones to come keep the plain line. */
+.steps li.now { color: var(--accent-text); border-top-color: var(--accent); font-weight: 600; }
 .steps li.done { color: var(--ok); border-top-color: var(--ok); }
 
 .choice { border: 1px solid var(--line); border-radius: var(--r-l); padding: 16px; margin-top: 16px; }
@@ -128,8 +132,9 @@ div.codebox > .code, div.codebox > .cmd { padding-right: 72px; margin: 0; }
 .skip-line { margin: 12px 0 0; }
 .small-btn { padding: 4px 10px; min-height: 28px; font-size: 12px; }
 .codebox > .code { font-family: var(--mono); font-size: 12px; word-break: break-all; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-s); padding: 10px; user-select: all; }
-/* The Mac's six digits, in the same tile as on the phone. */
-.sas { display: inline-block; font-family: var(--mono); font-size: 34px; font-weight: 600; line-height: 1.2; letter-spacing: .12em; margin: 8px 0; padding: 10px 20px; color: var(--ink); background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-l); }
+/* The Mac's six digits, in the same tile and type as on the phone: the
+   system font with tabular numbers. */
+.sas { display: inline-block; font-family: var(--font); font-variant-numeric: tabular-nums; font-size: 34px; font-weight: 600; line-height: 1.2; letter-spacing: .08em; margin: 8px 0; padding: 10px 20px; color: var(--ink); background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-l); }
 /* A question or notice, as NEXA's chips: a warn hairline all round and a
    16 px warn icon before the text. */
 .confirm, .banner { position: relative; background: var(--warn-soft); border: 1px solid var(--warn-line); border-radius: var(--r-l); color: var(--ink); }
@@ -243,7 +248,10 @@ tr.editing input:not(.switch) { width: 100%; min-width: 0; box-sizing: border-bo
 tr.editing input:not(.switch):focus { outline: 0; box-shadow: var(--focus); border-color: var(--accent); }
 tr.editing input:disabled { opacity: .45; }
 .budget-edit { display: grid; gap: 8px; }
-.money-in { display: flex; align-items: center; gap: 4px; max-width: 120px; }
+/* A dollar amount: the "$" inside the field, muted, before the number. */
+.money-in { position: relative; display: flex; align-items: center; max-width: 120px; }
+.money-in .money-sign { position: absolute; left: 10px; color: var(--muted); pointer-events: none; }
+.money-in input { padding-left: 22px; }
 .budget-edit .small { margin: 0; white-space: normal; font-size: 12px; }
 td.actions button.primary { margin-top: 0; box-shadow: none; }
 #tab-usage th.num, #tab-usage td.num { text-align: right; }
@@ -273,7 +281,8 @@ th { white-space: nowrap; }
 /* Round 2: online dot, paused rows, source problems, switch columns. */
 .dot-ok { color: var(--ok); }
 tr.paused td:not(.sw):not(.actions) { color: var(--muted); }
-.tag.paused-tag { background: var(--surface-2); color: var(--muted); box-shadow: inset 0 0 0 1px var(--line); font-weight: 500; }
+/* Paused (or kept off devices): off, not wrong: a dashed grey outline. */
+.tag.paused-tag { background: transparent; color: var(--dash-ink); border: 1px dashed var(--dash-line); padding: 1px 7px; box-shadow: none; font-weight: 500; }
 .tag.warn-tag { background: var(--warn-soft); color: var(--warn); box-shadow: inset 0 0 0 1px var(--warn-line); margin-top: 4px; white-space: normal; }
 th.sw, td.sw { text-align: center; width: 1%; white-space: nowrap; }
 td.nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -370,16 +379,14 @@ button.danger-text:hover:not(:disabled) { background: none; text-decoration: und
   .devices-table th:nth-child(2), .devices-table th:nth-child(3), .apps-table th:nth-child(2) { display: none; }
   .devices-table td.actions, .apps-table td.actions { padding-right: 0; }
   .devices-table .narrow-only, .apps-table .narrow-only { display: block; }
-  .devices-table .nm-line .narrow-only { display: inline-block; }
+  .devices-table .nm-line .brk, .apps-table .nm-line .brk { flex-basis: 100%; height: 0; }
+  .nm-sub .dot-on { display: inline-block; margin-right: 6px; vertical-align: 1px; }
   .devices-table tr.paused .nm-sub, .apps-table tr.paused .nm-sub { color: var(--muted); }
 }
 .tag { white-space: nowrap; }
 .tag.warn-tag { white-space: normal; border-radius: var(--r-s); }
 .narrow-only { display: none; }
-@media (min-width: 601px) { button.narrow-only { display: none; } }
 @media (max-width: 600px) {
-  .wide-only { display: none; }
-  button.narrow-only { display: inline-block; }
   /* Models: the name and Edit; the switches and renaming are in its dialog. */
   .models-table th:nth-child(n+2):not(:last-child), .models-table td:nth-child(n+2):not(:last-child) { display: none; }
   .models-table td.nm { white-space: normal; }
@@ -410,8 +417,18 @@ button.danger-text:hover:not(:disabled) { background: none; text-decoration: und
   .providers-table td { border-bottom: 0; }
   .providers-table td.actions { padding-right: 0; }
   .providers-table .narrow-only { display: block; }
-  .apps-table .nm-line .brk { flex-basis: 100%; height: 0; }
-  .apps-table .nm-line .tag.warn-tag { display: inline-flex; align-items: center; gap: 6px; white-space: normal; }
-  .apps-table .nm-line .tag.warn-tag::before { content: ""; flex: none; width: 16px; height: 16px; background: var(--warn-hi);
-    -webkit-mask: var(--warn-icon) center / contain no-repeat; mask: var(--warn-icon) center / contain no-repeat; }
+  .nm-line .tag.warn-tag { white-space: normal; }
 }
+/* Round 5: "No usable models" carries the 16 px warn icon at every width;
+   an app's leads to Models › Connect a model. */
+.nm-line .tag.warn-tag { display: inline-flex; align-items: center; gap: 6px; }
+.nm-line .tag.warn-tag::before { content: ""; flex: none; width: 16px; height: 16px; background: var(--warn-hi);
+  -webkit-mask: var(--warn-icon) center / contain no-repeat; mask: var(--warn-icon) center / contain no-repeat; }
+a.chip-link { text-decoration: none; cursor: pointer; }
+a.chip-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+a.chip-link:focus-visible { outline: 0; box-shadow: var(--focus); }
+/* Undo in a toast: a button in the toast's own colours. */
+.toast { display: flex; align-items: center; gap: 16px; }
+.toast-act { background: none; border: 0; padding: 0; min-height: 0; color: inherit; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.toast-act:hover:not(:disabled) { background: none; }
+#login-needed p:empty { display: none; }

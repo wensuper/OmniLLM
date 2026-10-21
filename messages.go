@@ -77,7 +77,7 @@ var texts = map[string][2]string{ // zh, en
 	msgBadTemperature:     {"temperature 要在 0 到 2 之间。", "temperature must be between 0 and 2."},
 	msgBadSchema:          {"结构化输出的 JSON Schema 不是合法的 JSON。", "The structured-output JSON Schema isn’t valid JSON."},
 	msgBadCaller:          {"调用方类型不对。", "Unknown caller type."},
-	msgInternal:           {"出了点内部问题，请稍后再试；反复出现请告诉我们。", "Something went wrong inside. Try again later; tell us if it keeps happening."},
+	msgInternal:           {"你的 Mac 上出了点问题。稍后再试；一直这样的话请告诉我们。", "Something went wrong on your Mac. Try again later; if it keeps happening, let us know."},
 	MsgUnsupportedFormat:  {"这个模型不支持所要求的结构化输出格式，请改用普通文本。", "This model doesn’t support the requested structured output. Use plain text instead."},
 	MsgInvalidToken:       {"令牌缺失、无效或已被移除。在你的 Mac 上重新添加这个应用。", "The token is missing, invalid or removed. Add this app again on your Mac."},
 	MsgModelNotAllowed:    {"这台设备不能用这个模型。可以在你的 Mac 上调整它能用的模型。", "This device can’t use this model. You can change its models on your Mac."},

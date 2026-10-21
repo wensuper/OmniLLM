@@ -264,7 +264,7 @@ func TestDetectNowConnectsEvenARemovedSubscription(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	t.Setenv("CODEX_HOME", t.TempDir())
 	ctx := context.Background()
-	h, err := New(ctx, Options{Secrets: secret.NewMemory(), Store: store.NewMemory()})
+	h, err := New(ctx, Options{Secrets: secret.NewMemory(), Store: store.NewMemory(), Transport: noOllama})
 	if err != nil {
 		t.Fatal(err)
 	}

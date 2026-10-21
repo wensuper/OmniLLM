@@ -32,11 +32,11 @@ const T = {
     noNetwork: "这台设备没有联网，联网后会自动连上。", kept: "刚才输入的还在。", loadingModels: "正在连接你的 Mac……",
     noModels: "这台设备现在没有能用的模型。在 Mac 的控制台里接入模型，或在“设备”里给它开放模型。", noModelsOpt: "没有可用的模型",
     modelGone: "原来的模型已从你的 Mac 上移除，换成了 {0}",
-    grpSub: "订阅（不另花钱）", grpKey: "API Key", grpLocal: "你的 Mac 上", latest: "（最新版）", codex: "ChatGPT（Codex）", codexV: "ChatGPT（Codex · {0}）",
+    grpSub: "订阅（不另花钱）", grpKey: "API Key", grpLocal: "你的 Mac 上", latest: "（最新版）", codex: "ChatGPT（Codex · 最新版）", codexV: "ChatGPT（Codex · {0}）",
     forget: "移除这台设备", forgetQ: "这里的对话会删掉。以后要用，在 Mac 上重新添加。", removing: "正在移除……",
-    forgetFar: "已从这台设备上移除，对话已删除。你的 Mac 现在连不上，下次在 Mac 的“设备”里也把它移除。",
+    forgetFar: "这台设备已移除，对话已删除。你的 Mac 现在连不上，之后记得在 Mac 的“设备”里也移除它。",
     close: "关闭", deleteChat: "删除这个对话", deleteChatQ: "删除对话“{0}”？", chatsLocal: "对话只保存在这台设备上。", searchChats: "搜索对话", noMatch: "没有找到",
-    addHome: "添加到主屏幕", addHomeTip: "点浏览器的“分享”按钮，选“添加到主屏幕”。从主屏幕打开时需要再扫一次码。",
+    addHome: "添加到主屏幕", addHomeTip: "点浏览器的“分享”按钮，选“添加到主屏幕”。第一次从主屏幕打开时，需要再扫一次码。",
     deviceLine: "这台设备：{0}", empty: "有什么可以帮你？", cut: "（回复太长被截断了。发“继续”让它接着写。）", stopped: "（已停止）",
     today: "今天", copy: "复制", copied: "已复制", again: "重新回答", againWith: "用 {0} 再答一次", thinking: "正在思考",
     earlier: "之前的回答（{0}）· 展开", earlierOpen: "之前的回答（{0}）· 收起",
@@ -68,9 +68,9 @@ const T = {
     noNetwork: "This device is offline; it reconnects when the network is back.", kept: "What you typed is kept.", loadingModels: "Connecting to your Mac…",
     noModels: "No models are available to this device. On your Mac, connect a model or allow this device more models under Devices.", noModelsOpt: "No models",
     modelGone: "The previous model was removed from your Mac; switched to {0}",
-    grpSub: "Subscriptions (no extra cost)", grpKey: "API key", grpLocal: "On your Mac", latest: " (latest)", codex: "ChatGPT (Codex)", codexV: "ChatGPT (Codex · {0})",
+    grpSub: "Subscriptions (no extra cost)", grpKey: "API key", grpLocal: "On your Mac", latest: " (latest)", codex: "ChatGPT (Codex · latest)", codexV: "ChatGPT (Codex · {0})",
     forget: "Remove this device", forgetQ: "Chats here will be deleted. To use this device later, add it on your Mac again.", removing: "Removing…",
-    forgetFar: "Removed from this device and its chats deleted. Your Mac can’t be reached now; remove it under Devices on your Mac later too.",
+    forgetFar: "This device was removed and its chats deleted. Your Mac can’t be reached right now, so remove it under “Devices” on your Mac later too.",
     close: "Close", deleteChat: "Delete this chat", deleteChatQ: "Delete the chat “{0}”?", chatsLocal: "Chats are kept on this device only.", searchChats: "Search chats", noMatch: "No matching chats",
     addHome: "Add to Home Screen", addHomeTip: "Tap the browser’s “Share” button and choose “Add to Home Screen”. The first time it’s opened from the Home Screen, you’ll scan the QR code once more.",
     deviceLine: "This device: {0}", empty: "How can I help?", cut: "(The reply was cut off. Send “continue” to have it go on.)", stopped: "(stopped)",
@@ -145,10 +145,15 @@ function wrapKey() {
   })();
   return wrapKeyP;
 }
+// seal stores value encrypted. A write that started before unpaired()
+// (S.gen moved on meanwhile) is dropped, so a late save can't bring back
+// a pairing or chats that were just removed.
 async function seal(name, value) {
+  const gen = S.gen;
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv, additionalData: new TextEncoder().encode(name) }, await wrapKey(),
     new TextEncoder().encode(JSON.stringify(value)));
+  if (gen !== S.gen) return;
   await idb.put(name, { iv, ct });
 }
 async function unseal(name) {
@@ -218,7 +223,7 @@ async function startWasm() {
 }
 
 // ---------- state ----------
-const S = { device: null, models: [], chats: [], cur: null, busy: null, online: true };
+const S = { device: null, models: [], chats: [], cur: null, busy: null, online: true, gen: 0 };
 const isStandalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
 function deviceName() {
   const ua = navigator.userAgent;
@@ -814,9 +819,24 @@ function bubble(m, isLast) {
 // holdBack: while words arrive, a line that so far is only a list marker
 // ("- ", "* ", "1. ") waits for its next character, so no bare "-" flashes
 // before it becomes a bullet. Inside an open code block nothing waits.
+// The same goes for a mark that opens **bold**, *italic*, __bold__ or
+// `code` on the last line before its closing half arrives: it waits, so
+// "**Set" shows as "Set", not as stars.
+const PAIRED = /\*\*[^*]+\*\*|__[^_]+__|`[^`]+`|\*[^*\s][^*]*?\*|_[^_\s][^_]*?_/g;
 function holdBack(text) {
   if ((text.match(/```/g) || []).length % 2) return text;
-  return text.replace(/(^|\n)[ \t]*([-*+]|\d+[.)]?)[ \t]*$/, "$1");
+  text = text.replace(/(^|\n)[ \t]*([-*+]|\d+[.)]?)[ \t]*$/, "$1");
+  const at = text.lastIndexOf("\n") + 1;
+  // Marks already closed are blanked out; what is left last is open.
+  const line = text.slice(at).replace(PAIRED, (s) => " ".repeat(s.length));
+  const m = line.match(/(\*+|_+|`+)[^*_`]*$/);
+  if (!m) return text;
+  const i = m.index, mark = m[1], next = line[i + mark.length];
+  // An opener is followed by a word (or nothing yet); a lone * or _ also
+  // starts a word ("2*3", "snake_case" and "a * b" stay as they are).
+  const opens = next === undefined || !/\s/.test(next);
+  const starts = mark[0] === "`" || mark.length > 1 || i === 0 || !/\w/.test(line[i - 1]);
+  return opens && starts ? text.slice(0, at + i) + text.slice(at + i + mark.length) : text;
 }
 function thinking(m) {
   const box = el("div", undefined, "thinking-box");
@@ -965,7 +985,8 @@ function grow() { input.style.height = "auto"; input.style.height = Math.min(inp
 input.addEventListener("keydown", (e) => {
   // Enter sends on a computer keyboard; on phones the send button does.
   // While a reply streams, Enter only says so: Stop is the one way to cancel.
-  if (e.key === "Enter" && !e.shiftKey && !e.isComposing && matchMedia("(pointer: fine)").matches) {
+  // An IME's Enter picks a word, not sends (Safari says so only by keyCode 229).
+  if (e.key === "Enter" && !e.shiftKey && !e.isComposing && e.keyCode !== 229 && matchMedia("(pointer: fine)").matches) {
     e.preventDefault();
     if (S.busy) return toastText(t("waitReply"));
     $("composer").requestSubmit();
@@ -1190,12 +1211,13 @@ $("install-tip").addEventListener("click", () => { ask(t("addHomeTip"), t("gotIt
 // here. If the Mac can't be reached it is still removed here, and the
 // welcome screen says to remove it on the Mac as well.
 $("forget").addEventListener("click", async () => {
-  if (!await ask(t("forgetQ"), t("remove"), true)) return;
+  if (!await ask(t("forgetQ"), t("remove"), true) || !S.device) return; // removed on the Mac meanwhile
   const btn = $("forget"); btn.disabled = true; btn.textContent = t("removing");
   if (S.busy) { try { omnillm.cancel(S.busy); } catch {} }
   let far = !navigator.onLine;
   if (!far) { try { await omnillm.leave(); } catch { far = true; } }
   btn.disabled = false; btn.textContent = t("forget");
+  if (!S.device) return; // the Mac's removal got here first: unpaired() has run
   try { omnillm.close(); } catch {}
   S.openedState = null;
   await unpaired(far ? "forgetFar" : "");
@@ -1203,13 +1225,15 @@ $("forget").addEventListener("click", async () => {
 // ask shows a question in the page (no browser dialog): yes is the action
 // (danger: red), Cancel beside it; with no cancel it is a note with one
 // button. Esc or a tap outside counts as Cancel. Resolves true for yes.
+let askDone = null; // the open question's answer, so unpaired() can cancel it
 function ask(text, yes, danger, cancel = !!danger) {
   const d = $("ask"), ok = $("ask-yes"), no = $("ask-no");
   quoted($("ask-text"), text);
   ok.textContent = yes; ok.className = danger ? "primary bad" : "primary";
   no.textContent = t("cancel"); no.hidden = !cancel;
   return new Promise((res) => {
-    const done = (v) => { ok.onclick = no.onclick = d.onclick = d.oncancel = null; if (d.open) d.close(); res(v); };
+    if (askDone) askDone(false); // a newer question replaces an open one
+    const done = askDone = (v) => { askDone = null; ok.onclick = no.onclick = d.onclick = d.oncancel = null; if (d.open) d.close(); res(v); };
     ok.onclick = () => done(true);
     no.onclick = () => done(false);
     d.oncancel = (e) => { e.preventDefault(); done(false); };
@@ -1223,6 +1247,8 @@ function ask(text, yes, danger, cancel = !!danger) {
 }
 async function unpaired(note) {
   if (S.quiet) return; // the tab in use handles it
+  S.gen++; // saves already on their way are dropped (seal)
+  if (askDone) askDone(false); // an open question is about a pairing that is gone
   S.device = null; S.chats = []; S.cur = null; S.models = []; S.listed = false; S.paused = null; S.hello = null;
   await idb.del("device"); await idb.del("chats");
   closeDrawer(); show("welcome");

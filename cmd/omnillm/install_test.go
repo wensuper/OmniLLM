@@ -60,20 +60,29 @@ func TestNextStepAlwaysSaysSomething(t *testing.T) {
 
 func TestStatusLinesFollowTheGlossary(t *testing.T) {
 	t.Setenv("OMNILLM_LANG", "en")
-	if got := runningLine(Status{Version: "0.2.0", Providers: 1, Devices: 3}); got != "OmniLLM is running (0.2.0). 1 model source, 3 devices." {
+	if got := runningLine(Status{Version: "0.2.0", Providers: 1, Devices: 3, Online: 1}); got != "OmniLLM is running (0.2.0). Devices: 3 (1 online), model sources: 1." {
 		t.Fatal(got)
 	}
 	if got := nextStep(Status{}); !strings.Contains(got, "isn’t running") || !strings.Contains(got, "settings are kept") {
 		t.Fatal(got)
 	}
 	t.Setenv("OMNILLM_LANG", "zh")
-	if got := runningLine(Status{Version: "0.2.0", Providers: 2, Devices: 0}); got != "OmniLLM 在运行（0.2.0）。模型来源 2 个，设备 0 台。" {
+	if got := runningLine(Status{Version: "0.2.0", Providers: 2, Devices: 0}); got != "OmniLLM 在运行（0.2.0）。设备 0 台（0 台在线），模型来源 2 个。" {
 		t.Fatal(got)
 	}
 	for _, st := range []Status{{}, {Running: true}, {Running: true, Providers: 1}, {Running: true, Providers: 1, RelayConfigured: true}, {Running: true, Providers: 1, RelayConfigured: true, RelayUp: true}} {
 		if s := nextStep(st); strings.Contains(s, "主机") || strings.Contains(s, "连接服务") {
 			t.Fatalf("%+v: %s", st, s)
 		}
+	}
+	// A changed region comes first, with the command that resumes.
+	st := Status{Running: true, Providers: 1, RelayConfigured: true, RelayUp: true, Devices: 1, RegionPaused: true}
+	if s := nextStep(st); !strings.Contains(s, " 所在的地区变了，已暂停使用模型。") || !strings.Contains(s, "omnillm hub region confirm") || strings.Contains(s, "  ") {
+		t.Fatal(s)
+	}
+	t.Setenv("OMNILLM_LANG", "en")
+	if s := nextStep(st); !strings.HasPrefix(s, "This ") || !strings.Contains(s, "’s region changed; models are paused.") {
+		t.Fatal(s)
 	}
 }
 

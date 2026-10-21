@@ -3,35 +3,40 @@
 "use strict";
 
 // Words for people, the same in every OmniLLM screen: the hub is "your Mac"
-// (here: this Mac), the relay is "remote access", a provider is a "model
-// source". Text in `backticks` is shown in code style (see rich()).
+// (here: this Mac; "this computer" when it is not a Mac, see HOST), the
+// relay is "remote access", a provider is a "model source". Text in
+// `backticks` is shown in code style (see rich()). A key with an "Other"
+// twin (hubDown, hubDownOther) has words that hold only on a Mac (the menu
+// bar, the keychain): the twin is used elsewhere.
 const T = {
   zh: {
     loading: "正在载入……",
     loginTitle: "需要重新打开控制台",
-    loginBody: "点屏幕顶部菜单栏里的 OmniLLM 图标，选“打开控制台”。",
-    loginOr: "或者在终端运行：",
-    loginSafe: "为了安全，控制台只能从这台 Mac 上打开。",
+    loginBody: "点屏幕顶部菜单栏里的 OmniLLM 图标，选“打开控制台”。", loginBodyOther: "在终端运行：",
+    loginOr: "或者在终端运行：", loginOrOther: "",
+    loginSafe: "为了安全，控制台只能从{here}上打开。",
     hubDown: "OmniLLM 没有运行。点菜单栏里的 OmniLLM 图标，选“启动 OmniLLM”，或在终端运行 omnillm install。",
+    hubDownOther: "OmniLLM 没有运行。在终端运行 omnillm install。",
     ariaLang: "切换语言", ariaTheme: "切换深色或浅色", ariaSteps: "步骤", back: "返回",
     step1: "接入模型", step2: "添加设备", step3: "试一下",
     w1Title: "先接入一个模型",
     w1Claude: "我有 Claude 订阅",
-    w1Claude1: "在这台 Mac 上安装 Claude Code。",
+    w1Claude1: "在{here}上安装 Claude Code。",
     w1Claude2: "在终端运行 `claude` 并登录。",
     w1Codex: "我有 ChatGPT 订阅",
-    w1Codex1: "在这台 Mac 上安装 Codex。",
+    w1Codex1: "在{here}上安装 Codex。",
     w1Codex2: "在终端运行 `codex login`。",
     w1Key: "我有 API Key",
-    w1Free: "想免费：安装 Ollama，用这台 Mac 上的模型。",
-    recheck: "重新检查", recheckNone: "还没发现已登录的订阅，也没发现这台 Mac 上的模型。", recheckNoMore: "没有发现别的已登录订阅或这台 Mac 上的模型。", connectedNames: "已接入 {0}。",
-    srcClaude: "Claude 订阅", srcCodex: "ChatGPT 订阅（Codex）", srcOllama: "Ollama（这台 Mac）", srcFailed: "{0}：{1}",
-    ollamaFound: "发现了这台 Mac 上的本地模型（Ollama）",
-    ollamaUse: "使用这台 Mac 上的模型",
+    w1Free: "想免费：安装 Ollama，用{here}上的模型。",
+    recheck: "重新检查", recheckNone: "还没发现已登录的订阅，也没发现{here}上的模型。", recheckNoMore: "没有发现别的已登录订阅或{here}上的模型。", connectedNames: "已接入 {0}。",
+    srcClaude: "Claude 订阅", srcCodex: "ChatGPT 订阅（Codex）", srcOllama: "Ollama（{here}）", srcFailed: "{0}：{1}",
+    ollamaFound: "发现了{here}上的本地模型（Ollama）",
+    ollamaUse: "使用{here}上的模型",
     source: "来源", otherCompatible: "其他 OpenAI 兼容服务",
     cname: "名字（英文，不要空格，如 groq）", curl: "接口地址（https://）",
     key: "API Key",
-    keyHint: "会先用它做一次最小的请求来确认能用，成功才保存；只存在这台 Mac 的钥匙串里。",
+    keyHint: "会先用它做一次最小的请求来确认能用，成功才保存；只存在{here}的钥匙串里。",
+    keyHintOther: "会先用它做一次最小的请求来确认能用，成功才保存；只存在{here}的密钥环里。",
     connect: "验证并接入",
     w2Title: "添加一台设备",
     skipPair: "先跳过，以后再加",
@@ -40,83 +45,87 @@ const T = {
     todaySpend: "今天的花费", estimate: "按公布的价格估算", devices: "设备", models: "模型", apps: "应用", usage: "用量",
     addDevice: "添加设备", addProvider: "接入模型", addApp: "添加应用", add: "添加",
     name: "名字", lastSeen: "最近在线", budget: "每天额度", todayBudget: "今天 / 每天额度", where: "对话发往", humanOnly: "只能手动对话",
-    showOnDevices: "在设备上显示", subAlways: "订阅模型始终只能手动对话", rename: "改名", editModel: "编辑模型 · {0}",
+    showOnDevices: "在设备上显示", subAlways: "订阅模型始终只能手动对话", editModel: "编辑模型 · {0}",
     enabled: "开启", pausedChip: "已暂停", pausedToast: "已暂停“{0}”", resumedToast: "已开启“{0}”",
     online: "在线", todayAt: "今天 {0}", yesterdayAt: "昨天 {0}",
     editDevice: "编辑设备 · {0}", editApp: "编辑应用 · {0}", secStatus: "状态", secModels: "可用模型",
-    infoAdded: "添加于 {0}", infoSeen: "最近在线 {0}", infoSpent: "今天已用 {0}",
+    infoAdded: "添加于{0}", infoSeen: "最近在线 {0}", infoSpent: "今天已用 {0}",
     pauseHint: "关掉即暂停：这台设备马上停用，配对和设置都保留。", pauseHintApp: "关掉即暂停：这个应用马上停用，令牌和设置都保留。",
-    limitHint: "只受整台 Mac 每天总额度（{0}）限制。", limitHintNone: "整台 Mac 也没有总额度。", allModels: "全部模型（以后接入的新模型也自动可用）",
-    grpSub: "订阅", grpKey: "API Key", grpLocal: "这台 Mac", pickOne: "至少选一个模型。", appNoSub: "订阅模型只能手动对话，应用用不了。",
-    hiddenTag: "不在设备上显示", appNoModels: "没有能用的模型", appNoModelsBody: "现在接入的模型应用都用不了。先接入 API Key 或这台 Mac 上的模型。",
+    limitHint: "只受{whole}每天总额度（{0}）限制。", limitHintNone: "{whole}也没有总额度。", allModels: "全部模型（以后接入的新模型也自动可用）",
+    grpSub: "订阅", grpKey: "API Key", grpLocal: "{Here}", pickOne: "至少选一个模型。", appNoSub: "订阅模型只能手动对话，应用用不了。",
+    hiddenTag: "不在设备上显示", appNoModels: "没有能用的模型", appNoModelsBody: "现在接入的模型应用都用不了。先接入 API Key 或{here}上的模型。",
+    appNoModelsTip: "接入 API Key 或{here}上的模型后就能用", devNoModelsBody: "它能用的模型都已移除或不在设备上显示。打开“全部模型”，或在下面选几个。",
     removeDevice: "移除设备", removeApp: "移除应用",
     discardQ: "放弃没保存的修改？", discard: "放弃", keepEditing: "继续编辑",
-    providers: "模型来源", keyLast4: "接入方式", subLogin: "订阅登录（只留在这台 Mac 上）",
+    providers: "模型来源", keyLast4: "接入方式", subLogin: "订阅登录（只留在{here}上）",
     problemLogin: "登录已失效：在终端运行 claude，再输入 /login", problemLoginCodex: "登录已失效：在终端运行 codex login",
     problemLimit: "用量到上限，约 {0}后恢复", problemLimitNow: "用量到上限，稍后恢复", hours: "{0} 小时", hour: "1 小时", minutes: "{0} 分钟", minute: "1 分钟",
     noDevices: "还没有设备。点“添加设备”。",
-    appsBody: "给脚本和其他不能直接嵌入 OmniLLM 的程序用。应用只能做后台调用，只能用 API Key 和这台 Mac 上的模型。",
-    usageBody: "按这台 Mac 的时间计。花费按公布的价格估算，没有公布价格的按偏高估；订阅和这台 Mac 上的模型不花钱。",
+    appsBody: "给脚本和其他不能直接嵌入 OmniLLM 的程序用。应用只能做后台调用，只能用 API Key 和{here}上的模型。",
+    usageBody: "按{here}的时间计。花费按公布的价格估算，没有公布价格的按偏高估；订阅和{here}上的模型不花钱。",
     rangeToday: "今天", rangeYesterday: "昨天", rangeWeek: "最近 7 天",
     totalToday: "今天合计", totalYesterday: "昨天合计", totalWeek: "最近 7 天合计",
     emptyToday: "今天还没有用过。", emptyYesterday: "昨天没有用过。", emptyWeek: "最近 7 天没有用过。",
     byModel: "按模型", modelsGone: "已移除的模型", byModelEarlier: "没有按模型记的记录",
     who: "设备或应用", spend: "花费", calls: "次数", tokens: "Token（发出 / 收到）",
-    usageHost: "这台 Mac", usageGone: "已移除的设备和应用", goneCount: "（{0} 个）", usageGoneOne: "{0}（已移除）",
-    capLine: "整台 Mac 每天总额度 {0}", capLabel: "整台 Mac 每天总额度", capNone: "整台 Mac 每天总额度：不设上限", capEdit: "修改", noApps: "还没有应用。",
+    usageHost: "{Here}", usageGone: "已移除的设备和应用", goneCount: "（{0} 个）", usageGoneOne: "{0}（已移除）",
+    capLine: "{whole}每天总额度：{0}", capLabel: "{whole}每天总额度", capNone: "{whole}每天总额度：不设上限", capEdit: "修改", noApps: "还没有应用。",
     modelsBody: "“只能手动对话”的模型只给在手机、电脑上聊天的人用，脚本和应用调用不了。订阅模型一直是这样，免得账号被当成自动化调用。",
-    codexName: "ChatGPT（Codex）", codexVer: "ChatGPT（Codex · {0}）", latest: "（最新版）",
+    codexName: "ChatGPT（Codex · 最新版）", codexVer: "ChatGPT（Codex · {0}）", latest: "（最新版）",
     remove: "移除", removeConfirm: "移除“{0}”？它会立刻用不了。",
-    removed: "已移除", connected: "已接入，{0} 个模型可用", saved: "已保存",
-    local: "只在这台 Mac", remote: "云端", localChip: "这台 Mac", sub: "订阅",
+    removeConfirmDevice: "移除“{0}”？它会马上断开，那台设备上的对话也会清除；要再用得重新添加。",
+    removed: "已移除", connected: "已接入，{0} 个模型可用", connectedOne: "已接入，1 个模型可用", saved: "已保存",
+    local: "只在{here}上", remote: "云端", localChip: "{Here}", sub: "订阅",
     todayOf: "{0} / {1}", todayNoLimit: "{0} · 不设上限",
     pairPhone: "手机或平板：用相机扫这个二维码，不用装任何东西。{0} 前有效，只能用一次。",
     pairComputer: "电脑或服务器（没有摄像头）",
     pairComputerNew: "那台电脑还没装 OmniLLM 的话，在它上面运行这一行，装完会提示粘贴配对文字（只用来聊天，不常驻后台）：",
-    pairComputerHow: "已经装好的，运行 `omnillm connect pair`，粘贴下面这段配对文字。不要发给别人，也不要贴到聊天里。",
+    pairComputerHow: "已经装好的，运行 `omnillm connect pair`，粘贴下面这段配对文字；或者在那台电脑的浏览器里打开 OmniLLM 网页，把配对文字粘贴进去。不要发给别人，也不要贴到聊天里。",
     pairWait: "等待设备连接……",
     pairConfirmQ: "设备“{0}”请求加入。它屏幕上显示的数字是这个吗？",
     pairYes: "一致，添加", pairNo: "不一致，拒绝", pairLeft: "手机那边取消了，或者连接断了。",
     pairDone: "已添加“{0}”", pairFailed: "配对没有完成：{0}", pairRelayDrop: "远程连接断了，这次添加没完成。网络恢复后点“换一个二维码”。",
-    pairDenied: "已拒绝。", pairExpired: "这个二维码已过期。", pairNew: "换一个二维码",
+    pairDenied: "已拒绝。", pairExpired: "这个二维码已过期。", pairNew: "换一个二维码", qrAlt: "添加设备的二维码",
     pairStartOffline: "远程连接现在没有连上，生成不了二维码。", retry: "重试",
     close: "关闭", edit: "编辑", save: "保存", cancel: "取消", noLimit: "不设上限",
     budgetLabel: "每天额度（美元）",
     noRelay: "还没有设置远程连接，其他设备暂时连不上。可以先跳过；设置好远程连接后，在“设备”里添加。",
-    relayWait: "正在打开远程连接……", relayDown: "远程连接现在连不上，请检查这台 Mac 的网络。连上之后这里会自动继续。",
-    relayOn: "手机和其他设备可以连上", relayOff: "远程连接断开，设备暂时连不上", relayNone: "只在这台 Mac 上用（没有远程连接）",
-    regionPaused: "这台 Mac 所在的地区变了，已暂停调用。", regionConfirm: "确认继续",
+    relayWait: "正在打开远程连接……", relayDown: "远程连接现在连不上，请检查{here}的网络。连上之后这里会自动继续。",
+    relayOn: "手机和其他设备可以连上", relayOff: "远程连接断开，设备暂时连不上", relayNone: "只在{here}上用（没有设置远程连接）",
+    regionPaused: "{Here}所在的地区变了，已暂停使用模型。", regionConfirm: "确认继续",
     appTokenFor: "“{0}”的令牌", appTokenOnce: "只显示这一次，现在复制。",
     appName: "应用的名字",
     tryText: "你好",
-    never: "还没用过", copy: "复制", copied: "已复制", oops: "出了点问题，请再试一次。",
+    never: "还没用过", copy: "复制", copied: "已复制", undo: "撤销", oops: "出了点问题，请再试一次。",
   },
   en: {
     loading: "Loading…",
     loginTitle: "Open the console again",
-    loginBody: "Click the OmniLLM icon in the menu bar and choose “Open the console”.",
-    loginOr: "Or run in Terminal:",
-    loginSafe: "For safety, the console opens only from this Mac.",
+    loginBody: "Click the OmniLLM icon in the menu bar and choose “Open the console”.", loginBodyOther: "Run in a terminal:",
+    loginOr: "Or run in Terminal:", loginOrOther: "",
+    loginSafe: "For safety, the console opens only from {here}.",
     hubDown: "OmniLLM isn’t running. Click the OmniLLM icon in the menu bar and choose “Start OmniLLM”, or run omnillm install in Terminal.",
+    hubDownOther: "OmniLLM isn’t running. Run omnillm install in a terminal.",
     ariaLang: "Language", ariaTheme: "Light or dark", ariaSteps: "Steps", back: "Back",
     step1: "Connect a model", step2: "Add a device", step3: "Try it",
     w1Title: "First, connect a model",
     w1Claude: "I have a Claude subscription",
-    w1Claude1: "Install Claude Code on this Mac.",
+    w1Claude1: "Install Claude Code on {here}.",
     w1Claude2: "In Terminal, run `claude` and log in.",
     w1Codex: "I have a ChatGPT subscription",
-    w1Codex1: "Install Codex on this Mac.",
+    w1Codex1: "Install Codex on {here}.",
     w1Codex2: "In Terminal, run `codex login`.",
     w1Key: "I have an API key",
-    w1Free: "Want it free? Install Ollama to use models on this Mac.",
-    recheck: "Check again", recheckNone: "No signed-in subscription or model on this Mac found yet.", recheckNoMore: "No other signed-in subscription or model on this Mac found.", connectedNames: "Connected {0}.",
-    srcClaude: "Claude subscription", srcCodex: "ChatGPT subscription (Codex)", srcOllama: "Ollama (this Mac)", srcFailed: "{0}: {1}",
-    ollamaFound: "A local model (Ollama) is running on this Mac",
-    ollamaUse: "Use models on this Mac",
+    w1Free: "Want it free? Install Ollama to use models on {here}.",
+    recheck: "Check again", recheckNone: "No signed-in subscription or model on {here} found yet.", recheckNoMore: "No other signed-in subscription or model on {here} found.", connectedNames: "Connected {0}.",
+    srcClaude: "Claude subscription", srcCodex: "ChatGPT subscription (Codex)", srcOllama: "Ollama ({here})", srcFailed: "{0}: {1}",
+    ollamaFound: "A local model (Ollama) is running on {here}",
+    ollamaUse: "Use models on {here}",
     source: "Source", otherCompatible: "Other OpenAI-compatible service",
     cname: "Name (no spaces, e.g. groq)", curl: "API address (https://)",
     key: "API key",
-    keyHint: "We check it with one tiny request and save it only if it works. It’s kept only in this Mac’s keychain.",
+    keyHint: "We check it with one tiny request and save it only if it works. It’s kept only in {here}’s keychain.",
+    keyHintOther: "We check it with one tiny request and save it only if it works. It’s kept only in {here}’s keyring.",
     connect: "Check and connect",
     w2Title: "Add a device",
     skipPair: "Skip for now",
@@ -125,63 +134,83 @@ const T = {
     todaySpend: "Spent today", estimate: "Estimated from published prices", devices: "Devices", models: "Models", apps: "Apps", usage: "Usage",
     addDevice: "Add device", addProvider: "Connect a model", addApp: "Add app", add: "Add",
     name: "Name", lastSeen: "Last seen", budget: "Daily limit", todayBudget: "Today / daily limit", where: "Messages go to", humanOnly: "Chat only",
-    showOnDevices: "Show on devices", subAlways: "Subscription models are always chat-only", rename: "Rename", editModel: "Edit model · {0}",
+    showOnDevices: "Show on devices", subAlways: "Subscription models are always chat-only", editModel: "Edit model · {0}",
     enabled: "On", pausedChip: "Paused", pausedToast: "Paused “{0}”", resumedToast: "Turned on “{0}”",
     online: "Online", todayAt: "Today {0}", yesterdayAt: "Yesterday {0}",
     editDevice: "Edit device · {0}", editApp: "Edit app · {0}", secStatus: "Status", secModels: "Models it can use",
     infoAdded: "Added {0}", infoSeen: "Last seen {0}", infoSpent: "Spent today {0}",
     pauseHint: "Turn off to pause: the device stops at once; its pairing and settings are kept.", pauseHintApp: "Turn off to pause: the app stops at once; its token and settings are kept.",
-    limitHint: "Only the daily total for this Mac ({0}) applies.", limitHintNone: "This Mac has no daily total either.", allModels: "All models (including ones added later)",
-    grpSub: "Subscriptions", grpKey: "API key", grpLocal: "This Mac", pickOne: "Choose at least one model.", appNoSub: "Subscription models are chat-only; apps can’t use them.",
-    hiddenTag: "Hidden on devices", appNoModels: "No usable models", appNoModelsBody: "None of the connected models work for apps. Connect an API key or a model on this Mac first.",
+    limitHint: "Only the daily total for {here} ({0}) applies.", limitHintNone: "{Here} has no daily total either.", allModels: "All models (including ones added later)",
+    grpSub: "Subscriptions", grpKey: "API key", grpLocal: "{Here}", pickOne: "Choose at least one model.", appNoSub: "Subscription models are chat-only; apps can’t use them.",
+    hiddenTag: "Hidden on devices", appNoModels: "No usable models", appNoModelsBody: "None of the connected models work for apps. Connect an API key or a model on {here} first.",
+    appNoModelsTip: "Works once you connect an API key or a model on {here}", devNoModelsBody: "All the models it could use were removed or hidden on devices. Turn on “All models” or choose some below.",
     removeDevice: "Remove device", removeApp: "Remove app",
     discardQ: "Discard unsaved changes?", discard: "Discard", keepEditing: "Keep editing",
-    providers: "Model sources", keyLast4: "Connected with", subLogin: "Subscription login (stays on this Mac)",
-    problemLogin: "Signed out: in Terminal, run claude, then type /login", problemLoginCodex: "Signed out: run codex login in Terminal",
+    providers: "Model sources", keyLast4: "Connected with", subLogin: "Subscription login (stays on {here})",
+    problemLogin: "Signed out: in Terminal, run claude, then type /login", problemLoginCodex: "Signed out: in Terminal, run codex login",
     problemLimit: "Usage limit reached; back in about {0}", problemLimitNow: "Usage limit reached; back soon", hours: "{0} hours", hour: "1 hour", minutes: "{0} minutes", minute: "1 minute",
     noDevices: "No devices yet. Choose “Add device”.",
-    appsBody: "For scripts and other programs that can’t embed OmniLLM. Apps make background calls only, with API keys and models on this Mac.",
-    usageBody: "Days follow this Mac’s clock. Spend is estimated from published prices (on the high side where none is published); subscriptions and models on this Mac cost nothing.",
+    appsBody: "For scripts and other programs that can’t embed OmniLLM. Apps make background calls only, with API keys and models on {here}.",
+    usageBody: "Days follow {here}’s clock. Spend is estimated from published prices (on the high side where none is published); subscriptions and models on {here} cost nothing.",
     rangeToday: "Today", rangeYesterday: "Yesterday", rangeWeek: "Last 7 days",
     totalToday: "Total today", totalYesterday: "Total yesterday", totalWeek: "Total, last 7 days",
     emptyToday: "Nothing used yet today.", emptyYesterday: "Nothing was used yesterday.", emptyWeek: "Nothing used in the last 7 days.",
     byModel: "By model", modelsGone: "Removed models", byModelEarlier: "Not recorded by model",
     who: "Device or app", spend: "Spend", calls: "Calls", tokens: "Tokens (in / out)",
-    usageHost: "This Mac", usageGone: "Removed devices and apps", goneCount: "({0})", usageGoneOne: "{0} (removed)",
-    capLine: "Daily total for this Mac: {0}", capLabel: "Daily total for this Mac", capNone: "Daily total for this Mac: no limit", capEdit: "Change", noApps: "No apps yet.",
+    usageHost: "{Here}", usageGone: "Removed devices and apps", goneCount: "({0})", usageGoneOne: "{0} (removed)",
+    capLine: "Daily total for {here}: {0}", capLabel: "Daily total for {here}", capNone: "Daily total for {here}: no limit", capEdit: "Change", noApps: "No apps yet.",
     modelsBody: "Chat-only models are for people chatting on a phone or computer; scripts and apps can’t use them. Subscription models are always chat-only, so the account isn’t flagged as automated.",
-    codexName: "ChatGPT (Codex)", codexVer: "ChatGPT (Codex · {0})", latest: " (latest)",
+    codexName: "ChatGPT (Codex · latest)", codexVer: "ChatGPT (Codex · {0})", latest: " (latest)",
     remove: "Remove", removeConfirm: "Remove “{0}”? It stops working at once.",
-    removed: "Removed", connected: "Connected: {0} models available", saved: "Saved",
-    local: "This Mac only", remote: "Cloud", localChip: "This Mac", sub: "subscription",
+    removeConfirmDevice: "Remove “{0}”? It disconnects at once and its chats on that device are cleared; to use it again, add it again.",
+    removed: "Removed", connected: "Connected: {0} models available", connectedOne: "Connected: 1 model available", saved: "Saved",
+    local: "{Here} only", remote: "Cloud", localChip: "{Here}", sub: "subscription",
     todayOf: "{0} / {1}", todayNoLimit: "{0} · no limit",
     pairPhone: "Phone or tablet: scan this QR code with the camera; nothing to install. Valid until {0}, single use.",
     pairComputer: "Computer or server (no camera)",
     pairComputerNew: "Not installed there yet? Run this line on that computer; it asks for the pairing text when done (chat only; nothing stays running):",
-    pairComputerHow: "Already installed: run `omnillm connect pair` and paste this pairing text. Don’t send it to anyone or paste it into a chat.",
+    pairComputerHow: "Already installed: run `omnillm connect pair` and paste this pairing text, or open the OmniLLM web page in that computer’s browser and paste the pairing text there. Don’t send it to anyone or paste it into a chat.",
     pairWait: "Waiting for the device…",
     pairConfirmQ: "“{0}” wants to join. Does its screen show this number?",
-    pairYes: "Matches, add", pairNo: "Doesn’t match, refuse", pairLeft: "The device cancelled or lost its connection.",
+    pairYes: "Matches, add", pairNo: "Doesn’t match — refuse", pairLeft: "The device cancelled or lost its connection.",
     pairDone: "Added “{0}”", pairFailed: "Pairing didn’t finish: {0}", pairRelayDrop: "Remote access dropped, so this device wasn’t added. Once the network is back, choose “New QR code”.",
-    pairDenied: "Refused.", pairExpired: "This QR code has expired.", pairNew: "New QR code",
+    pairDenied: "Refused.", pairExpired: "This QR code has expired.", pairNew: "New QR code", qrAlt: "QR code for adding a device",
     pairStartOffline: "Remote access isn’t connected right now, so no QR code can be made.", retry: "Retry",
     close: "Close", edit: "Edit", save: "Save", cancel: "Cancel", noLimit: "No limit",
     budgetLabel: "Daily limit (USD)",
     noRelay: "Remote access isn’t set up yet, so other devices can’t connect. Skip for now; add devices under Devices once it’s set up.",
-    relayWait: "Turning on remote access…", relayDown: "Remote access can’t connect right now; check this Mac’s network. It picks up again once connected.",
-    relayOn: "Phones and other devices can connect", relayOff: "Remote access is down; devices can’t connect now", relayNone: "This Mac only (no remote access)",
-    regionPaused: "This Mac’s region changed; calls are paused.", regionConfirm: "Confirm and resume",
+    relayWait: "Turning on remote access…", relayDown: "Remote access can’t connect right now; check {here}’s network. It picks up again once connected.",
+    relayOn: "Phones and other devices can connect", relayOff: "Remote access is down; devices can’t connect now", relayNone: "{Here} only (remote access not set up)",
+    regionPaused: "{Here}’s region changed; models are paused.", regionConfirm: "Confirm and resume",
     appTokenFor: "Token for “{0}”", appTokenOnce: "Shown once — copy it now.",
     appName: "App name",
     tryText: "Hello",
-    never: "Not yet", copy: "Copy", copied: "Copied", oops: "Something went wrong. Try again.",
+    never: "Not yet", copy: "Copy", copied: "Copied", undo: "Undo", oops: "Something went wrong. Try again.",
   },
 };
 
 function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (_) { return null; } }
 
 let lang = store("omnillm.lang") || ((navigator.language || "en").toLowerCase().startsWith("zh") ? "zh" : "en");
-const t = (k, ...a) => (T[lang][k] || k).replace(/\{(\d)\}/g, (_, i) => String(a[+i] ?? ""));
+// The computer OmniLLM runs on, in the strings' {here} ("this Mac"), {Here}
+// (at the start of a sentence) and {whole} ("整台 Mac"). The status says
+// which system it is; before it arrives the browser's own system is the
+// same one (the console opens only on that computer).
+const HOST = {
+  zh: { mac: { here: "这台 Mac", Here: "这台 Mac", whole: "整台 Mac" }, other: { here: "这台电脑", Here: "这台电脑", whole: "整台电脑" } },
+  en: { mac: { here: "this Mac", Here: "This Mac", whole: "this Mac" }, other: { here: "this computer", Here: "This computer", whole: "this computer" } },
+};
+const onMac = () => (S && S.os ? S.os === "darwin" : /Mac/i.test(navigator.platform || navigator.userAgent || ""));
+// hostWords puts the computer's words in; in Chinese a space separates
+// "Mac" from the character after it ("这台 Mac 上"), none after "电脑".
+function hostWords(s) {
+  const mac = onMac(), w = HOST[lang][mac ? "mac" : "other"];
+  return s.replace(/\{(here|Here|whole)\}([\u4e00-\u9fff]?)/g, (_, k, c) => w[k] + (c && mac && lang === "zh" ? " " : "") + c);
+}
+const t = (k, ...a) => {
+  const d = T[lang], s = !onMac() && d[k + "Other"] !== undefined ? d[k + "Other"] : d[k];
+  return hostWords(s === undefined ? k : s).replace(/\{(\d)\}/g, (_, i) => String(a[+i] ?? ""));
+};
 const $ = (id) => document.getElementById(id);
 const el = (tag, text, cls) => { const e = document.createElement(tag); if (text !== undefined) e.textContent = text; if (cls) e.className = cls; return e; };
 // composing: the key belongs to an input method (Chinese, Japanese…):
@@ -220,7 +249,10 @@ function codeBox(text) {
   return box;
 }
 
+// appliedMac: which system the page's fixed words were last put in for.
+let appliedMac = null;
 function applyLang() {
+  appliedMac = onMac();
   document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
   document.querySelectorAll("[data-t]").forEach((n) => { if (n.hasAttribute("data-rich")) rich(n, t(n.dataset.t)); else n.textContent = t(n.dataset.t); });
   document.querySelectorAll("[data-tip]").forEach((n) => { n.title = t(n.dataset.tip); });
@@ -276,14 +308,21 @@ function loggedOut() {
 }
 
 let toastTimer;
-function toast(msg, err) {
+// toast says something for a moment; act ({ label, run }) adds a button
+// (Undo) and keeps it up for 5 s.
+function toast(msg, err, act) {
   if (signedOut) return; // the login panel already says what to do
   const n = $("toast");
   n.textContent = msg;
   n.className = "toast" + (err ? " err" : "");
+  if (act) {
+    const b = el("button", act.label, "toast-act"); b.type = "button";
+    b.addEventListener("click", () => { clearTimeout(toastTimer); n.hidden = true; act.run(); });
+    n.append(b);
+  }
   n.hidden = false;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { n.hidden = true; }, err ? 6000 : 2500);
+  toastTimer = setTimeout(() => { n.hidden = true; }, err ? 6000 : act ? 5000 : 2500);
 }
 
 const money = (micro) => "$" + (micro / 1e6).toFixed(2);
@@ -308,6 +347,8 @@ async function refresh() {
   const next = await load(false);
   if (!next) return; // a newer range was asked for; its answer draws
   S = next;
+  // The status says which system this is: the fixed words follow it.
+  if (onMac() !== appliedMac) applyLang();
   renderStatus();
   if (!wizardDone() && (S.providers.length === 0 || (S.devices.length === 0 && !store("omnillm.skipPair")))) {
     showWizard();
@@ -433,16 +474,19 @@ $("key-form").addEventListener("submit", async (ev) => {
   try {
     const r = await api("providers/add", body);
     $("key").value = "";
-    toast(t("connected", r.models.length));
+    toast(connectedText(r.models.length));
     await refresh();
   } catch (e) { toast(e.message, true); } finally { btn.disabled = false; }
 });
+
+// connectedText: "Connected: 3 models available" (one: "1 model").
+const connectedText = (n) => n === 1 ? t("connectedOne") : t("connected", n);
 
 $("ollama-use").addEventListener("click", async (ev) => {
   ev.target.disabled = true;
   try {
     const r = await api("providers/add", { kind: "ollama", key: "" });
-    toast(t("connected", r.models.length));
+    toast(connectedText(r.models.length));
     await refresh();
   } catch (e) { toast(e.message, true); } finally { ev.target.disabled = false; }
 });
@@ -574,7 +618,7 @@ async function startPair(area, onDone, closable) {
   const exp = new Date(p.expires).toLocaleTimeString(lang === "zh" ? "zh-CN" : "en-US", { timeStyle: "short" });
   const left = el("div", undefined, "pair-qr");
   const img = el("img");
-  img.alt = "QR";
+  img.alt = t("qrAlt");
   img.src = p.qr;
   left.append(img, el("p", t("pairPhone", exp), "muted small"));
   const right = el("div");
@@ -722,6 +766,8 @@ function timeWords(iso) {
   if (diff === 1) return t("yesterdayAt", time);
   return dateWords(iso);
 }
+// inLine: timeWords inside a sentence: "Added today 9:41 AM", not "Today".
+const inLine = (s) => lang === "en" ? s.replace(/^(Today|Yesterday) /, (w) => w.toLowerCase()) : s;
 // dateWords: a date alone: "10月18日" / "Oct 18" (with the year when it
 // is not this year's).
 function dateWords(iso) {
@@ -738,16 +784,21 @@ function seenText(td, online, iso) {
 }
 
 // nameCell: a device's or app's name, with a "Paused" chip when it is.
-// On a phone-width window the row stacks: the name (after a dot while it
-// is online), and under it what it spent today against its limit.
+// On a phone-width window the row stacks: the name, and under it what it
+// spent today against its limit, after a green dot and "Online ·" while
+// it is online.
 function nameCell(tr, name, paused, online, spent) {
   const td = cell(tr, "", "nm");
   const line = el("div", undefined, "nm-line");
-  if (online) { const dot = el("span", "", "dot-on narrow-only"); dot.setAttribute("role", "img"); dot.setAttribute("aria-label", t("online")); line.append(dot); }
   line.append(el("span", name, "nm-text"));
   if (paused) line.append(el("span", t("pausedChip"), "tag paused-tag"));
   td.append(line);
-  if (spent) td.append(el("div", spent, "nm-sub narrow-only"));
+  if (spent) {
+    const sub = el("div", undefined, "nm-sub narrow-only");
+    if (online) sub.append(el("span", "", "dot-on"), t("online") + " · ");
+    sub.append(spent);
+    td.append(sub);
+  }
   td.title = name;
   return td;
 }
@@ -765,7 +816,13 @@ function pauseSwitch(tr, label, path, id, paused) {
     try {
       await api(path, { id, paused: !sw.checked });
     } catch (e) { sw.checked = !sw.checked; sw.disabled = false; toast(e.message, true); return; }
-    toast(t(sw.checked ? "resumedToast" : "pausedToast", label));
+    if (sw.checked) toast(t("resumedToast", label));
+    else {
+      // Paused by a slip of the finger: Undo turns it on again.
+      toast(t("pausedToast", label), false, { label: t("undo"), run: async () => {
+        try { await api(path, { id, paused: false }); toast(t("resumedToast", label)); await refresh(); } catch (e) { toast(e.message, true); }
+      } });
+    }
     try { await refresh(); } catch (_) { sw.disabled = false; }
   });
   td.append(sw);
@@ -777,7 +834,9 @@ function renderDevices() {
   for (const d of S.devices) {
     const tr = el("tr", undefined, d.Paused ? "paused" : "");
     const spent = spentText("device/" + d.ID, d.BudgetMicroUSD);
-    nameCell(tr, d.Name, d.Paused, d.Online, spent);
+    const nc = nameCell(tr, d.Name, d.Paused, d.Online, spent);
+    // Nothing on its list is left for it (removed, or kept off devices).
+    if (!deviceHasModels(d)) nc.firstChild.append(el("span", "", "brk narrow-only"), el("span", t("appNoModels"), "tag warn-tag"));
     seenText(cell(tr, "", "seen"), d.Online, d.LastSeen);
     cell(tr, spent, "spent");
     pauseSwitch(tr, d.Name, "devices/update", d.ID, d.Paused);
@@ -790,12 +849,14 @@ function renderDevices() {
   $("devices-empty").hidden = S.devices.length > 0;
 }
 
-// moneyInput: a dollar amount without the browser's number spinners.
+// moneyInput: a dollar amount without the browser's number spinners; the
+// "$" sits inside the field, before the amount.
 function moneyInput(value, label) {
   const wrap = el("span", undefined, "money-in");
   const amt = el("input"); amt.type = "text"; amt.inputMode = "decimal"; amt.autocomplete = "off"; amt.spellcheck = false;
   amt.value = value; amt.setAttribute("aria-label", label);
-  wrap.append(el("span", "$"), amt);
+  const cur = el("span", "$", "money-sign"); cur.setAttribute("aria-hidden", "true");
+  wrap.append(cur, amt);
   return [wrap, amt];
 }
 // dollars reads an amount; anything unreadable is sent as 0, which the
@@ -932,6 +993,11 @@ const usableByApp = (m) => !(m.human_only || m.group === "sub");
 function appHasModels(a) {
   return S.models.some((m) => usableByApp(m) && (!(a.Models || []).length || a.Models.includes(m.id)));
 }
+// deviceHasModels: a device can use at least one model: one on its list
+// (or any, with all models) that is shown on devices.
+function deviceHasModels(d) {
+  return S.models.some((m) => !m.hidden && (!(d.Models || []).length || d.Models.includes(m.id)));
+}
 
 // editDialog: everything about one device or app in one place: its name,
 // on or paused, its daily limit, the models it may use, and removing it.
@@ -946,12 +1012,13 @@ function editDialog(kind, x) {
   const nl = el("label", t("name")); nl.htmlFor = nid;
   const name = el("input"); name.id = nid; name.maxLength = 64; name.value = x.Name;
   const u = S.usage.find((r) => r.who === who);
-  const info = [t("infoAdded", dateWords(x.Created))];
-  if (!isApp) info.push(x.Online ? t("online") : t("infoSeen", timeWords(x.LastSeen)));
+  const info = [t("infoAdded", inLine(timeWords(x.Created)))];
+  if (!isApp) info.push(x.Online ? t("online") : t("infoSeen", inLine(timeWords(x.LastSeen))));
   info.push(t("infoSpent", money(u ? u.micro_usd : 0)));
-  // Each "label value" stays on one line; the line breaks between them.
+  // Each "label value" stays on one line, its "·" before it: a line that
+  // breaks starts with "· ", never ends with it.
   const meta = el("p", undefined, "muted small dlg-info");
-  info.forEach((s, i) => { if (i) meta.append(" · "); meta.append(el("span", s, "nowrap")); });
+  info.forEach((s, i) => { if (i) meta.append(" "); meta.append(el("span", (i ? "· " : "") + s, "nowrap")); });
   basics.append(nl, name, meta);
   // Status: on, or paused.
   const status = section(d.body, t("secStatus"));
@@ -973,6 +1040,7 @@ function editDialog(kind, x) {
   const msec = section(d.body, t("secModels"));
   const usable = (m) => isApp ? usableByApp(m) : !m.hidden;
   if (isApp && !S.models.some(usableByApp)) msec.append(el("p", t("appNoModelsBody"), "warn-note"));
+  if (!isApp && !deviceHasModels(x)) msec.append(el("p", t("devNoModelsBody"), "warn-note"));
   const allSw = el("input"); allSw.type = "checkbox"; allSw.className = "switch"; allSw.checked = !(x.Models || []).length;
   const all = el("label", undefined, "toggle wrap"); all.append(allSw, el("span", t("allModels")));
   const list = el("div", undefined, "model-pick");
@@ -1001,7 +1069,7 @@ function editDialog(kind, x) {
   msec.append(all, list, pickHint);
   // Foot: Remove on the left; it asks in the foot first.
   const rm = el("button", t(isApp ? "removeApp" : "removeDevice"), "danger-text"); rm.type = "button";
-  rm.addEventListener("click", () => d.ask(t("removeConfirm", x.Name), t("remove"), async () => {
+  rm.addEventListener("click", () => d.ask(t(isApp ? "removeConfirm" : "removeConfirmDevice", x.Name), t("remove"), async () => {
     try { await api(isApp ? "apps/remove" : "devices/remove", { id: x.ID }); d.close(); toast(t("removed")); refresh(); } catch (e) { toast(e.message, true); return false; }
   }));
   d.left = rm;
@@ -1038,8 +1106,8 @@ function editDialog(kind, x) {
   d.open(name);
 }
 
-// modelDialog: one model's name and switches, for a phone-width window
-// where the table keeps only the name and an Edit button.
+// modelDialog: one model's name and switches, from its row's Edit button
+// (on a phone-width window the table keeps only the name and Edit).
 function modelDialog(m) {
   const cur = modelName(m);
   const d = dialog(t("editModel", cur));
@@ -1079,7 +1147,7 @@ function modelDialog(m) {
 }
 
 // modelName: a model as people see it here: the owner's own name as it
-// is; else Codex is "ChatGPT (Codex)", and a model that follows its
+// is; else Codex is "ChatGPT (Codex · latest)", and a model that follows its
 // family's newest version (not known yet) says so, in the page's language.
 function modelName(m) {
   if (m.renamed) return m.display_name;
@@ -1149,13 +1217,11 @@ function renderModels() {
     switchCell(tr, !m.hidden, t("showOnDevices") + " " + name, async (box) => {
       try { await api("models/set", { id: m.id, shown: box.checked }); toast(t("saved")); m.hidden = !box.checked; } catch (e) { box.checked = !box.checked; toast(e.message, true); }
     });
-    const act = cell(tr, "", "actions");
-    const rn = el("button", t("rename"), "secondary small-btn wide-only"); rn.type = "button";
-    rn.addEventListener("click", () => renameModel(tr, nc, act, m, name));
-    // A phone-width window keeps the name and this; the rest is in a dialog.
-    const ed = el("button", t("edit"), "secondary small-btn narrow-only"); ed.type = "button";
+    // Edit, at every width: the name and both switches in a dialog (a
+    // phone-width window keeps only the name and this).
+    const ed = el("button", t("edit"), "secondary small-btn"); ed.type = "button";
     ed.addEventListener("click", () => modelDialog(m));
-    act.append(rn, ed);
+    cell(tr, "", "actions").append(ed);
     tb.append(tr);
   }
   const pb = $("providers");
@@ -1165,7 +1231,7 @@ function renderModels() {
     // Sources by the names people know them by; "(this Mac)" is in
     // Ollama's own name.
     const own = sourceName(p.kind), label = own || p.display_name || p.name;
-    const how = p.subscription ? t("subLogin") : p.key_last4 ? "API Key …" + p.key_last4 : t("local");
+    const how = p.subscription ? t("subLogin") : p.key_last4 ? t("key") + " …" + p.key_last4 : t("local");
     // On a phone-width window the row stacks: the name, then how it is
     // connected; Remove on the right.
     const nc = cell(tr, "", "src");
@@ -1179,29 +1245,6 @@ function renderModels() {
   }
 }
 
-// renameModel: the name cell becomes a field; an empty name goes back to
-// the one the model source gives.
-function renameModel(tr, nc, act, m, cur) {
-  tr.classList.add("editing");
-  nc.textContent = "";
-  const inp = el("input"); inp.value = cur; inp.maxLength = 64; inp.setAttribute("aria-label", t("rename"));
-  nc.append(inp);
-  act.textContent = "";
-  const save = el("button", t("save"), "primary small-btn"); save.type = "button";
-  const no = el("button", t("cancel"), "secondary small-btn"); no.type = "button";
-  act.append(no, save);
-  const submit = async () => {
-    // The name as it was is not a rename: nothing to send.
-    if (inp.value.trim() === cur) { renderModels(); return; }
-    save.disabled = true;
-    try { await api("models/set", { id: m.id, name: inp.value.trim() }); toast(t("saved")); await refresh(); } catch (e) { toast(e.message, true); save.disabled = false; }
-  };
-  save.addEventListener("click", submit);
-  no.addEventListener("click", renderModels);
-  inp.addEventListener("keydown", (e) => { if (composing(e)) return; if (e.key === "Enter") submit(); if (e.key === "Escape") renderModels(); });
-  inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length);
-}
-
 function renderApps() {
   const tb = $("apps");
   tb.textContent = "";
@@ -1212,7 +1255,13 @@ function renderApps() {
     // Nothing it may use works for apps (only subscriptions or chat-only
     // models are connected, or its own list has none left).
     // On a phone-width window it always takes a line of its own.
-    if (!appHasModels(a)) nc.firstChild.append(el("span", "", "brk narrow-only"), el("span", t("appNoModels"), "tag warn-tag"));
+    // The chip leads to where that is fixed: Models › Connect a model.
+    if (!appHasModels(a)) {
+      const chip = el("a", t("appNoModels"), "tag warn-tag chip-link");
+      chip.href = "#"; chip.title = t("appNoModelsTip");
+      chip.addEventListener("click", (e) => { e.preventDefault(); document.querySelector('.tabs button[data-tab="models"]').click(); $("add-provider").click(); });
+      nc.firstChild.append(el("span", "", "brk narrow-only"), chip);
+    }
     cell(tr, spent, "spent");
     pauseSwitch(tr, a.Name, "apps/update", a.ID, a.Paused);
     const ed = el("button", t("edit"), "secondary small-btn");

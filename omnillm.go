@@ -207,9 +207,10 @@ type ModelInfo struct {
 	// own language.
 	Latest bool `json:"latest,omitempty"`
 	// Kind is the provider's kind ("claude-code", "codex", "openai",
-	// "ollama", …). A screen names a Codex model "ChatGPT（Codex）" /
-	// "ChatGPT (Codex)" in its own language from it; DisplayName holds
-	// the English form for screens that do not.
+	// "ollama", …). A screen names a Codex model from it in its own
+	// language: "ChatGPT（Codex · {Version}）" / "ChatGPT (Codex · {Version})",
+	// or "ChatGPT（Codex · 最新版）" / "ChatGPT (Codex · latest)" with no
+	// Version; DisplayName holds the English form for screens that do not.
 	Kind string `json:"kind,omitempty"`
 	// Version is the exact model a Codex source runs ("gpt-5.1-codex"),
 	// set only when the hub itself passes that model to Codex; a screen

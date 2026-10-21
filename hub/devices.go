@@ -93,8 +93,27 @@ func (h *Hub) listDevices(ctx context.Context) ([]Device, error) {
 }
 
 // Devices lists paired devices, each with whether it is online now.
+// Devices are named uniquely; two that share a name from before that rule
+// (or from two hubs' records merged) are told apart once, here, the later
+// one becoming "iPhone (2)", as Apps does.
 func (h *Hub) Devices(ctx context.Context) ([]Device, error) {
+	h.deviceMu.Lock()
 	devs, err := h.listDevices(ctx)
+	var seen []string
+	for i, d := range devs {
+		if n := uniqueName(d.Name, seen); n != d.Name {
+			// Rename the stored record only: the last-seen time stays
+			// under its own key.
+			if rec, gerr := h.getDevice(ctx, d.ID); gerr == nil {
+				rec.Name = n
+				if store.PutJSON(ctx, h.opts.Store, "device/"+d.ID, rec) == nil {
+					devs[i].Name = n
+				}
+			}
+		}
+		seen = append(seen, devs[i].Name)
+	}
+	h.deviceMu.Unlock()
 	h.mu.Lock()
 	for i := range devs {
 		devs[i].Online = findSession(h.devSessions, devs[i].ID) != nil
@@ -493,8 +512,12 @@ func (h *Hub) finishPairing(ctx context.Context, p *pairing, sess *e2e.Session, 
 	if p.opts.Name != "" {
 		name = cleanName(p.opts.Name)
 	}
+	// base is the name before any number: it is numbered again under the
+	// lock right before the device is stored, since another device may
+	// have been paired with the same name while the owner was asked.
+	base := name
 	// Two phones both called "iPhone" can't be told apart in the device
-	// list (and the wrong one gets removed): the second is "iPhone 2".
+	// list (and the wrong one gets removed): the second is "iPhone (2)".
 	if devs, err := h.listDevices(ctx); err == nil {
 		name = uniqueName(name, deviceNames(devs, ""))
 	}
@@ -543,12 +566,10 @@ func (h *Hub) finishPairing(ctx context.Context, p *pairing, sess *e2e.Session, 
 		h.endPairing(p, &omnillm.Error{Code: omnillm.CodePairingDenied, Msg: omnillm.MsgPairingDenied})
 		return omnillm.ErrPairingDenied
 	}
-	if strings.TrimSpace(given) != "" {
-		// The owner's own name for it; still never a second "iPhone".
-		name = cleanName(given)
-		if devs, err := h.listDevices(ctx); err == nil {
-			name = uniqueName(name, deviceNames(devs, ""))
-		}
+	if g := cleanName(given); strings.TrimSpace(given) != "" && g != name {
+		// The owner's own name for it (not just the one proposed); still
+		// never a second "iPhone".
+		base = g
 	}
 	// The same device key may not be paired twice.
 	devs, _ := h.listDevices(ctx)
@@ -582,7 +603,8 @@ func (h *Hub) finishPairing(ctx context.Context, p *pairing, sess *e2e.Session, 
 		SecretHash: newHash[:], Models: p.opts.Models, Budget: p.opts.Budget, Created: h.opts.Now().UTC(),
 		BackgroundOnly: p.opts.BackgroundOnly}
 	h.deviceMu.Lock()
-	// Re-check under the lock: the same device key may not be paired twice.
+	// Re-check under the lock: the same device key may not be paired twice,
+	// and the name is numbered against the devices there are now.
 	devs, err = h.listDevices(ctx)
 	for _, other := range devs {
 		if subtle.ConstantTimeCompare(other.PublicKey, d.PublicKey) == 1 {
@@ -590,6 +612,8 @@ func (h *Hub) finishPairing(ctx context.Context, p *pairing, sess *e2e.Session, 
 		}
 	}
 	if err == nil {
+		d.Name = uniqueName(base, deviceNames(devs, ""))
+		name = d.Name
 		err = store.PutJSON(ctx, h.opts.Store, "device/"+d.ID, d)
 	}
 	h.deviceMu.Unlock()
@@ -804,7 +828,7 @@ func (h *Hub) AddApp(ctx context.Context, name string, models []string, budget i
 // Apps lists app tokens (hashes only). Apps are named uniquely, as
 // devices are; two apps that share a name from before that rule (or from
 // two hubs' records merged) are told apart once, here, the later one
-// becoming "my-script 2".
+// becoming "my-script (2)".
 func (h *Hub) Apps(ctx context.Context) ([]App, error) {
 	h.deviceMu.Lock()
 	defer h.deviceMu.Unlock()
