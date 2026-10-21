@@ -236,6 +236,9 @@ func chat(_ js.Value, a []js.Value) any {
 					s.Close()
 					return nil, err
 				}
+				if c.Model != "" {
+					onDelta.Invoke("", c.Model) // which model and version is answering
+				}
 				if c.Text != "" {
 					got = true
 					onDelta.Invoke(c.Text)

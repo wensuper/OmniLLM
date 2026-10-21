@@ -501,13 +501,15 @@ function renderLog() {
   const log = $("log"); log.textContent = "";
   if (!S.cur.messages.length) log.append(el("p", t("empty"), "empty"));
   // A line where the chat changes model, so who answered what stays clear.
-  let lastBy = "";
+  // Compared by model id (the name gains its version once known).
+  let last = "";
   for (const m of S.cur.messages) {
     if (m.role === "assistant" && m.by) {
-      if (lastBy && m.by !== lastBy) {
+      const key = m.model || m.by;
+      if (last && key !== last) {
         const line = el("div", undefined, "switch-line"); line.append(el("span", t("switchedTo", m.by))); log.lastElementChild.before(line);
       }
-      lastBy = m.by;
+      last = key;
     }
     log.append(bubble(m));
   }
@@ -650,7 +652,7 @@ $("composer").addEventListener("submit", async (e) => {
   chat.model = model;
   if (!chat.title) chat.title = text.slice(0, 40) || t("imageTitle");
   chat.messages.push(images.length ? { role: "user", content: text, images } : { role: "user", content: text });
-  const reply = { role: "assistant", content: "", by: modelName(model), live: true };
+  const reply = { role: "assistant", content: "", by: modelName(model), model, live: true };
   S.sentAt = Date.now();
   chat.messages.push(reply);
   renderLog(); renderList();
@@ -667,7 +669,10 @@ $("composer").addEventListener("submit", async (e) => {
   let raf = 0;
   const flush = () => { raf = 0; const nb = bubble(reply); node.replaceWith(nb); node = nb; log.scrollTop = log.scrollHeight; };
   try {
-    const r = await omnillm.chat(id, model, JSON.stringify(msgs), (d) => { reply.content += d; if (!raf) raf = requestAnimationFrame(flush); });
+    const r = await omnillm.chat(id, model, JSON.stringify(msgs), (d, exact) => {
+      if (exact) { reply.by = exact; S.versionSeen = true; } // "Claude Opus 5.5", as the hub reports it
+      reply.content += d; if (!raf) raf = requestAnimationFrame(flush);
+    });
     if (r.finish === "length") reply.note = t("cut");
     setOnline(true);
   } catch (err) {
@@ -682,6 +687,8 @@ $("composer").addEventListener("submit", async (e) => {
     delete reply.live;
     S.busy = null; busyUI(false);
     setTimeout(reloadIfIdle, 1500); // a new version waited for this reply
+    // The picker learns the version too (the hub now knows it).
+    if (S.versionSeen) { S.versionSeen = false; loadModels().catch(() => {}); }
     // Removed meanwhile (unpaired): nothing left to show or save.
     if (!S.device) return;
     renderLog();

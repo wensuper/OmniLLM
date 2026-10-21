@@ -700,8 +700,8 @@ func (s *stream) Recv() (omnillm.Chunk, error) {
 		}
 		switch env.T {
 		case proto.TChatDelta:
-			if env.Text != "" {
-				return omnillm.Chunk{Text: env.Text}, nil
+			if env.Text != "" || env.Model != "" {
+				return omnillm.Chunk{Text: env.Text, Model: env.Model}, nil
 			}
 		case proto.TChatEnd:
 			s.mu.Lock()

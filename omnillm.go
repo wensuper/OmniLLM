@@ -163,6 +163,10 @@ type Usage struct {
 // Chunk is one piece of a streamed reply.
 type Chunk struct {
 	Text string `json:"text"`
+	// Model, when set, is the exact model that is answering as the
+	// provider reports it (e.g. "claude-opus-5-5" behind the alias
+	// "opus"). It comes at most once, possibly with no text.
+	Model string `json:"model,omitempty"`
 }
 
 // Stream is a reply in progress. Recv returns io.EOF after the last chunk;

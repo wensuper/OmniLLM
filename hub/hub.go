@@ -66,9 +66,11 @@ type Options struct {
 // Hub is the hub role.
 type Hub struct {
 	opts Options
-	lim  *egress.Limiter
-	subs subscriptionPace
-	key  e2e.KeyPair
+	// resolved: model id -> its name with version, as last reported (mu).
+	resolved map[string]string
+	lim      *egress.Limiter
+	subs     subscriptionPace
+	key      e2e.KeyPair
 
 	mu          sync.Mutex
 	clients     map[string]*provider.Client
@@ -127,6 +129,7 @@ func New(ctx context.Context, opts Options) (*Hub, error) {
 	if err := h.loadRegion(ctx); err != nil {
 		return nil, err
 	}
+	h.loadResolved(ctx)
 	// The owner's own daily total, if they set one in the console.
 	var total int64
 	if err := store.GetJSON(ctx, h.opts.Store, dailyTotalKey, &total); err == nil && (total > 0 || total == NoLimit) {
@@ -546,7 +549,46 @@ func (h *Hub) info(m Model) omnillm.ModelInfo {
 	if name != m.DisplayName && strings.HasPrefix(name, "Codex") {
 		name = "Codex (ChatGPT)"
 	}
+	// The version the provider last said it answered with ("Claude Opus"
+	// behind the alias "opus" is "Claude Opus 5.5" today).
+	h.mu.Lock()
+	if v := h.resolved[m.ID]; v != "" {
+		name = v
+	}
+	h.mu.Unlock()
 	return omnillm.ModelInfo{ID: m.ID, DisplayName: name, Provider: m.Provider, Locality: loc, HumanOnly: m.HumanOnly}
+}
+
+// noteModel remembers the exact model a provider answered with for one of
+// our model ids, named for people with its version, and keeps it so the
+// model list shows the version after a restart too.
+func (h *Hub) noteModel(id, exact string) {
+	name := provider.PrettyModel(exact)
+	h.mu.Lock()
+	same := h.resolved[id] == name
+	if h.resolved == nil {
+		h.resolved = map[string]string{}
+	}
+	h.resolved[id] = name
+	h.mu.Unlock()
+	if !same {
+		_ = store.PutJSON(context.Background(), h.opts.Store, "resolved/"+id, name)
+	}
+}
+
+func (h *Hub) loadResolved(ctx context.Context) {
+	keys, _ := h.opts.Store.List(ctx, "resolved/")
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if h.resolved == nil {
+		h.resolved = map[string]string{}
+	}
+	for _, k := range keys {
+		var n string
+		if store.GetJSON(ctx, h.opts.Store, k, &n) == nil {
+			h.resolved[strings.TrimPrefix(k, "resolved/")] = n
+		}
+	}
 }
 
 // Models lists every model, with where its data goes as seen from this

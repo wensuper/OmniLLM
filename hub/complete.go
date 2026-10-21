@@ -135,6 +135,9 @@ type accounted struct {
 
 func (a *accounted) Recv() (omnillm.Chunk, error) {
 	c, err := a.Stream.Recv()
+	if c.Model != "" {
+		a.h.noteModel(a.m.ID, c.Model)
+	}
 	a.outBytes.Add(int64(len(c.Text)))
 	if c.Text != "" {
 		a.first.CompareAndSwap(0, time.Now().UnixNano())

@@ -49,6 +49,9 @@ type Envelope struct {
 	Text     string              `json:"text,omitempty"`
 	Usage    *omnillm.Usage      `json:"usage,omitempty"`
 	Finish   string              `json:"finish,omitempty"`
+	// Model in chat.delta names the model answering, for people, with its
+	// version ("Claude Opus 5.5"); sent once, when the provider says.
+	Model string `json:"model,omitempty"`
 	Err      *WireError          `json:"error,omitempty"`
 	Tool     string              `json:"tool,omitempty"`
 	Args     json.RawMessage     `json:"args,omitempty"`

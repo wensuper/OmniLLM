@@ -278,6 +278,8 @@ type cliStream struct {
 	done   bool
 	gotAny bool
 	limit  time.Time // a subscription limit's reset time, if reported
+	model  string    // the exact model, once the program says
+	told   bool      // model passed on
 
 	waitOnce sync.Once
 	waitErr  error
@@ -433,6 +435,16 @@ func (s *cliStream) Recv() (omnillm.Chunk, error) {
 			}
 			return omnillm.Chunk{}, io.EOF
 		}
+		// The exact model, as soon as the program has said it.
+		s.mu.Lock()
+		m := ""
+		if s.model != "" && !s.told {
+			m, s.told = s.model, true
+		}
+		s.mu.Unlock()
+		if m != "" {
+			return omnillm.Chunk{Model: m}, nil
+		}
 		if !s.sc.Scan() {
 			return omnillm.Chunk{}, s.end()
 		}
@@ -459,8 +471,12 @@ func (s *cliStream) Recv() (omnillm.Chunk, error) {
 func (s *cliStream) line(b []byte) (text string, final bool) {
 	var ev struct {
 		Type  string `json:"type"`
+		Model string `json:"model"` // Claude Code's system/init
 		Event struct {
-			Type  string `json:"type"`
+			Type    string `json:"type"`
+			Message struct {
+				Model string `json:"model"`
+			} `json:"message"`
 			Delta struct {
 				Type       string `json:"type"`
 				Text       string `json:"text"`
@@ -489,6 +505,13 @@ func (s *cliStream) line(b []byte) (text string, final bool) {
 	}
 	if json.Unmarshal(b, &ev) != nil {
 		return "", false
+	}
+	if m := ev.Model + ev.Event.Message.Model; m != "" && ev.Type != "result" {
+		s.mu.Lock()
+		if s.model == "" {
+			s.model = m
+		}
+		s.mu.Unlock()
 	}
 	switch ev.Type {
 	case "stream_event": // Claude Code, partial message

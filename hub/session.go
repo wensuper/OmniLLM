@@ -15,6 +15,7 @@ import (
 	omnillm "github.com/wensuper/OmniLLM"
 	"github.com/wensuper/OmniLLM/internal/e2e"
 	"github.com/wensuper/OmniLLM/internal/proto"
+	"github.com/wensuper/OmniLLM/internal/provider"
 	"github.com/wensuper/OmniLLM/internal/relaylink"
 	"github.com/wensuper/OmniLLM/internal/relayproto"
 )
@@ -403,8 +404,8 @@ func (ds *devSession) startChat(ctx context.Context, env proto.Envelope, d Devic
 // frames: less mobile data, less timing signal for the relay).
 func (ds *devSession) relayStream(ctx, cctx context.Context, id uint64, s omnillm.Stream) {
 	type item struct {
-		text string
-		err  error
+		text, model string
+		err         error
 	}
 	ch := make(chan item, 64)
 	go func() {
@@ -412,7 +413,7 @@ func (ds *devSession) relayStream(ctx, cctx context.Context, id uint64, s omnill
 		for {
 			c, err := s.Recv()
 			select {
-			case ch <- item{c.Text, err}:
+			case ch <- item{c.Text, c.Model, err}:
 			case <-cctx.Done():
 				return
 			}
@@ -437,6 +438,12 @@ func (ds *devSession) relayStream(ctx, cctx context.Context, id uint64, s omnill
 		case it, ok := <-ch:
 			if !ok {
 				return
+			}
+			if it.model != "" {
+				// Which model (and version) is answering, ahead of its words.
+				if !flush() || ds.send(ctx, proto.Envelope{T: proto.TChatDelta, ID: id, Model: provider.PrettyModel(it.model)}) != nil {
+					return
+				}
 			}
 			buf.WriteString(it.text)
 			if it.err != nil {
