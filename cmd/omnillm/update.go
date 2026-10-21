@@ -228,6 +228,12 @@ func updateCmd(args []string) {
 		die(say(t("这台电脑上还没有安装 OmniLLM。安装方法见 https://github.com/wensuper/OmniLLM#quick-start",
 			"OmniLLM isn’t installed on this computer yet. See https://github.com/wensuper/OmniLLM#quick-start")))
 	}
+	// A hub whose service is gone was uninstalled (where there is a
+	// service manager; without one the hub runs as a plain process).
+	if _, err := exec.LookPath("systemctl"); r == "hub" && !serviceInstalled() && (runtime.GOOS == "darwin" || err == nil) {
+		die(say(t("OmniLLM 的后台服务已经卸载了。要重新安装（设置都还在）：curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh",
+			"OmniLLM’s background service was uninstalled. To install it again (your settings are still here): curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh")))
+	}
 	dir := dataDir(r)
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		die(err)
@@ -271,7 +277,7 @@ func updateCmd(args []string) {
 	}
 	fmt.Printf(t("正在更新到 %s：下载、核对、安装……\n", "Updating to %s: downloading, verifying, installing…\n"), plain(latest))
 	if r == "hub" {
-		fmt.Println(t("OmniLLM 会重启几秒，手机上正在出的回答会中断。", "OmniLLM restarts for a few seconds; a reply on its way to your phone is cut off."))
+		fmt.Println(t("OmniLLM 会重启几秒，正在进行的回答会中断。", "OmniLLM restarts for a few seconds; a reply in progress is cut off."))
 	}
 	logPath := filepath.Join(dir, "update.log")
 	logf, err := os.OpenFile(logPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)

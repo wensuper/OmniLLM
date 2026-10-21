@@ -163,6 +163,7 @@ func trayReady() {
 			installDone <- update(ctx, dataDir("hub"), "hub", logf, true)
 		}()
 	}
+	up = up.fromHub(version, readUpdate(dataDir("hub")))
 	showUpdate()
 	firstCheck := time.NewTimer(time.Minute)
 	daily := time.NewTicker(24 * time.Hour)
@@ -183,7 +184,7 @@ func trayReady() {
 					startCheck()
 				}
 			case r := <-checkDone:
-				up = up.checked(version, r.latest, r.err, time.Now())
+				up = up.checked(version, r.latest, r.err, time.Now()).fromHub(version, readUpdate(dataDir("hub")))
 				showUpdate()
 			case <-check.ClickedCh:
 				if checkClick && !up.Checking {

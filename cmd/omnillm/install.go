@@ -54,8 +54,10 @@ type Status struct {
 	// opened here and the person types a key in the terminal instead.
 	Headless bool   `json:"headless"`
 	Next     string `json:"next"` // the one thing to do next, for a person
-	// Update: a newer release this hub has not installed yet.
-	Update string `json:"update,omitempty"`
+	// Update: a newer release this hub has not installed yet;
+	// UpdateFailed: installing it automatically didn't work.
+	Update       string `json:"update,omitempty"`
+	UpdateFailed bool   `json:"update_failed,omitempty"`
 }
 
 func installCmd(args []string) {
@@ -167,6 +169,8 @@ func installCmd(args []string) {
 		fmt.Printf(t("OmniLLM 已从 %s 换回 %s，在后台运行，设置都在。\n", "OmniLLM went from %s back to %s and runs in the background; your settings are kept.\n"), prev, version)
 	case prev != "":
 		fmt.Printf(t("OmniLLM 已从 %s 更新到 %s，在后台运行，设置都在。\n", "OmniLLM is updated from %s to %s and runs in the background; your settings are kept.\n"), prev, version)
+	case readUpdate(dir).Manual:
+		fmt.Println(runnable(t("OmniLLM 已安装，在后台运行（登录时自动启动）。自动更新是关着的：要打开，运行 omnillm update --auto on。", "OmniLLM is installed and runs in the background; it starts at login. Automatic updates are off; to turn them on, run omnillm update --auto on.")))
 	default:
 		fmt.Println(t("OmniLLM 已安装，在后台运行（登录时自动启动），以后会自己更新。", "OmniLLM is installed and runs in the background; it starts at login and updates itself."))
 	}
@@ -727,6 +731,22 @@ func loginURL() (string, error) {
 }
 
 func statusCmd(args []string) {
+	if role() == "device" {
+		st := Status{Next: runnable(t("这台机器用的是另一台电脑上的 OmniLLM，不在这里运行主机。对话：omnillm connect chat。",
+			"This machine uses OmniLLM on another computer; no hub runs here. To chat: omnillm connect chat."))}
+		u := readUpdate(dataDir("device"))
+		st.Update = plain(u.newer(version))
+		if len(args) > 0 && args[0] == "--json" {
+			b, _ := json.Marshal(st)
+			fmt.Println(string(b))
+			return
+		}
+		fmt.Println(st.Next)
+		if st.Update != "" {
+			fmt.Println(runnable(fmt.Sprintf(t("有新版本 %s。运行 omnillm update 更新。", "Version %s is out. Run omnillm update to install it."), st.Update)))
+		}
+		return
+	}
 	if role() == "" && !exists(dataDir("hub")) {
 		st := Status{Next: t("这台电脑上还没有安装 OmniLLM。安装方法见 https://github.com/wensuper/OmniLLM#quick-start",
 			"OmniLLM isn’t installed on this computer yet. See https://github.com/wensuper/OmniLLM#quick-start")}
@@ -743,9 +763,9 @@ func statusCmd(args []string) {
 	st = waitRelay(st, 5*time.Second)
 	st.Headless = headless()
 	st.Next = nextStep(st)
-	if ok {
-		st.Update = readUpdate(dataDir("hub")).newer(version)
-	}
+	hu := readUpdate(dataDir("hub"))
+	st.Update = plain(hu.newer(version))
+	st.UpdateFailed = st.Update != "" && sameVersion(hu.Error, st.Update)
 	for _, a := range args {
 		if a == "--json" {
 			b, _ := json.Marshal(st)
@@ -755,11 +775,14 @@ func statusCmd(args []string) {
 	}
 	if !ok {
 		fmt.Println(runnable(st.Next))
+		if l := statusUpdateLine(hu); l != "" {
+			fmt.Println(l)
+		}
 		os.Exit(1)
 	}
 	fmt.Println(runningLine(st))
 	fmt.Println(runnable(st.Next))
-	if l := statusUpdateLine(readUpdate(dataDir("hub"))); l != "" {
+	if l := statusUpdateLine(hu); l != "" {
 		fmt.Println(l)
 	}
 }

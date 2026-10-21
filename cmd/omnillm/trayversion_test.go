@@ -72,33 +72,33 @@ func TestUpdateLines(t *testing.T) {
 		t.Fatal(c)
 	}
 	s = s.checked(cur, "v0.2.0-alpha.10", nil, now)
-	if v, inst := versionLine(cur, s); v != "有新版本 v0.2.0-alpha.10 · 点击更新（正在进行的回答会中断）" || !inst {
+	if v, inst := versionLine(cur, s); v != "有新版本 0.2.0-alpha.10 · 点击更新（正在进行的回答会中断）" || !inst {
 		t.Fatal(v)
 	}
 	if _, _, show := checkLine(cur, s, now); show {
 		t.Fatal("check line shown while an update is offered")
 	}
 	s.Installing = s.Latest
-	if v, inst := versionLine(cur, s); v != "正在更新到 v0.2.0-alpha.10……" || inst {
+	if v, inst := versionLine(cur, s); v != "正在更新到 0.2.0-alpha.10……" || inst {
 		t.Fatal(v)
 	}
 	s.Installing, s.Failed = "", true
-	if v, inst := versionLine(cur, s); v != "更新失败，点击重试" || !inst {
+	if v, inst := versionLine(cur, s); v != "更新到 0.2.0-alpha.10 没有成功，点击再试" || !inst {
 		t.Fatal(v)
 	}
 	home, _ := os.UserHomeDir()
 	s.Log = filepath.Join(home, ".omnillm", "hub", "update.log")
-	if v, _ := versionLine(cur, s); v != "更新失败，点击重试（日志：~/.omnillm/hub/update.log）" {
+	if v, _ := versionLine(cur, s); v != "更新到 0.2.0-alpha.10 没有成功，点击再试（日志：~/.omnillm/hub/update.log）" {
 		t.Fatal(v)
 	}
 	t.Setenv("OMNILLM_LANG", "en")
 	if v, _ := versionLine(cur, updateState{}); v != "Version 0.2.0-alpha.9" {
 		t.Fatal(v)
 	}
-	if v, _ := versionLine(cur, s); v != "Update failed; click to retry (log: ~/.omnillm/hub/update.log)" {
+	if v, _ := versionLine(cur, s); v != "Updating to 0.2.0-alpha.10 didn’t work; click to try again (log: ~/.omnillm/hub/update.log)" {
 		t.Fatal(v)
 	}
-	if v, _ := versionLine(cur, updateState{Latest: "v0.2.0-alpha.10"}); v != "New version v0.2.0-alpha.10 · click to update (replies in progress will stop)" {
+	if v, _ := versionLine(cur, updateState{Latest: "v0.2.0-alpha.10"}); v != "New version 0.2.0-alpha.10 · click to update (a reply in progress is cut off)" {
 		t.Fatal(v)
 	}
 }
@@ -168,5 +168,19 @@ func TestAfterAnInstallThatDidNotReplaceTheMenu(t *testing.T) {
 		if restart || !s.Failed || s.Latest != offer.Latest || s.Installing != "" {
 			t.Fatalf("%v %q: %+v %v", c.err, c.have, s, restart)
 		}
+	}
+}
+
+func TestTrayFollowsTheHubsUpdater(t *testing.T) {
+	cur := "0.2.0-alpha.21"
+	// A version the hub rolled back is not offered again.
+	s := updateState{}.checked(cur, "v0.2.0-alpha.22", nil, time.Now()).fromHub(cur, updateFile{Latest: "v0.2.0-alpha.22", Skip: "0.2.0-alpha.22"})
+	if _, inst := versionLine(cur, s); inst {
+		t.Fatal("rolled-back version offered")
+	}
+	// An automatic update that didn't work shows as one to try again.
+	s = updateState{}.fromHub(cur, updateFile{Latest: "v0.2.0-alpha.22", Error: "v0.2.0-alpha.22"})
+	if !s.Failed || s.Latest == "" {
+		t.Fatalf("failed automatic update not shown: %+v", s)
 	}
 }

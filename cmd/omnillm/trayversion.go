@@ -283,15 +283,15 @@ const upToDateFor = time.Minute
 func versionLine(cur string, s updateState) (title string, install bool) {
 	switch {
 	case s.Installing != "":
-		return fmt.Sprintf(t("正在更新到 %s……", "Updating to %s…"), s.Installing), false
+		return fmt.Sprintf(t("正在更新到 %s……", "Updating to %s…"), plain(s.Installing)), false
 	case s.Failed && s.Latest != "":
 		if s.Log != "" {
-			return fmt.Sprintf(t("更新失败，点击重试（日志：%s）", "Update failed; click to retry (log: %s)"), tildePath(s.Log)), true
+			return fmt.Sprintf(t("更新到 %s 没有成功，点击再试（日志：%s）", "Updating to %s didn’t work; click to try again (log: %s)"), plain(s.Latest), tildePath(s.Log)), true
 		}
-		return t("更新失败，点击重试", "Update failed; click to retry"), true
+		return fmt.Sprintf(t("更新到 %s 没有成功，点击再试", "Updating to %s didn’t work; click to try again"), plain(s.Latest)), true
 	case s.Latest != "" && compareVersions(s.Latest, cur) > 0:
 		// Installing restarts the hub, which ends replies in progress.
-		return fmt.Sprintf(t("有新版本 %s · 点击更新（正在进行的回答会中断）", "New version %s · click to update (replies in progress will stop)"), s.Latest), true
+		return fmt.Sprintf(t("有新版本 %s · 点击更新（正在进行的回答会中断）", "New version %s · click to update (a reply in progress is cut off)"), plain(s.Latest)), true
 	}
 	return fmt.Sprintf(t("版本 %s", "Version %s"), cur), false
 }
@@ -311,6 +311,19 @@ func checkLine(cur string, s updateState, now time.Time) (title string, click, s
 		return t("✓ 已是最新版本", "✓ Up to date"), false, true
 	}
 	return t("检查更新…", "Check for updates…"), true, true
+}
+
+// fromHub folds in what the hub's own updater knows (update.json): a
+// version it rolled back is not offered again, and an automatic update
+// that didn't work shows as one to try again.
+func (s updateState) fromHub(cur string, u updateFile) updateState {
+	if sameVersion(s.Latest, u.Skip) {
+		s.Latest = ""
+	}
+	if v := u.newer(cur); v != "" && sameVersion(u.Error, v) && s.Installing == "" {
+		s.Latest, s.Failed = v, true
+	}
+	return s
 }
 
 // checked folds a finished check into the state.
