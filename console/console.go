@@ -67,6 +67,10 @@ type Server struct {
 	// owner sees it (a Terminal window on a Mac). Nil: the page shows the
 	// command to run instead. The library never runs it on its own.
 	OpenLogin func(kind string) error
+	// APIURL, set by the host, is where programs on this Mac reach the
+	// models with an app token ("http://127.0.0.1:8765/v1"); "" when the
+	// local API is off (the Apps tab says so).
+	APIURL string
 
 	mu       sync.Mutex
 	logins   map[string]time.Time // one-time login tokens → expiry
@@ -523,6 +527,8 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 		// The owner's language for the console and the menu bar ("" when
 		// not chosen); the page follows a choice made in the menu bar.
 		"lang": s.hub.UILang(ctx),
+		// Where apps connect (the Apps tab); "" when the local API is off.
+		"api_url": s.APIURL,
 	})
 }
 

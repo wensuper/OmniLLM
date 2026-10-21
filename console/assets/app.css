@@ -528,3 +528,35 @@ p code, li code, .pair-how code { white-space: nowrap; }
 .spinner.sm { flex: none; width: 16px; height: 16px; margin-top: 2px; border-radius: 50%; border: 2px solid var(--line); border-top-color: var(--accent); animation: sub-spin .8s linear infinite; }
 @keyframes sub-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .spinner.sm { animation: none; } }
+/* Apps: where programs connect, and how to use a new token. */
+.apps-where { margin: 4px 0 12px; color: var(--muted); }
+.apps-where code { font-family: var(--mono); font-size: 12px; background: var(--surface-2); border-radius: var(--r-xs); padding: 1px 6px; user-select: all; }
+.token-box .token-use { margin: 12px 0 6px; }
+.token-box .codebox > .code:not(.one-line) { white-space: pre-wrap; }
+/* Hover cards: a device's or app's details on its name; the models it can
+   use on its Models cell. Shown on hover and on keyboard focus. */
+.hc-target { cursor: default; border-radius: var(--r-xs); outline-offset: 2px; }
+.hc-target:hover, .hc-target:focus-visible { text-decoration: underline dotted; text-decoration-color: var(--muted); text-underline-offset: 4px; }
+.hovercard { position: absolute; z-index: 60; width: max-content; max-width: min(320px, calc(100vw - 16px)); padding: 12px 14px; border-radius: var(--r-l);
+  background: var(--surface); color: var(--ink); border: 1px solid var(--line); box-shadow: 0 1px 2px rgba(0,0,0,.06), 0 12px 32px -10px rgba(0,0,0,.35);
+  font-size: 13px; line-height: 1.5; pointer-events: none; animation: hc-in .12s ease-out; }
+.hovercard.above { animation-name: hc-in-up; }
+@keyframes hc-in { from { opacity: 0; transform: translateY(-4px); } }
+@keyframes hc-in-up { from { opacity: 0; transform: translateY(4px); } }
+@media (prefers-reduced-motion: reduce) { .hovercard { animation: none; } }
+.hc-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.hc-title { font-weight: 600; font-size: 14px; overflow-wrap: anywhere; }
+.hovercard > div > .hc-title:only-child, .hovercard .hc-title + .hc-group { margin-top: 0; }
+.hc-on { display: inline-flex; align-items: center; gap: 5px; color: var(--ok-ink); font-size: 12px; }
+.hc-rows { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 0; }
+.hc-rows dt { color: var(--muted); }
+.hc-rows dd { margin: 0; font-variant-numeric: tabular-nums; }
+.hc-group { color: var(--muted); font-size: 12px; margin: 10px 0 4px; }
+.hc-models { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
+.hc-models li { display: flex; align-items: center; gap: 8px; }
+.hc-mark { width: 14px; height: 14px; flex: none; border-radius: 50%; background: var(--accent-soft, var(--surface-2)); position: relative; }
+.hc-models li.on .hc-mark::after { content: ""; position: absolute; left: 4px; top: 2px; width: 4px; height: 7px; border: solid var(--accent); border-width: 0 1.6px 1.6px 0; transform: rotate(45deg); }
+.hc-models li.off { color: var(--ink-2); opacity: .72; }
+.hc-models li.off .hc-mark { background: var(--surface-2); }
+.hc-offtag { margin-left: auto; font-size: 11px; color: var(--muted); }
+.hc-note { margin: 10px 0 0; }

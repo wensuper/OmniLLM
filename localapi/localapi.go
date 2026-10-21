@@ -73,17 +73,28 @@ func loopbackHost(hostport string) bool {
 
 // Serve listens on a loopback address only and serves until ctx ends.
 func Serve(ctx context.Context, addr string, h http.Handler) error {
+	ln, err := Listen(addr)
+	if err != nil {
+		return err
+	}
+	return ServeListener(ctx, ln, h)
+}
+
+// Listen takes addr, which must be on this machine's loopback, so a host
+// can say where the API is (or that it isn't) before serving it.
+func Listen(addr string) (net.Listener, error) {
 	host, _, err := net.SplitHostPort(addr)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if !loopbackHost(host) {
-		return errors.New("localapi: refusing to listen beyond this machine; use 127.0.0.1")
+		return nil, errors.New("localapi: refusing to listen beyond this machine; use 127.0.0.1")
 	}
-	ln, err := net.Listen("tcp", addr)
-	if err != nil {
-		return err
-	}
+	return net.Listen("tcp", addr)
+}
+
+// ServeListener serves h on ln (from Listen) until ctx ends.
+func ServeListener(ctx context.Context, ln net.Listener, h http.Handler) error {
 	srv := &http.Server{Handler: h, ReadHeaderTimeout: 10 * time.Second, ReadTimeout: time.Minute,
 		IdleTimeout: 2 * time.Minute, MaxHeaderBytes: 32 << 10}
 	stop := make(chan struct{})
@@ -98,7 +109,7 @@ func Serve(ctx context.Context, addr string, h http.Handler) error {
 		defer cancel()
 		_ = srv.Shutdown(sctx)
 	}()
-	err = srv.Serve(ln)
+	err := srv.Serve(ln)
 	if errors.Is(err, http.ErrServerClosed) {
 		return nil
 	}

@@ -58,6 +58,10 @@ const T = {
     showOnDevices: "在设备上显示", subAlways: "订阅模型始终只能手动对话", editModel: "编辑模型 · {0}",
     enabled: "开启", pausedChip: "已暂停", pausedToast: "已暂停“{0}”", resumedToast: "已开启“{0}”",
     online: "在线", todayAt: "今天 {0}", yesterdayAt: "昨天 {0}",
+    hcAdded: "添加于", hcSeen: "最近在线", hcToday: "今天用量", hcModels: "能用的模型", hcOffline: "离线", hcKind: "类型",
+    hcBackground: "只给程序用", hcApp: "这台电脑上的程序",
+    hcAllTitle: "全部模型 · {0} 个", hcAllNote: "以后接入的新模型也自动可用。", hcSomeTitle: "能用 {0} 个，共 {1} 个",
+    hcOff: "没开", hcNoneUsable: "现在没有它能用的模型。",
     editDevice: "编辑设备 · {0}", editApp: "编辑应用 · {0}", secStatus: "状态", secModels: "可用模型",
     infoAdded: "{0} 添加", infoSeen: "最近在线：{0}", infoSpent: "今天已用 {0}",
     pauseHint: "关掉即暂停：这台设备马上停用，配对和设置都保留。", pauseHintApp: "关掉即暂停：这个应用马上停用，令牌和设置都保留。",
@@ -74,6 +78,10 @@ const T = {
     problemLimit: "用量到上限，约 {0}后恢复", problemLimitNow: "用量到上限，稍后恢复", hours: "{0} 小时", hour: "1 小时", minutes: "{0} 分钟", minute: "1 分钟",
     noDevices: "还没有设备。点“添加设备”。", deviceCount: "{0} 台设备", deviceCountOne: "1 台设备", always: "始终",
     appsBody: "给脚本和其他不能直接嵌入 OmniLLM 的程序用。应用只能做后台调用，只能用 API Key 和{here}上的模型。",
+    appsWhere: "程序里这样填：接口地址 {0}，Key 填应用的令牌（兼容 OpenAI 的接口；Anthropic 格式也行）。只有{here}上的程序连得上。",
+    appsOff: "给应用用的本机接口没有打开，应用暂时连不上。重新运行一次安装命令就会打开。",
+    appTokenUse: "在程序里这样设置（大多数工具认这两个变量；也可以在设置里填同样的地址和 Key）：",
+    appTokenTry: "试一下（应该列出它能用的模型）：",
     usageBody: "按{here}的时间计。花费按公布的价格估算，没有公布价格的按偏高估；订阅和{here}上的模型不花钱。",
     rangeToday: "今天", rangeYesterday: "昨天", rangeWeek: "最近 7 天",
     totalToday: "今天合计", totalYesterday: "昨天合计", totalWeek: "最近 7 天合计",
@@ -160,6 +168,10 @@ const T = {
     showOnDevices: "Show on devices", subAlways: "Subscription models are always chat-only", editModel: "Edit model · {0}",
     enabled: "On", pausedChip: "Paused", pausedToast: "Paused “{0}”", resumedToast: "Turned on “{0}”",
     online: "Online", todayAt: "Today {0}", yesterdayAt: "Yesterday {0}",
+    hcAdded: "Added", hcSeen: "Last seen", hcToday: "Today", hcModels: "Models", hcOffline: "Offline", hcKind: "Kind",
+    hcBackground: "Programs only", hcApp: "A program on this computer",
+    hcAllTitle: "All models · {0}", hcAllNote: "Models connected later are included too.", hcSomeTitle: "{0} of {1} models",
+    hcOff: "Off", hcNoneUsable: "No model it can use right now.",
     editDevice: "Edit device · {0}", editApp: "Edit app · {0}", secStatus: "Status", secModels: "Models it can use",
     infoAdded: "Added {0}", infoSeen: "Last seen: {0}", infoSpent: "Spent today {0}",
     pauseHint: "Turn off to pause: the device stops at once; its pairing and settings are kept.", pauseHintApp: "Turn off to pause: the app stops at once; its token and settings are kept.",
@@ -176,6 +188,10 @@ const T = {
     problemLimit: "Usage limit reached; back in about {0}", problemLimitNow: "Usage limit reached; back soon", hours: "{0} hours", hour: "1 hour", minutes: "{0} minutes", minute: "1 minute",
     noDevices: "No devices yet. Choose “Add device”.", deviceCount: "{0} devices", deviceCountOne: "1 device", always: "Always",
     appsBody: "For scripts and other programs that can’t embed OmniLLM. Apps make background calls only, with API keys and models on {here}.",
+    appsWhere: "In the program, set the API address to {0} and the key to the app’s token (OpenAI-compatible; the Anthropic format works too). Only programs on {here} can connect.",
+    appsOff: "The local API for apps is off, so apps can’t connect yet. Running the install command again turns it on.",
+    appTokenUse: "Set it up in the program (most tools read these two variables; or enter the same address and key in its settings):",
+    appTokenTry: "Try it (it should list the models it can use):",
     usageBody: "Days follow {here}’s clock. Spend is estimated from published prices (on the high side where none is published); subscriptions and models on {here} cost nothing.",
     rangeToday: "Today", rangeYesterday: "Yesterday", rangeWeek: "Last 7 days",
     totalToday: "Total today", totalYesterday: "Total yesterday", totalWeek: "Total, last 7 days",
@@ -874,6 +890,7 @@ function loopback(web) {
 // ---------- dashboard ----------
 
 function showDash() {
+  closeCard(); // its target is about to be drawn again
   show("dash");
   fromDash = false;
   const total = (S.usage || []).find((u) => u.who === "_total");
@@ -958,6 +975,99 @@ function seenText(td, online, iso) {
   else td.textContent = timeWords(iso);
 }
 
+// ---- hover cards ----
+// hoverCard shows build()'s card next to target while the pointer rests on
+// it or it has keyboard focus: below it, or above when there is no room;
+// Escape, scrolling or leaving closes it. One card at a time.
+let hcOpen = null, hcTimer = 0;
+function hoverCard(target, build) {
+  target.tabIndex = 0;
+  target.classList.add("hc-target");
+  const open = () => {
+    clearTimeout(hcTimer);
+    hcTimer = setTimeout(() => {
+      closeCard();
+      const card = el("div", undefined, "hovercard");
+      card.setAttribute("role", "tooltip");
+      card.id = "hovercard";
+      card.append(build());
+      document.body.append(card);
+      const r = target.getBoundingClientRect(), c = card.getBoundingClientRect();
+      const left = Math.max(8, Math.min(r.left, innerWidth - c.width - 8));
+      const below = r.bottom + 8 + c.height <= innerHeight - 8;
+      card.style.left = left + scrollX + "px";
+      card.style.top = (below ? r.bottom + 8 : r.top - 8 - c.height) + scrollY + "px";
+      card.classList.add(below ? "below" : "above");
+      target.setAttribute("aria-describedby", "hovercard");
+      hcOpen = { card, target };
+    }, 180);
+  };
+  const close = () => { clearTimeout(hcTimer); if (hcOpen && hcOpen.target === target) closeCard(); };
+  target.addEventListener("mouseenter", open);
+  target.addEventListener("focus", open);
+  target.addEventListener("mouseleave", close);
+  target.addEventListener("blur", close);
+}
+function closeCard() {
+  if (!hcOpen) return;
+  hcOpen.card.remove();
+  hcOpen.target.removeAttribute("aria-describedby");
+  hcOpen = null;
+}
+addEventListener("keydown", (e) => { if (e.key === "Escape") closeCard(); });
+addEventListener("scroll", closeCard, true);
+
+// hcRows: label / value lines of a card.
+function hcRows(rows) {
+  const dl = el("dl", undefined, "hc-rows");
+  for (const [k, v] of rows) { if (v === undefined || v === null || v === "") continue; dl.append(el("dt", k), el("dd", v)); }
+  return dl;
+}
+
+// nameCard: a device's or app's details: what it is, since when, last
+// seen, today's spend against its limit.
+function nameCard(x, kind, spent) {
+  const box = el("div");
+  const head = el("div", undefined, "hc-head");
+  head.append(el("span", x.Name, "hc-title"));
+  if (x.Paused) head.append(el("span", t("pausedChip"), "tag paused-tag"));
+  else if (kind === "device" && x.Online) { const on = el("span", t("online"), "hc-on"); on.prepend(el("span", "", "dot-on")); head.append(on); }
+  box.append(head);
+  // What it is, where that is known (a phone or a computer isn't).
+  const what = kind === "app" ? t("hcApp") : x.BackgroundOnly ? t("hcBackground") : "";
+  box.append(hcRows([
+    [t("hcKind"), what],
+    [t("hcAdded"), x.Created ? inLine(timeWords(x.Created)) : ""],
+    [t("hcSeen"), kind === "device" && !x.Online ? inLine(timeWords(x.LastSeen)) : ""], // online: the chip says it
+    [t("hcToday"), spent],
+  ]));
+  return box;
+}
+
+// modelsCard: which models it can use, by source, the ones not switched
+// on shown as off; "all" says later ones come too.
+function modelsCard(x, all, on, isAll) {
+  const box = el("div");
+  box.append(el("div", isAll ? t("hcAllTitle", num(all.length)) : t("hcSomeTitle", num(on.length), num(all.length)), "hc-title"));
+  if (!all.length) { box.append(el("p", t("hcNoneUsable"), "muted small")); return box; }
+  const ids = new Set(on.map((m) => m.id));
+  for (const [g, label] of [["sub", t("grpSub")], ["key", t("grpKey")], ["local", t("grpLocal")]]) {
+    const ms = all.filter((m) => (m.group || "key") === g);
+    if (!ms.length) continue;
+    box.append(el("div", label, "hc-group"));
+    const ul = el("ul", undefined, "hc-models");
+    for (const m of ms) {
+      const li = el("li", undefined, ids.has(m.id) ? "on" : "off");
+      li.append(el("span", "", "hc-mark"), el("span", modelName(m)));
+      if (!ids.has(m.id)) li.append(el("span", t("hcOff"), "hc-offtag"));
+      ul.append(li);
+    }
+    box.append(ul);
+  }
+  if (isAll) box.append(el("p", t("hcAllNote"), "muted small hc-note"));
+  return box;
+}
+
 // nameCell: a device's or app's name, with a "Paused" chip when it is.
 // On a phone-width window the row stacks: the name, and under it what it
 // spent today against its limit, after a green dot and "Online ·" while
@@ -966,7 +1076,6 @@ function nameCell(tr, name, paused, online, spent, seen) {
   const td = cell(tr, "", "nm");
   const line = el("div", undefined, "nm-line");
   const nm = el("span", name, "nm-text");
-  nm.title = name; // the whole name on hover when it is cut short
   line.append(nm);
   if (paused) line.append(el("span", t("pausedChip"), "tag paused-tag"));
   td.append(line);
@@ -980,7 +1089,6 @@ function nameCell(tr, name, paused, online, spent, seen) {
     else sub.append(part(spent));
     td.append(sub);
   }
-  td.title = name;
   return td;
 }
 
@@ -996,8 +1104,9 @@ function modelsCell(tr, nc, x, usable) {
   if (!on.length) { td.append(el("span", "—", "muted")); return; }
   const some = on.length < all.length;
   const txt = some ? t("modelsSome", num(on.length), num(all.length)) : t("modelsAll", num(all.length));
-  td.append(el("span", txt, some ? "some-models" : ""));
-  td.title = on.map(modelName).join("\n");
+  const label = el("span", txt, some ? "some-models" : "");
+  td.append(label);
+  hoverCard(label, () => modelsCard(x, all, on, list.length === 0 || !some));
   const sub = nc.querySelector(".nm-sub");
   if (sub) sub.append(el("span", txt, "nowrap part"));
 }
@@ -1041,6 +1150,7 @@ function renderDevices() {
     if (d.ID === fresh.id && Date.now() < fresh.until) tr.classList.add("fresh");
     const spent = spentText("device/" + d.ID, d.BudgetMicroUSD);
     const nc = nameCell(tr, d.Name, d.Paused, d.Online, spent, d.LastSeen);
+    hoverCard(nc.querySelector(".nm-text"), () => nameCard(d, "device", spent));
     // Nothing on its list is left for it (removed, or kept off devices).
     if (!deviceHasModels(d)) {
       const tag = el("span", t("appNoModels"), "tag warn-tag");
@@ -1485,12 +1595,18 @@ function renderModels() {
 }
 
 function renderApps() {
+  // Where programs connect, or that they can't yet.
+  const where = $("apps-where");
+  where.textContent = "";
+  if (S.api_url) rich(where, t("appsWhere", "`" + S.api_url + "`"));
+  else where.append(el("span", t("appsOff"), "tag warn-tag"));
   const tb = $("apps");
   tb.textContent = "";
   for (const a of S.apps) {
     const tr = el("tr", undefined, a.Paused ? "paused" : "");
     const spent = spentText("app/" + a.ID, a.BudgetMicroUSD);
     const nc = nameCell(tr, a.Name, a.Paused, false, spent);
+    hoverCard(nc.querySelector(".nm-text"), () => nameCard(a, "app", spent));
     // Nothing it may use works for apps (only subscriptions or chat-only
     // models are connected, or its own list has none left).
     // On a phone-width window it always takes a line of its own.
@@ -1665,6 +1781,13 @@ appForm.addEventListener("submit", async (ev) => {
     const box = $("app-token");
     box.textContent = "";
     box.append(el("p", t("appTokenFor", r.name), "token-for"), codeBox(r.token), el("p", t("appTokenOnce"), "muted small"));
+    // How to use it, ready to copy: the address and the token together.
+    if (S.api_url) {
+      box.append(el("p", t("appTokenUse"), "small token-use"),
+        codeBox("OPENAI_BASE_URL=" + S.api_url + "\nOPENAI_API_KEY=" + r.token),
+        el("p", t("appTokenTry"), "small token-use"),
+        codeBox("curl " + S.api_url + "/models -H \"Authorization: Bearer " + r.token + "\"", true));
+    }
     box.hidden = false;
     refresh();
   } catch (e) { toast(e.message, true); ok.disabled = false; }

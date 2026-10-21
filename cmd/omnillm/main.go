@@ -782,7 +782,7 @@ func hubRun(dir, sock string, args []string) {
 	log.SetFlags(log.LstdFlags) // a service log needs times
 	fs := flag.NewFlagSet("hub run", flag.ExitOnError)
 	relayURL := fs.String("relay", os.Getenv("OMNILLM_RELAY"), "relay URL (wss://…; default the project’s; off: none)")
-	api := fs.String("api", "", "serve the local API for app tokens on this loopback address, e.g. 127.0.0.1:8765")
+	api := fs.String("api", envOr("OMNILLM_API", defaultAPI), "serve the local API for app tokens on this loopback address (off: none)")
 	consoleAddr := fs.String("console", "127.0.0.1:8770", "serve the local console on this loopback address (empty: off)")
 	webApp := fs.String("web-app", "", "web client the pairing QR code opens (default: the project’s)")
 	_ = fs.Parse(args)
@@ -875,12 +875,22 @@ func hubRun(dir, sock string, args []string) {
 			}
 		}
 	}()
-	if *api != "" {
-		go func() {
-			if err := localapi.Serve(ctx, *api, localapi.Handler(localapi.HubBackend{Hub: h})); err != nil {
-				log.Printf("local API: %v", err)
+	// The local API for programs on this Mac (the console's Apps): on by
+	// default, loopback only, every request with an app token. Taken here so
+	// the console shows the address only once it is really there.
+	if *api != "" && *api != "off" {
+		if ln, err := localapi.Listen(*api); err != nil {
+			log.Printf(t("给应用用的本机接口没能启动（%v）；应用暂时连不上。", "The local API for apps did not start (%v); apps can’t connect for now."), err)
+		} else {
+			if con != nil {
+				con.APIURL = "http://" + ln.Addr().String() + "/v1"
 			}
-		}()
+			go func() {
+				if err := localapi.ServeListener(ctx, ln, localapi.Handler(localapi.HubBackend{Hub: h})); err != nil {
+					log.Printf("local API: %v", err)
+				}
+			}()
+		}
 	}
 	go autoUpdate(ctx, h, dir)
 	log.Print(t("OmniLLM 已启动。", "OmniLLM is running."))
@@ -1572,3 +1582,14 @@ type multi []string
 
 func (m *multi) String() string     { return strings.Join(*m, ",") }
 func (m *multi) Set(v string) error { *m = append(*m, v); return nil }
+
+// defaultAPI is where the local API for apps listens unless told otherwise.
+const defaultAPI = "127.0.0.1:8765"
+
+// envOr is the environment variable k, or def when it is unset.
+func envOr(k, def string) string {
+	if v := os.Getenv(k); v != "" {
+		return v
+	}
+	return def
+}
