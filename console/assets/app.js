@@ -67,7 +67,7 @@ const T = {
     rangeToday: "今天", rangeYesterday: "昨天", rangeWeek: "最近 7 天",
     totalToday: "今天合计", totalYesterday: "昨天合计", totalWeek: "最近 7 天合计",
     emptyToday: "今天还没有用过。", emptyYesterday: "昨天没有用过。", emptyWeek: "最近 7 天没有用过。",
-    byModel: "按模型", modelsGone: "已移除的模型", byModelEarlier: "没有按模型记的记录",
+    byModel: "按模型", modelsGone: "已移除的模型", byModelEarlier: "没记下是哪个模型",
     who: "设备或应用", spend: "花费", calls: "次数", tokens: "Token（发出 / 收到）",
     usageHost: "{Here}", usageGone: "已移除的设备和应用", usageGoneShort: "已移除", goneCount: "（{0} 个）", usageGoneOne: "{0}（已移除）",
     capLine: "{whole}每天总额度：{0}", capLabel: "{whole}每天总额度", capNone: "{whole}每天总额度：不设上限", capEdit: "修改", noApps: "还没有应用。",
@@ -158,7 +158,7 @@ const T = {
     rangeToday: "Today", rangeYesterday: "Yesterday", rangeWeek: "Last 7 days",
     totalToday: "Total today", totalYesterday: "Total yesterday", totalWeek: "Total, last 7 days",
     emptyToday: "Nothing used yet today.", emptyYesterday: "Nothing was used yesterday.", emptyWeek: "Nothing used in the last 7 days.",
-    byModel: "By model", modelsGone: "Removed models", byModelEarlier: "Not recorded by model",
+    byModel: "By model", modelsGone: "Removed models", byModelEarlier: "Model not recorded",
     who: "Device or app", spend: "Spend", calls: "Calls", tokens: "Tokens (in / out)",
     usageHost: "{Here}", usageGone: "Removed devices and apps", usageGoneShort: "Removed", goneCount: "({0})", usageGoneOne: "{0} (removed)",
     capLine: "Daily total for {here}: {0}", capLabel: "Daily total for {here}", capNone: "Daily total for {here}: no limit", capEdit: "Change", noApps: "No apps yet.",
@@ -246,10 +246,12 @@ function copyBtn(text, b) {
 }
 
 // codeBox: a command or pairing text with its Copy button in the top-right
-// corner, so the button never sits between two blocks.
-function codeBox(text) {
+// corner, so the button never sits between two blocks. A command (cmd)
+// stays one line that scrolls sideways, never broken inside "--device";
+// a token may break anywhere.
+function codeBox(text, cmd) {
   const box = el("div", undefined, "codebox");
-  box.append(el("div", text, "code"), copyBtn(text));
+  box.append(el("div", text, cmd ? "code one-line" : "code"), copyBtn(text));
   return box;
 }
 
@@ -639,7 +641,7 @@ async function startPair(area, onDone, closable) {
   const more = el("details", undefined, "pair-more");
   more.append(el("summary", t("pairComputer")));
   const install = "curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh -s -- --device";
-  more.append(rich(el("p"), t("pairComputerNew")), codeBox(install),
+  more.append(rich(el("p"), t("pairComputerNew")), codeBox(install, true),
     howText(p.web), codeBox(p.code));
   right.append(more);
   box.append(left, right);
@@ -710,10 +712,11 @@ async function startPair(area, onDone, closable) {
 
 // howText: how an installed computer pairs: the command, or the web page
 // the QR code opens (its address as a link, with Copy) in its browser.
-// Without that page's address, only the command.
+// Without that page's address, or when it is this computer's own
+// (localhost, 127.x, ::1: another computer can't open it), only the command.
 function howText(web) {
   const p = el("p", undefined, "pair-how");
-  if (!/^https?:\/\/[^\s#?]+$/.test(web || "")) return rich(p, t("pairComputerHowNoWeb"));
+  if (!/^https?:\/\/[^\s#?]+$/.test(web || "") || loopback(web)) return rich(p, t("pairComputerHowNoWeb"));
   const [a, b] = t("pairComputerHow").split("{url}");
   const link = el("a", web, "web-link");
   link.href = web; link.target = "_blank"; link.rel = "noopener noreferrer";
@@ -721,6 +724,13 @@ function howText(web) {
   url.append(link, copyBtn(web, el("button", t("copy"), "secondary small-btn")));
   p.append(rich(el("span"), a), url, rich(el("span"), b));
   return p;
+}
+// loopback: the address names this computer itself (localhost, 127.x,
+// ::1), which only a browser here can open.
+function loopback(web) {
+  let h;
+  try { h = new URL(web).hostname.toLowerCase(); } catch (_) { return false; }
+  return h === "localhost" || h.endsWith(".localhost") || /^127\.\d+\.\d+\.\d+$/.test(h) || h === "[::1]" || h === "::1";
 }
 
 // ---------- dashboard ----------
@@ -822,10 +832,12 @@ function nameCell(tr, name, paused, online, spent, seen) {
   td.append(line);
   if (spent) {
     const sub = el("div", undefined, "nm-sub narrow-only");
-    // Each part stays whole; a line too narrow breaks between them.
-    if (online) sub.append(el("span", "", "dot-on"), el("span", t("online"), "nowrap"), " · ");
-    else if (seen !== undefined) sub.append(el("span", timeWords(seen), "nowrap"), " · ");
-    sub.append(el("span", spent, "nowrap"));
+    // Each part stays whole, its "·" before it: a line too narrow breaks
+    // between them and starts with "· ", never ends with it.
+    const dot = (s) => el("span", "· " + s, "nowrap");
+    if (online) sub.append(el("span", "", "dot-on"), el("span", t("online"), "nowrap"), " ", dot(spent));
+    else if (seen !== undefined) sub.append(el("span", timeWords(seen), "nowrap"), " ", dot(spent));
+    else sub.append(el("span", spent, "nowrap"));
     td.append(sub);
   }
   td.title = name;

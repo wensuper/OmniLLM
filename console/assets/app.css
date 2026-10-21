@@ -441,10 +441,11 @@ a.chip-link:focus-visible { outline: 0; box-shadow: var(--focus); }
 .web-url .small-btn { margin: 0 2px 0 6px; padding: 0 8px; min-height: 22px; vertical-align: 1px; }
 /* Devices: how many, muted, left of "Add device". */
 #devices-count { flex: 1 1 auto; }
-/* The device just added: lit up for 2 s. */
-.devices-table tr td { transition: background .4s; }
-.devices-table tr.fresh td { background: var(--accent-soft); }
-@media (max-width: 600px) { .devices-table tr { transition: background .4s; } .devices-table tr.fresh { background: var(--accent-soft); } .devices-table tr.fresh td { background: none; } }
+/* The device just added: lit up for 2 s, the whole row (the tr, under
+   every cell: name, online, limit, switch, Edit) at every width. */
+.devices-table tr { transition: background .4s; }
+.devices-table tr.fresh { background: var(--accent-soft); }
+.devices-table tr.fresh td { background: transparent; }
 /* Models it can use: the switch before each name, indented under "All
    models", with softer lines between the rows. */
 .model-pick { margin-left: 16px; }
@@ -473,3 +474,8 @@ a.chip-link:focus-visible { outline: 0; box-shadow: var(--focus); }
 /* A device's second line on a phone wraps between its parts, never clips. */
 .nm-sub { white-space: normal; }
 .toast-act { flex: none; white-space: nowrap; }
+/* Round 7. A command stays one line and scrolls sideways (as the
+   phone's install line); a pairing text or token still breaks anywhere. */
+.codebox > .code.one-line { white-space: pre; word-break: normal; overflow-x: auto; scrollbar-width: thin; }
+/* Models: the two switch headers keep apart ("只能手动对话" / "在设备上显示"). */
+.models-table th.sw { padding-inline: 12px; }
