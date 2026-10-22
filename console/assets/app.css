@@ -513,6 +513,14 @@ p code, li code { white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) { .spinner.sm { animation: none; } }
 /* Apps: where programs connect, and how to use a new token. */
 .apps-where { margin: 4px 0 12px; color: var(--muted); }
+/* "?" after a section's one-line intro: the details, on click. */
+.help-btn { display: inline-grid; place-items: center; box-sizing: border-box; width: 18px; height: 18px; min-width: 0; min-height: 0; margin: 0 0 0 6px; padding: 0; vertical-align: -3px;
+  border-radius: 50%; border: 1px solid var(--line); background: transparent; color: var(--muted); font-size: 11px; font-weight: 600; line-height: 1; cursor: pointer; }
+.help-btn:hover, .help-btn[aria-expanded="true"] { color: var(--ink); border-color: var(--muted); }
+.hovercard.sticky { pointer-events: auto; max-width: min(380px, calc(100vw - 16px)); }
+.hc-addr { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.hc-addr code { font-family: var(--mono); font-size: 12px; background: var(--surface-2); border-radius: var(--r-xs); padding: 1px 6px; user-select: all; }
+.hc-addr .small-btn { margin: 0; }
 .apps-where code { font-family: var(--mono); font-size: 12px; background: var(--surface-2); border-radius: var(--r-xs); padding: 1px 6px; user-select: all; }
 .token-box .token-use { margin: 12px 0 6px; }
 .token-box .codebox > .code:not(.one-line) { white-space: pre-wrap; }

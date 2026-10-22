@@ -80,8 +80,9 @@ const T = {
     problemLoginCodex: "登录已失效：在终端运行 codex login", problemLoginCodexOther: "登录已失效：在终端里运行 codex login",
     problemLimit: "用量到上限，约 {0}后恢复", problemLimitNow: "用量到上限，稍后恢复", hours: "{0} 小时", hour: "1 小时", minutes: "{0} 分钟", minute: "1 分钟",
     noDevices: "还没有设备。点“添加设备”。", deviceCount: "{0} 台设备", deviceCountOne: "1 台设备", always: "始终",
-    appsBody: "给脚本和其他不能直接嵌入 OmniLLM 的程序用。应用只能做后台调用，只能用 API Key 和{here}上的模型。",
-    appsWhere: "程序里这样填：接口地址 {0}，Key 填应用的令牌（兼容 OpenAI 的接口；Anthropic 格式也行）。只有{here}上的程序连得上。",
+    appsBody: "供脚本和程序后台调用，仅可使用 API Key 和{here}上的模型。",
+    appsHelp: "接入方式", apAddr: "接口地址", apKey: "Key", apKeyV: "应用的令牌", apFmt: "格式", apFmtV: "兼容 OpenAI，也支持 Anthropic",
+    apWho: "可连接", apWhoV: "仅{here}上的程序",
     appsOff: "给应用用的本机接口没有打开，应用暂时连不上。重新运行一次安装命令就会打开。",
     appTokenUse: "在程序里这样设置（大多数工具认这两个变量；也可以在设置里填同样的地址和 Key）：",
     appTokenTry: "试一下（应该列出它能用的模型）：",
@@ -201,8 +202,9 @@ const T = {
     problemLoginCodex: "Signed out: in Terminal, run codex login", problemLoginCodexOther: "Signed out: in a terminal, run codex login",
     problemLimit: "Usage limit reached; back in about {0}", problemLimitNow: "Usage limit reached; back soon", hours: "{0} hours", hour: "1 hour", minutes: "{0} minutes", minute: "1 minute",
     noDevices: "No devices yet. Choose “Add device”.", deviceCount: "{0} devices", deviceCountOne: "1 device", always: "Always",
-    appsBody: "For scripts and other programs that can’t embed OmniLLM. Apps make background calls only, with API keys and models on {here}.",
-    appsWhere: "In the program, set the API address to {0} and the key to the app’s token (OpenAI-compatible; the Anthropic format works too). Only programs on {here} can connect.",
+    appsBody: "For scripts and programs: background calls only, with API keys and models on {here}.",
+    appsHelp: "How to connect", apAddr: "Address", apKey: "Key", apKeyV: "The app’s token", apFmt: "Format", apFmtV: "OpenAI-compatible; Anthropic works too",
+    apWho: "Reachable from", apWhoV: "Programs on {here} only",
     appsOff: "The local API for apps is off, so apps can’t connect yet. Running the install command again turns it on.",
     appTokenUse: "Set it up in the program (most tools read these two variables; or enter the same address and key in its settings):",
     appTokenTry: "Try it (it should list the models it can use):",
@@ -1211,7 +1213,44 @@ function closeCard() {
   if (!hcOpen) return;
   hcOpen.card.remove();
   hcOpen.target.removeAttribute("aria-describedby");
+  hcOpen.target.setAttribute("aria-expanded", "false");
   hcOpen = null;
+}
+
+// clickCard: a card that opens on click and stays (its text can be
+// selected and copied); a second click, a click elsewhere, Escape or
+// scrolling closes it.
+function clickCard(target, build) {
+  target.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (hcOpen && hcOpen.target === target) return closeCard();
+    closeCard();
+    const card = el("div", undefined, "hovercard sticky");
+    card.setAttribute("role", "dialog");
+    card.setAttribute("aria-label", target.getAttribute("aria-label") || "");
+    card.append(build());
+    card.addEventListener("click", (ev) => ev.stopPropagation());
+    document.body.append(card);
+    const r = target.getBoundingClientRect(), c = card.getBoundingClientRect();
+    const left = Math.max(8, Math.min(r.left - 12, innerWidth - c.width - 8));
+    const below = r.bottom + 8 + c.height <= innerHeight - 8;
+    card.style.left = left + scrollX + "px";
+    card.style.top = (below ? r.bottom + 8 : r.top - 8 - c.height) + scrollY + "px";
+    card.classList.add(below ? "below" : "above");
+    target.setAttribute("aria-expanded", "true");
+    hcOpen = { card, target };
+  });
+}
+addEventListener("click", () => { if (hcOpen && hcOpen.card.classList.contains("sticky")) closeCard(); });
+
+// appsHelpCard: how a program connects, with the address to copy.
+function appsHelpCard() {
+  const box = el("div");
+  box.append(el("div", t("appsHelp"), "hc-title hc-head"));
+  const addr = el("span", undefined, "hc-addr");
+  addr.append(el("code", S.api_url), copyBtn(S.api_url));
+  box.append(hcRows([[t("apAddr"), addr], [t("apKey"), t("apKeyV")], [t("apFmt"), t("apFmtV")], [t("apWho"), t("apWhoV")]]));
+  return box;
 }
 addEventListener("keydown", (e) => { if (e.key === "Escape") closeCard(); });
 addEventListener("scroll", closeCard, true);
@@ -1219,7 +1258,12 @@ addEventListener("scroll", closeCard, true);
 // hcRows: label / value lines of a card.
 function hcRows(rows) {
   const dl = el("dl", undefined, "hc-rows");
-  for (const [k, v] of rows) { if (v === undefined || v === null || v === "") continue; dl.append(el("dt", k), el("dd", v)); }
+  for (const [k, v] of rows) {
+    if (v === undefined || v === null || v === "") continue;
+    const dd = v instanceof Node ? el("dd") : el("dd", v);
+    if (v instanceof Node) dd.append(v);
+    dl.append(el("dt", k), dd);
+  }
   return dl;
 }
 
@@ -1856,8 +1900,9 @@ function renderApps() {
   // Where programs connect, or that they can't yet.
   const where = $("apps-where");
   where.textContent = "";
-  if (S.api_url) rich(where, t("appsWhere", "`" + S.api_url + "`"));
-  else where.append(el("span", t("appsOff"), "tag warn-tag"));
+  where.hidden = !!S.api_url;
+  if (!S.api_url) where.append(el("span", t("appsOff"), "tag warn-tag"));
+  $("apps-help").hidden = !S.api_url;
   const tb = $("apps");
   tb.textContent = "";
   for (const a of S.apps) {
@@ -2019,6 +2064,7 @@ $("wiz-back").addEventListener("click", async () => { fromDash = false; store("o
 // with its Copy button.
 const appForm = $("app-add"), appName = $("app-name");
 const closeAppForm = () => { appForm.hidden = true; $("add-app").hidden = false; appName.value = ""; };
+clickCard($("apps-help"), appsHelpCard);
 $("add-app").addEventListener("click", () => {
   appForm.hidden = false; $("add-app").hidden = true; $("app-add-ok").disabled = true;
   appName.focus();
