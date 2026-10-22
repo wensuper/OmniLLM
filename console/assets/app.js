@@ -52,7 +52,7 @@ const T = {
     skipPair: "先跳过，以后再加",
     w3Title: "试一下",
     model: "模型", message: "消息", send: "发送", finish: "完成",
-    todaySpend: "今天的花费", estimate: "按公布的价格估算", devices: "设备", models: "模型", apps: "应用", usage: "用量",
+    todaySpend: "今天的花费", estimate: "API Key 按官方价格估算，订阅和本机模型不花钱", devices: "设备", models: "模型", apps: "应用", usage: "用量",
     addDevice: "添加设备", addProvider: "接入模型", addApp: "添加应用", add: "添加",
     coTitle: "让“{0}”只能手动对话？", coBody: "打开后，下面这些就用不了“{0}”了：",
     coApp: "应用", coDevice: "只给程序用的设备", coOnly: "它只有这一个能用的模型，会完全停下来",
@@ -124,7 +124,7 @@ const T = {
     budgetLabel: "每天额度（美元）",
     noRelay: "还没有设置远程连接，其他设备暂时连不上。可以先跳过；设置好远程连接后，在“设备”里添加。",
     relayWait: "正在打开远程连接……", relayDown: "远程连接现在连不上，请检查{here}的网络。连上之后这里会自动继续。",
-    relayOn: "手机和其他设备可以连上", relayOff: "远程连接断开，设备暂时连不上", relayNone: "只在{here}上用（没有设置远程连接）",
+    relayOff: "远程连接断开，设备暂时连不上", relayNone: "只在{here}上用（没有设置远程连接）",
     regionPaused: "{Here}所在的地区变了，已暂停使用模型。", regionConfirm: "确认继续",
     appTokenFor: "“{0}”的令牌", appTokenOnce: "只显示这一次，现在复制。",
     appName: "应用的名字",
@@ -174,7 +174,7 @@ const T = {
     skipPair: "Skip for now",
     w3Title: "Try it",
     model: "Model", message: "Message", send: "Send", finish: "Done",
-    todaySpend: "Spent today", estimate: "Estimated from published prices", devices: "Devices", models: "Models", apps: "Apps", usage: "Usage",
+    todaySpend: "Spent today", estimate: "API keys at their official prices; subscriptions and local models cost nothing", devices: "Devices", models: "Models", apps: "Apps", usage: "Usage",
     addDevice: "Add device", addProvider: "Connect a model", addApp: "Add app", add: "Add",
     coTitle: "Make “{0}” chat only?", coBody: "Once it’s on, these can no longer use “{0}”:",
     coApp: "App", coDevice: "Programs-only device", coOnly: "its only usable model: it stops working entirely",
@@ -246,7 +246,7 @@ const T = {
     budgetLabel: "Daily limit (USD)",
     noRelay: "Remote access isn’t set up yet, so other devices can’t connect. Skip for now; add devices under Devices once it’s set up.",
     relayWait: "Turning on remote access…", relayDown: "Remote access can’t connect right now; check {here}’s network. It picks up again once connected.",
-    relayOn: "Phones and other devices can connect", relayOff: "Remote access is down; devices can’t connect now", relayNone: "{Here} only (remote access not set up)",
+    relayOff: "Remote access is down; devices can’t connect now", relayNone: "{Here} only (remote access not set up)",
     regionPaused: "{Here}’s region changed; models are paused.", regionConfirm: "Confirm and resume",
     appTokenFor: "Token for “{0}”", appTokenOnce: "Shown once — copy it now.",
     appName: "App name",
@@ -475,10 +475,16 @@ setInterval(async () => {
 
 function wizardDone() { return store("omnillm.wizard") === "done"; }
 
+// renderStatus: the header line speaks only when something needs the
+// owner: remote access down or not set up, or the region changed. While
+// phones can connect it says nothing (that is the normal state).
 function renderStatus() {
   const s = $("status");
   s.textContent = "";
-  let text = S.relay_configured ? (S.relay_up ? t("relayOn") : t("relayOff")) : t("relayNone");
+  s.removeAttribute("title");
+  // Left empty, not hidden: it is the spacer that keeps the tools right.
+  if (S.relay_configured && S.relay_up && !(S.region && S.region.paused)) return;
+  let text = !S.relay_configured ? t("relayNone") : S.relay_up ? "" : t("relayOff");
   if (S.region && S.region.paused) text += " · " + t("regionPaused");
   // On a phone-width window only the dot shows; it carries the sentence
   // for screen readers and as a tooltip.

@@ -4,6 +4,13 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.42](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.42) - 2026-10-22
+
+### Changed
+
+- The console’s top bar no longer says “Phones and other devices can connect” all the time. It shows a line only when something needs you: remote access is down or not set up, or the region changed.
+- Under today’s spending, “Estimated from published prices” now says what it means: API keys are counted at their official prices, and subscriptions and local models cost nothing.
+
 ## [0.2.0-alpha.41](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.41) - 2026-10-22
 
 ### Changed
