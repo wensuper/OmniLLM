@@ -470,7 +470,9 @@ pasteReady();
 $("paste-go").addEventListener("click", () => {
   const v = $("paste-text").value.trim();
   if (!v) return;
-  pair(v, !/^omnillm\d-/.test(v)); // anything but bare pairing text (a pasted link) gets the “is this your Mac?” question
+  // Pasted here by the person: a link or the bare text goes straight to
+  // the 6 digits, as a scan does. Only replacing a pairing still asks.
+  pair(v, false);
 });
 $("pair-retry").addEventListener("click", () => { show(S.device ? "chat" : "welcome"); });
 // Different numbers (someone else's pairing), or Cancel while connecting:
@@ -486,9 +488,10 @@ $("pair-mismatch").addEventListener("click", stopPairing);
 $("pair-stop").addEventListener("click", stopPairing);
 function sasShown(on) { S.sasUp = on; $("sas").hidden = $("pair-wait").hidden = $("pair-mismatch").hidden = !on; }
 
-// pair connects this device. A link (fromLink) could have been sent by
-// anyone, so the person first sees which remote access it leads through
-// and taps Add; a code they scanned or pasted here needs no extra tap.
+// pair connects this device. A link opened in the browser (fromLink) could
+// have been sent by anyone, so the person first sees which remote access
+// it leads through and taps Add; text they pasted here themselves (a link
+// or the bare pairing text) needs no extra tap.
 async function pair(text, fromLink) {
   if (S.pairing) return;
   const m = text.match(/omnillm[123]-[A-Za-z0-9_-]+/);
