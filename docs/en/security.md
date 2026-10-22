@@ -72,6 +72,7 @@ These rules reduce the risk but **can’t guarantee** your account won’t be ba
 - **Protections for the page itself**: A strict Content Security Policy (it runs only this site’s scripts, loads no third-party scripts, styles, or resources, and allows no inline scripts); it can’t be embedded in other pages; it sends no Referer.
 - **A separate domain**: The web client is on `omni.ixxzh.com`, which is used for nothing else, so no other site on the same origin can read its storage.
 - **Pairing text stays out of server logs**: In the QR code link, the pairing text comes after the `#`, and browsers don’t send that part to the web server; once the page opens, it immediately erases the pairing text from the address bar and history.
+- **Voice input doesn’t go through OmniLLM**: the microphone button uses the browser’s own speech recognition, so the audio is processed by the browser’s maker (Chrome and Edge send it to Google; Safari to Apple, or recognises it on the device when it can). It doesn’t pass through the connection service or the hub; the recognised words are treated like typed text and are end-to-end encrypted when you send them. If you’d rather not give your voice to the browser’s maker, don’t use the microphone; typing works as before. The page says this once, the first time you use it.
 
 **A limit to be aware of**: Browsers don’t verify the web page code they load the first time. If the server hosting the page is compromised or acts maliciously, it can serve malicious code to devices that open the page afterward. How we handle this:
 

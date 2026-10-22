@@ -4,6 +4,12 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.37](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.37) - 2026-10-22
+
+### Added
+
+- Voice input in the web chat, on computers and phones. Tap the microphone in the message box and speak: the button turns into a moving sound wave and your words appear in the box as you talk, after anything you already typed. Tap again, press Esc, start typing, or pause to stop; the words are never sent by themselves. It uses the browser’s own speech recognition (Chrome, Edge, Safari), and the page says once that the audio goes to Google or Apple for that; browsers without it show no microphone.
+
 ## [0.2.0-alpha.36](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.36) - 2026-10-22
 
 ### Changed

@@ -246,6 +246,22 @@ p.note.err { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12p
 .pending figure { position: relative; margin: 6px 0 0; flex: none; }
 .pending img { width: 64px; height: 64px; object-fit: cover; border-radius: var(--r); border: 1px solid var(--line); display: block; }
 .pending button { position: absolute; top: -6px; right: -6px; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--surface); background: var(--ink); color: var(--bg); font-size: 14px; line-height: 20px; cursor: pointer; padding: 0; }
+/* Voice input: the mic turns into a moving sound wave while it listens. */
+.i-mic { --i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='3' width='6' height='11' rx='3'/%3E%3Cpath d='M5 11a7 7 0 0 0 14 0M12 18v3'/%3E%3C/svg%3E"); }
+.comp-row .mic { width: 40px; height: 40px; margin-right: 4px; border-radius: 50%; }
+.mic .wave { display: none; align-items: center; gap: 3px; height: 18px; }
+.mic .wave i { width: 3px; height: 100%; border-radius: 2px; background: currentColor; transform: scaleY(.3); animation: wave 1s ease-in-out infinite; }
+.mic .wave i:nth-child(2) { animation-delay: -.8s; } .mic .wave i:nth-child(3) { animation-delay: -.6s; }
+.mic .wave i:nth-child(4) { animation-delay: -.4s; } .mic .wave i:nth-child(5) { animation-delay: -.2s; }
+@keyframes wave { 0%, 100% { transform: scaleY(.3); } 50% { transform: scaleY(1); } }
+.mic.on, .mic.on:hover { background: var(--accent-soft) !important; color: var(--accent-text) !important; }
+.mic.on .ic { display: none; }
+.mic.on .wave { display: inline-flex; }
+.mic.on::after { content: ""; position: absolute; inset: 0; border-radius: 50%; box-shadow: 0 0 0 0 var(--accent-soft); animation: ring 1.6s ease-out infinite; }
+@keyframes ring { 0% { box-shadow: 0 0 0 0 var(--accent-soft); } 100% { box-shadow: 0 0 0 10px transparent; } }
+.composer.listening { border-color: var(--accent); }
+@media (prefers-reduced-motion: reduce) { .mic .wave i { animation: none; transform: scaleY(.7); } .mic.on::after { animation: none; } }
+@media (pointer: coarse) { .comp-row .mic { width: 44px; height: 44px; } }
 .send { width: 36px; height: 36px; border-radius: 50%; border: 0; background: var(--accent); color: var(--accent-ink); cursor: pointer; flex: none; display: inline-grid; place-items: center; padding: 0; }
 .send::before { content: ""; width: 16px; height: 16px; background: currentColor; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 19V5M5 12l7-7 7 7'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 19V5M5 12l7-7 7 7'/%3E%3C/svg%3E") center / contain no-repeat; }
 .send.idle { background: var(--surface-3); color: var(--ink-3); cursor: default; }

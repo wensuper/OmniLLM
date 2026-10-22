@@ -33,7 +33,7 @@ const T = {
     pairDropped: "连接断了。在 Mac 上点“换一个二维码”再扫。", connectedMac: "已连上你的 Mac",
     notCode: "这不是 OmniLLM 的配对二维码或配对文字。请从电脑上“添加设备”里重新复制。", needTLS: "你的 Mac 用的远程连接不支持手机网页（需要 wss:// 地址）。请在 Mac 上设置一个公开的远程连接。",
     chats: "对话", newChat: "新对话", placeholder: "输入消息", stop: "停止", send: "发送", menu: "菜单", model: "模型",
-    addImage: "添加图片", removeImage: "移除图片", tooManyImages: "每条消息最多 4 张图片。", imageFailed: "这张图片打不开，换一张试试。", imageTooBig: "图片太大，换一张小一点的。", imageTitle: "图片",
+    addImage: "添加图片", voice: "语音输入", voiceStop: "停止语音输入", listening: "正在听，说完再点一下……", voiceFirst: "语音由浏览器识别：Chrome 交给 Google，Safari 交给 Apple。识别出的文字只填进输入框，你确认后再发。", voiceDenied: "没有麦克风权限。在浏览器的网站设置里允许麦克风，再点一次。", voiceNoMic: "没找到麦克风。", voiceNoSpeech: "没听到声音，再说一次试试。", voiceNetwork: "语音识别要联网，现在连不上。", voiceFailed: "语音输入没能开始，再试一次。", removeImage: "移除图片", tooManyImages: "每条消息最多 4 张图片。", imageFailed: "这张图片打不开，换一张试试。", imageTooBig: "图片太大，换一张小一点的。", imageTitle: "图片",
     offline: "连不上你的 Mac：它可能睡眠了或者没联网。醒来后会自动恢复。", retry: "重试",
     noNetwork: "这台设备没有联网，联网后会自动连上。", kept: "刚才输入的还在。", loadingModels: "正在连接你的 Mac……",
     noModels: "这台设备现在没有能用的模型。在 Mac 的控制台里接入模型，或在“设备”里给它开放模型。", noModelsOpt: "没有可用的模型",
@@ -79,7 +79,7 @@ const T = {
     pairDropped: "The connection dropped. Choose “New QR code” on your Mac and scan again.", connectedMac: "Connected to your Mac",
     notCode: "This is not an OmniLLM pairing QR code or pairing text. Copy it again from “Add device” on your computer.", needTLS: "Your Mac’s remote access can’t be used from a phone browser (it needs a wss:// address). Set up public remote access on your Mac.",
     chats: "Chats", newChat: "New chat", placeholder: "Message", stop: "Stop", send: "Send", menu: "Menu", model: "Model",
-    addImage: "Add image", removeImage: "Remove image", tooManyImages: "Up to 4 images per message.", imageFailed: "This image can’t be opened; try another one.", imageTooBig: "Image too large; try a smaller one.", imageTitle: "Image",
+    addImage: "Add image", voice: "Voice input", voiceStop: "Stop voice input", listening: "Listening… tap again when you’re done", voiceFirst: "Your browser turns speech into text: Chrome uses Google, Safari uses Apple. The words only fill the box; you send them.", voiceDenied: "No microphone permission. Allow the microphone in the browser’s site settings, then try again.", voiceNoMic: "No microphone found.", voiceNoSpeech: "Didn’t hear anything. Try again.", voiceNetwork: "Voice input needs the internet, which isn’t reachable right now.", voiceFailed: "Voice input couldn’t start. Try again.", removeImage: "Remove image", tooManyImages: "Up to 4 images per message.", imageFailed: "This image can’t be opened; try another one.", imageTooBig: "Image too large; try a smaller one.", imageTitle: "Image",
     offline: "Can’t reach your Mac: it may be asleep or offline. It reconnects when your Mac wakes.", retry: "Retry",
     noNetwork: "This device is offline; it reconnects when the network is back.", kept: "What you typed is kept.", loadingModels: "Connecting to your Mac…",
     noModels: "No models are available to this device. On your Mac, connect a model or allow this device more models under Devices.", noModelsOpt: "No models",
@@ -1180,7 +1180,72 @@ async function saveChats() {
 
 // ---------- sending ----------
 const input = $("input");
-input.addEventListener("input", () => { grow(); sendState(); });
+input.addEventListener("input", () => { grow(); sendState(); if (V.rec) stopVoice(); });
+
+// ---------- voice input ----------
+// The browser's own speech recognition (Chrome, Edge, Safari). Words show
+// in the box as they are heard, after what was already typed, and are
+// never sent by themselves: the person reads, edits and sends. Tap again,
+// Esc, typing, sending or a long pause ends it. No recogniser, no mic.
+const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
+const V = { rec: null, base: "", quiet: 0 };
+const VOICE_PAUSE = 6000; // this long with nothing new heard ends it
+function voiceUI(on) {
+  const b = $("mic");
+  b.classList.toggle("on", on);
+  b.setAttribute("aria-pressed", String(on));
+  b.setAttribute("aria-label", t(on ? "voiceStop" : "voice"));
+  b.title = t(on ? "voiceStop" : "voice");
+  $("composer").classList.toggle("listening", on);
+  input.placeholder = t(on ? "listening" : "placeholder");
+}
+function startVoice() {
+  if (V.rec || S.quiet) return;
+  if (!localStorageGet("voiceSeen")) { localStorageSet("voiceSeen", "1"); toastText(t("voiceFirst")); }
+  const r = new Speech();
+  r.lang = lang === "zh" ? "zh-CN" : (/^en/i.test(navigator.language) ? navigator.language : "en-US");
+  r.interimResults = true;
+  r.continuous = true;
+  // What was typed stays; the speech goes after it.
+  const typed = input.value.replace(/\s+$/, "");
+  V.base = typed ? typed + (lang === "zh" ? "" : " ") : "";
+  const pause = () => { clearTimeout(V.quiet); V.quiet = setTimeout(stopVoice, VOICE_PAUSE); };
+  // Rebuilt from every result each time (finished and still changing), so
+  // a browser that reports a result twice can't double the words.
+  r.onresult = (e) => {
+    let heard = "";
+    for (const res of e.results) heard += res[0].transcript;
+    input.value = V.base + heard;
+    grow(); sendState();
+    input.scrollTop = input.scrollHeight;
+    pause();
+  };
+  r.onerror = (e) => {
+    const k = { "not-allowed": "voiceDenied", "service-not-allowed": "voiceDenied", "audio-capture": "voiceNoMic", "no-speech": "voiceNoSpeech", "network": "voiceNetwork", "aborted": "" }[e.error];
+    if (k !== "") toastText(t(k || "voiceFailed"));
+  };
+  r.onend = () => {
+    clearTimeout(V.quiet);
+    if (V.rec !== r) return;
+    V.rec = null;
+    voiceUI(false);
+    // Leave the caret at the end, ready to edit or send (computers only:
+    // on a phone the keyboard would jump up over the words).
+    if (MOUSE_ONLY) { input.focus(); input.setSelectionRange(input.value.length, input.value.length); }
+  };
+  try { r.start(); } catch { toastText(t("voiceFailed")); return; }
+  V.rec = r;
+  voiceUI(true);
+  pause();
+}
+function stopVoice() { if (V.rec) { try { V.rec.stop(); } catch {} } }
+if (Speech) {
+  $("mic").hidden = false;
+  voiceUI(false);
+  $("mic").addEventListener("click", () => (V.rec ? stopVoice() : startVoice()));
+  // A tab put away stops listening.
+  document.addEventListener("visibilitychange", () => { if (document.hidden) stopVoice(); });
+}
 // The send button looks pressable only when there is something to send;
 // while the Mac has this device paused it rests (Stop still works).
 function sendState() {
@@ -1211,6 +1276,7 @@ async function chosenModel() {
   return $("model").value;
 }
 $("composer").addEventListener("submit", async (e) => {
+  if (V.rec) { const r = V.rec; V.rec = null; try { r.abort(); } catch {} voiceUI(false); }
   e.preventDefault();
   if (S.busy) { omnillm.cancel(S.busy); return; }
   const text = input.value.trim();
@@ -1539,6 +1605,7 @@ document.addEventListener("keydown", (e) => {
   if ($("chat").hidden || S.quiet || e.isComposing || e.keyCode === 229) return;
   const mod = MAC ? e.metaKey : e.ctrlKey;
   if (e.key === "Escape") {
+    if (V.rec) { e.preventDefault(); stopVoice(); return; }
     if (!$("mmenu").hidden) { e.preventDefault(); pickMenu(false); $("mpick").focus(); return; }
     if (!$("mac-menu").hidden) { e.preventDefault(); macMenu(false); $("mac").focus(); return; }
     if (overlay() && !$("drawer").hidden) { closeDrawer(); return; }
