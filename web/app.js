@@ -56,7 +56,6 @@ const T = {
     liveOn: "在线：你的 Mac 连得上，模型可以用", liveOff: "离线：现在连不上你的 Mac", liveWait: "正在连接你的 Mac……",
     volatile: "这个浏览器不能安全地保存配对，所以只在这个页面打开时有效；关掉后要在 Mac 上重新添加。换用 Safari 或 Chrome 可以一直保存。",
     removedHere: "这台设备已从你的 Mac 上移除，这里的对话也已删除。要再用，在 Mac 上点“添加设备”再扫一次。",
-    otherTab: "OmniLLM 已在另一个标签页打开。", useHere: "在这里用",
   },
   en: {
     loading: "Loading…", bootDownload: "Downloading…", bootStart: "Starting…", bootStorage: "Opening…",
@@ -102,7 +101,6 @@ const T = {
     liveOn: "Online: your Mac answers; models are ready", liveOff: "Offline: your Mac can’t be reached now", liveWait: "Connecting to your Mac…",
     volatile: "This browser can’t keep the pairing safely, so it only lasts while this page is open; after closing it, add the device on your Mac again. Safari or Chrome keep it.",
     removedHere: "This device was removed from your Mac and its chats here were deleted. To use it again, choose “Add device” on your Mac and scan again.",
-    otherTab: "OmniLLM is open in another tab.", useHere: "Use here",
   },
 };
 // The page's language: chosen here (the "Your Mac" menu), else the one the
@@ -270,8 +268,11 @@ function deviceName() {
 
 // ---------- one tab at a time ----------
 // Two tabs would each save their own copy of the chats over the other's.
-// A tab that opens says so; the others go quiet (they write nothing) until
-// the person picks one with "Use here".
+// A tab that opens says so; the others go quiet (they write nothing). A
+// quiet tab takes over by itself the moment the person comes back to it
+// (it gains focus or comes to the front), with no question: only the
+// person's own switch moves it, so two windows side by side never pull it
+// back and forth by themselves.
 const tabs = "BroadcastChannel" in window ? new BroadcastChannel("omnillm") : null;
 function claimTab() { if (tabs) tabs.postMessage("here"); }
 function takeOver() {
@@ -287,8 +288,17 @@ if (tabs) tabs.onmessage = (e) => {
   if (e.data !== "here" || S.quiet) return;
   S.quiet = true;
   if (S.busy) { try { omnillm.cancel(S.busy); } catch {} }
-  $("other-tab").hidden = false;
 };
+// Back to a quiet tab: it becomes the one in use (reload reads what the
+// other tab saved, then claims). Once only: focus and visibility both fire.
+let takingOver = false;
+function backHere() {
+  if (!S.quiet || takingOver || document.hidden) return;
+  takingOver = true;
+  takeOver();
+}
+addEventListener("focus", backHere);
+document.addEventListener("visibilitychange", backHere);
 // "gone" can be lost when a tab closes (WebKit drops messages sent while the
 // page unloads), so a quiet tab in front also asks every few seconds and
 // whenever it comes back to the front; no tab in use answering → take over.
@@ -300,8 +310,6 @@ function checkTab() {
 }
 document.addEventListener("visibilitychange", checkTab);
 setInterval(checkTab, 3000);
-// Use here: reload, so this tab reads what the other one saved, and claim.
-$("use-here").addEventListener("click", takeOver);
 claimTab();
 addEventListener("pagehide", () => { if (tabs && !S.quiet) tabs.postMessage("gone"); });
 

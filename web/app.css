@@ -371,8 +371,6 @@ p.note.err { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12p
 
 .toast { position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 30; max-width: min(90vw, 420px); background: var(--ink); color: var(--bg); border-radius: var(--r); padding: 8px 14px; font-size: 14px; text-align: center; box-shadow: var(--shadow-2); }
 /* Another tab took over: this one rests under a full-screen notice. */
-.other-tab { position: fixed; inset: 0; z-index: 40; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 24px; text-align: center; }
-.other-tab p { margin: 0; font-size: 17px; }
 :root { --cyan: #0B8FAE; }
 @media (prefers-color-scheme: dark) { :root { --cyan: #22D3EE; } }
 
@@ -429,7 +427,7 @@ body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-i
   background-size: 32px 32px; background-position: center;
   -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 20%, transparent 75%); mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 20%, transparent 75%); }
 #app { position: relative; z-index: 1; }
-.chat, .other-tab { background: var(--bg); }
+.chat { background: var(--bg); }
 :root { --aura-1: rgba(114,77,231,.16); --aura-2: rgba(114,77,231,.08); --grid: rgba(19,21,36,.05); --node: #FFFFFF; --ring: rgba(114,77,231,.22); }
 @media (prefers-color-scheme: dark) { :root { --aura-1: rgba(155,138,255,.20); --aura-2: rgba(155,138,255,.08); --grid: rgba(237,238,245,.045); --node: #10121C; --ring: rgba(155,138,255,.28); } }
 
