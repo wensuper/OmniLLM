@@ -10,6 +10,10 @@ All notable changes to OmniLLM are documented here. OmniLLM is in early pre-rele
 
 - The web page no longer shows “OmniLLM is open in another tab” with a *Use here* button. Only one tab saves your chats at a time, as before. A tab you come back to now takes over by itself, picking up what the other tab saved, and the tab you left goes quiet. A tab you aren’t looking at never takes over, so two windows side by side don’t pass it back and forth.
 
+### Fixed
+
+- A browser’s built-in translation no longer turns model names into gibberish (for example “Claude Sonnet 5.5” rendered in Chinese characters): the web page and the console are marked as not to be translated, since they already speak Chinese and English themselves.
+
 ## [0.2.0-alpha.37](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.37) - 2026-10-22
 
 ### Added
