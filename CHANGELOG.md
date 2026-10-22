@@ -14,6 +14,7 @@ All notable changes to OmniLLM are documented here. OmniLLM is in early pre-rele
 - *Your Mac* at the bottom of the sidebar says whether it is online and opens a menu: this device's name, language, keyboard shortcuts, where chats are kept, and removing this device. Notices such as "can't reach your Mac" now sit right above the message box.
 - Keyboard shortcuts on computers: ⌘⇧O new chat, ⌘K search, ⌘\ hide the sidebar, Esc stop the answer, ⌘⇧; copy the last answer, / go to the message box, ⌘/ list them (Ctrl on Windows and Linux).
 - The page now speaks your Mac's language (the one chosen for the console and the menu bar) instead of the browser's; you can still pick one for this device in the *Your Mac* menu.
+- The console’s *Apps* tab says what apps are for in one line. How a program connects (the address with a *Copy* button, the app’s token as the key, OpenAI- and Anthropic-compatible, programs on this Mac only) opens from the *?* next to it and stays open until you click elsewhere. If the local API is off, the page still says so directly.
 
 ## [0.2.0-alpha.35](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.35) - 2026-10-22
 
