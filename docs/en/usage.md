@@ -47,7 +47,7 @@ Open the console on the hub: click the OmniLLM icon in the Mac menu bar → *Ope
 | Page | What you can do |
 |---|---|
 | Devices | *Add device* shows a QR code; × in the top right closes it (the code stops working at once). See when each device was last used. *Edit* changes the name and daily limit (*No limit* is an option). *Remove* takes effect immediately |
-| Models | Connect or remove API keys and local models; see where each model’s messages go (this computer / cloud); choose which models are *Chat only* (scripts and apps can’t call them) |
+| Models | Connect or remove API keys and local models; each model source has an *On* switch: off, devices and apps can’t use its models for now, but its sign-in or key is kept and it works again as soon as it’s on (*Remove* deletes the key); see where each model’s messages go (this computer / cloud); choose which models are *Chat only* (scripts and apps can’t call them) |
 | Apps | Issue tokens to scripts or programs on the hub; *Edit* changes the name and daily limit. Apps can use only API keys and local models |
 | Usage | Today’s calls and spend for each device and app (estimated from the providers’ published prices). Removed ones are merged into one row, with a total at the end |
 
@@ -58,6 +58,7 @@ The command line can do the same things; see `omnillm help`:
 ```bash
 omnillm hub devices                 # list devices
 omnillm hub revoke <name or ID>     # remove a device
+omnillm hub provider off <source>   # switch a model source off (on: switch it on)
 omnillm hub models                  # connected models
 omnillm hub usage                   # usage
 ```

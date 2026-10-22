@@ -25,6 +25,7 @@ const (
 	MsgModelNotAllowed    = "model_not_allowed" // a device; older devices know only this key
 	MsgModelNotAllowedApp = "model_not_allowed_app"
 	MsgHumanOnly          = "human_only"
+	MsgSourceOff          = "source_off"
 	MsgUnknownModel       = "unknown_model"
 	MsgBusyQueue          = "busy_queue"
 	MsgBusyUpstream       = "busy_upstream"
@@ -82,6 +83,7 @@ var texts = map[string][2]string{ // zh, en
 	MsgInvalidToken:       {"令牌缺失、无效或已被移除。在你的 Mac 上重新添加这个应用。", "The token is missing, invalid or removed. Add this app again on your Mac."},
 	MsgModelNotAllowed:    {"这台设备不能用这个模型。可以在你的 Mac 上调整它能用的模型。", "This device can’t use this model. You can change its models on your Mac."},
 	MsgModelNotAllowedApp: {"这个应用不能用这个模型。可以在你的 Mac 上调整它能用的模型。", "This app can’t use this model. You can change its models on your Mac."},
+	MsgSourceOff:          {"这个模型的来源在你的 Mac 上关掉了。在控制台“模型”里把它打开就能用。", "This model’s source is switched off on your Mac. Turn it on under “Models” in the console to use it."},
 	MsgHumanOnly:          {"这个模型只能手动对话，脚本和应用不能用，免得账号被当成自动化调用。", "This model is chat-only; scripts and apps can’t use it, so the account isn’t flagged as automated."},
 	MsgUnknownModel:       {"你的 Mac 上没有这个模型。可以在 Mac 的控制台“模型”里查看已接入的模型。", "Your Mac has no such model. See the connected models under “Models” in the console on your Mac."},
 	MsgBusyQueue:          {"你的 Mac 正忙，过几秒再发一次。", "Your Mac is busy; send again in a few seconds."},

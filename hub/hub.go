@@ -328,6 +328,9 @@ type ProviderInfo struct {
 	// subscription (no key here; the login stays in that program).
 	Subscription bool   `json:"subscription,omitempty"`
 	DisplayName  string `json:"display_name"`
+	// Off: switched off by the owner. Its key or login stays; its models
+	// are offered to no device or app until it is on again.
+	Off bool `json:"off,omitempty"`
 	// Problem is what the owner should fix, as the last call showed it:
 	// "login" (the program is signed out) or "limit" (the subscription's
 	// usage limit; ResetsAt says when it resets, unix seconds). The next
@@ -473,6 +476,7 @@ func (h *Hub) RemoveProvider(ctx context.Context, name string) error {
 	if err := h.opts.Store.Delete(ctx, "provider/"+name); err != nil {
 		return err
 	}
+	_ = h.opts.Store.Delete(ctx, sourceOffKey(name))
 	ms, _ := h.listModels(ctx)
 	for _, m := range ms {
 		if m.Provider == name {
@@ -490,6 +494,31 @@ func (h *Hub) RemoveProvider(ctx context.Context, name string) error {
 	return nil
 }
 
+// sourceOffKey marks a model source the owner switched off.
+func sourceOffKey(name string) string { return "settings/source_off/" + name }
+
+// SetProviderOff switches a model source off, or on again. Unlike removing
+// it, the key or login stays: on again, its models are back at once.
+func (h *Hub) SetProviderOff(ctx context.Context, name string, off bool) error {
+	if !h.connected(name) {
+		return &omnillm.Error{Code: omnillm.CodeBadRequest, Msg: omnillm.MsgBadSource, Detail: "provider: not connected"}
+	}
+	if !off {
+		return h.opts.Store.Delete(ctx, sourceOffKey(name))
+	}
+	return store.PutJSON(ctx, h.opts.Store, sourceOffKey(name), true)
+}
+
+// sourcesOff lists the model sources switched off, by name.
+func (h *Hub) sourcesOff(ctx context.Context) map[string]bool {
+	keys, _ := h.opts.Store.List(ctx, "settings/source_off/")
+	out := make(map[string]bool, len(keys))
+	for _, k := range keys {
+		out[strings.TrimPrefix(k, "settings/source_off/")] = true
+	}
+	return out
+}
+
 // Providers lists connected providers without their keys.
 func (h *Hub) Providers(ctx context.Context) ([]ProviderInfo, error) {
 	h.mu.Lock()
@@ -499,11 +528,12 @@ func (h *Hub) Providers(ctx context.Context) ([]ProviderInfo, error) {
 	}
 	h.mu.Unlock()
 	sort.Slice(clients, func(i, j int) bool { return clients[i].Config().Name < clients[j].Config().Name })
+	off := h.sourcesOff(ctx)
 	var out []ProviderInfo
 	for _, cl := range clients {
 		c := cl.Config()
 		pi := ProviderInfo{Name: c.Name, Kind: c.Kind, BaseURL: c.BaseURL, Local: c.Local(),
-			Subscription: c.Kind.Subscription(), DisplayName: c.Name}
+			Subscription: c.Kind.Subscription(), DisplayName: c.Name, Off: off[c.Name]}
 		if p, at := cl.Problem(); p != "" {
 			pi.Problem = p
 			if p == provider.ProblemLimit {

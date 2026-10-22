@@ -245,6 +245,7 @@ func usageText(all bool) string {
   omnillm hub provider add <openai|anthropic|ollama|openai-compatible> [--name N] [--base-url U]
                                      接入模型来源（API Key 从标准输入读，不写在命令行里）
   omnillm hub provider rm <来源>     移除模型来源
+  omnillm hub provider off|on <来源> 关闭或打开模型来源（登录和 Key 保留）
   omnillm hub providers | models | devices | apps | usage [--json]
                                      列出来（--json 输出原始数据）
   omnillm hub usage [--day today|yesterday|7d]
@@ -285,6 +286,7 @@ func usageText(all bool) string {
   omnillm hub provider add <openai|anthropic|ollama|openai-compatible> [--name N] [--base-url U]
                                      connect a model source (the API key is read from stdin, never argv)
   omnillm hub provider rm <source>   remove a model source
+  omnillm hub provider off|on <source>  switch a model source off or on (its sign-in or key is kept)
   omnillm hub providers | models | devices | apps | usage [--json]
                                      list them (--json: the raw data)
   omnillm hub usage [--day today|yesterday|7d]
@@ -540,6 +542,10 @@ func hubCmd(args []string) {
 	case "provider":
 		if len(args) >= 3 && args[1] == "rm" {
 			call(sock, control.Request{Op: "provider.rm", Args: map[string]string{"name": strings.Join(args[2:], " ")}})
+			return
+		}
+		if len(args) >= 3 && (args[1] == "off" || args[1] == "on") {
+			call(sock, control.Request{Op: "provider.off", Args: map[string]string{"name": strings.Join(args[2:], " "), "off": fmt.Sprint(args[1] == "off")}})
 			return
 		}
 		if len(args) < 3 || args[1] != "add" || strings.HasPrefix(args[2], "-") {
@@ -1180,6 +1186,23 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 				return hubSay(l, err)
 			}
 			return c.Send(control.Reply{Event: "ok", Text: fmt.Sprintf(tl(l, "已移除“%s”，它的模型不再能用。", "Removed “%s”; its models can’t be used any more."), sourceNameIn(l, p))})
+		case "provider.off":
+			ps, err := h.Providers(ctx)
+			if err != nil {
+				return hubSay(l, err)
+			}
+			p, err := findProvider(l, ps, a["name"])
+			if err != nil {
+				return err
+			}
+			off := a["off"] == "true"
+			if err := h.SetProviderOff(ctx, p.Name, off); err != nil {
+				return hubSay(l, err)
+			}
+			if off {
+				return c.Send(control.Reply{Event: "ok", Text: fmt.Sprintf(tl(l, "已关闭“%s”：设备和应用暂时用不了它的模型，登录和 Key 都保留。", "Switched off “%s”: devices and apps can’t use its models for now; its sign-in or key is kept."), sourceNameIn(l, p))})
+			}
+			return c.Send(control.Reply{Event: "ok", Text: fmt.Sprintf(tl(l, "已打开“%s”，它的模型又能用了。", "Switched on “%s”; its models can be used again."), sourceNameIn(l, p))})
 		case "ui_lang.set":
 			// The menu bar's 中文 / English; the console sets the same one.
 			if v := a["lang"]; v != "" && v != "zh" && v != "en" {

@@ -179,6 +179,9 @@ func providersTable(data []byte, now time.Time) (string, error) {
 // problemText is a source's state: fine, or what to do about it, as the
 // console's problem chips say it.
 func problemText(p hub.ProviderInfo, now time.Time) string {
+	if p.Off {
+		return t("已关闭", "Off")
+	}
 	switch p.Problem {
 	case provider.ProblemLogin:
 		if p.Kind == provider.Codex {

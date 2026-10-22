@@ -776,6 +776,8 @@ func (h *Hub) SetModelPref(ctx context.Context, id string, name *string, shown *
 type ModelView struct {
 	omnillm.ModelInfo
 	Hidden bool `json:"hidden,omitempty"`
+	// SourceOff: its model source is switched off, so no one gets it now.
+	SourceOff bool `json:"source_off,omitempty"`
 }
 
 // OwnerModels lists every model for the owner's own screens.
@@ -785,25 +787,27 @@ func (h *Hub) OwnerModels(ctx context.Context) ([]ModelView, error) {
 		return nil, err
 	}
 	prefs := h.modelPrefs(ctx)
+	off := h.sourcesOff(ctx)
 	out := make([]ModelView, 0, len(all))
 	for _, m := range all {
 		mp := prefs[m.ID]
 		if mp.Name != "" {
 			m.DisplayName, m.Renamed = mp.Name, true
 		}
-		out = append(out, ModelView{ModelInfo: m, Hidden: mp.Hidden})
+		out = append(out, ModelView{ModelInfo: m, Hidden: mp.Hidden, SourceOff: off[m.Provider]})
 	}
 	return out, nil
 }
 
 // forDevices is a model list as devices get it: the owner's names, and
-// without the models kept off devices.
+// without the models kept off devices or whose source is switched off.
 func (h *Hub) forDevices(ctx context.Context, ms []omnillm.ModelInfo) []omnillm.ModelInfo {
 	prefs := h.modelPrefs(ctx)
+	off := h.sourcesOff(ctx)
 	out := ms[:0:0]
 	for _, m := range ms {
 		mp := prefs[m.ID]
-		if mp.Hidden {
+		if mp.Hidden || off[m.Provider] {
 			continue
 		}
 		if mp.Name != "" {
@@ -991,10 +995,11 @@ func (h *Hub) ModelsForApp(ctx context.Context, token string) ([]omnillm.ModelIn
 	if err != nil {
 		return nil, err
 	}
+	off := h.sourcesOff(ctx)
 	var out []omnillm.ModelInfo
 	for _, m := range all {
 		// App tokens are Background: models kept for people are not theirs.
-		if m.HumanOnly {
+		if m.HumanOnly || off[m.Provider] {
 			continue
 		}
 		if len(a.Models) == 0 || contains(a.Models, m.ID) {

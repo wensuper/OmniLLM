@@ -111,3 +111,33 @@ func TestRemoveProviderDeletesTheKey(t *testing.T) {
 		_ = a
 	}
 }
+
+func TestSwitchedOffSourceServesNoOneAndKeepsItsKey(t *testing.T) {
+	e := setup(t, nil)
+	ctx := context.Background()
+	if err := e.hub.SetProviderOff(ctx, "fake", true); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := ask(ctx, e.hub, "fake/m1", "hello", omnillm.Interactive); !errors.Is(err, omnillm.ErrModelNotAllowed) {
+		t.Fatalf("a switched-off source answered: %v", err)
+	}
+	if _, err := e.hubSec.Get(ctx, "provider/fake/key"); err != nil {
+		t.Fatal("switching off deleted the key")
+	}
+	ps, _ := e.hub.Providers(ctx)
+	if len(ps) != 1 || !ps[0].Off {
+		t.Fatalf("providers don't say it is off: %+v", ps)
+	}
+	if vs, _ := e.hub.OwnerModels(ctx); len(vs) == 0 || !vs[0].SourceOff {
+		t.Fatalf("the owner's list doesn't mark its models: %+v", vs)
+	}
+	if err := e.hub.SetProviderOff(ctx, "fake", false); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := ask(ctx, e.hub, "fake/m1", "hello", omnillm.Interactive); err != nil {
+		t.Fatalf("on again, it still refuses: %v", err)
+	}
+	if err := e.hub.SetProviderOff(ctx, "nosuch", true); err == nil {
+		t.Fatal("switched off a source that isn't connected")
+	}
+}

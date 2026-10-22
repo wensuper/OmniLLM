@@ -405,7 +405,7 @@ button.danger-text:hover:not(:disabled) { background: none; text-decoration: und
 @media (max-width: 600px) {
   .providers-table thead, .providers-table td.how { display: none; }
   .providers-table, .providers-table tbody { display: block; }
-  .providers-table tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 12px; border-bottom: 1px solid var(--line); }
+  .providers-table tr { display: grid; grid-template-columns: minmax(0, 1fr) 44px auto; align-items: center; column-gap: 12px; border-bottom: 1px solid var(--line); }
   .providers-table td { border-bottom: 0; }
   .providers-table td.actions { padding-right: 0; }
   .providers-table .narrow-only { display: block; }

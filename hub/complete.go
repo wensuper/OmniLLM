@@ -69,6 +69,15 @@ func (h *Hub) complete(ctx context.Context, p principal, req omnillm.Request) (o
 	if len(p.models) > 0 && !slices.Contains(p.models, m.ID) {
 		return nil, &omnillm.Error{Code: omnillm.CodeModelNotAllowed, Msg: p.msg(omnillm.MsgModelNotAllowed, omnillm.MsgModelNotAllowedApp)}
 	}
+	// A source the owner switched off serves no one. A device is told as
+	// for a removed model (it reloads its list); an app hears why.
+	if h.sourcesOff(ctx)[m.Provider] {
+		msg := omnillm.MsgUnknownModel
+		if !strings.HasPrefix(p.key, "device/") {
+			msg = omnillm.MsgSourceOff
+		}
+		return nil, &omnillm.Error{Code: omnillm.CodeModelNotAllowed, Msg: msg}
+	}
 	// A model the owner took off the devices' list is gone for them, as if
 	// removed: the device reloads its list and picks another.
 	if strings.HasPrefix(p.key, "device/") && h.modelPrefs(ctx)[m.ID].Hidden {

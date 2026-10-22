@@ -175,6 +175,7 @@ func (s *Server) Handler() http.Handler {
 	api("GET /console/api/ollama", s.ollama)
 	api("POST /console/api/providers/add", s.addProvider)
 	api("POST /console/api/providers/remove", s.removeProvider)
+	api("POST /console/api/providers/off", s.setProviderOff)
 	api("POST /console/api/providers/detect", s.detectProviders)
 	api("POST /console/api/models/set", s.setModel)
 	api("POST /console/api/devices/remove", s.removeDevice)
@@ -603,6 +604,22 @@ func (s *Server) removeProvider(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.hub.RemoveProvider(r.Context(), in.ID); err != nil {
+		writeErr(w, r, 0, err)
+		return
+	}
+	writeJSON(w, map[string]bool{"ok": true})
+}
+
+// setProviderOff switches a model source off or on; its key or login stays.
+func (s *Server) setProviderOff(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		ID  string `json:"id"`
+		Off bool   `json:"off"`
+	}
+	if !decode(w, r, &in) {
+		return
+	}
+	if err := s.hub.SetProviderOff(r.Context(), in.ID, in.Off); err != nil {
 		writeErr(w, r, 0, err)
 		return
 	}

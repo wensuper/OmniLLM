@@ -70,7 +70,7 @@ const T = {
     pauseHint: "关掉即暂停：这台设备马上停用，配对和设置都保留。", pauseHintApp: "关掉即暂停：这个应用马上停用，令牌和设置都保留。",
     limitHint: "只受{whole}每天总额度（{0}）限制。", limitHintNone: "{whole}也没有总额度。", allModels: "全部模型（以后接入的新模型也自动可用）",
     grpSub: "订阅", grpKey: "API Key", grpLocal: "{Here}", pickOne: "至少选一个模型。", appNoHuman: "应用用不了只能手动对话的模型",
-    hiddenTag: "不在设备上显示", appNoModels: "没有能用的模型", modelsCol: "模型", modelsAll: "全部 {0} 个", modelsSome: "部分 {0} / {1}", appNoModelsBody: "现在接入的模型应用都用不了。先接入 API Key 或{here}上的模型。",
+    hiddenTag: "不在设备上显示", sourceOffTag: "来源已关闭", appNoModels: "没有能用的模型", modelsCol: "模型", modelsAll: "全部 {0} 个", modelsSome: "部分 {0} / {1}", appNoModelsBody: "现在接入的模型应用都用不了。先接入 API Key 或{here}上的模型。",
     appNoModelsTip: "接入 API Key 或{here}上的模型后就能用", devNoModelsBody: "它能用的模型都已移除或不在设备上显示。打开“全部模型”，或在下面选几个。",
     devNoModelsBg: "这台设备只给程序和脚本用，可它能选的模型都设成了“只能手动对话”。在下面换一个模型，或在“模型”里关掉那个模型的“只能手动对话”。",
     removeDevice: "移除设备", removeApp: "移除应用",
@@ -191,7 +191,7 @@ const T = {
     pauseHint: "Turn off to pause: the device stops at once; its pairing and settings are kept.", pauseHintApp: "Turn off to pause: the app stops at once; its token and settings are kept.",
     limitHint: "Only the daily total for {here} ({0}) applies.", limitHintNone: "{Here} has no daily total either.", allModels: "All models (including ones added later)",
     grpSub: "Subscriptions", grpKey: "API key", grpLocal: "{Here}", pickOne: "Choose at least one model.", appNoHuman: "Apps can’t use chat-only models",
-    hiddenTag: "Hidden on devices", appNoModels: "No usable models", modelsCol: "Models", modelsAll: "All {0}", modelsSome: "{0} of {1}", appNoModelsBody: "None of the connected models work for apps. Connect an API key or a model on {here} first.",
+    hiddenTag: "Hidden on devices", sourceOffTag: "Source off", appNoModels: "No usable models", modelsCol: "Models", modelsAll: "All {0}", modelsSome: "{0} of {1}", appNoModelsBody: "None of the connected models work for apps. Connect an API key or a model on {here} first.",
     appNoModelsTip: "Works once you connect an API key or a model on {here}", devNoModelsBody: "All the models it could use were removed or hidden on devices. Turn on “All models” or choose some below.",
     devNoModelsBg: "This device is for programs and scripts only, but every model it may use is set to “Chat only”. Choose another model below, or turn off “Chat only” for that model under “Models”.",
     removeDevice: "Remove device", removeApp: "Remove app",
@@ -1312,7 +1312,7 @@ function modelsCell(tr, nc, x, usable) {
 
 // pauseSwitch: on = in use; turning it off pauses that device or app at
 // once (its next request is refused), and on again resumes it.
-function pauseSwitch(tr, label, path, id, paused) {
+function pauseSwitch(tr, label, path, id, paused, field = "paused") {
   const td = cell(tr, "", "sw");
   const sw = el("input"); sw.type = "checkbox"; sw.className = "switch"; sw.checked = !paused;
   sw.setAttribute("aria-label", t("enabled") + " " + label);
@@ -1321,13 +1321,13 @@ function pauseSwitch(tr, label, path, id, paused) {
     // Only a failed change puts the switch back; the redraw after it is
     // just a redraw (the next poll tries again).
     try {
-      await api(path, { id, paused: !sw.checked });
+      await api(path, { id, [field]: !sw.checked });
     } catch (e) { sw.checked = !sw.checked; sw.disabled = false; toast(e.message, true); return; }
     if (sw.checked) toast(named("resumedToast", label));
     else {
       // Paused by a slip of the finger: Undo turns it on again.
       toast(named("pausedToast", label), false, { label: t("undo"), run: async () => {
-        try { await api(path, { id, paused: false }); toast(named("resumedToast", label)); await refresh(); } catch (e) { toast(e.message, true); }
+        try { await api(path, { id, [field]: false }); toast(named("resumedToast", label)); await refresh(); } catch (e) { toast(e.message, true); }
       } });
     }
     try { await refresh(); } catch (_) { sw.disabled = false; }
@@ -1510,14 +1510,14 @@ function section(body, label) {
 }
 
 // usableByApp: apps make background calls only: no chat-only models.
-const usableByApp = (m) => !(m.human_only || m.group === "sub");
+const usableByApp = (m) => !(m.human_only || m.group === "sub" || m.source_off);
 // appHasModels: an app can use at least one connected model.
 function appHasModels(a) {
   return S.models.some((m) => usableByApp(m) && (!(a.Models || []).length || a.Models.includes(m.id)));
 }
 // usableByDevice: a device gets the models shown on devices; one that
 // only makes background calls (a server, a script) no chat-only ones.
-const usableByDevice = (d, m) => !m.hidden && (!d.BackgroundOnly || usableByApp(m));
+const usableByDevice = (d, m) => !m.hidden && !m.source_off && (!d.BackgroundOnly || usableByApp(m));
 // deviceHasModels: a device can use at least one model: one on its list
 // (or any, with all models) that it can use.
 // devNoModelsWhy: why a device has nothing to use. A device for programs
@@ -1590,6 +1590,7 @@ function editDialog(kind, x) {
       const nm = el("span", modelName(m), "pick-name");
       if (isApp && !usableByApp(m)) { nm.append(" ", el("span", t("humanOnly"), "tag")); row.title = t("appNoHuman"); }
       if (!isApp && m.hidden) nm.append(" ", el("span", t("hiddenTag"), "tag paused-tag"));
+      if (m.source_off) nm.append(" ", el("span", t("sourceOffTag"), "tag paused-tag"));
       const sw = el("input"); sw.type = "checkbox"; sw.className = "switch";
       sw.disabled = !usable(m);
       sw.checked = usable(m) && (!(x.Models || []).length || x.Models.includes(m.id));
@@ -1801,7 +1802,7 @@ function renderModels() {
   const tb = $("models");
   tb.textContent = "";
   for (const m of S.models) {
-    const tr = el("tr");
+    const tr = el("tr", undefined, m.source_off ? "paused" : "");
     const name = modelName(m);
     // The sources table below says which are subscriptions.
     const nc = cell(tr, name, "nm");
@@ -1829,7 +1830,7 @@ function renderModels() {
   const pb = $("providers");
   pb.textContent = "";
   for (const p of S.providers) {
-    const tr = el("tr");
+    const tr = el("tr", undefined, p.off ? "paused" : "");
     // Sources by the names people know them by; "(this Mac)" is in
     // Ollama's own name.
     const own = sourceName(p.kind), label = own || p.display_name || p.name;
@@ -1842,7 +1843,11 @@ function renderModels() {
     const pt = problemText(p);
     if (pt) nc.append(el("span", pt, "tag warn-tag"));
     cell(tr, how, "how");
-    cell(tr, "", "actions").append(removeButton(label, "providers/remove", p.name, renderModels));
+    // Off keeps the login or key; Remove (quieter) deletes it.
+    pauseSwitch(tr, label, "providers/off", p.name, !!p.off, "off");
+    const rm = removeButton(label, "providers/remove", p.name, renderModels);
+    rm.className = "danger-text";
+    cell(tr, "", "actions").append(rm);
     pb.append(tr);
   }
 }
