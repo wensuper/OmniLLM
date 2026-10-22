@@ -256,6 +256,19 @@ func (c *Client) Problem() (problem string, resets time.Time) {
 	return c.problem, c.until
 }
 
+// SignedOut records what a sign-in check found: signed out sets the login
+// problem at once (before any call fails); signed in clears it. A limit is
+// left as it is.
+func (c *Client) SignedOut(out bool) {
+	c.healthMu.Lock()
+	defer c.healthMu.Unlock()
+	if out {
+		c.problem, c.until = ProblemLogin, time.Time{}
+	} else if c.problem == ProblemLogin {
+		c.problem = ""
+	}
+}
+
 // note records how a call ended: nil is a success; a login or limit error
 // sets the problem; anything else leaves it as it was.
 func (c *Client) note(err error) {

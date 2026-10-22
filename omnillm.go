@@ -220,6 +220,12 @@ type ModelInfo struct {
 	// Renamed: DisplayName is the owner's own name for the model, to be
 	// shown as it is (no suffix, no translation).
 	Renamed bool `json:"renamed,omitempty"`
+	// Problem is what keeps this model from working right now, as the hub
+	// knows it: "login" (its program on the hub is signed out) or "limit"
+	// (the subscription's usage limit; ResetsAt says when, unix seconds).
+	// Screens say so before anything is sent.
+	Problem  string `json:"problem,omitempty"`
+	ResetsAt int64  `json:"resets_at,omitempty"`
 }
 
 // Code is a stable error code. Local API status codes map 1:1 (design §6).

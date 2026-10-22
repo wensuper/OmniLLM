@@ -10,6 +10,10 @@ All notable changes to OmniLLM are documented here. OmniLLM is in early pre-rele
 
 - The console’s top bar no longer says “Phones and other devices can connect” all the time. It shows a line only when something needs you: remote access is down or not set up, or the region changed.
 - Under today’s spending, “Estimated from published prices” now says what it means: API keys are counted at their official prices, and subscriptions and local models cost nothing.
+### Fixed
+
+- A subscription signed out on your Mac no longer shows a green dot in the web chat. Each model's dot says whether it works right now: amber with the reason under its name when its subscription is signed out, or at its usage limit (with the time it comes back). While such a model is chosen, a notice above the message box says how to sign in (`omnillm login claude` / `chatgpt`, or the card in the console). The hub checks the programs’ sign-in by itself at start, every 5 minutes, and when a device asks for its models, without calling a model; signing in again clears it.
+- Error messages in the web chat use the page’s language (which follows your Mac), not the browser’s.
 
 ## [0.2.0-alpha.41](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.41) - 2026-10-22
 

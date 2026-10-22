@@ -36,7 +36,7 @@ const T = {
     addImage: "添加图片", voice: "语音输入", voiceStop: "停止语音输入", listening: "正在听，说完再点一下……", voiceFirst: "语音由浏览器识别：Chrome 交给 Google，Safari 交给 Apple。识别出的文字只填进输入框，你确认后再发。", voiceDenied: "没有麦克风权限。在浏览器的网站设置里允许麦克风，再点一次。", voiceNoMic: "没找到麦克风。", voiceNoSpeech: "没听到声音，再说一次试试。", voiceNetwork: "语音识别要联网，现在连不上。", voiceFailed: "语音输入没能开始，再试一次。", removeImage: "移除图片", tooManyImages: "每条消息最多 4 张图片。", imageFailed: "这张图片打不开，换一张试试。", imageTooBig: "图片太大，换一张小一点的。", imageTitle: "图片",
     offline: "连不上你的 Mac：它可能睡眠了或者没联网。醒来后会自动恢复。", retry: "重试",
     noNetwork: "这台设备没有联网，联网后会自动连上。", kept: "刚才输入的还在。", loadingModels: "正在连接你的 Mac……",
-    noModels: "这台设备现在没有能用的模型。在 Mac 的控制台里接入模型，或在“设备”里给它开放模型。", noModelsOpt: "没有可用的模型",
+    noModels: "这台设备现在没有能用的模型。在 Mac 的控制台里接入模型，或在“设备”里给它开放模型。", noModelsOpt: "没有可用的模型", probLogin: "要在 Mac 上登录", probLimit: "到上限，{0} 恢复", probLoginNote: "{0}在你的 Mac 上没有登录，现在发不出去。在 Mac 上运行 omnillm login {1}，或点控制台里 {2} 卡片上的按钮，登录后就能用。", probLimitNote: "{0}的用量到上限了，{1} 恢复。可以先换一个模型。", subClaude: "Claude 订阅", subChatGPT: "ChatGPT 订阅",
     modelGone: "原来的模型已从你的 Mac 上移除，换成了 {0}",
     grpSub: "订阅（不另花钱）", grpKey: "API Key", grpLocal: "你的 Mac 上", latest: "（最新版）", codex: "ChatGPT（Codex · 最新版）", codexV: "ChatGPT（Codex · {0}）",
     forget: "移除这台设备", forgetQ: "这里的对话会删除。以后要用，在 Mac 上重新添加。", removing: "正在移除……",
@@ -81,7 +81,7 @@ const T = {
     addImage: "Add image", voice: "Voice input", voiceStop: "Stop voice input", listening: "Listening… tap again when you’re done", voiceFirst: "Your browser turns speech into text: Chrome uses Google, Safari uses Apple. The words only fill the box; you send them.", voiceDenied: "No microphone permission. Allow the microphone in the browser’s site settings, then try again.", voiceNoMic: "No microphone found.", voiceNoSpeech: "Didn’t hear anything. Try again.", voiceNetwork: "Voice input needs the internet, which isn’t reachable right now.", voiceFailed: "Voice input couldn’t start. Try again.", removeImage: "Remove image", tooManyImages: "Up to 4 images per message.", imageFailed: "This image can’t be opened; try another one.", imageTooBig: "Image too large; try a smaller one.", imageTitle: "Image",
     offline: "Can’t reach your Mac: it may be asleep or offline. It reconnects when your Mac wakes.", retry: "Retry",
     noNetwork: "This device is offline; it reconnects when the network is back.", kept: "What you typed is kept.", loadingModels: "Connecting to your Mac…",
-    noModels: "No models are available to this device. On your Mac, connect a model or allow this device more models under Devices.", noModelsOpt: "No models",
+    noModels: "No models are available to this device. On your Mac, connect a model or allow this device more models under Devices.", noModelsOpt: "No models", probLogin: "Sign in on your Mac", probLimit: "At its limit until {0}", probLoginNote: "{0} is signed out on your Mac, so messages to it won’t go through. On your Mac, run omnillm login {1}, or use the button on the {2} card in the console; it works once you’re signed in.", probLimitNote: "{0} has reached its usage limit until {1}. Pick another model for now.", subClaude: "Claude subscription", subChatGPT: "ChatGPT subscription",
     modelGone: "The previous model was removed from your Mac; switched to {0}",
     grpSub: "Subscriptions (no extra cost)", grpKey: "API key", grpLocal: "On your Mac", latest: " (latest)", codex: "ChatGPT (Codex · latest)", codexV: "ChatGPT (Codex · {0})",
     forget: "Remove this device", forgetQ: "Chats here will be deleted. To use this device later, add it on your Mac again.", removing: "Removing…",
@@ -718,6 +718,23 @@ function isSub(m) { const k = m.kind || m.provider; return k === "claude-code" |
 function isLocal(m) { return !!m.onHost; } // runs on the Mac itself (the hub says so)
 function group(m) { return isSub(m) ? 0 : isLocal(m) ? 2 : 1; }
 function modelName(id) { const m = S.models.find((x) => x.id === id); return m ? m.name : id; }
+// What keeps a model from working right now, as the Mac last said: signed
+// out of its program, or at its subscription's limit (until when). Shown
+// before anything is sent: a dot in the picker, a line under the name, and
+// a notice above the box while it is the chosen one.
+function problemOf(m) {
+  if (!m || !m.problem) return null;
+  const claude = m.kind !== "codex", src = t(claude ? "subClaude" : "subChatGPT");
+  if (m.problem === "login") return { short: t("probLogin"), long: t("probLoginNote", src, claude ? "claude" : "chatgpt", claude ? "Claude" : "ChatGPT") };
+  if (m.problem === "limit") {
+    const at = m.resetsAt ? new Date(m.resetsAt * 1000) : null;
+    if (at && at <= new Date()) return null;
+    const when = at ? at.toLocaleTimeString(document.documentElement.lang, { hour: "2-digit", minute: "2-digit" }) : "…";
+    return { short: t("probLimit", when), long: t("probLimitNote", src, when) };
+  }
+  return null;
+}
+const chosenProblem = () => problemOf(S.models.find((m) => m.id === $("model").value));
 // label: the name in this page's language. The Mac sends the name without
 // language-built parts and says what to add: "latest" (the version isn't
 // known yet) and the kind (Codex). A name the owner chose stays as it is.
@@ -803,7 +820,7 @@ function pickModel() {
   S.cur.model = sel.value;
   return true;
 }
-$("model").addEventListener("change", () => { localStorageSet("model", $("model").value); if (S.cur) S.cur.model = $("model").value; paintPick(); refreshActs(); });
+$("model").addEventListener("change", () => { localStorageSet("model", $("model").value); if (S.cur) S.cur.model = $("model").value; paintPick(); refreshActs(); paintBanner(); });
 function localStorageGet(k) { try { return localStorage.getItem("omnillm." + k); } catch { return null; } }
 function localStorageSet(k, v) { try { localStorage.setItem("omnillm." + k, v); } catch {} }
 
@@ -813,6 +830,8 @@ function localStorageSet(k, v) { try { localStorage.setItem("omnillm." + k, v); 
 function liveDot(state) {
   const label = t({ on: "liveOn", off: "liveOff", paused: "pausedDot" }[state] || "liveWait");
   for (const id of ["live-dot", "pick-dot"]) { const d = $(id); d.className = "live-dot " + state; d.title = label; }
+  const pr = state === "on" && chosenProblem();
+  if (pr) { $("pick-dot").className = "live-dot prob"; $("pick-dot").title = pr.short; }
   $("live-dot").setAttribute("aria-label", label);
   const said = t({ on: "macOn", off: navigator.onLine ? "macOff" : "macNoNet", paused: "macPaused" }[state] || "macWait");
   $("mac-state").textContent = said;
@@ -846,6 +865,8 @@ function paintNotice() {
   b.textContent = ""; b.hidden = S.online && !none && !S.paused;
   if (S.paused && S.online) { b.append(quoted(el("span"), S.paused)); return; }
   if (none) { b.append(quoted(el("span"), t("noModels"))); return; }
+  const pr = S.online && !S.paused && chosenProblem();
+  if (pr) { b.hidden = false; b.append(quoted(el("span"), pr.long)); return; }
   if (S.online) return;
   b.append(quoted(el("span"), S.why + (S.kept ? " " + t("kept") : "")));
   if (navigator.onLine) { const r = el("button", t("retry"), "link"); r.type = "button"; r.addEventListener("click", connect); b.append(r); }
@@ -1589,8 +1610,12 @@ function pickMenu(open) {
     for (const o of g.querySelectorAll("option")) {
       const it = el("div", undefined, "mi"); it.id = "mi-" + n++; it.dataset.v = o.value;
       it.setAttribute("role", "option"); it.setAttribute("aria-selected", String(o.value === sel.value));
-      const dot = el("span", "", "live-dot " + (live ? "on" : "off")); dot.setAttribute("aria-hidden", "true");
-      it.append(dot, el("span", o.textContent, "nm"));
+      const pr = problemOf(S.models.find((m) => m.id === o.value));
+      const dot = el("span", "", "live-dot " + (!live ? "off" : pr ? "prob" : "on")); dot.setAttribute("aria-hidden", "true");
+      const nm = el("span", undefined, "nm");
+      nm.append(el("span", o.textContent, "nmx"));
+      if (pr) { nm.append(el("span", pr.short, "mprob")); it.classList.add("has-prob"); }
+      it.append(dot, nm);
       if (o.value === sel.value) it.append(icon("i-check s16"));
       it.addEventListener("click", () => choosePick(o.value));
       m.append(it);

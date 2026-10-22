@@ -283,6 +283,7 @@ p.note.err { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12p
 @media (max-width: 400px) { .mpick .nmx { max-width: 150px; } }
 .live-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--muted); opacity: .55; }
 .live-dot.on { background: var(--ok); opacity: 1; box-shadow: 0 0 0 3px var(--ok-soft); }
+.live-dot.prob { background: var(--warn-hi); opacity: 1; box-shadow: 0 0 0 3px var(--warn-soft); }
 .live-dot.paused { background: var(--warn-hi); opacity: 1; box-shadow: 0 0 0 3px var(--warn-soft); }
 .live-dot.wait { animation: dot-wait 1.2s ease-in-out infinite; }
 @keyframes dot-wait { 50% { opacity: .2; } }
@@ -294,6 +295,9 @@ p.note.err { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12p
 .mmenu .mi, .pop-item { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 40px; padding: 0 10px; border: 0; border-radius: var(--r-s); background: transparent; color: var(--ink); font-size: 14px; text-align: left; cursor: pointer; }
 .mmenu .mi .nm, .pop-item .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mmenu .mi[aria-selected="true"] { font-weight: 500; }
+.mmenu .mi.has-prob { min-height: 52px; }
+.mmenu .mi .nm .nmx { display: block; overflow: hidden; text-overflow: ellipsis; }
+.mmenu .mi .mprob { display: block; font-size: 12px; font-weight: 400; color: var(--warn); margin-top: 1px; }
 .mmenu .mi .ic { color: var(--accent-text); }
 .mmenu .mi.act, .pop-item:focus-visible { background: var(--surface-2); }
 @media (hover: hover) { .mmenu .mi:hover, .pop-item:hover { background: var(--surface-2); } }

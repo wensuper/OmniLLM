@@ -433,3 +433,63 @@ func (h *Hub) ConnectSubscription(ctx context.Context, kind string) error {
 	_, err = h.AddProvider(ctx, cfg, "")
 	return err
 }
+
+// loginsEvery is how often the hub asks the subscription programs whether
+// they are still signed in; a device asking for its models asks again when
+// the last look is older than loginsStale (in the background: the list it
+// gets now says what is known).
+var loginsEvery, loginsStale = 5 * time.Minute, 30 * time.Second
+
+// watchLogins looks at the subscription programs' sign-in at start and
+// every few minutes, so a signed-out Claude Code or Codex shows on every
+// screen before a message fails on it, and clears once signed in again.
+func (h *Hub) watchLogins(ctx context.Context) {
+	h.checkLogins(ctx)
+	t := time.NewTicker(loginsEvery)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			h.checkLogins(ctx)
+		}
+	}
+}
+
+// freshLogins starts a sign-in check when the last one is old.
+func (h *Hub) freshLogins() {
+	if time.Since(time.Unix(0, h.loginsAt.Load())) >= loginsStale {
+		go h.checkLogins(h.ctx) // runs one at a time by itself
+	}
+}
+
+// checkLogins asks each connected subscription program whether it is
+// signed in (its own status command; no model is called). Codex counts as
+// signed in through the owner's own login too, as the hub runs it.
+func (h *Hub) checkLogins(ctx context.Context) {
+	if !h.loginsBusy.CompareAndSwap(false, true) {
+		return
+	}
+	defer h.loginsBusy.Store(false)
+	h.loginsAt.Store(time.Now().UnixNano())
+	h.mu.Lock()
+	var subs []*provider.Client
+	for _, c := range h.clients {
+		if c.Config().Kind.Subscription() {
+			subs = append(subs, c)
+		}
+	}
+	h.mu.Unlock()
+	for _, c := range subs {
+		cfg := c.Config()
+		in := provider.CLILoggedIn(ctx, cfg.Kind, cfg.Path)
+		if !in && cfg.Kind == provider.Codex {
+			in = provider.CodexLoggedInOwn(ctx, cfg.Path)
+		}
+		if ctx.Err() != nil {
+			return // a check cut short says nothing
+		}
+		c.SignedOut(!in)
+	}
+}

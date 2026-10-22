@@ -308,3 +308,49 @@ func TestDetectNowConnectsEvenARemovedSubscription(t *testing.T) {
 		t.Fatal(err, failed)
 	}
 }
+
+func TestSignedOutSubscriptionShowsBeforeAnyCall(t *testing.T) {
+	path, _ := fakeClaude(t)
+	// The same stand-in, but its sign-in follows a flag file.
+	flag := filepath.Join(filepath.Dir(path), "signed-out")
+	b, _ := os.ReadFile(path)
+	s := strings.Replace(string(b), `if [ "$1" = auth ]; then echo '{"loggedIn":true}'; exit 0; fi`,
+		`if [ "$1" = auth ]; then if [ -e `+flag+` ]; then echo '{"loggedIn":false}'; else echo '{"loggedIn":true}'; fi; exit 0; fi`, 1)
+	if err := os.WriteFile(path, []byte(s), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", filepath.Dir(path))
+	t.Setenv("HOME", t.TempDir())
+	ctx := context.Background()
+	h, err := New(ctx, Options{Secrets: secret.NewMemory(), Store: store.NewMemory()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.AddProvider(ctx, provider.Config{Name: "claude-code", Kind: provider.ClaudeCode, Path: path}, ""); err != nil {
+		t.Fatal(err)
+	}
+	problems := func() map[string]bool {
+		ms, _ := h.Models(ctx)
+		out := map[string]bool{}
+		for _, m := range ms {
+			out[m.Problem] = true
+		}
+		return out
+	}
+	h.checkLogins(ctx)
+	if p := problems(); p["login"] {
+		t.Fatalf("signed in, but the models say login: %v", p)
+	}
+	if err := os.WriteFile(flag, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	h.checkLogins(ctx)
+	if p := problems(); !p["login"] || len(p) != 1 {
+		t.Fatalf("signed out, but the models don't say so: %v", p)
+	}
+	_ = os.Remove(flag)
+	h.checkLogins(ctx)
+	if p := problems(); p["login"] {
+		t.Fatalf("signed in again, but the models still say login: %v", p)
+	}
+}

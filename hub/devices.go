@@ -718,6 +718,7 @@ func (h *Hub) modelsFor(ctx context.Context, d Device) ([]omnillm.ModelInfo, err
 	if err != nil {
 		return nil, err
 	}
+	h.freshLogins()
 	return h.forDevices(ctx, ms), nil
 }
 

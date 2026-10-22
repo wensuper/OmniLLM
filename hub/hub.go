@@ -70,7 +70,11 @@ type Options struct {
 
 // Hub is the hub role.
 type Hub struct {
-	opts Options
+	// The sign-in watch (watchLogins): one check at a time, and when the
+	// last one began (unix nanoseconds).
+	loginsBusy atomic.Bool
+	loginsAt   atomic.Int64
+	opts       Options
 	// resolved: model id -> its name with version, as last reported (mu).
 	resolved map[string]string
 	// seen: model id -> when a call last reported its version (mu).
@@ -238,6 +242,8 @@ func (h *Hub) Start(ctx context.Context) error {
 	h.chats.Sweep() // here, not in the loop: Start's caller owns the clock
 	h.wg.Add(1)
 	go func() { defer h.wg.Done(); h.sweepChats(h.ctx) }()
+	h.wg.Add(1)
+	go func() { defer h.wg.Done(); h.watchLogins(h.ctx) }()
 	return nil
 }
 
@@ -711,6 +717,14 @@ func (h *Hub) info(m Model) omnillm.ModelInfo {
 	// behind the alias "opus" is "Claude Opus 5.5" today).
 	if resolved != "" {
 		mi.DisplayName, mi.Latest = resolved, false
+	}
+	if c != nil {
+		if p, at := c.Problem(); p != "" {
+			mi.Problem = p
+			if p == provider.ProblemLimit {
+				mi.ResetsAt = at.Unix()
+			}
+		}
 	}
 	return mi
 }

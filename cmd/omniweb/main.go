@@ -66,10 +66,11 @@ func promise(f func() (any, error)) js.Value {
 	}))
 }
 
-// errValue gives the page a code and a sentence in its language; never a
-// raw error from deep inside.
+// errValue gives the page a code and a sentence in its language (the one
+// the page shows, which follows the Mac; not the browser's); never a raw
+// error from deep inside.
 func errValue(err error) js.Value {
-	lang := js.Global().Get("navigator").Get("language").String()
+	lang := js.Global().Get("document").Get("documentElement").Get("lang").String()
 	l := "en"
 	if len(lang) >= 2 && lang[:2] == "zh" {
 		l = "zh"
@@ -248,7 +249,8 @@ func models(_ js.Value, _ []js.Value) any {
 			// latest, kind and renamed let the page word the name in its
 			// own language ("(latest)", "ChatGPT (Codex · latest)").
 			out = append(out, map[string]any{"id": m.ID, "name": m.DisplayName, "provider": m.Provider, "humanOnly": m.HumanOnly, "onHost": m.OnHost,
-				"latest": m.Latest, "kind": m.Kind, "renamed": m.Renamed, "version": version(m)})
+				"latest": m.Latest, "kind": m.Kind, "renamed": m.Renamed, "version": version(m),
+				"problem": m.Problem, "resetsAt": m.ResetsAt})
 		}
 		return out, nil
 	})
