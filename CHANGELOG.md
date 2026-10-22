@@ -4,6 +4,13 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.39](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.39) - 2026-10-22
+
+### Changed
+
+- The web page no longer sits on “Connecting to your Mac…” each time it opens. It shows the models your Mac listed last time right away, so you can type, pick a model, and send at once; a message sent before the connection is up goes out as soon as it is. The dot pulses until your Mac answers. Opening the connection took about 2.5 seconds on a slow network: one round trip each for the connection itself, the encrypted session, and the model list.
+- When connecting fails (often a single lost packet on a slow network), the page tries again after 1, 2, and 4 seconds, then every 10 seconds as before. Previously it always waited 10 seconds.
+
 ## [0.2.0-alpha.38](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.38) - 2026-10-22
 
 ### Changed

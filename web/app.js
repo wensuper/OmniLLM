@@ -658,6 +658,7 @@ async function openChat() {
   if (!S.cur) S.cur = S.chats[0] || newChat();
   try { const d = sessionStorage.getItem("omnillm.draft"); if (d) { $("input").value = d; sessionStorage.removeItem("omnillm.draft"); grow(); } } catch {}
   renderList(); renderLog(); sendState();
+  await keptModels();
   await connect();
 }
 
@@ -676,11 +677,19 @@ function connect() {
       // mid-reply). An open device reconnects by itself.
       if (S.openedState !== S.device.state) { await omnillm.open(S.device.state); S.openedState = S.device.state; }
       await loadModels();
+      S.retry = 0;
       setOnline(true);
     } catch (e) {
       if (e && e.msg === "device_revoked") return unpaired("removedHere");
       if (e && e.code === "device_paused") return setPaused(errText(e));
       setOnline(false, errText(e));
+      // A failed try is often one lost packet on a slow network: try again
+      // soon (1, 2, 4 s), then every 10 s as before.
+      const n = S.retry || 0;
+      if (n < 3) {
+        S.retry = n + 1;
+        setTimeout(() => { if (S.device && !S.quiet && !S.online && !S.dialing && !document.hidden) connect(); }, 1000 << n);
+      }
     } finally { S.dialing = false; }
   })();
   return S.connecting;
@@ -728,16 +737,36 @@ async function loadModels() {
   // then models on the Mac; the picker shows names only, grouped.
   ms.sort((a, b) => (group(a) - group(b)) || (group(a) === 0 && family(a) - family(b)) || a.name.localeCompare(b.name));
   S.models = ms; S.listed = true;
+  // Kept for the next start: the picker shows them at once while the
+  // connection to the Mac opens (seconds on a slow network).
+  if (S.device) seal("models", { added: S.device.added, ms }).catch(() => {});
+  fillPicker(ms);
+  macLang();
+  if (!ms.length) { const o = el("option", t("noModelsOpt")); o.value = ""; o.disabled = true; sel.append(o); sel.value = ""; paintPick(); return; }
+  if (pickModel()) renderLog(true);
+  if (S.cur) renderList(); // the drawer names models by name now
+}
+// fillPicker lists the models, grouped (subscriptions, keys, the Mac's own).
+function fillPicker(ms) {
   const sel = $("model"); sel.textContent = "";
   let og = null, g = -1;
   for (const m of ms) {
     if (group(m) !== g) { g = group(m); og = el("optgroup"); og.label = t(["grpSub", "grpKey", "grpLocal"][g]); sel.append(og); }
     const o = el("option", m.name); o.value = m.id; og.append(o);
   }
-  macLang();
-  if (!ms.length) { const o = el("option", t("noModelsOpt")); o.value = ""; o.disabled = true; sel.append(o); sel.value = ""; paintPick(); return; }
-  if (pickModel()) renderLog(true);
-  if (S.cur) renderList(); // the drawer names models by name now
+}
+// keptModels shows the models the Mac listed last time, before the
+// connection is up: the person can type, pick and send at once (a message
+// waits for the connection), and the dot pulses until the Mac answers.
+async function keptModels() {
+  if (S.models.length || !S.device) return;
+  const k = await unseal("models").catch(() => null);
+  if (!k || k.added !== S.device.added || !Array.isArray(k.ms) || !k.ms.length || S.models.length) return;
+  S.models = k.ms;
+  fillPicker(k.ms);
+  const want = [S.cur && S.cur.model, localStorageGet("model"), "claude-code/sonnet"].find((id) => id && k.ms.some((m) => m.id === id));
+  $("model").value = want || k.ms[0].id;
+  paintPick();
 }
 // macLang: the language the Mac speaks (the owner's choice there, else the
 // Mac's own) is kept for the next start; when it changes and nothing was
@@ -1697,7 +1726,7 @@ async function unpaired(note) {
   S.gen++; // saves already on their way are dropped (seal)
   if (askDone) askDone(false); // an open question is about a pairing that is gone
   S.device = null; S.chats = []; S.cur = null; S.models = []; S.listed = false; S.paused = null; S.hello = null;
-  await idb.del("device"); await idb.del("chats");
+  await idb.del("device"); await idb.del("chats"); await idb.del("models");
   closeDrawer(); $("chat-search").value = ""; show("welcome");
   $("welcome-err").textContent = "";
   welcomeNote(note);
