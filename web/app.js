@@ -1073,13 +1073,13 @@ function thinking(m) {
   const w = el("div", undefined, "thinking");
   const orb = el("span", "", "orb"); orb.setAttribute("aria-hidden", "true");
   const secs = el("span", "", "waited");
-  // Until the Mac has the request, say that; then the model thinks.
-  w.append(orb, el("span", t(m.acked ? "thinking" : "pairConnecting"), "think-text"));
-  if (m.acked) {
-    const dots = el("span", undefined, "dots"); dots.setAttribute("aria-hidden", "true");
-    dots.append(el("i"), el("i"), el("i"));
-    w.append(dots);
-  }
+  // Thinking from the moment it is sent: the Mac's receipt comes a round
+  // trip later and is no step of the person's (a lost connection says so
+  // in the banner and the reply's error, not here).
+  w.append(orb, el("span", t("thinking"), "think-text"));
+  const dots = el("span", undefined, "dots"); dots.setAttribute("aria-hidden", "true");
+  dots.append(el("i"), el("i"), el("i"));
+  w.append(dots);
   w.append(secs);
   w.setAttribute("role", "status");
   // Past a minute, say what can be done about it.
@@ -1397,8 +1397,7 @@ async function run(chat, model, fresh, old) {
   // removed" line), not again as a red note.
   let quiet = false;
   try {
-    const r = await omnillm.chat(id, model, JSON.stringify(msgs), (d, exact, acked) => {
-      if (acked) reply.acked = true; // the Mac has it: thinking from here
+    const r = await omnillm.chat(id, model, JSON.stringify(msgs), (d, exact) => {
       if (exact) { reply.by = exact; S.versionSeen = true; } // "Claude Opus 5.5", as the hub reports it
       reply.content += d || ""; if (!raf) raf = requestAnimationFrame(flush);
     });
