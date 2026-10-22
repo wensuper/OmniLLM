@@ -39,7 +39,7 @@ Subscription models work only when you type by hand in a real terminal. Calls th
 
 ## Managing devices and limits
 
-Open the console on the hub: click the OmniLLM icon in the Mac menu bar → *Open the console…*, or run `~/.local/bin/omnillm open`.
+Open the console on the hub: click the OmniLLM icon in the Mac menu bar → *Open the console…*, or run `~/.local/bin/omnillm open` (add `--add` to open straight on the QR code for adding a device).
 
 **Menu bar icon** (macOS): appears automatically at login once installed. A glance tells you whether your phone can connect right now (solid: yes; dashed orbit, hollow: no). Its menu has *Open the console…*, *Add device…*, and *Check for updates…*; when OmniLLM isn’t running, it has *Start OmniLLM*. If you remove it from the menu bar, it comes back at your next login. If you use a menu bar organizer (such as Ice or Bartender), the new icon may land in the hidden section; drag it out.
 

@@ -50,7 +50,7 @@ If you use an AI coding assistant on that computer (Claude Code, Codex, Cursor, 
 Read https://raw.githubusercontent.com/wensuper/OmniLLM/main/INSTALL.md and install OmniLLM on this computer.
 ```
 
-It reads the installer before running it, verifies the download, installs OmniLLM, and tells you the next step. It never needs your API keys: those go into the OmniLLM console, never into a chat.
+It reads the installer before running it, verifies the download, and installs OmniLLM; your browser then opens on the QR code for adding your phone, and you scan it and compare the digits yourself. It never needs your API keys: those go into the OmniLLM console, never into a chat.
 
 ### Option 2 — Run the installer yourself
 
@@ -74,7 +74,7 @@ The [quick start guide](docs/en/quickstart.md) covers every step in detail, incl
 
 ```bash
 omnillm status            # what’s running, and what to do next
-omnillm open              # open the console
+omnillm open              # open the console (--add: straight to the QR code for adding a device)
 omnillm login claude      # connect a Claude subscription (chatgpt: a ChatGPT subscription)
 omnillm update            # update now (updates also install by themselves)
 omnillm uninstall         # stop and remove the background service (--purge also deletes data and keys)

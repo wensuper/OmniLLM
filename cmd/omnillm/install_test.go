@@ -87,6 +87,35 @@ func TestStatusLinesFollowTheGlossary(t *testing.T) {
 	}
 }
 
+// The last sentence an assistant passes on matches the screen: the QR
+// code the install just opened, or the one command that shows it again.
+func TestNextStepForTheFirstDevice(t *testing.T) {
+	t.Setenv("OMNILLM_LANG", "zh")
+	ready := Status{Running: true, Providers: 1, RelayConfigured: true, RelayUp: true}
+	opened := ready
+	opened.Opened = true
+	if s := nextStep(opened); !strings.Contains(s, "浏览器里已经打开了添加手机的二维码") || !strings.Contains(s, "“一致，添加”") || strings.Contains(s, "omnillm open") {
+		t.Fatal(s)
+	}
+	if s := nextStep(ready); !strings.Contains(s, "omnillm open --add") {
+		t.Fatal(s)
+	}
+	headless := ready
+	headless.Headless = true
+	if s := nextStep(headless); !strings.Contains(s, "omnillm hub pair") || strings.Contains(s, "omnillm open") {
+		t.Fatal(s)
+	}
+	t.Setenv("OMNILLM_LANG", "en")
+	if s := nextStep(opened); !strings.HasPrefix(s, "The QR code for adding your phone is open in your browser") || !strings.Contains(s, "“Matches, add”") {
+		t.Fatal(s)
+	}
+	// A device already added: nothing about QR codes.
+	ready.Devices = 1
+	if s := nextStep(ready); strings.Contains(s, "QR") {
+		t.Fatal(s)
+	}
+}
+
 func TestUpdateKeepsTheOwnersRelayAndWebApp(t *testing.T) {
 	plist := filepath.Join(t.TempDir(), "hub.plist")
 	write := func(env map[string]string) {

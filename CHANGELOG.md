@@ -9,6 +9,11 @@ All notable changes to OmniLLM are documented here. OmniLLM is in early pre-rele
 ### Added
 
 - Each model source in the console (*Models*) has an *On* switch, like devices and apps. Switched off, its models are offered to no device or app, but its sign-in or API key is kept, and it works again as soon as it’s switched on. *Remove* is now a quieter text button, since it deletes the key. On the command line: `omnillm hub provider off|on <source>`; `omnillm hub providers` shows “Off”.
+- `omnillm open --add` opens the console straight on the QR code for adding a phone or another computer.
+
+### Changed
+
+- Installing through an AI assistant ends on the QR code. When there is no device yet, the console the installer opens goes straight to adding a phone, and the last sentence the assistant passes on says just that: scan the QR code that is open in the browser, and if the 6 digits match, choose *Matches, add* on the computer. INSTALL.md now says that adding a phone is the person’s step: the assistant never runs the pairing or confirms it for them.
 
 ## [0.2.0-alpha.34](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.34) - 2026-10-22
 

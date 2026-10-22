@@ -50,7 +50,7 @@ flowchart LR
 请阅读并按照 https://raw.githubusercontent.com/wensuper/OmniLLM/main/INSTALL.md 在这台电脑上安装 OmniLLM。
 ```
 
-它会先读一遍安装脚本，再下载、核对、安装，然后告诉你下一步。它用不到你的 API Key：Key 只在 OmniLLM 的控制台里输入，不要贴进任何聊天。
+它会先读一遍安装脚本，再下载、核对、安装；装完浏览器里直接是添加手机的二维码，扫码和核对数字由你自己完成。它用不到你的 API Key：Key 只在 OmniLLM 的控制台里输入，不要贴进任何聊天。
 
 ### 方法二：自己运行安装命令
 
@@ -74,7 +74,7 @@ curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | 
 
 ```bash
 omnillm status            # 现在怎么样、下一步做什么
-omnillm open              # 打开控制台
+omnillm open              # 打开控制台（--add：直接到添加设备的二维码）
 omnillm login claude      # 接上 Claude 订阅（chatgpt：ChatGPT 订阅）
 omnillm update            # 马上更新（平时会自己更新）
 omnillm uninstall         # 停止并移除后台服务（加 --purge 连数据和 Key 一起删）

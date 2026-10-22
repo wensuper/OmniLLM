@@ -375,7 +375,7 @@ func main() {
 	case "relay":
 		relayCmd(os.Args[2:])
 	case "open":
-		openCmd()
+		openCmd(os.Args[2:])
 	case "install":
 		installCmd(os.Args[2:])
 	case "uninstall":
@@ -398,7 +398,14 @@ func main() {
 // version is set at build time (-ldflags "-X main.version=…").
 var version = "0.1.0-dev"
 
-func openCmd() {
+// openCmd is "omnillm open [--add]": the console in the browser; --add
+// opens it on the QR code for adding a phone or another computer.
+func openCmd(args []string) {
+	fs := flag.NewFlagSet("open", flag.ContinueOnError)
+	add := fs.Bool("add", false, "open on “Add device”")
+	if err := parseFlags(fs, args); err != nil {
+		dieArgs(err)
+	}
 	sock := filepath.Join(dataDir("hub"), "control.sock")
 	var url string
 	err := ctl(sock, control.Request{Op: "console.login"}, func(r control.Reply) (bool, bool) {
@@ -408,6 +415,9 @@ func openCmd() {
 	if err != nil || !strings.HasPrefix(url, "http://127.0.0.1:") {
 		fmt.Fprintln(os.Stderr, notRunning())
 		os.Exit(1)
+	}
+	if *add {
+		url += "&add"
 	}
 	if err := openLogin(url); err != nil {
 		fmt.Print(onMachine(t("在 %s 的浏览器里打开（2 分钟内有效，只能用一次）：\n", "Open this in a browser on %s (valid 2 minutes, single use):\n")))

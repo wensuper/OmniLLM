@@ -63,6 +63,10 @@ type Status struct {
 	// Headless: no display on this machine, so the console cannot be
 	// opened here and the person types a key in the terminal instead.
 	Headless bool `json:"headless"`
+	// Opened: the installer just opened the console here, on the QR code
+	// for adding a phone when there is no device yet. Not reported: next
+	// says it in words.
+	Opened bool `json:"-"`
 	// Problems are the model sources that need the owner now (signed
 	// out, at the usage limit), as the console's problem chips show them.
 	Problems []SourceProblem `json:"problems,omitempty"`
@@ -216,7 +220,14 @@ func installCmd(args []string) {
 		fmt.Println(t("OmniLLM 已安装，在后台运行（登录时自动启动），以后会自己更新。", "OmniLLM is installed and runs in the background; it starts at login and updates itself."))
 	}
 	if !noOpen && !st.Headless {
-		if url, err := loginURL(); err == nil && openLogin(url) == nil {
+		// No device yet: the console opens on the QR code for adding one
+		// (after connecting a model, when none is connected).
+		extra := ""
+		if st.Devices == 0 {
+			extra = "&add"
+		}
+		if url, err := loginURL(); err == nil && openLogin(url+extra) == nil {
+			st.Opened = true
 			fmt.Println(t("控制台已在浏览器里打开。", "The console is open in your browser."))
 		} else {
 			fmt.Println(runnable(t("在浏览器里打开控制台：运行 omnillm open", "To open the console, run: omnillm open")))
@@ -311,8 +322,18 @@ func nextStep(st Status) string {
 	case len(st.Problems) > 0:
 		// A model source that stopped working comes before adding more.
 		return attention(st.Problems, time.Now())
+	// Adding a phone: the person scans and compares the 6 digits on this
+	// machine's screen themselves; that check is what keeps out someone
+	// who only saw the code, so no assistant answers it for them.
+	case st.Devices == 0 && st.Opened:
+		return onMachine(t("浏览器里已经打开了添加手机的二维码：用手机相机扫一下，在手机上点“添加”；两边的 6 位数一样，就在%s上点“一致，添加”。",
+			"The QR code for adding your phone is open in your browser: scan it with your phone’s camera and tap “Add” on the phone. If the 6 digits match on both sides, choose “Matches, add” on %s."))
+	case st.Devices == 0 && st.Headless:
+		return t("下一步：添加手机：在这台机器的终端里运行 omnillm hub pair，用手机相机扫它显示的二维码；两边的 6 位数一样，就在这里确认。",
+			"Next: add your phone: in this machine’s terminal, run omnillm hub pair and scan the QR code it shows with your phone’s camera. If the 6 digits match on both sides, confirm there.")
 	case st.Devices == 0:
-		return t("下一步：在控制台的“设备”里点“添加设备”，添加手机或其他电脑。", "Next: under “Devices” in the console, choose “Add device” to add a phone or another computer.")
+		return t("下一步：添加手机：运行 omnillm open --add，用手机相机扫页面上的二维码。",
+			"Next: add your phone: run omnillm open --add and scan the QR code on the page with your phone’s camera.")
 	}
 	if runtime.GOOS == "darwin" {
 		return t("一切正常。运行 omnillm open 打开控制台，或点菜单栏里的 OmniLLM 图标。",
