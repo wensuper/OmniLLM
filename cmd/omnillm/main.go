@@ -234,6 +234,7 @@ func usageText(all bool) string {
 		return strings.Replace(t(`用法：
   omnillm install                    一步装好：主机作为后台服务运行，打开控制台
   omnillm open                       打开本机控制台
+  omnillm open --add                 打开控制台，直接到「添加设备」
   omnillm status                     查看主机状态
   omnillm update [--check] [--auto on|off]
                                      更新到最新版本（主机默认会在空闲时自己更新）；--auto 开关自动更新
@@ -275,6 +276,7 @@ func usageText(all bool) string {
 `, `Usage:
   omnillm install                    one step: run the hub as a background service, open the console
   omnillm open                       open the local console
+  omnillm open --add                 open the console on Add device
   omnillm status                     show the hub’s status
   omnillm update [--check] [--auto on|off]
                                      update to the newest version (the hub also updates itself when idle); --auto turns that on or off
@@ -318,6 +320,7 @@ func usageText(all bool) string {
 	return t(`用法：
   omnillm install                    一步装好：主机作为后台服务运行，打开控制台
   omnillm open                       打开本机控制台
+  omnillm open --add                 打开控制台，直接到「添加设备」
   omnillm status                     查看主机状态
   omnillm update [--check] [--auto on|off]
                                      更新到最新版本（主机默认会在空闲时自己更新）；--auto 开关自动更新
@@ -329,6 +332,7 @@ func usageText(all bool) string {
 `, `Usage:
   omnillm install                    one step: run the hub as a background service, open the console
   omnillm open                       open the local console
+  omnillm open --add                 open the console on Add device
   omnillm status                     show the hub’s status
   omnillm update [--check] [--auto on|off]
                                      update to the newest version (the hub also updates itself when idle); --auto turns that on or off

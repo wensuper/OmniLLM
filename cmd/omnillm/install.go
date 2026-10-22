@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"html"
 	"io"
+	"net"
 	"net/url"
 	"os"
 	"os/exec"
@@ -519,10 +520,10 @@ func installLaunchd(home, bin, dir string, env map[string]string) error {
 }
 
 // carriedEnv are the owner's own choices an earlier install wrote into the
-// service: a self-hosted relay (or "off") and web client. An update (from
-// the menu bar, or install.sh run again) usually has neither in its
-// environment and must not undo them.
-var carriedEnv = []string{"OMNILLM_RELAY", "OMNILLM_WEB_APP"}
+// service: a self-hosted relay (or "off"), web client and local API address
+// (or "off"). An update (from the menu bar, or install.sh run again) usually
+// has none of them in its environment and must not undo them.
+var carriedEnv = []string{"OMNILLM_RELAY", "OMNILLM_WEB_APP", "OMNILLM_API"}
 
 // serviceEnv is the service's environment: env, then each carried
 // variable from this environment, or else from the previous service's
@@ -542,7 +543,26 @@ func serviceEnv(env, previous map[string]string) map[string]string {
 	} else if old := previous["OMNILLM_WEB_APP"]; validWebApp(old) {
 		out["OMNILLM_WEB_APP"] = old
 	}
+	if api := strings.TrimSpace(os.Getenv("OMNILLM_API")); validAPI(api) {
+		out["OMNILLM_API"] = api
+	} else if old := previous["OMNILLM_API"]; validAPI(old) {
+		out["OMNILLM_API"] = old
+	}
 	return out
+}
+
+// validAPI is the local API's address as the owner may set it: "off", or a
+// loopback host:port (programs on other machines never reach it).
+func validAPI(v string) bool {
+	if v == "off" {
+		return true
+	}
+	h, p, err := net.SplitHostPort(v)
+	if err != nil || p == "" {
+		return false
+	}
+	ip := net.ParseIP(h)
+	return h == "localhost" || (ip != nil && ip.IsLoopback())
 }
 
 // hubPlist is the hub's launch agent, its environment in a stable order.

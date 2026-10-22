@@ -19,7 +19,7 @@ This document is for people who use OmniLLM: what it protects, how it protects i
 | **The connection service** (public or your own) | The IP addresses of the hub and devices, connection times, the rough size and timing of each message, and which devices are online | Chat content, images, model names, usage, device names, or any credentials. It also can’t replace the hub’s public key, so it can’t act as a man in the middle |
 | **Others on the network** (public Wi-Fi, your carrier) | That you’re connecting to `relay.ixxzh.com` (TLS-encrypted) | Everything else, as for the connection service, with an extra layer of TLS |
 | **Someone who only photographed the QR code** | Nothing | Pairing: the QR code expires after 5 minutes and works only once, and in the end you still have to check a 6-digit number and confirm at the hub |
-| **Someone who has your phone** | Whatever the phone can open, including chat history stored on it | Your accounts and keys; they also can’t go over that device’s limits. When you choose “Remove” for the device on the hub, it stops working at once; the next time it opens, it’s told it was removed and its pairing is cleared |
+| **Someone who has your phone** | Whatever the phone can open, including chat history stored on it | Your accounts and keys; they also can’t go over that device’s limits. When you choose *Remove* for the device on the hub, it stops working at once; the next time it opens, it’s told it was removed and its pairing is cleared |
 | **Other programs on the hub, or a malicious web page you open** | Nothing | The local API listens only on `127.0.0.1`, every request needs a token, any request that carries a browser origin is refused, and so is any request with the wrong `Host` header (to block DNS rebinding); the console needs a one-time sign-in link |
 | **People using OmniLLM on a device** | The model’s answers | Making the hub run commands, read or write files, or go online: every tool is turned off when a subscription model is called |
 | **Someone who controls the hub** (the hub is compromised) | Everything | This is what OmniLLM can’t protect against: your accounts are on the hub |
@@ -32,7 +32,7 @@ This document is for people who use OmniLLM: what it protects, how it protects i
 - **Public keys are exchanged only in person**: The hub’s public key is in the QR code or pairing text, which you carry from the hub’s screen to the device; it never passes through the connection service. The device checks this public key on every later connection.
 - **Pairing needs your confirmation**: The QR code also holds a one-time pairing key (a 256-bit random number that expires after 5 minutes). After the handshake, both screens show the same 6-digit number, derived from the handshake. Pairing succeeds only after you check that they match and confirm on the hub. Confirmation can be done only on the hub.
 - **Pairing text has a checksum**: If a character is missing or wrong after copying, you’re told at once “The pairing text is incomplete or altered,” and the device doesn’t connect anywhere else.
-- **Pairing links ask before connecting**: For a pairing link someone sends you, the web page first tells you which connection service it leads to and continues only after you choose “Add.” If the device is already paired, it also warns that this replaces the current pairing.
+- **Pairing links ask before connecting**: A pairing link opened from the address bar (a scan or a click) could have come from anyone, so the web page first asks “Add this device to your Mac?”, shows which connection service it leads to, and continues only after you choose *Add*. A pairing link or text you paste into the page yourself goes straight to the 6 digits. Replacing an existing pairing always asks first.
 
 ## Accounts and credentials
 
@@ -72,7 +72,7 @@ These rules reduce the risk but **can’t guarantee** your account won’t be ba
 - **Protections for the page itself**: A strict Content Security Policy (it runs only this site’s scripts, loads no third-party scripts, styles, or resources, and allows no inline scripts); it can’t be embedded in other pages; it sends no Referer.
 - **A separate domain**: The web client is on `omni.ixxzh.com`, which is used for nothing else, so no other site on the same origin can read its storage.
 - **Pairing text stays out of server logs**: In the QR code link, the pairing text comes after the `#`, and browsers don’t send that part to the web server; once the page opens, it immediately erases the pairing text from the address bar and history.
-- **Voice input doesn’t go through OmniLLM**: the microphone button uses the browser’s own speech recognition, so the audio is processed by the browser’s maker (Chrome and Edge send it to Google; Safari to Apple, or recognises it on the device when it can). It doesn’t pass through the connection service or the hub; the recognised words are treated like typed text and are end-to-end encrypted when you send them. If you’d rather not give your voice to the browser’s maker, don’t use the microphone; typing works as before. The page says this once, the first time you use it.
+- **Voice input doesn’t go through OmniLLM**: the microphone button uses the browser’s own speech recognition, so the audio is processed by the browser’s maker (Chrome and Edge send it to Google; Safari to Apple, or recognises it on the device when it can). Browsers without speech recognition, such as Firefox, show no microphone. It doesn’t pass through the connection service or the hub; the recognised words are treated like typed text and are end-to-end encrypted when you send them. If you’d rather not give your voice to the browser’s maker, don’t use the microphone; typing works as before. The page says this once, the first time you use it.
 
 **A limit to be aware of**: Browsers don’t verify the web page code they load the first time. If the server hosting the page is compromised or acts maliciously, it can serve malicious code to devices that open the page afterward. How we handle this:
 
@@ -101,10 +101,10 @@ If this matters to you, use the command-line client `omnillm connect` (a signed 
 
 | Situation | What to do |
 |---|---|
-| You lost your phone or computer | In the hub’s console, under “Devices,” choose “Remove”; it takes effect at once |
+| You lost your phone or computer | In the hub’s console, under *Devices*, choose *Remove*; it takes effect at once |
 | You suspect an API key has leaked | Revoke it in the provider’s dashboard, then replace it with a new one in the console. Deleting a key in OmniLLM only removes it from this computer; the key itself stays valid with the provider |
 | The hub is lost or compromised | Revoke your API keys in each provider’s dashboard, and sign out of your subscriptions in the official programs (or sign out of all sessions on the provider’s website); then reinstall on a new computer and pair your devices again |
-| You received a pairing link from an unknown source | Don’t choose “Add.” Normally, pairing links come only from the QR code on your own hub’s screen |
+| You received a pairing link from an unknown source | Don’t choose *Add*. Normally, pairing links come only from the QR code on your own hub’s screen |
 
 ## Safer ways to use it
 

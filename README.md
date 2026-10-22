@@ -50,7 +50,7 @@ If you use an AI coding assistant on that computer (Claude Code, Codex, Cursor, 
 Read https://raw.githubusercontent.com/wensuper/OmniLLM/main/INSTALL.md and install OmniLLM on this computer.
 ```
 
-It reads the installer before running it, verifies the download, and installs OmniLLM; your browser then opens on the QR code for adding your phone, and you scan it and compare the digits yourself. It never needs your API keys: those go into the OmniLLM console, never into a chat.
+It reads the installer before running it, verifies the download, and installs OmniLLM; your browser then opens on the QR code for adding your phone, and you scan it and compare the 6 digits yourself; the assistant never pairs or confirms for you. It never needs your API keys: those go into the OmniLLM console, never into a chat.
 
 ### Option 2 — Run the installer yourself
 
@@ -65,7 +65,7 @@ The installer downloads the release for your system, checks its SHA-256 checksum
 ## Quick start
 
 1. **Connect a model.** With a Claude or ChatGPT subscription (even if you only have the desktop app), choose the button on the Claude or ChatGPT card in the console, or run `omnillm login claude` / `omnillm login chatgpt`. It installs Claude Code or Codex with the official installer if needed, signs you in in the browser, and connects. Without a subscription, paste an API key in the console, or install [Ollama](https://ollama.com) for free local models.
-2. **Add your phone.** In the console, choose *Devices → Add device* (on a Mac, also the OmniLLM menu bar icon → *Add device…*) and scan the QR code with your phone’s camera. When the 6 digits on both screens match, choose *Matches, add* on the computer.
+2. **Add your phone.** In the console, choose *Devices → Add device* (on a Mac, also the OmniLLM menu bar icon → *Add device…*; or run `omnillm open --add`) and scan the QR code with your phone’s camera. When the 6 digits on both screens match, choose *Matches, add* on the computer.
 3. **Chat.** That’s it — about five minutes in all.
 
 The [quick start guide](docs/en/quickstart.md) covers every step in detail, including servers and scripts.

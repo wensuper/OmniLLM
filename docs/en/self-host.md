@@ -37,7 +37,7 @@ On the hub, run the installer once more with an environment variable (your setti
 OMNILLM_RELAY=wss://relay.example.com ~/.local/bin/omnillm install
 ```
 
-**Devices that are already paired must pair again once**: a device remembers the connection service it paired through. In the console, choose “Add device,” scan the new QR code, and then remove the old device entry.
+**Devices that are already paired must pair again once**: a device remembers the connection service it paired through. In the console, choose *Add device*, scan the new QR code, and then remove the old device entry.
 
 The phone web client still uses `omni.ixxzh.com`. It connects to the connection service named in the QR code, which is now yours. Encryption and storage in the web page all happen on the phone.
 

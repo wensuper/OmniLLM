@@ -137,6 +137,23 @@ func TestUpdateKeepsTheOwnersRelayAndWebApp(t *testing.T) {
 	if _, ok := got["K"]; ok {
 		t.Fatal("only the owner's relay and web client are carried over")
 	}
+	// The local API's address (or off) is kept the same way; anything but
+	// a loopback address is not.
+	t.Setenv("OMNILLM_API", "off")
+	write(serviceEnv(nil, nil))
+	t.Setenv("OMNILLM_API", "")
+	if got := serviceEnv(nil, plistEnv(plist)); got["OMNILLM_API"] != "off" {
+		t.Fatalf("local API off undone: %v", got)
+	}
+	t.Setenv("OMNILLM_API", "0.0.0.0:8765")
+	if got := serviceEnv(nil, nil); got["OMNILLM_API"] != "" {
+		t.Fatalf("a non-loopback API address was carried: %v", got)
+	}
+	t.Setenv("OMNILLM_API", "127.0.0.1:9000")
+	if got := serviceEnv(nil, nil); got["OMNILLM_API"] != "127.0.0.1:9000" {
+		t.Fatalf("API address ignored: %v", got)
+	}
+	t.Setenv("OMNILLM_API", "")
 	// "off" is a choice too.
 	t.Setenv("OMNILLM_RELAY", "off")
 	write(serviceEnv(nil, nil))

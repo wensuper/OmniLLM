@@ -4,6 +4,17 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.40](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.40) - 2026-10-22
+
+### Fixed
+
+- An `OMNILLM_API` set when installing (another loopback address, or `off`) is now written into the background service and kept by updates, like `OMNILLM_RELAY` and `OMNILLM_WEB_APP`. Before, the service always used the default.
+- `omnillm help` lists `omnillm open --add`.
+
+### Changed
+
+- The design document and the user guides in both languages are brought up to date with everything through alpha.39: the desktop web chat, voice input, the Add device panel, the console tables and edit dialog, model source switches, the Apps tab, sign-in, the menu bar, and updates.
+
 ## [0.2.0-alpha.39](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.39) - 2026-10-22
 
 ### Changed

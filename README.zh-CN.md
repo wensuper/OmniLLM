@@ -50,7 +50,7 @@ flowchart LR
 请阅读并按照 https://raw.githubusercontent.com/wensuper/OmniLLM/main/INSTALL.md 在这台电脑上安装 OmniLLM。
 ```
 
-它会先读一遍安装脚本，再下载、核对、安装；装完浏览器里直接是添加手机的二维码，扫码和核对数字由你自己完成。它用不到你的 API Key：Key 只在 OmniLLM 的控制台里输入，不要贴进任何聊天。
+它会先读一遍安装脚本，再下载、核对、安装；装完浏览器里直接是添加手机的二维码，扫码和核对 6 位数由你自己完成，AI 不会替你配对或确认。它用不到你的 API Key：Key 只在 OmniLLM 的控制台里输入，不要贴进任何聊天。
 
 ### 方法二：自己运行安装命令
 
@@ -65,7 +65,7 @@ curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | 
 ## 快速开始
 
 1. **接上模型。** 有 Claude 或 ChatGPT 订阅（只装了桌面版也行）：在控制台里点 Claude 或 ChatGPT 卡片上的按钮，或者运行 `omnillm login claude` / `omnillm login chatgpt`。需要的话它会用官方安装程序装好 Claude Code 或 Codex，在浏览器里登录，然后自动接上。没有订阅：在控制台里粘贴一个 API Key，或者装 [Ollama](https://ollama.com) 用免费的本地模型。
-2. **加手机。** 在控制台里点「设备 → 添加设备」（Mac 上也可以点菜单栏的 OmniLLM 图标 →「添加设备…」），用手机相机扫二维码。两边显示的 6 位数一致，就在电脑上点「一致，添加」。
+2. **加手机。** 在控制台里点「设备 → 添加设备」（Mac 上也可以点菜单栏的 OmniLLM 图标 →「添加设备…」，或运行 `omnillm open --add`），用手机相机扫二维码。两边显示的 6 位数一致，就在电脑上点「一致，添加」。
 3. **开始对话。** 就这些，一共大约 5 分钟。
 
 每一步的细节，以及怎么加服务器、怎么让脚本也能用，见[快速上手](docs/zh-CN/quickstart.md)。
