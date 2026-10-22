@@ -4,13 +4,6 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
-## [0.2.0-alpha.34](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.34) - 2026-10-22
-
-### Changed
-
-- “Add device” in the console is redesigned. A switch at the top picks *Phone or tablet* or *Computer or server*, so you see one way at a time. On the left, the QR code (or the link) turns into the 6 digits in place. On the right are three steps: the current one is highlighted and finished ones are checked off. A status line below says what the panel is waiting for, and a countdown ring shows how long the code has left. When it expires, or the device isn’t added, *New QR code* sits right on top of it.
-- A computer now joins through its browser: *Copy link* gives the same link the QR code holds; open it in that computer’s browser and choose *Add*, just like a phone. The command line is folded into one line at the bottom (*No browser on that computer? Use the command line*). It shows one install command, which also works on a computer that already has OmniLLM, and the pairing text, each with Copy. The command keeps `--device` in sight, and the page says that nothing shows in the terminal while you paste the pairing text.
-
 ## [0.2.0-alpha.35](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.35) - 2026-10-22
 
 ### Added
@@ -21,8 +14,8 @@ All notable changes to OmniLLM are documented here. OmniLLM is in early pre-rele
 
 ### Changed
 
-- *Add device* in the console is redesigned. A switch at the top picks *Phone or tablet* or *Computer or server*, one way at a time. On the left, the QR code (or link) turns into the 6 digits in place; on the right, three steps, with the current one highlighted and finished ones ticked; a line below says what it is waiting for. A countdown ring shows the time left, and when the code expires or the device isn’t added, *New QR code* appears in place.
-- Another computer is now added through its browser: choose *Copy link* (the same link as the QR code), open it in that computer’s browser, and choose *Add*, just like on a phone. The command line is folded into one line at the bottom for computers without a browser: one install command (run it even if OmniLLM is already installed) and the pairing text, each with *Copy*. The command shows its trailing `--device`, and the panel explains that pasted pairing text is hidden in the terminal.
+- “Add device” in the console is redesigned. A switch at the top picks *Phone or tablet* or *Computer or server*, so you see one way at a time. On the left, the QR code (or the link) turns into the 6 digits in place. On the right are three steps: the current one is highlighted and finished ones are checked off. A status line below says what the panel is waiting for, and a countdown ring shows how long the code has left. When it expires, or the device isn’t added, *New QR code* sits right on top of it.
+- A computer now joins through its browser: *Copy link* gives the same link the QR code holds; open it in that computer’s browser and choose *Add*, just like a phone. The command line is folded into one line at the bottom (*No browser on that computer? Use the command line*). It shows one install command, which also works on a computer that already has OmniLLM, and the pairing text, each with Copy. The command keeps `--device` in sight, and the page says that nothing shows in the terminal while you paste the pairing text.
 
 ## [0.2.0-alpha.33](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.33) - 2026-10-22
 
