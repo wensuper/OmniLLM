@@ -14,6 +14,7 @@ All notable changes to OmniLLM are documented here. OmniLLM is in early pre-rele
 ### Changed
 
 - Installing through an AI assistant ends on the QR code. When there is no device yet, the console the installer opens goes straight to adding a phone, and the last sentence the assistant passes on says just that: scan the QR code that is open in the browser, and if the 6 digits match, choose *Matches, add* on the computer. INSTALL.md now says that adding a phone is the person’s step: the assistant never runs the pairing or confirms it for them.
+- The *Models* tab’s note on chat-only models is shorter and clearer.
 
 ## [0.2.0-alpha.34](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.34) - 2026-10-22
 
