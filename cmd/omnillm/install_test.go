@@ -116,6 +116,36 @@ func TestNextStepForTheFirstDevice(t *testing.T) {
 	}
 }
 
+// The assistant running the install comes first: its own subscription is
+// the sign-in asked for, whatever else is connected.
+func TestNextStepAsksForTheInstallingAssistantsSignIn(t *testing.T) {
+	t.Setenv("OMNILLM_LANG", "zh")
+	st := Status{Running: true, Providers: 1, RelayConfigured: true, RelayUp: true, Assistant: "codex"}
+	if s := nextStep(st); !strings.Contains(s, "你在用 Codex，但 OmniLLM 还用不上它的登录") || !strings.Contains(s, "omnillm login chatgpt") {
+		t.Fatal(s)
+	}
+	st.LoginOpened = true
+	if s := nextStep(st); !strings.Contains(s, "已经打开一个终端窗口") || strings.Contains(s, "omnillm login") {
+		t.Fatal(s)
+	}
+	t.Setenv("OMNILLM_LANG", "en")
+	st = Status{Running: true, Assistant: "claude-code", Headless: true}
+	if s := nextStep(st); !strings.Contains(s, "you’re using Claude Code") || !strings.Contains(s, "omnillm login claude yourself") {
+		t.Fatal(s)
+	}
+	// Not running comes before anything else.
+	if s := nextStep(Status{Assistant: "codex"}); strings.Contains(s, "Codex") {
+		t.Fatal(s)
+	}
+}
+
+func TestInstallingAssistantFromClaudeCodesVariable(t *testing.T) {
+	t.Setenv("CLAUDECODE", "1")
+	if k := installingAssistant(); k != "claude-code" {
+		t.Fatal(k)
+	}
+}
+
 func TestUpdateKeepsTheOwnersRelayAndWebApp(t *testing.T) {
 	plist := filepath.Join(t.TempDir(), "hub.plist")
 	write := func(env map[string]string) {

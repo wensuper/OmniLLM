@@ -4,6 +4,12 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.44](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.44) - 2026-10-23
+
+### Changed
+
+- Installing through Claude Code or Codex now makes sure that assistant’s own subscription gets connected. If OmniLLM can’t use its sign-in yet (signed out, signed in only to the system keychain, or running on an API key), the installer opens the guided sign-in right away on a Mac (a Terminal window, then a confirmation in the browser). The next step the assistant passes on says so first. `omnillm status` says the same until it is connected, and INSTALL.md tells the assistant to leave the sign-in to the person.
+
 ## [0.2.0-alpha.43](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.43) - 2026-10-23
 
 ### Added

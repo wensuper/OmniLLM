@@ -68,6 +68,13 @@ type Status struct {
 	// for adding a phone when there is no device yet. Not reported: next
 	// says it in words.
 	Opened bool `json:"-"`
+	// Assistant: the AI assistant running this command ("claude-code",
+	// "codex") when the hub can't use its subscription yet, so the
+	// sign-in asked for first is the one the person is using right now.
+	Assistant string `json:"assistant,omitempty"`
+	// LoginOpened: the installer just opened that sign-in (a Terminal
+	// window, then the browser). Not reported: next says it in words.
+	LoginOpened bool `json:"-"`
 	// Problems are the model sources that need the owner now (signed
 	// out, at the usage limit), as the console's problem chips show them.
 	Problems []SourceProblem `json:"problems,omitempty"`
@@ -223,11 +230,20 @@ func installCmd(args []string) {
 	default:
 		fmt.Println(t("OmniLLM 已安装，在后台运行（登录时自动启动），以后会自己更新。", "OmniLLM is installed and runs in the background; it starts at login and updates itself."))
 	}
+	// The assistant running this install (Claude Code, Codex) comes with a
+	// subscription; when the hub can't use it yet, its sign-in opens now.
+	if k := assistantToConnect(); k != "" {
+		st.Assistant = string(k)
+		if !noOpen && !st.Headless && runtime.GOOS == "darwin" && openLoginWindow(string(k)) == nil {
+			st.LoginOpened = true
+		}
+	}
 	if !noOpen && !st.Headless {
 		// No device yet: the console opens on the QR code for adding one
-		// (after connecting a model, when none is connected).
+		// (after connecting a model, when none is connected; not while a
+		// sign-in is on its way).
 		extra := ""
-		if st.Devices == 0 {
+		if st.Devices == 0 && st.Assistant == "" {
 			extra = "&add"
 		}
 		if url, err := loginURL(); err == nil && openLogin(url+extra) == nil {
@@ -289,6 +305,8 @@ func nextStep(st Status) string {
 		s := onMachine(t("%s 所在的地区变了，已暂停使用模型。确认是你本人换了地方，运行 omnillm hub region confirm 恢复。",
 			"%s’s region changed; models are paused. If you moved, run omnillm hub region confirm to turn them back on."))
 		return upperFirst(s) // "This Mac’s region …"
+	case st.Assistant != "":
+		return assistantStep(st)
 	case st.Providers == 0 && st.Headless:
 		// No browser here: a key is typed in this terminal, never sent in a chat.
 		return t("下一步：接入一个模型（选一种）：\n"+
@@ -346,6 +364,79 @@ func nextStep(st Status) string {
 			"All set. Run omnillm open, or click the OmniLLM icon in the menu bar, to open the console.")
 	}
 	return t("一切正常。运行 omnillm open 打开控制台。", "All set. Run omnillm open to open the console.")
+}
+
+// assistantStep is the next step when the AI assistant running this
+// command comes with a subscription the hub can't use yet: sign in to that
+// one first. The sign-in is the person's own (the browser, their account);
+// an assistant never types it for them.
+func assistantStep(st Status) string {
+	name, sub, word := "Claude Code", t("Claude 订阅", "Claude subscription"), "claude"
+	if st.Assistant == string(provider.Codex) {
+		name, sub, word = "Codex", t("ChatGPT 订阅", "ChatGPT subscription"), "chatgpt"
+	}
+	switch {
+	case st.LoginOpened:
+		return fmt.Sprintf(t("你在用 %[1]s：已经打开一个终端窗口，在浏览器里用你的 %[2]s确认登录一次，手机就能用它；登录好 OmniLLM 自己接上。",
+			"You’re using %[1]s: a Terminal window is open. Confirm the sign-in with your %[2]s in the browser once, and your phone can use it; OmniLLM connects it by itself."), name, sub)
+	case st.Headless:
+		return fmt.Sprintf(t("下一步：你在用 %[1]s，但 OmniLLM 还用不上它的登录。在这台机器的终端里亲自运行 omnillm login %[3]s，用你的 %[2]s确认一次（没有浏览器时它会给一个网址和代码，在手机上打开）。",
+			"Next: you’re using %[1]s, but OmniLLM can’t use its sign-in yet. In this machine’s terminal, run omnillm login %[3]s yourself and confirm with your %[2]s (without a browser it gives an address and a code to open on your phone)."), name, sub, word)
+	}
+	return fmt.Sprintf(t("下一步：你在用 %[1]s，但 OmniLLM 还用不上它的登录。运行 omnillm login %[3]s，在浏览器里用你的 %[2]s确认一次。",
+		"Next: you’re using %[1]s, but OmniLLM can’t use its sign-in yet. Run omnillm login %[3]s and confirm with your %[2]s in the browser."), name, sub, word)
+}
+
+// assistantToConnect is the AI assistant running this command when the
+// hub can't use its subscription yet (not installed where the hub finds
+// it, signed out, or signed in where the hub can't use the login) and the
+// owner did not remove it on purpose; "" otherwise.
+func assistantToConnect() provider.Kind {
+	k := installingAssistant()
+	if k == "" {
+		return ""
+	}
+	var s struct {
+		Connected bool `json:"connected"`
+		Removed   bool `json:"removed"`
+	}
+	ok := false
+	err := ctl(filepath.Join(dataDir("hub"), "control.sock"), control.Request{Op: "subscription.state", Args: map[string]string{"kind": string(k)}},
+		func(r control.Reply) (bool, bool) { ok = json.Unmarshal(r.Data, &s) == nil; return false, false })
+	if err != nil || !ok || s.Connected || s.Removed {
+		return ""
+	}
+	return k
+}
+
+// installingAssistant is the AI assistant this command runs under: Claude
+// Code says so in CLAUDECODE; otherwise the process's ancestors are looked
+// at for claude or codex. "" when it is neither (a person at a terminal).
+func installingAssistant() provider.Kind {
+	if os.Getenv("CLAUDECODE") == "1" {
+		return provider.ClaudeCode
+	}
+	pid := os.Getppid()
+	for i := 0; i < 16 && pid > 1; i++ {
+		out, err := exec.Command("ps", "-o", "ppid=,comm=", "-p", strconv.Itoa(pid)).Output()
+		if err != nil {
+			return ""
+		}
+		f := strings.Fields(string(out))
+		if len(f) < 2 {
+			return ""
+		}
+		switch name := strings.ToLower(filepath.Base(strings.Join(f[1:], " "))); {
+		case name == "claude":
+			return provider.ClaudeCode
+		case name == "codex" || strings.HasPrefix(name, "codex-"):
+			return provider.Codex
+		}
+		if pid, err = strconv.Atoi(f[0]); err != nil {
+			return ""
+		}
+	}
+	return ""
 }
 
 // hanGap is a space left between two Chinese characters when "这台电脑"
@@ -902,6 +993,9 @@ func statusCmd(args []string) {
 	st.Running = ok
 	st = waitRelay(st, 5*time.Second)
 	st.Headless = headless()
+	if ok {
+		st.Assistant = string(assistantToConnect())
+	}
 	st.Next = nextStep(st)
 	hu := readUpdate(dataDir("hub"))
 	running := version

@@ -969,6 +969,15 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 				}
 			}
 			return c.Send(control.Reply{Event: "ok"})
+		case "subscription.state":
+			// One subscription's state, for the installer: is the
+			// assistant running it already usable here?
+			for _, s := range h.SubscriptionStates(ctx) {
+				if s.Kind == a["kind"] {
+					return c.Send(control.Reply{Event: "ok", Data: jsonData(s)})
+				}
+			}
+			return say(tl(l, "不认识这种订阅。", "Unknown subscription."))
 		case "subscription.connect":
 			// After omnillm login: connect it now, even if it was
 			// removed before (logging in again is asking for it).
