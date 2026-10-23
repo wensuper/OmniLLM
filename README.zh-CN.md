@@ -2,7 +2,7 @@
 
 <h1 align="center">OmniLLM</h1>
 
-<p align="center"><b>Your AI, Everywhere</b><br>在一台电脑上登录大模型，手机、平板、服务器都能用。</p>
+<p align="center"><b>Your AI, Everywhere</b><br>在手机、平板、服务器上，用你 Mac 上的 Claude、ChatGPT 和本地模型。</p>
 
 <p align="center">
   <a href="https://github.com/wensuper/OmniLLM/releases"><img src="https://img.shields.io/github/v/release/wensuper/OmniLLM?include_prereleases&label=release" alt="最新版本"></a>
@@ -15,7 +15,23 @@
 
 ---
 
-OmniLLM 让一台电脑（**主机**）成为唯一保存你大模型账号的地方：Claude、ChatGPT 订阅（通过官方的 Claude Code 和 Codex）、API Key、本地模型都只在这台电脑上。你的手机、平板、服务器通过端到端加密的连接使用这些模型。手机不用装 App：扫一下二维码，在浏览器里就能对话。
+**OmniLLM 不是模型。** 它没有自己的模型，不把你的请求转给别人的服务，也不卖任何模型的使用权。它是一个装在**你自己电脑上**的小程序（一台 Mac 或 Linux 电脑，OmniLLM 管它叫“主机”），负责把你其他设备上的对话端到端加密地传到这台电脑，交给你在这台电脑上已经有的 AI：
+
+- 你的 **Claude** 或 **ChatGPT 订阅**：通过官方的 Claude Code 或 Codex 命令行程序，用你自己的账号登录；
+- 你的 **API Key**（Anthropic、OpenAI，或任何兼容 OpenAI 接口的服务）；
+- [Ollama](https://ollama.com) 里的**本地模型**。
+
+模型还在原来的地方运行：Claude 在 Anthropic 的服务器上，ChatGPT 在 OpenAI 的服务器上，Ollama 在你的电脑上。OmniLLM 只管“哪台设备可以用哪些模型”，并把对话传过去、传回来。
+
+**举个例子。** 你买了 Claude Pro，平时在 Mac 上用。坐地铁时，你在手机上打开 OmniLLM 的网页，选「Claude Opus」提问。问题加密传到你的 Mac，由 Mac 上的 Claude Code 用你的订阅回答，答案再传回手机。手机上什么都不用装，你的 Claude 登录信息也从不离开 Mac。
+
+| OmniLLM 是 | OmniLLM 不是 |
+|---|---|
+| 装在你自己电脑上的私人通道，连到你已经有的 AI | 一个模型、微调模型，或者套在大模型前面的“小模型” |
+| 让手机、平板、服务器用上这台电脑的订阅、Key 和本地模型 | 托管服务、转卖的 API，或者把一个账号分给别人用的工具 |
+| 端到端加密：中间的中转服务器只转发它看不懂的数据 | 能看到你对话、或者保管你账号的代理 |
+
+**为什么不直接用各家的 App？** 一处接入全部：Claude、ChatGPT、API Key、本地模型，在任何设备上的同一个对话里用。设备拿不到任何账号，只有你给的每天额度和能用的模型，所以平板、家人的手机、服务器都能用，又不用把密码或 Key 交出去。主机上的脚本走一个兼容 OpenAI 的本机接口，不用到处复制 Key。
 
 ## 特性
 
@@ -32,8 +48,8 @@ OmniLLM 让一台电脑（**主机**）成为唯一保存你大模型账号的�
 flowchart LR
   P["手机 / 平板<br>（浏览器）"] <-- 端到端加密 --> R["连接服务<br>（只转发）"]
   S["服务器 / 另一台电脑<br>（omnillm connect）"] <-- 端到端加密 --> R
-  R <-- 端到端加密 --> H["主机<br>（你的 Mac 或 Linux 电脑）"]
-  H --> M["Claude Code · Codex<br>API Key · Ollama"]
+  R <-- 端到端加密 --> H["主机：OmniLLM<br>装在你的 Mac 或 Linux 电脑上"]
+  H --> M["你已经有的 AI<br>Claude Code · Codex · API Key · Ollama"]
 ```
 
 只有主机和模型提供商通信。主机不对网络开放任何端口：它和设备一样，主动连到连接服务。保护什么、不保护什么，见[安全说明](docs/zh-CN/security.md)。

@@ -2,7 +2,7 @@
 
 <h1 align="center">OmniLLM</h1>
 
-<p align="center"><b>Your AI, Everywhere</b><br>Sign in to your AI models once, on one computer. Use them from every device you own.</p>
+<p align="center"><b>Your AI, Everywhere</b><br>Use the Claude, ChatGPT and local models on your Mac from your phone, tablet and servers.</p>
 
 <p align="center">
   <a href="https://github.com/wensuper/OmniLLM/releases"><img src="https://img.shields.io/github/v/release/wensuper/OmniLLM?include_prereleases&label=release" alt="Latest release"></a>
@@ -15,7 +15,23 @@
 
 ---
 
-OmniLLM turns one computer — the **hub** — into the only place that holds your AI accounts: Claude and ChatGPT subscriptions (through the official Claude Code and Codex), API keys, and local models. Your phone, tablet, and servers use those models through an end-to-end encrypted connection. Phones install nothing: scan a QR code and chat in the browser.
+**OmniLLM is not a model.** It has no model of its own, doesn’t route your requests through anyone else’s, and doesn’t sell access to any. It is a small program that runs on **your own computer** (a Mac or a Linux machine, which OmniLLM calls the *hub*) and carries your chats, end-to-end encrypted, between your other devices and the AI you already have on that computer:
+
+- your **Claude** or **ChatGPT subscription** — through the official Claude Code or Codex command-line program, signed in with your own account;
+- your **API keys** (Anthropic, OpenAI, or any OpenAI-compatible service);
+- **local models** in [Ollama](https://ollama.com).
+
+The models run where they always do: Claude on Anthropic’s servers, ChatGPT on OpenAI’s, Ollama on your computer. OmniLLM only decides which of your devices may use them, and passes the conversation along.
+
+**An example.** You pay for Claude Pro and use it on your Mac. On the train, you open the OmniLLM page on your phone, pick *Claude Opus*, and ask. The question travels encrypted to your Mac; Claude Code there answers with your subscription; the answer comes back to your phone. Nothing is installed on the phone, and your Claude sign-in never leaves the Mac.
+
+| OmniLLM is | OmniLLM is not |
+|---|---|
+| A personal gateway to AI you already have, running on your own computer | A model, a fine-tune, or a “small model” in front of a big one |
+| A way for your phone, tablet, and servers to use that computer’s subscriptions, keys, and local models | A hosted service, a resold API, or a way to share one account with other people |
+| An end-to-end encrypted link: the relay in between only forwards data it can’t read | A proxy that sees your chats or holds your credentials |
+
+**Why not just use each app?** One place for all of them: Claude, ChatGPT, API keys, and local models, in one chat on any device. Devices get no credentials, only a daily limit and the models you allow, so a tablet, a family member’s phone, or a server can use them without your password or keys. Scripts on the hub get an OpenAI-compatible local API instead of keys copied around.
 
 ## Features
 
@@ -32,8 +48,8 @@ OmniLLM turns one computer — the **hub** — into the only place that holds yo
 flowchart LR
   P["Phone / tablet<br>(browser)"] <-- end-to-end encrypted --> R["Connection service<br>(forwards only)"]
   S["Server / other computer<br>(omnillm connect)"] <-- end-to-end encrypted --> R
-  R <-- end-to-end encrypted --> H["Hub<br>(your Mac or Linux computer)"]
-  H --> M["Claude Code · Codex<br>API keys · Ollama"]
+  R <-- end-to-end encrypted --> H["Hub: OmniLLM<br>on your Mac or Linux computer"]
+  H --> M["The AI you already have<br>Claude Code · Codex · API keys · Ollama"]
 ```
 
 Only the hub talks to model providers. The hub opens no ports to the network: it connects out to the connection service, the same way your devices do. See [Security](docs/en/security.md) for what is and isn’t protected.
