@@ -28,7 +28,7 @@ Goal: within 5 minutes, use the Claude or ChatGPT on your Mac from your phone, w
 
 > Read https://raw.githubusercontent.com/wensuper/OmniLLM/main/INSTALL.md and install OmniLLM on this computer.
 
-It reads the install script first, then downloads, verifies, and installs. A Claude Code or Codex that is already signed in on this computer connects by itself, and your browser opens on the QR code for adding your phone: scan it with your phone’s camera, and if the 6 digits match on both sides, choose *Matches, add* on the computer. You scan and compare the digits yourself; the assistant never confirms for you. It won’t, and shouldn’t, ask you to paste any key into the chat.
+It reads the install script first, then downloads, verifies, and installs. A Claude Code or Codex that is already signed in on this computer connects by itself; if OmniLLM can’t use its sign-in yet (signed out, or running on an API key), a sign-in window or the console helps you connect a model first. Then your browser shows the QR code for adding your phone: scan it with your phone’s camera, and if the 6 digits match on both sides, choose *Matches, add* on the computer. You scan and compare the digits yourself; the assistant never confirms for you. It won’t, and shouldn’t, ask you to paste any key into the chat.
 
 **Option 2 — Run the installer yourself.** In a terminal (as a regular user, not with sudo):
 

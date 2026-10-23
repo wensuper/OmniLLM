@@ -67,7 +67,7 @@ flowchart LR
 请阅读并按照 https://raw.githubusercontent.com/wensuper/OmniLLM/main/INSTALL.md 在这台电脑上安装 OmniLLM。
 ```
 
-它会先读一遍安装脚本，再下载、核对、安装；装完浏览器里直接是添加手机的二维码，扫码和核对 6 位数由你自己完成，AI 不会替你配对或确认。它用不到你的 API Key：Key 只在 OmniLLM 的控制台里输入，不要贴进任何聊天。
+它会先读一遍安装脚本，再下载、核对、安装。还没有能用的模型时，控制台（或者你正在用的 Claude Code、Codex 的登录窗口）先带你接上一个；接着显示添加手机的二维码，扫码和核对 6 位数由你自己完成，AI 不会替你配对或确认。它用不到你的 API Key：Key 只在 OmniLLM 的控制台里输入，不要贴进任何聊天。
 
 ### 方法二：自己运行安装命令
 

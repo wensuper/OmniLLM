@@ -67,7 +67,7 @@ If you use an AI coding assistant on that computer (Claude Code, Codex, Cursor, 
 Read https://raw.githubusercontent.com/wensuper/OmniLLM/main/INSTALL.md and install OmniLLM on this computer.
 ```
 
-It reads the installer before running it, verifies the download, and installs OmniLLM; your browser then opens on the QR code for adding your phone, and you scan it and compare the 6 digits yourself; the assistant never pairs or confirms for you. It never needs your API keys: those go into the OmniLLM console, never into a chat.
+It reads the installer before running it, verifies the download, and installs OmniLLM. If no model is connected yet, the console (or a sign-in window for the Claude Code or Codex you are using) helps you connect one first; then it shows the QR code for adding your phone, and you scan it and compare the 6 digits yourself; the assistant never pairs or confirms for you. It never needs your API keys: those go into the OmniLLM console, never into a chat.
 
 ### Option 2 — Run the installer yourself
 

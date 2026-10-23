@@ -72,6 +72,32 @@ func TestLoginScriptRunsTheOfficialLogin(t *testing.T) {
 	}
 }
 
+// The sign-in window connects the subscription itself once the sign-in
+// succeeds (no console page may be open to notice it), through the
+// installed omnillm; a failed sign-in connects nothing.
+func TestLoginWindowConnectsAfterSignIn(t *testing.T) {
+	home, bin := fakeHome(t)
+	log := filepath.Join(home, "calls")
+	self := filepath.Join(home, ".local", "bin", "omnillm")
+	if err := os.MkdirAll(filepath.Dir(self), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeExec(t, self, `echo "omnillm $*" >> `+shq(log)+"\n")
+	writeExec(t, filepath.Join(bin, "claude"), "exit 0\n")
+	if out, err := exec.Command("bash", "-c", loginScript(provider.ClaudeCode, filepath.Join(bin, "claude"), false, true)).CombinedOutput(); err != nil {
+		t.Fatalf("%v %s", err, out)
+	}
+	if b, _ := os.ReadFile(log); !strings.Contains(string(b), "omnillm login --connect claude") {
+		t.Fatalf("calls: %q", b)
+	}
+	os.Remove(log)
+	writeExec(t, filepath.Join(bin, "claude"), "exit 1\n")
+	_ = exec.Command("bash", "-c", loginScript(provider.ClaudeCode, filepath.Join(bin, "claude"), false, true)).Run()
+	if b, _ := os.ReadFile(log); len(b) != 0 {
+		t.Fatalf("connected after a failed sign-in: %q", b)
+	}
+}
+
 // Not installed (only a desktop app, say): the official installer runs
 // first, then the login of what it installed in ~/.local/bin.
 func TestLoginScriptInstallsFirst(t *testing.T) {

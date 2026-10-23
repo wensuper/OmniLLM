@@ -102,7 +102,7 @@ func TestNextStepForTheFirstDevice(t *testing.T) {
 	}
 	headless := ready
 	headless.Headless = true
-	if s := nextStep(headless); !strings.Contains(s, "omnillm hub pair") || strings.Contains(s, "omnillm open") {
+	if s := nextStep(headless); !strings.Contains(s, "omnillm pair") || strings.Contains(s, "omnillm open") {
 		t.Fatal(s)
 	}
 	t.Setenv("OMNILLM_LANG", "en")

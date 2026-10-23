@@ -4,6 +4,23 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.45](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.45) - 2026-10-23
+
+### Added
+
+- On a server without a screen, one command after the install adds your phone. Run `omnillm login claude` (or `chatgpt`), or paste an API key with `omnillm hub provider add`; once the model is connected, the same terminal shows a QR code. Scan it with your phone and type y if the 6 digits match. If a model is already connected, the installer goes straight to the QR code. `omnillm pair` is the new short command for adding a phone later.
+
+### Fixed
+
+- The installer could report “OmniLLM isn’t running” right after installing it, when the hub answered slowly.
+- A Claude Code that runs on an API key or another provider’s endpoint is no longer sent to a subscription sign-in.
+- The sign-in window for the assistant’s subscription opens in front of the browser, only on a first install. Once you sign in, it connects the subscription itself, even with the console closed.
+- The console opens on the QR code only when there is a model to use; otherwise it opens on the step that is next.
+- The next step in `omnillm status --json` uses the full path when `omnillm` isn’t on PATH, and the JSON says whether the console or a sign-in window was opened (`console_opened`, `login_opened`).
+- A pairing that expires or is refused right after an install or a sign-in no longer makes the command fail.
+- `omnillm status` no longer runs the Claude and Codex programs on every call when no model is connected.
+- INSTALL.md: the assistant never runs sign-ins, key prompts or pairing for the person; it downloads into a fixed folder, gives the install at least 5 minutes, and recognizes a sandbox refusal.
+
 ## [0.2.0-alpha.44](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.44) - 2026-10-23
 
 ### Changed

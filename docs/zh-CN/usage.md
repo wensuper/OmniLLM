@@ -178,7 +178,7 @@ OmniLLM 尽量让用法看起来就是你本人在自己的电脑上用：只从
 网页客户端里运行的是和命令行客户端同一份加密代码（WebAssembly），在浏览器里就能完成端到端加密。代价是第一次打开网页时要信任托管方，详见[安全说明](security.md#手机上的网页客户端)。
 
 **主机可以是 Linux 服务器吗？**
-可以。安装方法一样，没有浏览器时用 `omnillm hub provider add` 在终端里接 API Key，配对二维码和确认都在终端里完成（`omnillm hub pair`）。用订阅的话，在服务器上装好并登录 Claude Code 或 Codex 就行。
+可以。安装方法一样，装完在服务器的终端里运行一条命令接上模型：用订阅就运行 `omnillm login claude`（或 `omnillm login chatgpt`），它会给一个网址和代码，在手机上打开确认；用 API Key 就运行 `omnillm hub provider add anthropic`（或 `openai`）粘贴。接好后同一个终端里直接显示二维码，手机扫一下，两边的 6 位数一样就输入 y。以后再加手机：`omnillm pair`。
 
 **Windows 呢？**
 暂不支持做主机，Windows 电脑可以用浏览器打开网页客户端当设备用。

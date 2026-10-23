@@ -67,14 +67,14 @@ type Status struct {
 	// Opened: the installer just opened the console here, on the QR code
 	// for adding a phone when there is no device yet. Not reported: next
 	// says it in words.
-	Opened bool `json:"-"`
+	Opened bool `json:"console_opened,omitempty"`
 	// Assistant: the AI assistant running this command ("claude-code",
 	// "codex") when the hub can't use its subscription yet, so the
 	// sign-in asked for first is the one the person is using right now.
 	Assistant string `json:"assistant,omitempty"`
 	// LoginOpened: the installer just opened that sign-in (a Terminal
 	// window, then the browser). Not reported: next says it in words.
-	LoginOpened bool `json:"-"`
+	LoginOpened bool `json:"login_opened,omitempty"`
 	// Problems are the model sources that need the owner now (signed
 	// out, at the usage limit), as the console's problem chips show them.
 	Problems []SourceProblem `json:"problems,omitempty"`
@@ -215,7 +215,10 @@ func installCmd(args []string) {
 	if st.Providers == 0 {
 		// A local model needs no key and sends nothing off the machine.
 		_ = ctl(filepath.Join(dir, "control.sock"), control.Request{Op: "ollama.auto"}, func(control.Reply) (bool, bool) { return false, false })
-		st, _ = waitRunning(time.Second)
+		// A slow answer keeps what is known instead of reading as "not running".
+		if s, ok := waitRunning(5 * time.Second); ok {
+			st = s
+		}
 	}
 	st = waitRelay(st, 10*time.Second)
 	st.Service = service
@@ -231,19 +234,13 @@ func installCmd(args []string) {
 		fmt.Println(t("OmniLLM 已安装，在后台运行（登录时自动启动），以后会自己更新。", "OmniLLM is installed and runs in the background; it starts at login and updates itself."))
 	}
 	// The assistant running this install (Claude Code, Codex) comes with a
-	// subscription; when the hub can't use it yet, its sign-in opens now.
-	if k := assistantToConnect(); k != "" {
-		st.Assistant = string(k)
-		if !noOpen && !st.Headless && runtime.GOOS == "darwin" && openLoginWindow(string(k)) == nil {
-			st.LoginOpened = true
-		}
-	}
+	// subscription; when the hub can't use it yet, that sign-in comes first.
+	st.Assistant = string(assistantToConnect())
 	if !noOpen && !st.Headless {
-		// No device yet: the console opens on the QR code for adding one
-		// (after connecting a model, when none is connected; not while a
-		// sign-in is on its way).
+		// No device yet and a model to use: the console opens on the QR
+		// code for adding one; otherwise where the next step is.
 		extra := ""
-		if st.Devices == 0 && st.Assistant == "" {
+		if st.Devices == 0 && st.Assistant == "" && st.Providers > 0 && st.RelayConfigured {
 			extra = "&add"
 		}
 		if url, err := loginURL(); err == nil && openLogin(url+extra) == nil {
@@ -252,9 +249,21 @@ func installCmd(args []string) {
 		} else {
 			fmt.Println(runnable(t("在浏览器里打开控制台：运行 omnillm open", "To open the console, run: omnillm open")))
 		}
+		// The sign-in window opens after the browser, so it is the one in
+		// front; only on a first install (an update or a rerun doesn't
+		// open it again).
+		if st.Assistant != "" && prev == "" && runtime.GOOS == "darwin" && openLoginWindow(st.Assistant) == nil {
+			st.LoginOpened = true
+		}
 	}
-	st.Next = nextStep(st)
-	fmt.Println(runnable(st.Next))
+	st.Next = runnable(nextStep(st))
+	// A machine without a screen, a person at its terminal, a model and
+	// no phone yet: add the phone right here, no other command.
+	if pairsHere(st) {
+		pairHere()
+		return
+	}
+	fmt.Println(st.Next)
 	b, _ := json.Marshal(st)
 	// For an AI agent running the install (INSTALL.md): its output is not
 	// a terminal. A person at a terminal has just read the same in words.
@@ -309,11 +318,12 @@ func nextStep(st Status) string {
 		return assistantStep(st)
 	case st.Providers == 0 && st.Headless:
 		// No browser here: a key is typed in this terminal, never sent in a chat.
-		return t("下一步：接入一个模型（选一种）：\n"+
+		// Each command goes on to the phone's QR code once it connects.
+		return t("下一步：接入一个模型（选一种；接好后终端里接着显示给手机扫的二维码）：\n"+
 			"· 有 Claude 订阅：运行 omnillm login claude（没装 Claude Code 会先装上，再登录）\n"+
 			"· 有 ChatGPT 订阅：运行 omnillm login chatgpt（没装 Codex 会先装上，再登录）\n"+
 			"· 有 API Key：在这台电脑的终端里亲自运行 omnillm hub provider add anthropic（或 openai、openai-compatible），在提示时粘贴；API Key 不要发到聊天里",
-			"Next: connect a model (pick one):\n"+
+			"Next: connect a model (pick one; once it’s connected, the terminal goes on to a QR code for your phone):\n"+
 				"· Claude subscription: run omnillm login claude (installs Claude Code first if needed, then signs in)\n"+
 				"· ChatGPT subscription: run omnillm login chatgpt (installs Codex first if needed, then signs in)\n"+
 				"· API key: in this computer’s terminal, run omnillm hub provider add anthropic (or openai, openai-compatible) yourself and paste the key when asked; don’t send it in a chat")
@@ -353,8 +363,8 @@ func nextStep(st Status) string {
 		return onMachine(t("浏览器里已经打开了添加手机的二维码：用手机相机扫一下，在手机上点“添加”；两边的 6 位数一样，就在%s上点“一致，添加”。",
 			"The QR code for adding your phone is open in your browser: scan it with your phone’s camera and tap “Add” on the phone. If the 6 digits match on both sides, choose “Matches, add” on %s."))
 	case st.Devices == 0 && st.Headless:
-		return t("下一步：添加手机：在这台机器的终端里运行 omnillm hub pair，用手机相机扫它显示的二维码；两边的 6 位数一样，就在这里确认。",
-			"Next: add your phone: in this machine’s terminal, run omnillm hub pair and scan the QR code it shows with your phone’s camera. If the 6 digits match on both sides, confirm there.")
+		return t("下一步：添加手机：在这台机器的终端里运行 omnillm pair，用手机相机扫它显示的二维码；两边的 6 位数一样，就在那里输入 y。",
+			"Next: add your phone: in this machine’s terminal, run omnillm pair and scan the QR code it shows with your phone’s camera. If the 6 digits match on both sides, type y there.")
 	case st.Devices == 0:
 		return t("下一步：添加手机：运行 omnillm open --add，用手机相机扫页面上的二维码。",
 			"Next: add your phone: run omnillm open --add and scan the QR code on the page with your phone’s camera.")
@@ -393,7 +403,7 @@ func assistantStep(st Status) string {
 // owner did not remove it on purpose; "" otherwise.
 func assistantToConnect() provider.Kind {
 	k := installingAssistant()
-	if k == "" {
+	if k == "" || onAPIKey(k) {
 		return ""
 	}
 	var s struct {
@@ -413,30 +423,75 @@ func assistantToConnect() provider.Kind {
 // Code says so in CLAUDECODE; otherwise the process's ancestors are looked
 // at for claude or codex. "" when it is neither (a person at a terminal).
 func installingAssistant() provider.Kind {
-	if os.Getenv("CLAUDECODE") == "1" {
-		return provider.ClaudeCode
-	}
+	// The nearest ancestor wins (Codex started from inside Claude Code is
+	// Codex); Claude Code's variable covers its versioned binary names.
 	pid := os.Getppid()
 	for i := 0; i < 16 && pid > 1; i++ {
 		out, err := exec.Command("ps", "-o", "ppid=,comm=", "-p", strconv.Itoa(pid)).Output()
 		if err != nil {
-			return ""
+			break
 		}
 		f := strings.Fields(string(out))
 		if len(f) < 2 {
-			return ""
+			break
 		}
-		switch name := strings.ToLower(filepath.Base(strings.Join(f[1:], " "))); {
-		case name == "claude":
-			return provider.ClaudeCode
-		case name == "codex" || strings.HasPrefix(name, "codex-"):
-			return provider.Codex
+		comm := strings.Join(f[1:], " ")
+		// The desktop apps (Claude.app, Codex.app) are not the programs.
+		if !strings.Contains(comm, ".app/Contents/") {
+			switch name := strings.ToLower(filepath.Base(comm)); {
+			case name == "claude":
+				return provider.ClaudeCode
+			case name == "codex" || strings.HasPrefix(name, "codex-"):
+				return provider.Codex
+			}
 		}
 		if pid, err = strconv.Atoi(f[0]); err != nil {
-			return ""
+			break
 		}
 	}
+	if os.Getenv("CLAUDECODE") == "1" {
+		return provider.ClaudeCode
+	}
 	return ""
+}
+
+// onAPIKey: the assistant runs on an API key or another provider's
+// endpoint, not a subscription; there is no subscription sign-in to ask
+// for, and the key itself is connected in the console or the terminal.
+func onAPIKey(k provider.Kind) bool {
+	vars := []string{"OPENAI_API_KEY"}
+	if k == provider.ClaudeCode {
+		vars = []string{"ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_BASE_URL", "CLAUDE_CODE_USE_BEDROCK", "CLAUDE_CODE_USE_VERTEX"}
+	}
+	for _, v := range vars {
+		if os.Getenv(v) != "" {
+			return true
+		}
+	}
+	return false
+}
+
+// pairsHere: a machine without a screen, a person at its terminal, a model
+// to use and no device yet: the phone is added right in this terminal.
+func pairsHere(st Status) bool {
+	// An AI assistant (even one whose commands run in a pseudo-terminal)
+	// never gets here: pairing is the person's step.
+	return st.Headless && st.Providers > 0 && st.Devices == 0 && st.RelayConfigured && st.RelayUp && st.Assistant == "" &&
+		term.IsTerminal(int(os.Stdin.Fd())) && term.IsTerminal(int(os.Stdout.Fd())) && installingAssistant() == ""
+}
+
+// pairHere adds a phone in this terminal: the QR code to scan, then the
+// owner's yes when the 6 digits match (on the phone and here). Ctrl-C
+// skips it; omnillm pair does it later.
+func pairHere() {
+	fmt.Println(runnable(t("接着把手机加进来：用手机相机扫下面的二维码，在手机上点“添加”；两边的 6 位数一样，就在这里输入 y。现在不加就按 Ctrl-C，以后运行 omnillm pair。",
+		"Now add your phone: scan the QR code below with your phone’s camera and tap “Add” on the phone; if the 6 digits match on both sides, type y here. To skip for now, press Ctrl-C and run omnillm pair later.")))
+	// What came before (the install, the sign-in, the key) succeeded:
+	// a pairing that expires or is refused here says so and ends well.
+	if err := stream(filepath.Join(dataDir("hub"), "control.sock"), control.Request{Op: "pair", Args: map[string]string{"name": "", "models": "", "budget_usd": "0", "background_only": "false"}}, ""); err != nil {
+		fmt.Println(err)
+		fmt.Println(runnable(t("手机可以以后再加：运行 omnillm pair。", "You can add your phone later: run omnillm pair.")))
+	}
 }
 
 // hanGap is a space left between two Chinese characters when "这台电脑"
@@ -996,7 +1051,7 @@ func statusCmd(args []string) {
 	if ok {
 		st.Assistant = string(assistantToConnect())
 	}
-	st.Next = nextStep(st)
+	st.Next = runnable(nextStep(st))
 	hu := readUpdate(dataDir("hub"))
 	running := version
 	if st.Version != "" {

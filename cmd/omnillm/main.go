@@ -29,6 +29,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -235,6 +236,7 @@ func usageText(all bool) string {
   omnillm install                    一步装好：主机作为后台服务运行，打开控制台
   omnillm open                       打开本机控制台
   omnillm open --add                 打开控制台，直接到「添加设备」
+  omnillm pair                       在终端里添加手机：显示二维码，手机扫码后核对 6 位数（同 omnillm hub pair）
   omnillm verify web [网页地址]      核对手机用的网页和 GitHub 上签名发布的是否一致
   omnillm status                     查看主机状态
   omnillm update [--check] [--auto on|off]
@@ -376,6 +378,10 @@ func main() {
 	switch os.Args[1] {
 	case "help", "-h", "--help":
 		helpCmd(os.Args[2:])
+	case "pair":
+		// omnillm pair is omnillm hub pair: adding a phone is common enough
+		// to deserve the short command.
+		hubCmd(append([]string{"pair"}, os.Args[2:]...))
 	case "hub":
 		hubCmd(os.Args[2:])
 	case "connect":
@@ -584,6 +590,12 @@ func hubCmd(args []string) {
 			key = readSecret(t("粘贴 API Key（不会显示）：", "Paste the API key (not shown): "))
 		}
 		call(sock, control.Request{Op: "provider.add", Args: map[string]string{"kind": kind, "name": *name, "base_url": *base}, Secret: key})
+		if st, ok := queryStatus(); ok {
+			st.Headless = headless()
+			if pairsHere(st) {
+				pairHere()
+			}
+		}
 	case "devices", "apps", "models", "providers", "usage":
 		// A table for people; --json, the hub's data as it is.
 		fs := flag.NewFlagSet(args[0], flag.ContinueOnError)
@@ -770,7 +782,16 @@ func printTable(sock string, req control.Request, render func([]byte) (string, e
 
 // callOr is call, printing empty instead of an empty list.
 func callOr(sock string, req control.Request, empty string) {
-	err := ctl(sock, req, func(r control.Reply) (bool, bool) {
+	if err := stream(sock, req, empty); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+
+// stream runs a hub command, printing what it says (texts, the QR code on
+// a terminal, the owner's yes or no), and returns its error.
+func stream(sock string, req control.Request, empty string) error {
+	return ctl(sock, req, func(r control.Reply) (bool, bool) {
 		switch r.Event {
 		case "info", "ok", "done":
 			if r.Text != "" {
@@ -798,10 +819,6 @@ func callOr(sock string, req control.Request, empty string) {
 		}
 		return false, false
 	})
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
 }
 
 func hubRun(dir, sock string, args []string) {
@@ -995,7 +1012,10 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 			}
 			return c.Send(control.Reply{Event: "ok", Text: con.LoginURL()})
 		case "status":
-			if ps, _ := h.Providers(ctx); len(ps) == 0 {
+			// With nothing connected, look for logged-in subscriptions, at
+			// most once a minute: it runs the programs, and status is polled.
+			if ps, _ := h.Providers(ctx); len(ps) == 0 && time.Since(time.Unix(0, lastDetect.Load())) > time.Minute {
+				lastDetect.Store(time.Now().UnixNano())
 				for _, cfg := range h.DetectSubscriptions(ctx) {
 					_, _ = h.AddProvider(ctx, cfg, "")
 				}
@@ -1267,6 +1287,9 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 		return say(tl(l, "OmniLLM 不认识这个命令。运行 omnillm install 更新到同一个版本。", "OmniLLM doesn’t know this command. Run omnillm install to update it to the same version."))
 	}
 }
+
+// lastDetect is when the status op last looked for logged-in subscriptions.
+var lastDetect atomic.Int64
 
 // spentToday is today's spend per device or app ("device/<id>").
 func spentToday(ctx context.Context, h *hub.Hub) map[string]int64 {

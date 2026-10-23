@@ -95,6 +95,10 @@ func loginScript(k provider.Kind, cli string, headless, window bool) string {
 	w("say %s", shq(how))
 	w("%s || { say ''; say %s; exit 1; }", login, shq(failed+again))
 	if window {
+		// Connect it now: no page may be open to notice the sign-in.
+		if self := installedSelf(); self != "" {
+			w("%s login --connect %s >/dev/null 2>&1", shq(self), word)
+		}
 		w("say ''")
 		w("say %s", shq(fmt.Sprintf(t("好了：%s 已登录。OmniLLM 会自己接上，这个窗口可以关掉。", "Done: %s is signed in. OmniLLM connects it by itself; you can close this window."), name)))
 	}
@@ -141,6 +145,13 @@ func loginWord(k provider.Kind) string {
 // loginCmd is "omnillm login claude|chatgpt": the guided login in this
 // terminal, then the hub connects it.
 func loginCmd(args []string) {
+	// --connect: only the last step, for the sign-in window's script.
+	if len(args) == 2 && args[0] == "--connect" && loginKind(args[1]) != "" {
+		sock := filepath.Join(dataDir("hub"), "control.sock")
+		_ = ctl(sock, control.Request{Op: "subscription.connect", Args: map[string]string{"kind": string(loginKind(args[1]))}, Lang: lang()},
+			func(control.Reply) (bool, bool) { return false, false })
+		return
+	}
 	if len(args) != 1 || loginKind(args[0]) == "" {
 		// The one line that says it all; the whole command list would bury it.
 		fmt.Fprintln(os.Stderr, runnable(t("用法：omnillm login claude（Claude 订阅）或 omnillm login chatgpt（ChatGPT 订阅）。",
@@ -173,4 +184,25 @@ func loginCmd(args []string) {
 		die(err)
 	}
 	fmt.Println(msg)
+	// A machine without a screen and no phone yet: on to the QR code.
+	if st, ok := queryStatus(); ok {
+		st.Headless = headless()
+		if pairsHere(st) {
+			pairHere()
+		}
+	}
+}
+
+// installedSelf is the installed omnillm (~/.local/bin/omnillm), for a
+// script to call back; "" when it isn't there.
+func installedSelf() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	p := filepath.Join(home, ".local", "bin", "omnillm")
+	if st, err := os.Stat(p); err != nil || st.IsDir() || st.Mode()&0o111 == 0 {
+		return ""
+	}
+	return p
 }
