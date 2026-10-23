@@ -244,10 +244,13 @@ func TestCLIPromptTooLong(t *testing.T) {
 	if got := omnillm.Describe("en", err); got != "This chat is too long for Claude Haiku. Start a new chat and ask again." {
 		t.Fatal(got)
 	}
-	// Not a limit: the next call goes out.
-	if _, err := ask(c); err != nil {
+	// Not a limit: the next call goes out. Read it to the end, so its
+	// program has finished before the test's folder is removed.
+	s2, err := ask(c)
+	if err != nil {
 		t.Fatalf("too long paused the source: %v", err)
 	}
+	_, _ = collect(t, s2)
 }
 
 func TestCodexHomeFailureIsNotALogin(t *testing.T) {
