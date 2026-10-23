@@ -280,6 +280,7 @@ func usageText(all bool) string {
   omnillm install                    one step: run the hub as a background service, open the console
   omnillm open                       open the local console
   omnillm open --add                 open the console on Add device
+  omnillm pair                       add a phone in the terminal: a QR code to scan, then check the 6 digits (same as omnillm hub pair)
   omnillm verify web [address]       check the web page phones use against the signed GitHub release
   omnillm status                     show the hub’s status
   omnillm update [--check] [--auto on|off]
@@ -325,6 +326,7 @@ func usageText(all bool) string {
   omnillm install                    一步装好：主机作为后台服务运行，打开控制台
   omnillm open                       打开本机控制台
   omnillm open --add                 打开控制台，直接到「添加设备」
+  omnillm pair                       在终端里添加手机：显示二维码，手机扫码后核对 6 位数
   omnillm verify web [网页地址]      核对手机用的网页和 GitHub 上签名发布的是否一致
   omnillm status                     查看主机状态
   omnillm update [--check] [--auto on|off]
@@ -338,6 +340,7 @@ func usageText(all bool) string {
   omnillm install                    one step: run the hub as a background service, open the console
   omnillm open                       open the local console
   omnillm open --add                 open the console on Add device
+  omnillm pair                       add a phone in the terminal: a QR code to scan, then check the 6 digits
   omnillm verify web [address]       check the web page phones use against the signed GitHub release
   omnillm status                     show the hub’s status
   omnillm update [--check] [--auto on|off]
@@ -364,6 +367,65 @@ func subUsage() {
 }
 
 // helpCmd is `omnillm help [--all]` (and omnillm alone): the list, exit 0.
+// guideCmd is a bare "omnillm": what is set up, the one thing to do next,
+// and the few commands people look for, by what they want to do. The full
+// list is omnillm help.
+func guideCmd() {
+	switch {
+	case role() == "device":
+		fmt.Println(runnable(t("这台电脑用的是你 Mac 上的 OmniLLM。\n\n想做什么：\n"+
+			"  对话                 omnillm connect chat\n"+
+			"  问一句               omnillm connect ask \"问题\"\n"+
+			"  换一台 Mac 配对      omnillm connect forget，再 omnillm connect pair\n"+
+			"  更新                 omnillm update\n"+
+			"  全部命令             omnillm help --all",
+			"This computer uses OmniLLM on your Mac.\n\nWhat do you want to do?\n"+
+				"  Chat                    omnillm connect chat\n"+
+				"  Ask one question        omnillm connect ask \"question\"\n"+
+				"  Pair with another Mac   omnillm connect forget, then omnillm connect pair\n"+
+				"  Update                  omnillm update\n"+
+				"  Every command           omnillm help --all")))
+		return
+	case role() == "" && !exists(dataDir("hub")):
+		fmt.Println(t("OmniLLM 还没有装好。安装：curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh\n全部命令：omnillm help",
+			"OmniLLM isn’t set up yet. To install: curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh\nEvery command: omnillm help"))
+		return
+	}
+	st, ok := queryStatus()
+	st.Running = ok
+	st.Headless = headless()
+	if ok {
+		fmt.Println(runningLine(st))
+	}
+	fmt.Println(runnable(nextStep(st)))
+	fmt.Println()
+	console := ""
+	if !st.Headless {
+		console = t("  打开控制台           omnillm open\n", "  Open the console         omnillm open\n")
+	}
+	fmt.Println(runnable(t("想做什么：\n"+
+		"  加手机或另一台电脑   omnillm pair\n"+
+		"  接上订阅             omnillm login claude（或 chatgpt）\n"+
+		"  接上 API Key         omnillm hub provider add anthropic（或 openai）\n"+
+		"  看现在怎么样         omnillm status\n"+console+
+		"  更新                 omnillm update\n"+
+		"  全部命令             omnillm help --all",
+		"What do you want to do?\n"+
+			"  Add a phone or computer  omnillm pair\n"+
+			"  Connect a subscription   omnillm login claude (or chatgpt)\n"+
+			"  Connect an API key       omnillm hub provider add anthropic (or openai)\n"+
+			"  See how things are       omnillm status\n"+console+
+			"  Update                   omnillm update\n"+
+			"  Every command            omnillm help --all")))
+}
+
+// pairedNote is what a terminal says once a device is added: it is ready,
+// and the three things worth remembering.
+func pairedNote() string {
+	return onMachine(t("好了：这台设备已经能用%s 上的模型了，在它上面直接对话就行。\n以后：再加手机 omnillm pair · 看状态 omnillm status · 忘了怎么用，输入 omnillm",
+		"Done: that device can now use the models on %s; just chat on it.\nLater: add another phone with omnillm pair · see how things are with omnillm status · forgot how? type omnillm"))
+}
+
 func helpCmd(args []string) {
 	all := len(args) > 0 && (args[0] == "--all" || args[0] == "-a" || args[0] == "all")
 	fmt.Print(usageText(all))
@@ -372,7 +434,7 @@ func helpCmd(args []string) {
 func main() {
 	log.SetFlags(0)
 	if len(os.Args) < 2 {
-		helpCmd(nil)
+		guideCmd()
 		return
 	}
 	switch os.Args[1] {
@@ -636,7 +698,8 @@ func hubCmd(args []string) {
 		if err != nil {
 			dieArgs(err)
 		}
-		call(sock, control.Request{Op: "pair", Args: a})
+		callOr(sock, control.Request{Op: "pair", Args: a}, "")
+		fmt.Println(runnable(pairedNote()))
 	case "revoke":
 		// The name may be typed unquoted: "hub revoke iPhone 2".
 		if len(args) < 2 {
@@ -1449,13 +1512,13 @@ func connectCmd(args []string) {
 		if paired {
 			die(say(t("这台设备已经配对过（"+dir+"）。要换一台 Mac 或重新配对，先运行 omnillm connect forget。", "This device is already paired ("+dir+"). To pair again (or with another Mac), run omnillm connect forget first.")))
 		}
-		code := readSecret(t("粘贴你的 Mac 上“添加设备”给的配对文字：", "Paste the pairing text from “Add device” on your Mac: "))
+		code := readSecret(t("粘贴配对文字（你 Mac 上“添加设备”或服务器上 omnillm pair 给的）：", "Paste the pairing text (from “Add device” on your Mac, or omnillm pair on your server): "))
 		host, _ := os.Hostname()
 		info, err := device.Pair(ctx, device.Options{Secrets: sec}, code, host, func(sas string) {
 			if len(sas) == 6 {
 				sas = sas[:3] + " " + sas[3:]
 			}
-			fmt.Printf(t("\n请核对：你的 Mac 上显示的数字应该是 %s，一致就在 Mac 上点“一致，添加”。\n", "\nCheck: your Mac should show %s. If it does, choose “Matches, add” there.\n"), sas)
+			fmt.Printf(t("\n请核对：另一边（你的 Mac 或服务器）显示的数字应该是 %s，一致就在那边确认（Mac 上点“一致，添加”，服务器上输入 y）。\n", "\nCheck: the other side (your Mac or server) should show %s. If it does, confirm there (choose “Matches, add” on a Mac, type y on a server).\n"), sas)
 		})
 		if err != nil {
 			die(err)

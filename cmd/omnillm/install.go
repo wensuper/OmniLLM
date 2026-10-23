@@ -491,7 +491,9 @@ func pairHere() {
 	if err := stream(filepath.Join(dataDir("hub"), "control.sock"), control.Request{Op: "pair", Args: map[string]string{"name": "", "models": "", "budget_usd": "0", "background_only": "false"}}, ""); err != nil {
 		fmt.Println(err)
 		fmt.Println(runnable(t("手机可以以后再加：运行 omnillm pair。", "You can add your phone later: run omnillm pair.")))
+		return
 	}
+	fmt.Println(runnable(pairedNote()))
 }
 
 // hanGap is a space left between two Chinese characters when "这台电脑"

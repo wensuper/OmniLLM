@@ -247,3 +247,17 @@ func TestNextStepNamesTheDesktopApp(t *testing.T) {
 		}
 	}
 }
+
+// After a pairing in the terminal: it says the device is ready, and how to
+// find the way later ("type omnillm"), spaced as Chinese is written.
+func TestPairedNote(t *testing.T) {
+	t.Setenv("OMNILLM_LANG", "zh")
+	s := pairedNote()
+	if !strings.Contains(s, "输入 omnillm") || !strings.Contains(s, "omnillm pair") || strings.Contains(s, "Mac上") || strings.Contains(s, "电脑 上") {
+		t.Fatal(s)
+	}
+	t.Setenv("OMNILLM_LANG", "en")
+	if s := pairedNote(); !strings.HasPrefix(s, "Done: ") || !strings.Contains(s, "type omnillm") {
+		t.Fatal(s)
+	}
+}

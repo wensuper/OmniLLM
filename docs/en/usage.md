@@ -178,7 +178,7 @@ The project’s author runs it at `relay.ixxzh.com`. It only forwards encrypted 
 The web client runs the same encryption code as the command-line client (as WebAssembly), so end-to-end encryption happens right in the browser. The trade-off is that the first time you open the page, you have to trust whoever hosts it; see [Security](security.md#the-web-client-on-your-phone).
 
 **Can the hub be a Linux server?**
-Yes. Install it the same way, then in the server’s terminal run one command to connect a model: `omnillm login claude` (or `omnillm login chatgpt`) for a subscription, which gives an address and a code to open on your phone, or `omnillm hub provider add anthropic` (or `openai`) to paste an API key. Once it’s connected, the same terminal shows a QR code: scan it with your phone, and if the 6 digits match, type y. To add another phone later: `omnillm pair`.
+Yes. Install it the same way, then in the server’s terminal run one command to connect a model: `omnillm login claude` (or `omnillm login chatgpt`) for a subscription, which gives an address and a code to open on your phone, or `omnillm hub provider add anthropic` (or `openai`) to paste an API key. Once it’s connected, the same terminal shows a QR code: scan it with your phone, and if the 6 digits match, type y. To add another phone later: `omnillm pair`. If you forget how it works, type just `omnillm`: it says where things stand, the one thing to do next, and the few commands people use most.
 
 **What about Windows?**
 Windows can’t be the hub yet. A Windows computer can open the web client in a browser and be used as a device.

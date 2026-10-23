@@ -4,6 +4,14 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.46](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.46) - 2026-10-23
+
+### Changed
+
+- Typing just `omnillm` now says where things stand and the one thing to do next, then lists the few commands people look for, by what they want to do (add a phone, connect a subscription or an API key, see the status, update). Before, it printed a generic command list. On a machine set up as a device, it lists chatting and re-pairing instead. `omnillm help` still prints every command.
+- After a device is added in the terminal (`omnillm pair`, or right after an install or sign-in on a server), a short closing screen says the device is ready to use and how to find your way later: `omnillm pair`, `omnillm status`, or just `omnillm`.
+- While pairing, a computer added from the command line no longer assumes the other side is a Mac: it asks for the pairing text from your Mac or from `omnillm pair` on your server, and says to confirm there.
+
 ## [0.2.0-alpha.45](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.45) - 2026-10-23
 
 ### Added
