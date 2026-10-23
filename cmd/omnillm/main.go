@@ -235,6 +235,7 @@ func usageText(all bool) string {
   omnillm install                    一步装好：主机作为后台服务运行，打开控制台
   omnillm open                       打开本机控制台
   omnillm open --add                 打开控制台，直接到「添加设备」
+  omnillm verify web [网页地址]      核对手机用的网页和 GitHub 上签名发布的是否一致
   omnillm status                     查看主机状态
   omnillm update [--check] [--auto on|off]
                                      更新到最新版本（主机默认会在空闲时自己更新）；--auto 开关自动更新
@@ -277,6 +278,7 @@ func usageText(all bool) string {
   omnillm install                    one step: run the hub as a background service, open the console
   omnillm open                       open the local console
   omnillm open --add                 open the console on Add device
+  omnillm verify web [address]       check the web page phones use against the signed GitHub release
   omnillm status                     show the hub’s status
   omnillm update [--check] [--auto on|off]
                                      update to the newest version (the hub also updates itself when idle); --auto turns that on or off
@@ -321,6 +323,7 @@ func usageText(all bool) string {
   omnillm install                    一步装好：主机作为后台服务运行，打开控制台
   omnillm open                       打开本机控制台
   omnillm open --add                 打开控制台，直接到「添加设备」
+  omnillm verify web [网页地址]      核对手机用的网页和 GitHub 上签名发布的是否一致
   omnillm status                     查看主机状态
   omnillm update [--check] [--auto on|off]
                                      更新到最新版本（主机默认会在空闲时自己更新）；--auto 开关自动更新
@@ -333,6 +336,7 @@ func usageText(all bool) string {
   omnillm install                    one step: run the hub as a background service, open the console
   omnillm open                       open the local console
   omnillm open --add                 open the console on Add device
+  omnillm verify web [address]       check the web page phones use against the signed GitHub release
   omnillm status                     show the hub’s status
   omnillm update [--check] [--auto on|off]
                                      update to the newest version (the hub also updates itself when idle); --auto turns that on or off
@@ -390,6 +394,8 @@ func main() {
 		updateCmd(os.Args[2:])
 	case "login":
 		loginCmd(os.Args[2:])
+	case "verify":
+		verifyCmd(os.Args[2:])
 	case "tray":
 		trayCmd()
 	case "version":
@@ -913,6 +919,12 @@ func hubRun(dir, sock string, args []string) {
 		}
 	}
 	go autoUpdate(ctx, h, dir)
+	// The page phones open is checked against the release that built it
+	// (verifyweb.go): whoever hosts it can't change it unnoticed.
+	if con != nil {
+		con.WebCheck = func() any { return lastWebCheck(dir) }
+	}
+	go watchWeb(ctx, dir, *webApp)
 	log.Print(t("OmniLLM 已启动。", "OmniLLM is running."))
 	if *relayURL == "" {
 		log.Print(t("没有设置远程连接（--relay），其他设备暂时连不上。", "Remote access not set up (--relay); other devices can’t connect yet."))
@@ -996,7 +1008,7 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 			_, _, paused := h.RegionStatus()
 			st := map[string]any{"running": true, "version": version, "providers": len(ps), "devices": len(ds), "online": online,
 				"relay_configured": relayURL != "", "relay_up": h.RelayUp(), "console": con != nil, "os": runtime.GOOS,
-				"region_paused": paused, "problems": problems, "lang": h.UILang(ctx)}
+				"region_paused": paused, "problems": problems, "lang": h.UILang(ctx), "web_check": lastWebCheck(dataDir("hub"))}
 			return c.Send(control.Reply{Event: "ok", Data: jsonData(st)})
 		case "provider.add":
 			cfg, err := provider.Default(provider.Kind(a["kind"]))

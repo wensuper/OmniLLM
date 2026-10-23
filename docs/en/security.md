@@ -78,9 +78,31 @@ These rules reduce the risk but **can’t guarantee** your account won’t be ba
 
 - The web page is deployed only from signed release packages on GitHub and is never edited by hand on the server; its files are owned by root and read-only, and the connection service runs as a separate unprivileged account, so even if the connection service is compromised, it can’t change the page.
 - Once cached, the page is pinned as a whole set, and a new version replaces the whole set.
-- Not done yet: verifying every update of the page with a signature.
+- Anyone can check that the page served is, file by file, what a signed release built: `omnillm verify web` (see the next section). Every hub also checks the page its own devices open, a few minutes after it starts and then daily, and warns loudly if it differs.
+- Not done yet: the browser itself refusing a changed page. A check finds a change; it can’t stop the first load.
 
 If this matters to you, use the command-line client `omnillm connect` (a signed program), or [host the web client yourself](self-host.md).
+
+## If someone else runs the connection service and the web page
+
+Most people use the public connection service (`relay.ixxzh.com`) and web page (`omni.ixxzh.com`), run by the project’s author. You don’t have to take the operator’s word for any of this; each point below can be checked.
+
+**What the operator can’t do**
+- **Read your chats or pictures.** They are end-to-end encrypted between your device and your own hub (Noise, ChaCha20-Poly1305). The connection service only ever sees ciphertext.
+- **Pretend to be your hub, or sit in the middle.** Your hub’s public key and the pairing secret reach a device only through the QR code or pairing text shown on your own screen, and you confirm the 6 digits on both sides. The connection service never sees either.
+- **Add a device to your hub.** Pairing needs the code from your screen and your confirmation on the hub.
+- **Get your accounts or keys.** They never leave your hub; devices don’t have them either.
+- **Change the hub program.** It comes from GitHub releases signed by the release workflow; the installer checks them, and the operator’s servers aren’t involved.
+
+**What the operator can see**
+- That a hub or device is connected, from which IP address and when, and the rough size and rhythm of messages (padded to 1, 4, 16, or 64 KB). This is what any relay sees.
+- The public service keeps no access log of connections, and the connection service writes nothing to disk; what it holds in memory is gone when a connection ends.
+
+**What you have to check rather than trust: the web page.** The page phones open is served by the operator, and a changed page could read what you type on that phone. So it is made checkable:
+- Every release publishes the exact files of its web page (`omnillm-web-manifest.json`, covered by the signed `checksums.txt`).
+- Anyone can run `omnillm verify web` (or `omnillm verify web https://your-page/`). It reads the build of the page being served, finds the signed release that built it, and compares every file. The result is either “exactly what release … built” or the list of files that differ.
+- Your own hub does this by itself, a few minutes after it starts and then daily, for the page your devices use. If it differs, the console’s top bar, the menu bar, and `omnillm status` say so.
+- A limit: an operator who served a changed page to one person only, and the real one to everyone else, could avoid other people’s checks. For that level of assurance, [run your own connection service and web page](self-host.md) (one command each), or use the signed command-line client `omnillm connect`.
 
 ## The hub and the local machine
 

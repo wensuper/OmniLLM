@@ -10,3 +10,4 @@ build/
 bin/
 omnillm-web.tar.gz
 dist-web/
+omnillm-web-manifest.json

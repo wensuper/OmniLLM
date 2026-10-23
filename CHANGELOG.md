@@ -4,6 +4,16 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.43](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.43) - 2026-10-23
+
+### Added
+
+- `omnillm verify web [address]` checks the web page phones open against the signed release that built it, file by file. Each release now publishes `omnillm-web-manifest.json` (every file’s sha256, in the signed `checksums.txt`); older releases are checked from their signed web tarball. Your hub runs the same check for the page its devices use, a few minutes after it starts and then daily; if it differs, the console’s top bar, the menu bar, and `omnillm status` warn you. Nobody has to take the web host’s word for it.
+
+### Security
+
+- The public connection service keeps no access log (it used to record each device’s connection with its mailbox ID). The security guide has a new section on what an operator of the relay and web page can and can’t do, and what you can check yourself.
+
 ## [0.2.0-alpha.42](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.42) - 2026-10-22
 
 ### Changed

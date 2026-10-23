@@ -444,6 +444,8 @@ func statusLine(st Status, ok, updating, startFailed bool) string {
 		return t("没能启动 · 在终端运行 omnillm install", "Couldn’t start · run omnillm install in Terminal")
 	case !ok:
 		return t("OmniLLM 没有运行", "OmniLLM isn’t running")
+	case st.WebCheck.Mismatch():
+		return t("警告：手机用的网页和发布的不一致 · 先别用", "Warning: the phones’ web page differs from the release · don’t use it")
 	case !st.RelayConfigured:
 		return t("在运行 · 只在这台 Mac 上用", "Running · this Mac only")
 	case st.RelayUp:

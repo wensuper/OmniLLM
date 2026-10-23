@@ -71,6 +71,9 @@ type Server struct {
 	// models with an app token ("http://127.0.0.1:8765/v1"); "" when the
 	// local API is off (the Apps tab says so).
 	APIURL string
+	// WebCheck, set by the host, is its last check of the web page phones
+	// open against the signed release (nil: not checked yet).
+	WebCheck func() any
 
 	mu       sync.Mutex
 	logins   map[string]time.Time // one-time login tokens → expiry
@@ -530,7 +533,16 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 		"lang": s.hub.UILang(ctx),
 		// Where apps connect (the Apps tab); "" when the local API is off.
 		"api_url": s.APIURL,
+		// The phones' web page against the signed release (top bar warns).
+		"web_check": s.webCheck(),
 	})
+}
+
+func (s *Server) webCheck() any {
+	if s.WebCheck == nil {
+		return nil
+	}
+	return s.WebCheck()
 }
 
 // relay is the cheap part of status, polled while the hub (re)connects.

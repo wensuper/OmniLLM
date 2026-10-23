@@ -125,7 +125,7 @@ const T = {
     noRelay: "还没有设置远程连接，其他设备暂时连不上。可以先跳过；设置好远程连接后，在“设备”里添加。",
     relayWait: "正在打开远程连接……", relayDown: "远程连接现在连不上，请检查{here}的网络。连上之后这里会自动继续。",
     relayOff: "远程连接断开，设备暂时连不上", relayNone: "只在{here}上用（没有设置远程连接）",
-    regionPaused: "{Here}所在的地区变了，已暂停使用模型。", regionConfirm: "确认继续",
+    regionPaused: "{Here}所在的地区变了，已暂停使用模型。", webBad: "警告：手机用的网页和 GitHub 上签名发布的不一致，先别在手机上用。详情运行 omnillm verify web", regionConfirm: "确认继续",
     appTokenFor: "“{0}”的令牌", appTokenOnce: "只显示这一次，现在复制。",
     appName: "应用的名字",
     tryText: "你好",
@@ -247,7 +247,7 @@ const T = {
     noRelay: "Remote access isn’t set up yet, so other devices can’t connect. Skip for now; add devices under Devices once it’s set up.",
     relayWait: "Turning on remote access…", relayDown: "Remote access can’t connect right now; check {here}’s network. It picks up again once connected.",
     relayOff: "Remote access is down; devices can’t connect now", relayNone: "{Here} only (remote access not set up)",
-    regionPaused: "{Here}’s region changed; models are paused.", regionConfirm: "Confirm and resume",
+    regionPaused: "{Here}’s region changed; models are paused.", webBad: "Warning: the web page phones use differs from the signed GitHub release; don’t use it on phones for now. Details: omnillm verify web", regionConfirm: "Confirm and resume",
     appTokenFor: "Token for “{0}”", appTokenOnce: "Shown once — copy it now.",
     appName: "App name",
     tryText: "Hello",
@@ -483,12 +483,14 @@ function renderStatus() {
   s.textContent = "";
   s.removeAttribute("title");
   // Left empty, not hidden: it is the spacer that keeps the tools right.
-  if (S.relay_configured && S.relay_up && !(S.region && S.region.paused)) return;
-  let text = !S.relay_configured ? t("relayNone") : S.relay_up ? "" : t("relayOff");
+  // The phones' web page differs from the signed release: said first.
+  const wc = S.web_check, webBad = wc && !wc.ok && !wc.error;
+  if (S.relay_configured && S.relay_up && !(S.region && S.region.paused) && !webBad) return;
+  let text = webBad ? t("webBad") : !S.relay_configured ? t("relayNone") : S.relay_up ? "" : t("relayOff");
   if (S.region && S.region.paused) text += " · " + t("regionPaused");
   // On a phone-width window only the dot shows; it carries the sentence
   // for screen readers and as a tooltip.
-  const dot = el("span", "", "dot" + (S.relay_up ? " on" : ""));
+  const dot = el("span", "", "dot" + (S.relay_up && !webBad ? " on" : ""));
   dot.setAttribute("role", "img");
   dot.setAttribute("aria-label", text);
   s.title = text;

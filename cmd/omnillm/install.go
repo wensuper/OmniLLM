@@ -71,7 +71,10 @@ type Status struct {
 	// Problems are the model sources that need the owner now (signed
 	// out, at the usage limit), as the console's problem chips show them.
 	Problems []SourceProblem `json:"problems,omitempty"`
-	Next     string          `json:"next"` // the one thing to do next, for a person
+	// WebCheck: the hub's last check of the web page phones open against
+	// the signed release (omnillm verify web); nil before the first one.
+	WebCheck *webCheck `json:"web_check,omitempty"`
+	Next     string    `json:"next"` // the one thing to do next, for a person
 	// Update: a newer release this hub has not installed yet;
 	// UpdateFailed: installing it automatically didn't work.
 	Update       string `json:"update,omitempty"`
@@ -280,6 +283,8 @@ func nextStep(st Status) string {
 	switch {
 	case !st.Running:
 		return notRunning()
+	case st.WebCheck.Mismatch():
+		return webCheckText(*st.WebCheck)
 	case st.RegionPaused:
 		s := onMachine(t("%s 所在的地区变了，已暂停使用模型。确认是你本人换了地方，运行 omnillm hub region confirm 恢复。",
 			"%s’s region changed; models are paused. If you moved, run omnillm hub region confirm to turn them back on."))

@@ -78,6 +78,7 @@ omnillm hub devices                 # list devices
 omnillm hub revoke <name or ID>     # remove a device
 omnillm hub device set <name or ID> --paused true   # pause a device
 omnillm hub provider off <source>   # switch a model source off (on: switch it on)
+omnillm verify web                  # check the phones’ web page file by file against the signed release
 omnillm hub models                  # connected models
 omnillm hub usage                   # usage
 ```

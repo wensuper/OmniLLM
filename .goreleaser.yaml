@@ -6,7 +6,9 @@ before:
   hooks:
     # The web client (phones and tablets), released and signed with the
     # programs; the server serving omni.ixxzh.com installs it from here.
-    - sh -c 'scripts/build-web.sh dist-web && tar -czf omnillm-web.tar.gz -C dist-web . && rm -rf dist-web'
+    # Its manifest (every file's sha256) is published and signed with the
+    # checksums: omnillm verify web checks a served page against it.
+    - sh -c 'scripts/build-web.sh dist-web omnillm-web-manifest.json && tar -czf omnillm-web.tar.gz -C dist-web . && rm -rf dist-web'
 builds:
   - id: omnillm-linux
     main: ./cmd/omnillm
@@ -47,6 +49,7 @@ checksum:
   name_template: checksums.txt
   extra_files:
     - glob: ./omnillm-web.tar.gz
+    - glob: ./omnillm-web-manifest.json
 sboms:
   - artifacts: archive
 signs:
@@ -67,3 +70,4 @@ release:
   prerelease: auto
   extra_files:
     - glob: ./omnillm-web.tar.gz
+    - glob: ./omnillm-web-manifest.json

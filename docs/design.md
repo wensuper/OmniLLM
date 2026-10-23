@@ -218,10 +218,10 @@
 
 - **端到端加密**：所有业务消息在设备和中心节点之间用 Noise 会话加密，relay 只转发密文。
 - **防冒充**：中心节点公钥只能从屏幕上的二维码拿到，设备每次连接都校验；relay 换不了公钥，也就做不了中间人。配对时的预共享密钥同样只在二维码里。
-- **不让 relay 下发代码**：`omnillm connect` 和原生 App 是签名的程序。网页客户端从只给它用的静态地址（`https://omni.ixxzh.com`）发布，首次安装后由 Service Worker 锁定，之后只接受用发布密钥签名的新版本，签名不对就继续用旧版本并提示。
-  - 如实说明：浏览器不会校验第一次加载的页面，所以**首次安装那一刻要信任托管方**；“公开构建哈希”只能事后核对，挡不住第一次。对安全要求高的场景用 `omnillm connect` 或原生 App。
+- **不让 relay 下发代码**：`omnillm connect` 和原生 App 是签名的程序。网页客户端从只给它用的静态地址（`https://omni.ixxzh.com`）发布，Service Worker 把一个版本整套缓存，新版本整套替换（不校验签名，没有实现）。替换网页可以被发现：每次发布附带网页清单 `omnillm-web-manifest.json`（构建编号和每个文件的 sha256，列在签名的 `checksums.txt` 里），`omnillm verify web` 读出线上 `app.js` 的构建编号，到最近的发布里找出构建它的那一个（没有清单的老版本读它签名的 `omnillm-web.tar.gz`），逐个文件比对；主机启动 3 分钟后和之后每天替自己的设备核对一次（`cmd/omnillm/verifyweb.go`），不一致时控制台顶部、菜单栏状态行和 `omnillm status` 的下一步都警告；没能核对（网络）不算不一致。
+  - 如实说明：浏览器不会校验第一次加载的页面，所以**首次安装那一刻要信任托管方**；核对只能事后发现，挡不住第一次；只针对某一个人换网页，别人的核对也发现不了。对安全要求高的场景用 `omnillm connect` 或原生 App。
 - **防重放**：握手第一条消息不带业务数据；会话内每条消息有递增编号，乱序或重复的直接丢弃并断开。
-- **少留痕**：relay 不落盘、不记内容日志；消息按固定长度档位（如 1 / 4 / 16 / 64 KB）填充；信箱编号是随机数，和主人身份无关。
+- **少留痕**：relay 不落盘、不记内容日志；公共服务的 Tengine 也不记访问日志（请求行里有信箱编号，配对期间不变，记下来就能跨网络跟踪同一台设备，`deploy/zz-relay.ixxzh.com.conf` `access_log off`）；消息按固定长度档位（如 1 / 4 / 16 / 64 KB）填充；信箱编号是随机数，和主人身份无关。
 - **如实说明 relay 能看到的**：双方的 IP、连接时间、流量大小、流式回复的节奏（大致能推出回复长度）、哪些信箱在线。这些在 v1 不再进一步隐藏，文档和界面都不宣称“服务器什么都不知道”。
 - **测试守住**：用一组哨兵明文跑完配对和对话，断言 relay 收到的每一帧、日志和内存快照里都找不到这组明文。
 
@@ -262,7 +262,7 @@
 
 ### 5.8 网页客户端安全
 
-- 严格 CSP（服务器配置 `deploy/zz-omni.ixxzh.com.conf`）：`default-src 'none'`，脚本只认本站（加 `wasm-unsafe-eval` 给 WebAssembly），`connect-src 'self' wss:`，不允许内联脚本和第三方资源。
+- 严格 CSP（服务器配置 `deploy/zz-omni.ixxzh.com.conf`）：`default-src 'none'`，脚本只认本站（加 `wasm-unsafe-eval` 给 WebAssembly），`connect-src 'self' wss:`（任何 wss 地址：自己部署连接服务、又用公共网页的人也要连得上；这条防的是注入的脚本，防不了托管方，托管方的问题靠上面的核对），不允许内联脚本和第三方资源。
 - 私钥用 WebCrypto 不可导出保存；不放 URL、不放 localStorage。
 - 加 `nosniff`、`no-referrer`、`frame-ancestors 'none'`、HSTS。`Permissions-Policy` 只给本站开摄像头（扫码）和麦克风（语音输入）：`camera=(self), microphone=(self)`；控制台两样都关。
 - 页面标 `translate="no"`，浏览器的自动翻译不会改坏模型名、命令和配对文字（§13.3）。
@@ -270,7 +270,7 @@
 ### 5.9 供应链与发布
 
 - 依赖尽量只用标准库和 `golang.org/x`；新增依赖要评审，CI 跑 `govulncheck` 和 `gosec`。
-- 发布物用 cosign 签名并附 SBOM；安装脚本先校验签名再安装；网页客户端公开构建哈希。
+- 发布物用 cosign 签名并附 SBOM；安装脚本先校验签名再安装；网页客户端发布逐文件清单，`omnillm verify web` 和主机每天核对线上网页。
 - 自动更新和手动更新走同一个安装脚本，校验和与签名照旧核对；自动更新只装比当前新的版本，新版起不来就换回旧版并跳过它（§10.7）。手动装旧版本可以，不会因此停掉自动更新。
 - 发布流程不重跑测试：打标签后先确认这个提交在 CI 里已经通过（vet、`-race` 测试、staticcheck、govulncheck），没通过就停下，所以只在 CI 绿了之后打标签。
 - 仓库开启 Dependabot、secret scanning 和分支保护。

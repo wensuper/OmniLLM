@@ -37,6 +37,7 @@ The models run where they always do: Claude on Anthropic’s servers, ChatGPT on
 
 - **Accounts stay on the hub.** Subscriptions, API keys, and local models never leave the computer they are on. Devices never see a credential.
 - **End-to-end encrypted.** Devices reach the hub through a connection service that only forwards encrypted data; it can’t read your chats or pretend to be your hub.
+- **Checkable, not just trusted.** If someone else runs the relay and the web page, they can’t read your chats, and `omnillm verify web` (which your hub also runs daily) proves the page your phone loads is exactly what a signed release built. See [Security](docs/en/security.md#if-someone-else-runs-the-connection-service-and-the-web-page).
 - **No app to install.** Scan a QR code with your phone’s camera and chat in the browser, with text and pictures.
 - **You decide who uses what.** Name each device, give it a daily limit, choose which models it may use, or pause it with one switch.
 - **Kind to your subscriptions.** Subscriptions are for people chatting, at one person’s pace; scripts and programs use API keys or local models.

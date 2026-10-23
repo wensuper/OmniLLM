@@ -1,10 +1,14 @@
 #!/bin/sh
-# Builds the web client (phones and tablets) into $1 (default dist/web):
+# Builds the web client (phones and tablets) into $1 (default dist/web),
+# and with $2 also its manifest: the build and the sha256 of every file,
+# which releases publish so anyone can check a served page against them
+# (omnillm verify web):
 # the page, Go's wasm_exec.js and the device code compiled to WebAssembly.
 # The service worker's cache name is stamped with a hash of the files, so a
 # new build replaces the old one as a whole.
 set -eu
 out=${1:-dist/web}
+manifest=${2:-}
 cd "$(dirname "$0")/.."
 rm -rf "$out"
 mkdir -p "$out"
@@ -26,4 +30,9 @@ sed "s/const VERSION = \"dev\";/const VERSION = \"$hash\";/" web/sw.js > "$out/s
 sed "s/<meta name=\"omnillm-build\" content=\"dev\">/<meta name=\"omnillm-build\" content=\"$hash\">/" web/index.html > "$out/index.html"
 sed "s/^const BUILD = \"dev\";/const BUILD = \"$hash\";/" web/app.js > "$out/app.js"
 grep -q "$hash" "$out/index.html" && grep -q "$hash" "$out/app.js" || { echo "build stamp missing" >&2; exit 1; }
+if [ -n "$manifest" ]; then
+  (cd "$out" && find . -type f | sed 's|^\./||' | LC_ALL=C sort | while read -r f; do
+    printf '%s %s\n' "$(shasum -a 256 "$f" | cut -d' ' -f1)" "$f"
+  done) | awk -v b="$hash" 'BEGIN { printf "{\n  \"build\": \"%s\",\n  \"files\": {", b } { printf "%s\n    \"%s\": \"%s\"", (NR > 1 ? "," : ""), $2, $1 } END { printf "\n  }\n}\n" }' > "$manifest"
+fi
 echo "web client built in $out ($hash)"
