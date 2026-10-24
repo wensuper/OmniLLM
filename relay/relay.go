@@ -18,6 +18,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/coder/websocket"
@@ -70,6 +71,7 @@ type Server struct {
 	mu        sync.Mutex
 	hubs      map[[32]byte]*hubConn
 	hubsPerIP map[string]int
+	swept     time.Time // when the failure table was last swept
 	pending   int
 	claims    int
 	mailboxes map[relayproto.ID]*mailbox
@@ -102,7 +104,14 @@ type devConn struct {
 	cancel context.CancelFunc
 	out    chan outItem
 	gen    uint64
+	// queued is the bytes waiting in out: a device that reads slowly is
+	// cut at maxQueuedBytes, so slow readers can't pile up the relay's
+	// memory (128 frames of 64 KB each would be 8 MB per device).
+	queued atomic.Int64
 }
+
+// maxQueuedBytes is how much may wait for one device.
+const maxQueuedBytes = 1 << 20
 
 // outItem is a message for the device, or (close set) the instruction to
 // close after everything queued before it has been written.
@@ -221,7 +230,9 @@ func (s *Server) serveHub(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-	ip := s.clientIP(r)
+	// Per address, an IPv6 /64 counting as one (as for wrong secrets): one
+	// host with a /64 must not fill the relay with hubs.
+	ip := limitKey(s.clientIP(r))
 	// Take the per-IP slot before the upgrade, so a burst of parallel
 	// connections cannot all pass the check.
 	s.mu.Lock()
@@ -347,9 +358,17 @@ func (s *Server) handleHubFrame(h *hubConn, t byte, mid relayproto.ID, payload [
 		}
 		// Each device has its own queue: one stalled device never blocks
 		// the hub's other mailboxes. A device that cannot keep up is cut.
+		if dev.queued.Add(int64(len(payload))) > maxQueuedBytes {
+			dev.queued.Add(-int64(len(payload)))
+			dev.cancel() // stop at once; the close handshake follows
+			closeLater(dev.conn, websocket.StatusPolicyViolation, "slow")
+			return
+		}
 		select {
 		case dev.out <- outItem{data: payload}:
 		default:
+			dev.queued.Add(-int64(len(payload)))
+			dev.cancel()
 			closeLater(dev.conn, websocket.StatusPolicyViolation, "slow")
 		}
 	}
@@ -402,6 +421,9 @@ func (s *Server) clientIP(r *http.Request) string {
 	return host
 }
 
+// maxFailureBuckets bounds the wrong-secret table.
+const maxFailureBuckets = 100000
+
 // tooManyFailures limits wrong-secret guessing per IP.
 func (s *Server) tooManyFailures(ip string, record bool) bool {
 	ip = limitKey(ip)
@@ -412,13 +434,21 @@ func (s *Server) tooManyFailures(ip string, record bool) bool {
 		if !record {
 			return false
 		}
-		if len(s.failures) > 100000 {
-			// Drop buckets that have refilled; keep the active ones.
-			for k, v := range s.failures {
-				v.refill()
-				if v.tokens >= v.burst {
-					delete(s.failures, k)
+		if len(s.failures) >= maxFailureBuckets {
+			// Drop buckets that have refilled, at most every 10 s (the
+			// sweep holds the lock); past the cap, new addresses are not
+			// recorded, so the table can't grow without bound.
+			if time.Since(s.swept) > 10*time.Second {
+				s.swept = time.Now()
+				for k, v := range s.failures {
+					v.refill()
+					if v.tokens >= v.burst {
+						delete(s.failures, k)
+					}
 				}
+			}
+			if len(s.failures) >= maxFailureBuckets {
+				return false
 			}
 		}
 		b = &bucket{rate: 0.2, burst: 10, tokens: 10, last: time.Now()}
@@ -568,6 +598,7 @@ func (s *Server) serveDevice(w http.ResponseWriter, r *http.Request) {
 				wctx, wc := context.WithTimeout(ctx, 15*time.Second)
 				err := c.Write(wctx, websocket.MessageBinary, it.data)
 				wc()
+				d.queued.Add(-int64(len(it.data)))
 				if err != nil {
 					cancel()
 					return

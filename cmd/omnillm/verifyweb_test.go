@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -17,6 +18,11 @@ import (
 
 // A web host and a release, both faked: the page matches the release, then
 // one file is changed, then the page is a build no release made.
+
+// The checks here use made-up releases without signatures; cosign on this
+// computer must not change their outcome.
+func init() { lookCosign = func() (string, error) { return "", errors.New("no cosign") } }
+
 func TestVerifyWebComparesEveryFileWithTheSignedRelease(t *testing.T) {
 	files := map[string]string{
 		"index.html": "<html>page</html>",

@@ -105,14 +105,16 @@ func Listen(path string) (net.Listener, error) {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return nil, err
 	}
-	st, err := os.Stat(dir)
+	// A real folder (not a link someone else placed), private every time.
+	st, err := os.Lstat(dir)
 	if err != nil {
 		return nil, err
 	}
-	if st.Mode().Perm()&0o077 != 0 {
-		if err := os.Chmod(dir, 0o700); err != nil {
-			return nil, fmt.Errorf("control: %s must be private (0700)", dir)
-		}
+	if !st.IsDir() {
+		return nil, fmt.Errorf("control: %s is not a folder", dir)
+	}
+	if err := os.Chmod(dir, 0o700); err != nil {
+		return nil, fmt.Errorf("control: %s must be private (0700)", dir)
 	}
 	_ = os.Remove(path)
 	ln, err := net.Listen("unix", path)

@@ -47,6 +47,7 @@ Claude Code and Codex are coding assistants that can run commands and read and w
 
 - **All tools are turned off**: Claude Code gets no tools, no MCP connections, and doesn’t read your settings. Codex runs in a read-only sandbox with shell, plugins, browser, web search, and every other feature turned off, and doesn’t read your configuration.
 - **Your personal instructions aren’t read**: Codex runs in OmniLLM’s own directory, so it can’t read the personal instructions you wrote for it in `~/.codex/AGENTS.md`.
+- **A message is only ever a message**: a device’s text that starts with “/” is handed over so that it can’t run one of the program’s own commands (yours included); it reaches the model as plain text.
 - **A clean environment**: They run in an empty temporary directory with only these environment variables: HOME, PATH, language, and the temporary directory. The hub’s own keys, connection service token, and proxy settings are never passed on.
 - **New versions are checked first**: Whether the tools can be turned off depends on whether the official program honors these options. So for every new version it sees, the hub first has it try, in the background, to run a command and read a temporary file. If it manages either one, that version isn’t used, and devices show “Update OmniLLM.”
 - **Images are checked before use**: Only PNG, JPEG, GIF, and WebP are accepted; the format is checked against the file’s leading bytes; images that are a few KB but claim billions of pixels are blocked (no more than 8192 pixels on a side and about 40 million pixels in total); each image is at most 2 MB. The local API accepts only images attached directly; it doesn’t download URLs for programs, so the hub can’t be used as a stepping stone to reach arbitrary URLs.
@@ -96,12 +97,13 @@ Most people use the public connection service (`relay.ixxzh.com`) and web page (
 
 **What the operator can see**
 - That a hub or device is connected, from which IP address and when, and the rough size and rhythm of messages (padded to 1, 4, 16, or 64 KB). This is what any relay sees.
-- The public service keeps no access log of connections, and the connection service writes nothing to disk; what it holds in memory is gone when a connection ends.
+- The public service keeps no access log of connections and no error log (an error line would name the address and the mailbox), the connection service writes nothing to disk, and what it holds in memory is gone when a connection ends.
+- It limits abuse without logging: hubs per address (an IPv6 /64 counts as one address), wrong secrets per address, and how much may wait for one slow device (1 MB; past that the device is disconnected).
 - Two numbers a day, for the operator: how many different hubs connected, and how many of them were new installs. During the day a hub is remembered only as a keyed hash under a key drawn at random that morning and discarded at midnight, so the count can’t be traced to a hub or linked across days; a new hub says so itself on its first connection, so the relay keeps no list of hubs. The numbers are one log line per day and are readable only on the relay’s own machine.
 
 **What you have to check rather than trust: the web page.** The page phones open is served by the operator, and a changed page could read what you type on that phone. So it is made checkable:
 - Every release publishes the exact files of its web page (`omnillm-web-manifest.json`, covered by the signed `checksums.txt`).
-- Anyone can run `omnillm verify web` (or `omnillm verify web https://your-page/`). It reads the build of the page being served, finds the signed release that built it, and compares every file. The result is either “exactly what release … built” or the list of files that differ.
+- Anyone can run `omnillm verify web` (or `omnillm verify web https://your-page/`). It reads the build of the page being served, finds the release that built it, checks that release’s checksums and, when cosign is installed, its signature, and compares every file. The result is either “exactly what release … built” (it says “signed” only when the signature was checked) or the list of files that differ. A host could still serve one page to this check and another to phones; the check proves what the host serves to it.
 - Your own hub does this by itself, a few minutes after it starts and then daily, for the page your devices use. If it differs, the console’s top bar, the menu bar, and `omnillm status` say so.
 - A limit: an operator who served a changed page to one person only, and the real one to everyone else, could avoid other people’s checks. For that level of assurance, [run your own connection service and web page](self-host.md) (one command each), or use the signed command-line client `omnillm connect`.
 
@@ -116,7 +118,7 @@ Most people use the public connection service (`relay.ixxzh.com`) and web page (
 
 - Release packages are built by GitHub Actions from tagged code and come with a software bill of materials (SBOM); the checksum file is signed keylessly with [cosign](https://github.com/sigstore/cosign), and the signature is bound to this repository’s release workflow.
 - The download address is hard-coded in the install script and can’t be changed with an environment variable; the script checks the SHA-256 first and, if cosign is installed, the signature too, and stops if either doesn’t match.
-- Updates use the same install script: whether the hub updates itself, you run `omnillm update`, or you click update in the menu bar, it downloads the official script, checks it by the same rules, and reinstalls; there’s no other download path. Versions you build yourself during development only notify you and never replace themselves.
+- Updates use the same install script: whether the hub updates itself, you run `omnillm update`, or you click update in the menu bar, it downloads the install script as of the release it installs (from that release’s tag, not the branch tip), checks it by the same rules, and reinstalls; there’s no other download path. Without cosign, an update is vouched for by GitHub’s TLS and the release’s checksums; with cosign, by the release workflow’s signature too. Versions you build yourself during development only notify you and never replace themselves.
 - If a newly installed version fails to start, the installer switches back to the previous program file (`~/.local/bin/omnillm.prev`), and automatic updates skip that version from then on.
 - CI runs the tests (including race detection), `go vet`, `staticcheck`, and `govulncheck`.
 

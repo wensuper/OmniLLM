@@ -288,3 +288,18 @@ X`)
 		t.Fatalf("%+v", u)
 	}
 }
+
+// A device's message that starts with "/" never reaches the program as one
+// of its commands (the owner's slash commands or skills).
+func TestDeviceTextIsNeverACommand(t *testing.T) {
+	_, p := cliPrompt(ClaudeCode, []omnillm.Message{{Role: "user", Content: "/init"}})
+	if strings.HasPrefix(strings.TrimSpace(p), "/") || !strings.Contains(p, "/init") {
+		t.Fatalf("%q", p)
+	}
+	if got := noCommand("  /help me"); strings.HasPrefix(strings.TrimSpace(got), "/") {
+		t.Fatalf("%q", got)
+	}
+	if got := noCommand("hello /there"); got != "hello /there" {
+		t.Fatalf("an ordinary message changed: %q", got)
+	}
+}

@@ -23,6 +23,8 @@ ProtectSystem=full
 ProtectHome=yes
 ReadOnlyDirectories=/
 CapabilityBoundingSet=
+# Network sockets and the journal only (systemd 219 knows this one).
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 
 [Install]
 WantedBy=multi-user.target

@@ -243,3 +243,15 @@ func TestHubUpdatingIsNotAFailure(t *testing.T) {
 		t.Fatal(got)
 	}
 }
+
+// An unattended update runs the installer as of the release it installs.
+func TestInstallerIsTheReleasesOwn(t *testing.T) {
+	if got := installerFor("v0.2.0-alpha.46"); got != "https://raw.githubusercontent.com/wensuper/OmniLLM/v0.2.0-alpha.46/install.sh" {
+		t.Fatal(got)
+	}
+	for _, bad := range []string{"", "main", "v1.2.3/../../evil", "v1.2.3?x"} {
+		if got := installerFor(bad); got != defaultInstallerURL {
+			t.Fatalf("%q: %s", bad, got)
+		}
+	}
+}

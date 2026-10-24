@@ -189,6 +189,16 @@ const chatOnly = "You are chatting with a person from their phone or computer. "
 // cliPrompt turns a chat into the one text the programs take. The system
 // text goes to Claude's --system-prompt; Codex has no such flag, so it
 // leads the prompt there.
+// noCommand keeps a message that starts with "/" from being read as one
+// of the program's commands (the owner's own slash commands or skills): a
+// device's text is only ever a message to the model.
+func noCommand(s string) string {
+	if strings.HasPrefix(strings.TrimLeft(s, " \t\r\n"), "/") {
+		return "User message:\n" + s
+	}
+	return s
+}
+
 func cliPrompt(k Kind, msgs []omnillm.Message) (system, prompt string) {
 	var sys []string
 	var turns []omnillm.Message
@@ -214,7 +224,7 @@ func cliPrompt(k Kind, msgs []omnillm.Message) (system, prompt string) {
 		b.WriteString("Instructions:\n" + system + "\n\nYou have no tools. Answer in text only.\n\n")
 	}
 	if len(turns) == 1 && k != Codex {
-		return system, turns[0].Content
+		return system, noCommand(turns[0].Content)
 	}
 	b.WriteString("The conversation so far is below. Reply to the user's last message as the assistant.\n")
 	n := 0
@@ -341,7 +351,7 @@ func (c *Client) spawnCLI(ctx context.Context, model string, msgs []omnillm.Mess
 				// The session already holds the conversation: only the
 				// new message goes in.
 				last := turns[len(turns)-1]
-				prompt, images = last.Content, last.Images
+				prompt, images = noCommand(last.Content), last.Images
 			}
 		}
 		if !turn.resumed && c.cfg.Kind == ClaudeCode {

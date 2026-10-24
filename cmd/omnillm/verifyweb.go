@@ -17,10 +17,12 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -47,9 +49,12 @@ type webCheck struct {
 	Build   string    `json:"build,omitempty"`
 	Release string    `json:"release,omitempty"`
 	Files   int       `json:"files,omitempty"`
-	OK      bool      `json:"ok"`
-	Bad     []string  `json:"bad,omitempty"`
-	Error   string    `json:"error,omitempty"`
+	// Signed: checksums.txt's signature was checked too (cosign is
+	// installed); otherwise the checksums come from GitHub over TLS.
+	Signed bool     `json:"signed,omitempty"`
+	OK     bool     `json:"ok"`
+	Bad    []string `json:"bad,omitempty"`
+	Error  string   `json:"error,omitempty"`
 }
 
 // Mismatch: the page differs from every release (not a failed check).
@@ -92,6 +97,12 @@ func verifyWeb(ctx context.Context, c *http.Client, base string) webCheck {
 		return w
 	}
 	w.Release = tag
+	signed, err := signedRelease(ctx, c, tag)
+	if err != nil {
+		w.Bad = []string{"signature"}
+		return w
+	}
+	w.Signed = signed
 	paths := make([]string, 0, len(man.Files))
 	for p := range man.Files {
 		paths = append(paths, p)
@@ -219,21 +230,71 @@ func listed(sums []byte, sum, name string) bool {
 	return false
 }
 
-// webCheckText says a check's result for a person.
+// lookCosign finds cosign (a variable for tests: they must not depend on
+// whether this computer has it).
+var lookCosign = func() (string, error) { return exec.LookPath("cosign") }
+
+// signedRelease checks a release's checksums.txt against its signature
+// with cosign, pinned to this repository's release workflow (as install.sh
+// does). false, nil: cosign isn't installed, so only TLS and the checksums
+// vouch for it; an error: the signature is wrong.
+func signedRelease(ctx context.Context, c *http.Client, tag string) (bool, error) {
+	cosign, err := lookCosign()
+	if err != nil {
+		return false, nil
+	}
+	sums, err := get(ctx, c, releaseFile(tag, "checksums.txt"), 1<<20)
+	if err != nil {
+		return false, err
+	}
+	bundle, err := get(ctx, c, releaseFile(tag, "checksums.txt.sigstore.json"), 1<<20)
+	if err != nil {
+		if strings.Contains(err.Error(), "HTTP 404") {
+			return false, nil // no bundle published: say "not signed", not "bad signature"
+		}
+		return false, err
+	}
+	dir, err := os.MkdirTemp("", "omnillm-verify-")
+	if err != nil {
+		return false, err
+	}
+	defer os.RemoveAll(dir)
+	sp, bp := filepath.Join(dir, "checksums.txt"), filepath.Join(dir, "checksums.txt.sigstore.json")
+	if os.WriteFile(sp, sums, 0o600) != nil || os.WriteFile(bp, bundle, 0o600) != nil {
+		return false, errors.New("verify: can't write a temporary file")
+	}
+	cmd := exec.CommandContext(ctx, cosign, "verify-blob", "--bundle", bp,
+		"--certificate-identity-regexp", `^https://github\.com/wensuper/OmniLLM/\.github/workflows/release\.yml@refs/tags/v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$`,
+		"--certificate-oidc-issuer", "https://token.actions.githubusercontent.com", sp)
+	if err := cmd.Run(); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// webCheckText says a check's result for a person. "Signed" only when the
+// signature was checked; otherwise "published on GitHub".
 func webCheckText(w webCheck) string {
 	switch {
-	case w.OK:
-		return fmt.Sprintf(t("手机用的网页（%s）和 GitHub 上签名发布的 %s 完全一致（构建 %s，%d 个文件逐个核对）。",
-			"The web page your phones use (%s) is exactly what the signed GitHub release %s built (build %s, %d files checked one by one)."),
+	case w.OK && w.Signed:
+		return fmt.Sprintf(t("手机用的网页（%s）和 GitHub 上签名发布的 %s 完全一致（构建 %s，%d 个文件逐个核对，签名也核对过）。",
+			"The web page your phones use (%s) is exactly what the signed GitHub release %s built (build %s, %d files checked one by one, and the signature too)."),
 			w.URL, w.Release, w.Build, w.Files)
+	case w.OK:
+		return fmt.Sprintf(t("手机用的网页（%s）和 GitHub 上发布的 %s 完全一致（构建 %s，%d 个文件逐个核对；装了 cosign 还会核对签名）。",
+			"The web page your phones use (%s) is exactly what the GitHub release %s built (build %s, %d files checked one by one; with cosign installed, the signature is checked too)."),
+			w.URL, w.Release, w.Build, w.Files)
+	case len(w.Bad) == 1 && w.Bad[0] == "signature":
+		return fmt.Sprintf(t("警告：GitHub 上 %s 的签名核对没有通过。在弄清楚之前，不要在手机上用这个网页（%s）。",
+			"Warning: the signature of the GitHub release %s didn’t check out. Don’t use the web page (%s) on your phones until this is cleared up."), w.Release, w.URL)
 	case w.Error != "":
 		return fmt.Sprintf(t("没能核对手机用的网页（%s）：%s。稍后再试。", "Couldn’t check the web page your phones use (%s): %s. Try again later."), w.URL, w.Error)
 	case len(w.Bad) == 1 && w.Bad[0] == "build":
-		return fmt.Sprintf(t("警告：手机用的网页（%s，构建 %s）不是最近任何一个签名发布构建的。在弄清楚之前，不要在手机上用它。",
-			"Warning: the web page your phones use (%s, build %s) wasn’t built by any recent signed release. Don’t use it on your phones until this is cleared up."), w.URL, w.Build)
+		return fmt.Sprintf(t("警告：手机用的网页（%s，构建 %s）不是 GitHub 上最近任何一个发布构建的。在弄清楚之前，不要在手机上用它。",
+			"Warning: the web page your phones use (%s, build %s) wasn’t built by any recent GitHub release. Don’t use it on your phones until this is cleared up."), w.URL, w.Build)
 	default:
-		return fmt.Sprintf(t("警告：手机用的网页（%s）和签名发布的 %s 不一致：%s。在弄清楚之前，不要在手机上用它。",
-			"Warning: the web page your phones use (%s) differs from the signed release %s: %s. Don’t use it on your phones until this is cleared up."),
+		return fmt.Sprintf(t("警告：手机用的网页（%s）和 GitHub 上发布的 %s 不一致：%s。在弄清楚之前，不要在手机上用它。",
+			"Warning: the web page your phones use (%s) differs from the GitHub release %s: %s. Don’t use it on your phones until this is cleared up."),
 			w.URL, w.Release, strings.Join(w.Bad, t("、", ", ")))
 	}
 }

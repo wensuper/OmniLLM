@@ -146,7 +146,21 @@ func newestRelease(rels []release) string {
 var releasesURL = "https://api.github.com/repos/wensuper/OmniLLM/releases?per_page=30"
 
 // installerURL is the official installer, run as a person would run it.
-var installerURL = "https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh"
+var installerURL = defaultInstallerURL
+
+const defaultInstallerURL = "https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh"
+
+// releaseTag is a release's tag (v0.2.0, v0.2.0-alpha.46).
+var releaseTag = regexp.MustCompile(`^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$`)
+
+// installerFor is install.sh as of the release being installed (its tag),
+// not the branch tip: an unattended update runs only what was released.
+func installerFor(tag string) string {
+	if installerURL != defaultInstallerURL || !releaseTag.MatchString(tag) {
+		return installerURL
+	}
+	return "https://raw.githubusercontent.com/wensuper/OmniLLM/" + tag + "/install.sh"
+}
 
 // updateClient fetches from GitHub: the hub's guarded transport (public
 // addresses only, no proxy from the environment), bounded in time, and
@@ -200,7 +214,7 @@ func latestRelease(ctx context.Context, c *http.Client) (string, error) {
 // the service this process belongs to (systemd would stop every process in
 // the service, and the service's /tmp is private, hence dir).
 func runInstaller(ctx context.Context, c *http.Client, dir string, args []string, logw io.Writer, detached bool) error {
-	script, err := get(ctx, c, installerURL, 1<<20)
+	script, err := get(ctx, c, installerFor(readUpdate(dir).Latest), 1<<20)
 	if err != nil {
 		return err
 	}
