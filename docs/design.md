@@ -283,7 +283,7 @@
 - **更新跑发布自己的脚本**：自动更新、`omnillm update` 下载的是目标发布标签下的 `install.sh`（`installerFor`），不是 main 分支最新；没装 cosign 时靠 TLS 加校验和，装了再加签名（安装脚本里已有）。
 - **verify web 说实话**：装了 cosign 就用同样钉死的发布流程身份核对 `checksums.txt` 的签名，只有核对过才说“签名发布”；签名不对算警告。
 - **中转防滥用**：每地址主机数按 IPv6 /64 计；每台设备排队的数据按字节计，超过 1 MB 立即断开（不再只按 128 条算）；口令错误表固定上限 10 万、最多每 10 秒清理一次。
-- **不留痕**：Tengine 的 relay 两个 server 都 `access_log off` + `error_log /dev/null emerg`（错误日志会写客户端地址和带信箱编号的请求行），关闭 `ssl_session_tickets`；relay 服务加 `RestrictAddressFamilies`。
+- **不留痕**：Tengine 的 relay 两个 server 都 `access_log off` + `error_log /dev/null emerg`（错误日志会写客户端地址和带信箱编号的请求行）；**不**单独关 `ssl_session_tickets`：443 和其他站点共用，只在 relay 上关掉时 Chromium 连 relay 的 WebSocket 报 `ERR_SSL_PROTOCOL_ERROR`（Go 写的主机不受影响），alpha.48 上线时因此撤回，要关就所有站点一起关；relay 服务加 `RestrictAddressFamilies`。
 - **控制通道文件夹**：每次都 chmod 0700，并且必须是真文件夹（Lstat，不跟随链接）。
 留着没改、写在 security.md 的：托管方可以给 verify web 和给手机不同的页面；链接配对只显示连接服务地址、不显示主机指纹（靠“只有你刚点了添加设备才继续”）；本机接口固定 8765 端口，别的本机用户先占住时应用会把令牌发给它（只影响同一台电脑上的其他账户）。
 

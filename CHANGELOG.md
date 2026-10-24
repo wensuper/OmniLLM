@@ -11,7 +11,7 @@ All notable changes to OmniLLM are documented here. OmniLLM is in early pre-rele
 - A device’s message that starts with “/” can no longer run one of Claude Code’s own commands (including the owner’s custom ones); it reaches the model as plain text.
 - An update runs the install script of the release it installs (from that release’s tag), not the newest script on the main branch.
 - `omnillm verify web` checks the release’s signature when cosign is installed, and calls the release “signed” only when it did.
-- The public relay keeps no error log either (an error line names the client address and the mailbox). The port-80 redirect no longer logs requests, and TLS session tickets are off.
+- The public relay keeps no error log either (an error line names the client address and the mailbox). The port-80 redirect no longer logs requests. (TLS session tickets stay on: turning them off on this server alone broke browsers’ connections to the relay, so that change was withdrawn before it went live for good.)
 - The relay counts hubs per IPv6 /64 as one address, caps how much may wait for one slow device (1 MB, then it is disconnected), and keeps its wrong-secret table at a fixed size, so one attacker can’t fill it or exhaust its memory.
 - The hub’s control socket folder is made private every time and must be a real folder; the relay service may only use network and local sockets.
 
