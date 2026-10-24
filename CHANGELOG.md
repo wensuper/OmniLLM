@@ -11,9 +11,13 @@ All notable changes to OmniLLM are documented here. OmniLLM is in early pre-rele
 - A device’s message that starts with “/” can no longer run one of Claude Code’s own commands (including the owner’s custom ones); it reaches the model as plain text.
 - An update runs the install script of the release it installs (from that release’s tag), not the newest script on the main branch.
 - `omnillm verify web` checks the release’s signature when cosign is installed, and calls the release “signed” only when it did.
-- The public relay keeps no error log either (an error line names the client address and the mailbox). The port-80 redirect no longer logs requests. (TLS session tickets stay on: turning them off on this server alone broke browsers’ connections to the relay, so that change was withdrawn before it went live for good.)
+- The public relay keeps no error log either (an error line names the client address and the mailbox). The port-80 redirect no longer logs requests.
 - The relay counts hubs per IPv6 /64 as one address, caps how much may wait for one slow device (1 MB, then it is disconnected), and keeps its wrong-secret table at a fixed size, so one attacker can’t fill it or exhaust its memory.
 - The hub’s control socket folder is made private every time and must be a real folder; the relay service may only use network and local sockets.
+
+### Incident
+
+- **On 2026-10-24, browser devices couldn’t reach their hubs for about 32 minutes after alpha.48 went live (10:54–11:26 Beijing time), with three more short interruptions while it was tracked down.** Phones and desktop browsers couldn’t connect or pair; hubs and the command-line client were unaffected, and no data was exposed. Cause: the deploy turned TLS session tickets off on the relay’s site alone, while other sites on the same server port issue them, so browsers’ TLS handshakes with the relay failed. That line was removed; the rest of alpha.48 is live. Relay changes now go out one at a time and count as done only after a real browser pairs on the new configuration. Full timeline (in Chinese): [docs/relay-deploy.md](docs/relay-deploy.md#2026-10-24-alpha48浏览器设备全部连不上重大).
 
 ## [0.2.0-alpha.47](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.47) - 2026-10-24
 
