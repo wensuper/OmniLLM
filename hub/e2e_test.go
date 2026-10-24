@@ -769,3 +769,31 @@ func readFile(t *testing.T, p string) string {
 func ptr[T any](v T) *T { return &v }
 
 func hubModelHumanOnly() hub.ModelUpdate { return hub.ModelUpdate{HumanOnly: ptr(true)} }
+
+func TestANewHubSaysSoOnceForTheRelaysDailyCount(t *testing.T) {
+	e := setup(t, nil)
+	rs := e.relay.Config.Handler.(*relay.Server)
+	if today, _ := rs.Stats(); today.Hubs != 1 || today.New != 1 {
+		t.Fatalf("a new hub's first connection: %+v", today)
+	}
+	// The same hub again (a restart): known, not new.
+	ctx := context.Background()
+	sctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	_ = e.hub.Stop(sctx)
+	cancel()
+	h, err := hub.New(ctx, hub.Options{Secrets: e.hubSec, Store: e.hubSt, RelayURL: e.relayWS, RelayToken: relayToken, Logf: t.Logf})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := h.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { c, cl := context.WithTimeout(ctx, 5*time.Second); defer cl(); _ = h.Stop(c) })
+	deadline := time.Now().Add(10 * time.Second)
+	for !h.RelayUp() && time.Now().Before(deadline) {
+		time.Sleep(50 * time.Millisecond)
+	}
+	if today, _ := rs.Stats(); today.Hubs != 1 || today.New != 1 {
+		t.Fatalf("after a restart: %+v", today)
+	}
+}

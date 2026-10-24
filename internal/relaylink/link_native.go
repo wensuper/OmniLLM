@@ -37,6 +37,19 @@ type HubLink struct {
 
 	events chan Event
 	logf   func(string, ...any)
+
+	// first: until a connection succeeds, the hub says it is a new
+	// install (relay.FirstHeader); then firstDone runs once.
+	first     bool
+	firstDone func()
+}
+
+// FirstConnection marks this hub as a new install: its next successful
+// connection says so (only for the relay's daily count), then done runs.
+func (l *HubLink) FirstConnection(done func()) {
+	l.mu.Lock()
+	l.first, l.firstDone = true, done
+	l.mu.Unlock()
 }
 
 // NewHubLink prepares a link; Run connects.
@@ -118,8 +131,23 @@ func (l *HubLink) Run(ctx context.Context) {
 
 func (l *HubLink) runOnce(ctx context.Context) (upFor time.Duration, err error) {
 	dctx, cancel := context.WithTimeout(ctx, 20*time.Second)
-	c, resp, err := websocket.Dial(dctx, l.url, dialOpts(l.rt, l.token))
+	opts := dialOpts(l.rt, l.token)
+	l.mu.Lock()
+	first, done := l.first, l.firstDone
+	l.mu.Unlock()
+	if first {
+		opts.HTTPHeader.Set("X-OmniLLM-First", "1")
+	}
+	c, resp, err := websocket.Dial(dctx, l.url, opts)
 	cancel()
+	if err == nil && first {
+		l.mu.Lock()
+		l.first, l.firstDone = false, nil
+		l.mu.Unlock()
+		if done != nil {
+			done()
+		}
+	}
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()
 	}

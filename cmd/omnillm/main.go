@@ -1683,10 +1683,24 @@ func relayCmd(args []string) {
 	if !*open && len(opts.HubTokenHashes) == 0 {
 		die(say(t("没有允许的主机：用 --hub-token-hash 或 --open。", "No hubs allowed: pass --hub-token-hash or --open.")))
 	}
-	srv := &http.Server{Addr: *listen, Handler: relay.New(opts), ReadHeaderTimeout: 10 * time.Second, MaxHeaderBytes: 16 << 10,
+	rs := relay.New(opts)
+	srv := &http.Server{Addr: *listen, Handler: rs, ReadHeaderTimeout: 10 * time.Second, MaxHeaderBytes: 16 << 10,
 		TLSConfig: &tls.Config{MinVersion: tls.VersionTLS13}}
 	ctx, stop := signalCtx()
 	defer stop()
+	// The day's counts close at midnight even if no hub connects then.
+	go func() {
+		t := time.NewTicker(time.Minute)
+		defer t.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				rs.RollDay()
+			}
+		}
+	}()
 	go func() {
 		<-ctx.Done()
 		sctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

@@ -4,6 +4,12 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.47](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.47) - 2026-10-24
+
+### Added
+
+- The connection service counts, per day, how many different hubs connected and how many of them were new installs. Counts only: a hub is told apart within the day by a keyed hash whose random key is discarded at midnight, no IP address or device is recorded, and a new hub says so itself on its first connection, so the relay keeps no list of hubs. One log line a day, and `/stats` on the relay’s own machine only.
+
 ## [0.2.0-alpha.46](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.46) - 2026-10-23
 
 ### Changed

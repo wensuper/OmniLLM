@@ -75,6 +75,8 @@ type Server struct {
 	mailboxes map[relayproto.ID]*mailbox
 	failures  map[string]*bucket // per-IP failed device auth
 
+	daily daily // counts per day (daily.go)
+
 	mux *http.ServeMux
 }
 
@@ -147,6 +149,7 @@ func New(opts Options) *Server {
 	s.mux.HandleFunc("GET /v1/hub", s.serveHub)
 	s.mux.HandleFunc("GET /v1/mailbox/{id}", s.serveDevice)
 	s.mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte("ok\n")) })
+	s.mux.HandleFunc("GET /stats", s.serveStats)
 	return s
 }
 
@@ -253,6 +256,7 @@ func (s *Server) serveHub(w http.ResponseWriter, r *http.Request) {
 	n := len(s.hubs)
 	s.mu.Unlock()
 	s.logf("relay: hub connected (%d online)", n)
+	s.countHub(id, r.Header.Get(FirstHeader) == "1")
 
 	defer func() {
 		s.mu.Lock()

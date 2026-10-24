@@ -220,6 +220,18 @@ func (h *Hub) Start(ctx context.Context) error {
 			}
 			_ = link.Claim(ctx, id, sh)
 		}
+		// The relay counts new installs per day, counts only: a hub that
+		// never connected says so on its first connection. One already in
+		// use (devices or apps) when this came in is not new.
+		var seen bool
+		if store.GetJSON(ctx, h.opts.Store, relaySeenKey, &seen) != nil || !seen {
+			apps, _ := h.Apps(ctx)
+			if len(devs) > 0 || len(apps) > 0 {
+				_ = store.PutJSON(ctx, h.opts.Store, relaySeenKey, true)
+			} else {
+				link.FirstConnection(func() { _ = store.PutJSON(context.Background(), h.opts.Store, relaySeenKey, true) })
+			}
+		}
 	}
 	h.mu.Lock()
 	if h.cancel != nil {
@@ -515,6 +527,10 @@ func (h *Hub) RemoveProvider(ctx context.Context, name string) error {
 	}
 	return nil
 }
+
+// relaySeenKey: this hub has connected to a relay before (it is not a new
+// install in the relay's daily count).
+const relaySeenKey = "settings/relay_seen"
 
 // sourceOffKey marks a model source the owner switched off.
 func sourceOffKey(name string) string { return "settings/source_off/" + name }

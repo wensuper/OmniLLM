@@ -97,6 +97,7 @@ Most people use the public connection service (`relay.ixxzh.com`) and web page (
 **What the operator can see**
 - That a hub or device is connected, from which IP address and when, and the rough size and rhythm of messages (padded to 1, 4, 16, or 64 KB). This is what any relay sees.
 - The public service keeps no access log of connections, and the connection service writes nothing to disk; what it holds in memory is gone when a connection ends.
+- Two numbers a day, for the operator: how many different hubs connected, and how many of them were new installs. During the day a hub is remembered only as a keyed hash under a key drawn at random that morning and discarded at midnight, so the count can’t be traced to a hub or linked across days; a new hub says so itself on its first connection, so the relay keeps no list of hubs. The numbers are one log line per day and are readable only on the relay’s own machine.
 
 **What you have to check rather than trust: the web page.** The page phones open is served by the operator, and a changed page could read what you type on that phone. So it is made checkable:
 - Every release publishes the exact files of its web page (`omnillm-web-manifest.json`, covered by the signed `checksums.txt`).
