@@ -733,9 +733,15 @@ func (h *Hub) info(m Model) omnillm.ModelInfo {
 	// behind the alias "opus" is "Claude Opus 5.5" today). Codex keeps its
 	// name ("ChatGPT (Codex)") and carries the model as Version, which each
 	// screen words as "ChatGPT (Codex · GPT-6-Astra)".
-	if resolved != "" && kind == provider.Codex {
+	switch {
+	case kind == provider.Codex && m.Upstream != "default":
+		// A model Codex offers besides its first: named from the catalog.
+		mi.Version, mi.Rank = provider.CodexName(m.Upstream)
+		mi.Latest = false
+	case kind == provider.Codex && resolved != "":
 		mi.Version, mi.Latest = resolved, false
-	} else if resolved != "" {
+		mi.Rank = provider.CodexRankOf(resolved)
+	case resolved != "":
 		mi.DisplayName, mi.Latest = resolved, false
 	}
 	if c != nil {

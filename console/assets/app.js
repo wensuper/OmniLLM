@@ -1803,18 +1803,19 @@ function confirmChatOnly(m) {
 function modelName(m) {
   if (m.renamed) return m.display_name;
   // Codex names the version it runs only when the hub passes one on.
-  if ((m.kind || kindOf(m.provider)) === "codex") return m.version ? t("codexVer", m.version) : t("codexName"); // its version is never known; same as the phone and the CLI
+  if ((m.kind || kindOf(m.provider)) === "codex") return m.version ? t("codexVer", m.version) : t("codexName"); // same as the phone and the CLI
   return m.display_name + (m.latest ? t("latest") : "");
 }
 // withDot: "a · b", with no space after a full-width bracket
 // ("ChatGPT（Codex）· 订阅").
 const withDot = (a, b) => a + (/[）」』】]$/.test(a) ? "· " : " · ") + b;
 // sortModels: the models of one source stay together, in the order the
-// sources come; Claude's go Opus, Sonnet, Haiku.
+// sources come; Claude's go Opus, Sonnet, Haiku; Codex's as Codex lists them.
 function sortModels(ms) {
   const src = [...new Set(ms.map((m) => m.provider))];
   const rank = (m) => { const id = m.id.toLowerCase(); return id.includes("opus") ? 0 : id.includes("sonnet") ? 1 : id.includes("haiku") ? 2 : 3; };
-  ms.sort((a, b) => src.indexOf(a.provider) - src.indexOf(b.provider) || rank(a) - rank(b));
+  // Codex's models in Codex's own order (rank from its catalog).
+  ms.sort((a, b) => src.indexOf(a.provider) - src.indexOf(b.provider) || rank(a) - rank(b) || (a.rank || 0) - (b.rank || 0));
 }
 // vendorChip: where a model's messages go: this Mac, or the company that
 // runs it in the cloud.

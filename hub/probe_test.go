@@ -371,3 +371,55 @@ func TestCodexShowsItsModelAsTheVersion(t *testing.T) {
 		t.Fatalf("%+v", ms)
 	}
 }
+
+func TestCodexOffersEveryModelItsPickerLists(t *testing.T) {
+	dir, err := os.MkdirTemp("", "fakecodex-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(dir) })
+	t.Setenv("HOME", t.TempDir())
+	ch := t.TempDir()
+	t.Setenv("CODEX_HOME", ch)
+	if err := os.WriteFile(filepath.Join(ch, "auth.json"), []byte("{}"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(dir, "codex")
+	script := `#!/bin/sh
+case "$*" in *"debug models"*) echo '{"models":[{"slug":"gpt-6-sol","display_name":"GPT-6-Sol","priority":4,"visibility":"list"},{"slug":"gpt-hidden","display_name":"Hidden","priority":1,"visibility":"hide"},{"slug":"gpt-6-astra","display_name":"GPT-6-Astra","priority":2,"visibility":"list"},{"slug":"gpt-5.6-luna","display_name":"GPT-5.6-Luna","priority":9,"visibility":"list"}]}'; exit 0;; esac
+exit 1
+`
+	if err := os.WriteFile(path, []byte(script), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	st := store.NewMemory()
+	h, err := New(ctx, Options{Secrets: secret.NewMemory(), Store: st})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = store.PutJSON(ctx, st, "model/codex/default", Model{ID: "codex/default", Provider: "codex", Upstream: "default", DisplayName: "ChatGPT (Codex)", HumanOnly: true, PriceSet: true})
+	c, err := provider.New(provider.Config{Name: "codex", Kind: provider.Codex, Path: path}, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.syncCodexModels(ctx, c)
+	ms, _ := h.Models(ctx)
+	got := map[string]string{}
+	rank := map[string]int{}
+	for _, m := range ms {
+		got[m.ID], rank[m.ID] = m.Version, m.Rank
+		if !m.HumanOnly {
+			t.Fatalf("%s is not for people only", m.ID)
+		}
+	}
+	if len(ms) != 3 || got["codex/gpt-6-sol"] != "GPT-6-Sol" || got["codex/gpt-5.6-luna"] != "GPT-5.6-Luna" || rank["codex/gpt-6-sol"] >= rank["codex/gpt-5.6-luna"] {
+		t.Fatalf("models %v ranks %v", got, rank)
+	}
+	if _, ok := got["codex/gpt-hidden"]; ok {
+		t.Fatal("a model hidden in Codex's picker was offered")
+	}
+	if _, ok := got["codex/gpt-6-astra"]; ok {
+		t.Fatal("the first model appears twice (it is codex/default)")
+	}
+}

@@ -247,7 +247,11 @@ func (c *Client) ListModels(ctx context.Context, cred Credential) ([]string, err
 			c.note(err)
 			return nil, err
 		}
-		return append([]string(nil), cliModels[c.cfg.Kind]...), nil
+		ids := append([]string(nil), cliModels[c.cfg.Kind]...)
+		if c.cfg.Kind == Codex {
+			ids = append(ids, CodexExtra(ctx, c.cfg.Path)...)
+		}
+		return ids, nil
 	}
 	if c.cfg.NeedsKey && cred.Key == "" {
 		return nil, &omnillm.Error{Code: omnillm.CodeCredentialProblem, Msg: omnillm.MsgCredentialMissing, Args: []string{c.cfg.Name}}

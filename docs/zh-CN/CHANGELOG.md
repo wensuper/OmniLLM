@@ -2,6 +2,10 @@
 
 [English](../../CHANGELOG.md) | 简体中文
 
+## v0.2.0-alpha.53（2026-10-25）
+
+- ChatGPT 订阅下 Codex 提供的模型全部列出来了，不再只有默认的那一个：例如 GPT-6-Astra、GPT-6-Sol、GPT-6-Luna、GPT-5.6-Sol 等，顺序和 Codex 自己的一样，每个都按自己的名字运行（用 `-m` 指定）。列表跟着你 Mac 上 Codex 的模型目录走：新增的模型在主机重启后出现，下架的会去掉。原来那一项“ChatGPT（Codex · …）”仍是 Codex 排第一的模型，用它的设备和对话不受影响；设成“全部模型”的设备马上就能用新的。
+
 ## v0.2.0-alpha.52（2026-10-25）
 
 - 主机启动后真正能显示 Codex 的模型名了：后台查版本只对 Claude 生效，所以 alpha.50、alpha.51 要先和 Codex 聊过一次才显示。

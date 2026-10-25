@@ -251,7 +251,7 @@ func models(_ js.Value, _ []js.Value) any {
 			// own language ("(latest)", "ChatGPT (Codex · latest)").
 			out = append(out, map[string]any{"id": m.ID, "name": m.DisplayName, "provider": m.Provider, "humanOnly": m.HumanOnly, "onHost": m.OnHost,
 				"latest": m.Latest, "kind": m.Kind, "renamed": m.Renamed, "version": version(m),
-				"problem": m.Problem, "resetsAt": m.ResetsAt})
+				"problem": m.Problem, "resetsAt": m.ResetsAt, "rank": m.Rank})
 		}
 		return out, nil
 	})

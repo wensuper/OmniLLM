@@ -224,8 +224,11 @@ type ModelInfo struct {
 	// knows it: "login" (its program on the hub is signed out) or "limit"
 	// (the subscription's usage limit; ResetsAt says when, unix seconds).
 	// Screens say so before anything is sent.
-	Problem  string `json:"problem,omitempty"`
-	ResetsAt int64  `json:"resets_at,omitempty"`
+	Problem string `json:"problem,omitempty"`
+	// Rank orders a source's models as the source's own picker does
+	// (Codex: lower first); 0 when it has no order.
+	Rank     int   `json:"rank,omitempty"`
+	ResetsAt int64 `json:"resets_at,omitempty"`
 }
 
 // Code is a stable error code. Local API status codes map 1:1 (design §6).

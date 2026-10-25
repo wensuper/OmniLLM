@@ -37,9 +37,9 @@ case "$*" in *"login status"*)`, 1)
 	if err := os.WriteFile(c.cfg.Path, []byte(s), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	codexModel.mu.Lock()
-	codexModel.slug = ""
-	codexModel.mu.Unlock()
+	codexCatalog.mu.Lock()
+	codexCatalog.list = nil
+	codexCatalog.mu.Unlock()
 	st, err := c.Stream(context.Background(), "default", omnillm.Request{Model: "codex/default", Caller: omnillm.Interactive, MaxTokens: 16,
 		Messages: []omnillm.Message{{Role: "user", Content: "ping"}}}, Credential{})
 	if err != nil {

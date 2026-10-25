@@ -187,6 +187,9 @@ func (h *Hub) probeModels(ctx context.Context, c *provider.Client) {
 	if err := c.Prepare(ctx); err != nil {
 		return
 	}
+	if c.Config().Kind == provider.Codex {
+		h.syncCodexModels(ctx, c)
+	}
 	ms, err := h.listModels(ctx)
 	if err != nil {
 		return
@@ -217,6 +220,44 @@ func (h *Hub) probeModels(ctx context.Context, c *provider.Client) {
 	}
 }
 
+// syncCodexModels keeps a connected Codex's models in step with its
+// catalog: a model it now offers is added (for people only, at no cost,
+// like the others), one it no longer offers is removed. "default" (its
+// first model) always stays. Nothing when the catalog can't be read.
+func (h *Hub) syncCodexModels(ctx context.Context, c *provider.Client) {
+	cfg := c.Config()
+	list, err := provider.CodexModels(ctx, cfg.Path)
+	if err != nil {
+		return
+	}
+	want := map[string]bool{}
+	for _, e := range list[1:] {
+		want[e.Slug] = true
+	}
+	ms, err := h.listModels(ctx)
+	if err != nil {
+		return
+	}
+	have := map[string]bool{}
+	for _, m := range ms {
+		if m.Provider != cfg.Name || m.Upstream == "default" {
+			continue
+		}
+		have[m.Upstream] = true
+		if !want[m.Upstream] {
+			_ = h.opts.Store.Delete(ctx, "model/"+m.ID)
+		}
+	}
+	for _, e := range list[1:] {
+		if have[e.Slug] {
+			continue
+		}
+		m := Model{ID: cfg.Name + "/" + e.Slug, Provider: cfg.Name, Upstream: e.Slug, DisplayName: subscriptionModelName(cfg.Kind, e.Slug),
+			PriceSet: true, HumanOnly: true}
+		_ = h.putModel(ctx, m)
+	}
+}
+
 // needsProbe: the version is unknown or a week old, and the alias was not
 // asked in the last week.
 func (h *Hub) needsProbe(ctx context.Context, id string) bool {
@@ -243,7 +284,7 @@ func (h *Hub) probe(ctx context.Context, c *provider.Client, m Model) bool {
 	// Codex names its model in its own catalog, read on this machine: no
 	// call is sent, no usage counted (and nothing to remember as asked).
 	if c.Config().Kind == provider.Codex {
-		if _, name, err := provider.CodexModel(ctx, c.Config().Path); err == nil {
+		if _, name, err := provider.CodexModel(ctx, c.Config().Path); err == nil && m.Upstream == "default" {
 			h.noteModel(m.ID, name)
 		}
 		return true

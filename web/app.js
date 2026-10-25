@@ -761,7 +761,8 @@ async function loadModels() {
   for (const m of ms) m.name = label(m);
   // Subscriptions first (the owner pays for them already), then API keys,
   // then models on the Mac; the picker shows names only, grouped.
-  ms.sort((a, b) => (group(a) - group(b)) || (group(a) === 0 && family(a) - family(b)) || a.name.localeCompare(b.name));
+  // Codex's own models in Codex's own order (rank, from its catalog).
+  ms.sort((a, b) => (group(a) - group(b)) || (group(a) === 0 && family(a) - family(b)) || ((a.rank || 0) - (b.rank || 0)) || a.name.localeCompare(b.name));
   S.models = ms; S.listed = true;
   // Kept for the next start: the picker shows them at once while the
   // connection to the Mac opens (seconds on a slow network).

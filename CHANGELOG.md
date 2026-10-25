@@ -4,6 +4,12 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.53](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.53) - 2026-10-25
+
+### Added
+
+- Every model Codex offers your ChatGPT subscription is now listed, not just its default: for example GPT-6-Astra, GPT-6-Sol, GPT-6-Luna and GPT-5.6-Sol, in Codex’s own order. Each runs as itself (named with `-m`). The list follows Codex’s catalog on your Mac: models it adds appear after the hub restarts, and models it drops go away. The existing “ChatGPT (Codex · …)” entry stays Codex’s first model, so devices and chats that use it are unchanged; devices set to “All models” get the new ones at once.
+
 ## [0.2.0-alpha.52](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.52) - 2026-10-25
 
 ### Fixed
