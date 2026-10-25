@@ -689,9 +689,20 @@ func hubCmd(args []string) {
 			// A key reaches an assistant's command only through its chat:
 			// it is typed in the person's own terminal. (A script piping
 			// a key in, with no assistant around, is fine.)
-			if installingAssistant() != "" {
-				fmt.Println(runnable(t("API Key 由你自己输入：在这台机器上你自己的终端里运行 omnillm hub provider add "+kind+"，在提示时粘贴；不要贴进聊天。",
-					"You enter the API key yourself: in your own terminal on this machine, run omnillm hub provider add "+kind+" and paste it when asked; don’t paste it into a chat.")))
+			if installingAssistant() != "" || otherAssistant() {
+				cmd := "omnillm hub provider add " + kind
+				if kind == "openai-compatible" {
+					name, base := *name, *base
+					if name == "" {
+						name = "NAME"
+					}
+					if base == "" {
+						base = "https://…"
+					}
+					cmd += " --name " + name + " --base-url " + base
+				}
+				fmt.Println(runnable(t("API Key 由你自己输入：在这台机器上你自己的终端里运行 "+cmd+"，在提示时粘贴；不要贴进聊天。",
+					"You enter the API key yourself: in your own terminal on this machine, run "+cmd+" and paste it when asked; don’t paste it into a chat.")))
 				return
 			}
 			key = readSecret(t("粘贴 API Key（不会显示）：", "Paste the API key (not shown): "))
