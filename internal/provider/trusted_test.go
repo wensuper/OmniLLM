@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/wensuper/OmniLLM/internal/fsown"
 )
 
 // A program is used only when no one else could have put it (or a link to
@@ -27,8 +29,10 @@ func TestTrustedCLI(t *testing.T) {
 	if err := os.Chmod(p, 0o775); err != nil {
 		t.Fatal(err)
 	}
-	if TrustedCLI(p) {
-		t.Fatal("a program its group can change is not")
+	// Group-writable is trusted only when the group is the user's own
+	// private one (as on many Linux systems, CI included).
+	if fi, _ := os.Stat(p); TrustedCLI(p) != fsown.PrivateGroup(fi) {
+		t.Fatalf("group-writable: trusted=%v, private group=%v", TrustedCLI(p), fsown.PrivateGroup(fi))
 	}
 	_ = os.Chmod(p, 0o755)
 	// A link from a folder anyone can write to, even to a trusted file.
