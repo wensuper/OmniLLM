@@ -312,13 +312,13 @@ func TestStatusNamesSourcesThatNeedAttention(t *testing.T) {
 	}
 	t.Setenv("OMNILLM_LANG", "zh")
 	got := nextStep(st)
-	want := "需要处理：Claude 订阅 — 登录已失效：" + term["zh"] + "运行 claude，再输入 /login\n需要处理：ChatGPT 订阅（Codex） — 用量到上限，稍后恢复"
+	want := "需要处理：Claude 订阅 — 登录已失效：" + term["zh"] + "运行 omnillm login claude\n需要处理：ChatGPT 订阅（Codex） — 用量到上限，稍后恢复"
 	if got != want {
 		t.Fatalf("%q\nwant %q", got, want)
 	}
 	t.Setenv("OMNILLM_LANG", "en")
 	got = nextStep(st)
-	want = "Needs attention: Claude subscription — Signed out: " + term["en"] + ", run claude, then type /login\nNeeds attention: ChatGPT subscription (Codex) — Usage limit reached; back soon"
+	want = "Needs attention: Claude subscription — Signed out: " + term["en"] + ", run omnillm login claude\nNeeds attention: ChatGPT subscription (Codex) — Usage limit reached; back soon"
 	if got != want {
 		t.Fatalf("%q\nwant %q", got, want)
 	}

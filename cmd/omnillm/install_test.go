@@ -1,11 +1,12 @@
 package main
 
 import (
-	"github.com/wensuper/OmniLLM/internal/provider"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/wensuper/OmniLLM/internal/provider"
 )
 
 func TestPurgeNeverTakesTheParent(t *testing.T) {
@@ -319,5 +320,41 @@ func TestMasterKeyMustBePrivate(t *testing.T) {
 	}
 	if err := ensureMasterKey(kf); err == nil {
 		t.Fatal("a readable key is refused")
+	}
+}
+
+// OMNILLM_HOME's parents: no one else can swap the folder out.
+func TestSafeParents(t *testing.T) {
+	d := t.TempDir()
+	if !safeParents(d) {
+		t.Fatal("a temp folder of this user's is safe")
+	}
+	open := filepath.Join(d, "open")
+	if err := os.MkdirAll(open, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	_ = os.Chmod(open, 0o777)
+	if safeParents(open) || safeParents(filepath.Join(open, "x")) {
+		t.Fatal("a folder others can write to (not sticky) is not")
+	}
+	_ = os.Chmod(open, 0o777|os.ModeSticky)
+	if !safeParents(open) {
+		t.Fatal("a sticky folder (like /tmp) is")
+	}
+	t.Setenv("OMNILLM_HOME", filepath.Join(d, "link"))
+	if err := os.Symlink(d, filepath.Join(d, "link")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := privateHome(); err == nil {
+		t.Fatal("a link is not a data folder")
+	}
+}
+
+// All set on a server: nothing to open there.
+func TestAllSetOnAServer(t *testing.T) {
+	t.Setenv("OMNILLM_LANG", "en")
+	st := Status{Running: true, Providers: 1, Devices: 1, RelayConfigured: true, RelayUp: true, Headless: true}
+	if s := nextStep(st); s != "All set." {
+		t.Fatal(s)
 	}
 }

@@ -22,6 +22,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -75,11 +77,10 @@ func cliDirs() []string {
 	if home != "" {
 		dirs = append(dirs, filepath.Join(home, ".local", "bin"), filepath.Join(home, ".claude", "local"),
 			filepath.Join(home, ".npm-global", "bin"), filepath.Join(home, ".bun", "bin"), filepath.Join(home, ".volta", "bin"))
-		// npm under nvm: each Node version has its own bin, newest last.
+		// npm under nvm: each Node version has its own bin, newest first.
 		nvm, _ := filepath.Glob(filepath.Join(home, ".nvm", "versions", "node", "*", "bin"))
-		for i := len(nvm) - 1; i >= 0; i-- {
-			dirs = append(dirs, nvm[i])
-		}
+		sort.Slice(nvm, func(i, j int) bool { return nodeNewer(nvm[i], nvm[j]) })
+		dirs = append(dirs, nvm...)
 	}
 	return append(dirs, "/opt/homebrew/bin", "/usr/local/bin", "/usr/bin")
 }
@@ -93,20 +94,68 @@ func FindCLI(k Kind) string {
 		if d == "" || !filepath.IsAbs(d) {
 			continue
 		}
-		p := filepath.Join(d, cliName(k))
-		// Only a program this user or the system installed, that no one
-		// else may change: a writable folder on PATH can't plant one.
-		if st, err := os.Stat(p); err == nil && st.Mode().IsRegular() && st.Mode().Perm()&0o111 != 0 &&
-			st.Mode().Perm()&0o002 == 0 && fsown.MineOrRoot(st) {
+		if p := filepath.Join(d, cliName(k)); TrustedCLI(p) {
 			return p
 		}
 	}
 	return ""
 }
 
+// nodeNewer orders nvm's ".../node/v22.3.0/bin" folders by version.
+func nodeNewer(a, b string) bool {
+	va := strings.Split(strings.TrimPrefix(filepath.Base(filepath.Dir(a)), "v"), ".")
+	vb := strings.Split(strings.TrimPrefix(filepath.Base(filepath.Dir(b)), "v"), ".")
+	for i := 0; i < len(va) && i < len(vb); i++ {
+		x, _ := strconv.Atoi(va[i])
+		y, _ := strconv.Atoi(vb[i])
+		if x != y {
+			return x > y
+		}
+	}
+	return len(va) > len(vb)
+}
+
+// TrustedCLI: p is a program only this user or the system could have put
+// there. The link (if it is one) and its folder, the real file and its
+// folder are each owned by this user or root and not writable by others;
+// the real file isn't writable by its group either. A folder on PATH that
+// someone else can write to can't plant a program (or a link to one).
+// Checked when the program is found and again before every run.
+func TrustedCLI(p string) bool {
+	if !filepath.IsAbs(p) {
+		return false
+	}
+	lt, err := os.Lstat(p)
+	if err != nil || !fsown.MineOrRoot(lt) {
+		return false
+	}
+	real, err := filepath.EvalSymlinks(p)
+	if err != nil {
+		return false
+	}
+	st, err := os.Stat(real)
+	if err != nil || !st.Mode().IsRegular() || st.Mode().Perm()&0o111 == 0 || st.Mode().Perm()&0o022 != 0 || !fsown.MineOrRoot(st) {
+		return false
+	}
+	for _, d := range []string{filepath.Dir(p), filepath.Dir(real)} {
+		fi, err := os.Stat(d)
+		if err != nil || !fi.IsDir() || fi.Mode().Perm()&0o002 != 0 || !fsown.MineOrRoot(fi) {
+			return false
+		}
+	}
+	return true
+}
+
+// errUntrustedCLI: the saved program is no longer one only this user or
+// the system could have put there.
+var errUntrustedCLI = errors.New("provider: the program can be changed by another user; reinstall it with omnillm login")
+
 // CLILoggedIn asks the official program whether it is logged in. It never
 // reads the login itself.
 func CLILoggedIn(ctx context.Context, k Kind, path string) bool {
+	if !TrustedCLI(path) {
+		return false
+	}
 	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
 	dir, err := os.MkdirTemp("", "omnillm-cli-")
@@ -458,6 +507,9 @@ func (c *Client) spawnCLI(ctx context.Context, model string, msgs []omnillm.Mess
 			args = append(args, turn.id)
 		}
 		args = append(args, "-")
+	}
+	if !TrustedCLI(c.cfg.Path) {
+		return fail(errUntrustedCLI)
 	}
 	cctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	cmd := exec.CommandContext(cctx, c.cfg.Path, args...)

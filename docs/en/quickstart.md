@@ -104,9 +104,11 @@ Install [Ollama](https://ollama.com) and download a model (for example `ollama p
 ## Step 3: Add a phone or tablet
 
 1. In the console, click *Devices → Add device* (on a Mac, also the menu bar icon → *Add device…*; or run `omnillm open --add`). The switch at the top is on *Phone or tablet*: the QR code is on the left, the three steps on the right, and a line below says what the panel is waiting for.
-2. Scan the code with your phone’s **camera** and open the link. The web page asks “Add this device to your Mac?” and shows which connection service it goes through; tap *Add*.
+2. Scan the code with your phone’s **camera** and open the link. The web page asks “Add this device to your computer?” and shows which connection service it goes through; tap *Add*.
 3. The QR code turns into a 6-digit number, and your phone shows one too. **Check that they match**, then click *Matches, add* on the computer (*Doesn’t match, don’t add* if they don’t).
 4. A chat screen appears on the phone. Send a message to try it.
+
+On a hub without a screen (a server), run `omnillm pair` in its terminal instead: it shows the QR code there, and you type y when the 6 digits match. It also prints a pairing text, for adding a computer with `omnillm connect pair` (Step 4).
 
 Adding the phone is your step: when an AI assistant installed OmniLLM, it never pairs or confirms for you.
 

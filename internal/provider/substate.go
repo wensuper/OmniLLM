@@ -53,6 +53,9 @@ func CodexLoggedInOwn(ctx context.Context, path string) bool {
 		return false
 	}
 	defer os.RemoveAll(dir)
+	if !TrustedCLI(path) {
+		return false
+	}
 	cmd := exec.CommandContext(ctx, path, "login", "status")
 	cmd.Dir, cmd.Env = dir, cliEnv(path, dir)
 	if h := os.Getenv("CODEX_HOME"); h != "" {

@@ -185,9 +185,9 @@ func problemText(p hub.ProviderInfo, now time.Time) string {
 	switch p.Problem {
 	case provider.ProblemLogin:
 		if p.Kind == provider.Codex {
-			return fmt.Sprintf(t("登录已失效：%s运行 codex login", "Signed out: %s, run codex login"), inTerminal())
+			return fmt.Sprintf(t("登录已失效：%s运行 omnillm login chatgpt", "Signed out: %s, run omnillm login chatgpt"), inTerminal())
 		}
-		return fmt.Sprintf(t("登录已失效：%s运行 claude，再输入 /login", "Signed out: %s, run claude, then type /login"), inTerminal())
+		return fmt.Sprintf(t("登录已失效：%s运行 omnillm login claude", "Signed out: %s, run omnillm login claude"), inTerminal())
 	case provider.ProblemLimit:
 		if wait := time.Unix(p.ResetsAt, 0).Sub(now); p.ResetsAt > 0 && wait > 0 {
 			return fmt.Sprintf(t("用量到上限，%s后恢复", "Usage limit reached; back in %s"), omnillm.RoundDuration(lang(), wait))

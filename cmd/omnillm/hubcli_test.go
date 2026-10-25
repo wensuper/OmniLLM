@@ -180,7 +180,7 @@ func TestAppsModelsProvidersTables(t *testing.T) {
 	}
 	for i, want := range [][]string{
 		{"Claude subscription", "Subscription login", "Usage limit reached; back in about 3 hours"},
-		{"ChatGPT subscription (Codex)", "Signed out: " + inTerminal() + ", run codex login"}, // "in Terminal" on a Mac, "in a terminal" elsewhere
+		{"ChatGPT subscription (Codex)", "Signed out: " + inTerminal() + ", run omnillm login chatgpt"}, // "in Terminal" on a Mac, "in a terminal" elsewhere
 		{"groq", "API key …1234", "OK"},
 		{"Ollama (this ", " only", "OK"},
 	} {

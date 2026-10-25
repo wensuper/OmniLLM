@@ -14,13 +14,19 @@ All notable changes to OmniLLM are documented here. OmniLLM is in early pre-rele
 - Installing again doesn't reopen the sign-in window, and says it is already installed.
 - The installer says when OmniLLM starts by itself, and warns on Linux when it would stop at logout or after a restart.
 - The phone page no longer assumes your OmniLLM runs on a Mac: pairing says "your computer" (with both ways to confirm), and a hub that isn't a Mac is called "your computer" everywhere.
-- The console's signed-out fix and the API-key line use the same commands as everywhere else (`omnillm login claude`, `omnillm hub provider add anthropic`).
+- Signed-out fixes (console and terminal) and the API-key line use the same commands everywhere (`omnillm login claude`, `omnillm login chatgpt`, `omnillm hub provider add anthropic`).
+- A hub installed with `OMNILLM_HOME` is found by every later command without setting it again.
+- On a server, "All set" no longer tells you to open a console you can't open there. After `omnillm login` or `omnillm hub provider add` on a computer with a screen, the next step (adding a phone) follows.
+- A computer set up as a device, and pairing errors, say "your other computer" or "the console / omnillm pair", not "your Mac". The phone's confirmation reads "Continue only if the QR code you just scanned is showing on your own computer".
+- The installer script reports progress only ("Updating X → Y…"); the result is said once.
 
 ### Security
 
 - A data folder set with `OMNILLM_HOME` must be your own (it is made private), and the hub service now keeps it, so an update with it no longer rolls itself back.
 - The master key file, the control socket and the Claude Code / Codex programs are used only when they are your own (or, for programs, the system's) and others can't change them.
 - Downloads follow redirects only while they stay on https. A relay or phone page other than the project's, set once, is named at every install.
+- Claude Code and Codex are run only from places no other user can change (the link, the file and both folders), checked again before every run. `OMNILLM_HOME` can't be a link or sit under a folder someone else can swap; the hub checks it at start too.
+- When no browser opens, `omnillm open` prints its one-time console link only for a person at the terminal, never into an AI assistant's output.
 
 ## [0.2.0-alpha.48](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.48) - 2026-10-24
 

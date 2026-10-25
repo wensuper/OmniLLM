@@ -12,6 +12,8 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+
+	"github.com/wensuper/OmniLLM/internal/fsown"
 )
 
 // codexSourceHome is the owner's Codex home.
@@ -52,7 +54,14 @@ func prepareCodexHome() (string, error) {
 	if err := os.MkdirAll(home, 0o700); err != nil {
 		return "", err
 	}
-	_ = os.Chmod(home, 0o700)
+	// Ours alone: a real folder of this user's (not a link, not one
+	// someone else made), private, or Codex would read their files.
+	if fi, err := os.Lstat(home); err != nil || !fi.IsDir() || !fsown.Mine(fi) {
+		return "", errors.New("codex: its folder isn't this user's own")
+	}
+	if err := os.Chmod(home, 0o700); err != nil {
+		return "", err
+	}
 	link := filepath.Join(home, "auth.json")
 	if cur, err := os.Readlink(link); err != nil || cur != src {
 		_ = os.Remove(link)

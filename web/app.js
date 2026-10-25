@@ -27,7 +27,7 @@ const T = {
     scan: "扫描二维码", pasteInstead: "扫不了码？粘贴配对文字", pastePh: "粘贴配对文字（以 omnillm3- 开头）", add: "添加", cancel: "取消", back: "返回", delete: "删除", remove: "移除", gotIt: "知道了",
     scanHint: "把电脑屏幕上的二维码放进框里", camDenied: "没有拿到摄像头权限。在浏览器设置里允许这个网站用摄像头后再试，或者用“粘贴配对文字”。",
     pairTitle: "添加这台设备", pairConnecting: "正在连接你的电脑……",
-    pairAsk: "要把这台设备添加到你的电脑吗？只有你刚在电脑上点了“添加设备”或运行了 omnillm pair 才继续。", pairVia: "经由 {0}",
+    pairAsk: "要把这台设备添加到你的电脑吗？只有你刚扫的二维码正显示在你自己的电脑上，才继续。", pairVia: "经由 {0}",
     pairReplace: "这会替换这台设备现在的配对（{0}），之前的 Mac 就不能再从这里用了。",
     pairCheck: "电脑上显示同样的数字，就在那边确认：控制台里点“一致，添加”，终端里输入 y。", pairWait: "等你在电脑上确认……", pairMismatch: "数字不一样？取消", pairDone: "已添加。",
     pairDropped: "连接断了。在电脑上换一个二维码再扫（控制台点“换一个二维码”，终端里重新运行 omnillm pair）。", connectedMac: "已连上你的 Mac",
@@ -72,7 +72,7 @@ const T = {
     scan: "Scan QR code", pasteInstead: "Can’t scan? Paste the pairing text", pastePh: "Paste the pairing text (starts with omnillm3-)", add: "Add", cancel: "Cancel", back: "Back", delete: "Delete", remove: "Remove", gotIt: "Got it",
     scanHint: "Point at the QR code on your computer’s screen", camDenied: "No camera access. Allow the camera for this site in your browser settings and try again, or use “Paste the pairing text”.",
     pairTitle: "Add this device", pairConnecting: "Connecting to your computer…",
-    pairAsk: "Add this device to your computer? Continue only if you just chose “Add device” or ran omnillm pair there.", pairVia: "Via {0}",
+    pairAsk: "Add this device to your computer? Continue only if the QR code you just scanned is showing on your own computer.", pairVia: "Via {0}",
     pairReplace: "This replaces this device’s current pairing ({0}); the previous Mac can no longer be used from here.",
     pairCheck: "If your computer shows the same number, confirm there: “Matches, add” in the console, or type y in the terminal.", pairWait: "Waiting for you to confirm on your computer…", pairMismatch: "Numbers don’t match? Cancel", pairDone: "Added.",
     pairDropped: "The connection dropped. Get a new QR code on your computer (“New QR code” in the console, or run omnillm pair again) and scan it.", connectedMac: "Connected to your Mac",
@@ -116,7 +116,7 @@ document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
 let hubOS = localStorageGet("hubos") || "";
 const MAC_HINTS = new Set(["step1", "getHubBody", "getHubBodyPaste"]);
 function computerWords(k, s) {
-  if (!hubOS || hubOS === "darwin" || MAC_HINTS.has(k)) return s;
+  if (hubOS === "darwin" || MAC_HINTS.has(k)) return s; // not known yet: "computer" too
   return lang === "zh" ? s.replace(/ ?Mac ?/g, "电脑") : s.replace(/\bMac\b/g, "computer");
 }
 function t(k, ...a) { let s = computerWords(k, T[lang][k] ?? T.en[k] ?? k); a.forEach((v, i) => { s = s.replace("{" + i + "}", v); }); return s; }

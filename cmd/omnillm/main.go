@@ -374,18 +374,18 @@ func subUsage() {
 func guideCmd() {
 	switch {
 	case role() == "device":
-		fmt.Println(runnable(t("这台电脑用的是你 Mac 上的 OmniLLM。\n\n想做什么：\n"+
+		fmt.Println(runnable(t("这台电脑用的是你另一台电脑上的 OmniLLM。\n\n想做什么：\n"+
 			"  对话                 omnillm connect chat\n"+
 			"  问一句               omnillm connect ask \"问题\"\n"+
-			"  换一台 Mac 配对      omnillm connect forget，再 omnillm connect pair\n"+
+			"  换一台电脑配对       omnillm connect forget，再 omnillm connect pair\n"+
 			"  更新                 omnillm update\n"+
 			"  全部命令             omnillm help --all",
-			"This computer uses OmniLLM on your Mac.\n\nWhat do you want to do?\n"+
-				"  Chat                    omnillm connect chat\n"+
-				"  Ask one question        omnillm connect ask \"question\"\n"+
-				"  Pair with another Mac   omnillm connect forget, then omnillm connect pair\n"+
-				"  Update                  omnillm update\n"+
-				"  Every command           omnillm help --all")))
+			"This computer uses OmniLLM on another computer of yours.\n\nWhat do you want to do?\n"+
+				"  Chat                        omnillm connect chat\n"+
+				"  Ask one question            omnillm connect ask \"question\"\n"+
+				"  Pair with another computer  omnillm connect forget, then omnillm connect pair\n"+
+				"  Update                      omnillm update\n"+
+				"  Every command               omnillm help --all")))
 		return
 	case role() == "" && !exists(dataDir("hub")):
 		fmt.Println(t("OmniLLM 还没有装好。安装：curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh\n全部命令：omnillm help",
@@ -400,21 +400,24 @@ func guideCmd() {
 	}
 	fmt.Println(runnable(nextStep(st)))
 	fmt.Println()
-	console := ""
+	console, connect := "", ""
 	if !st.Headless {
 		console = t("  打开控制台           omnillm open\n", "  Open the console         omnillm open\n")
 	}
+	// With no model yet, next already lists how to connect one.
+	if st.Providers > 0 {
+		connect = t("  接上订阅             omnillm login claude（或 chatgpt）\n"+
+			"  接上 API Key         omnillm hub provider add anthropic（OpenAI 的 Key 换成 openai）\n",
+			"  Connect a subscription   omnillm login claude (or chatgpt)\n"+
+				"  Connect an API key       omnillm hub provider add anthropic (openai for an OpenAI key)\n")
+	}
 	fmt.Println(runnable(t("想做什么：\n"+
-		"  加手机或另一台电脑   omnillm pair\n"+
-		"  接上订阅             omnillm login claude（或 chatgpt）\n"+
-		"  接上 API Key         omnillm hub provider add anthropic（OpenAI 的 Key 换成 openai）\n"+
+		"  加手机或另一台电脑   omnillm pair\n"+connect+
 		"  看现在怎么样         omnillm status\n"+console+
 		"  更新                 omnillm update\n"+
 		"  全部命令             omnillm help --all",
 		"What do you want to do?\n"+
-			"  Add a phone or computer  omnillm pair\n"+
-			"  Connect a subscription   omnillm login claude (or chatgpt)\n"+
-			"  Connect an API key       omnillm hub provider add anthropic (openai for an OpenAI key)\n"+
+			"  Add a phone or computer  omnillm pair\n"+connect+
 			"  See how things are       omnillm status\n"+console+
 			"  Update                   omnillm update\n"+
 			"  Every command            omnillm help --all")))
@@ -434,6 +437,7 @@ func helpCmd(args []string) {
 
 func main() {
 	log.SetFlags(0)
+	adoptHome()
 	if len(os.Args) < 2 {
 		guideCmd()
 		return
@@ -499,6 +503,12 @@ func openCmd(args []string) {
 		url += "&add"
 	}
 	if err := openLogin(url); err != nil {
+		// The link is a console session: only for a person at this
+		// terminal, never into an assistant's transcript.
+		if installingAssistant() != "" || !term.IsTerminal(int(os.Stdout.Fd())) {
+			fmt.Println(runnable(onMachine(t("这里打不开浏览器。请在%s 的终端里亲自运行 omnillm open。", "No browser opened here. In a terminal on %s, run omnillm open yourself."))))
+			return
+		}
 		fmt.Print(onMachine(t("在 %s 的浏览器里打开（2 分钟内有效，只能用一次）：\n", "Open this in a browser on %s (valid 2 minutes, single use):\n")))
 		fmt.Println(url)
 		return
@@ -653,12 +663,7 @@ func hubCmd(args []string) {
 			key = readSecret(t("粘贴 API Key（不会显示）：", "Paste the API key (not shown): "))
 		}
 		call(sock, control.Request{Op: "provider.add", Args: map[string]string{"kind": kind, "name": *name, "base_url": *base}, Secret: key})
-		if st, ok := queryStatus(); ok {
-			st.Headless = headless()
-			if pairsHere(st) {
-				pairHere()
-			}
-		}
+		afterModel()
 	case "devices", "apps", "models", "providers", "usage":
 		// A table for people; --json, the hub's data as it is.
 		fs := flag.NewFlagSet(args[0], flag.ContinueOnError)
@@ -893,6 +898,11 @@ func hubRun(dir, sock string, args []string) {
 	consoleAddr := fs.String("console", "127.0.0.1:8770", "serve the local console on this loopback address (empty: off)")
 	webApp := fs.String("web-app", "", "web client the pairing QR code opens (default: the project’s)")
 	_ = fs.Parse(args)
+	// The data folder is checked here too, not only at install: the hub
+	// keeps its secrets and state there.
+	if _, err := privateHome(); err != nil {
+		log.Fatal(err)
+	}
 	switch *relayURL {
 	case "":
 		*relayURL = hub.DefaultRelayURL
@@ -1530,7 +1540,7 @@ func connectCmd(args []string) {
 			die(err)
 		}
 		// The other side may be a Mac or a server: not known here yet.
-		fmt.Printf(t("已添加到你的电脑（这台设备在那边叫“%s”）。\n", "Added to your computer (it lists this device as “%s”).\n"), info.Name)
+		fmt.Printf(t("已添加：这台电脑现在能用你另一台电脑上的模型（那边叫它“%s”）。\n", "Added: this computer can now use the models on your other computer, which lists it as “%s”.\n"), info.Name)
 	case "run":
 		fs := flag.NewFlagSet("connect run", flag.ContinueOnError)
 		listen := fs.String("listen", "127.0.0.1:8766", "")

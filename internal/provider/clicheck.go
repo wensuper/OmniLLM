@@ -78,6 +78,9 @@ func cliVersion(ctx context.Context, path string) string {
 		return ""
 	}
 	defer os.RemoveAll(dir)
+	if !TrustedCLI(path) {
+		return ""
+	}
 	cmd := exec.CommandContext(ctx, path, "--version")
 	cmd.Dir, cmd.Env = dir, cliEnv(path, dir)
 	out, err := cmd.Output()

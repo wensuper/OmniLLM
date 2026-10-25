@@ -100,9 +100,20 @@ func loginScript(k provider.Kind, cli string, headless, window bool) string {
 			w("%s login --connect %s >/dev/null 2>&1", shq(self), word)
 		}
 		w("say ''")
-		w("say %s", shq(fmt.Sprintf(t("好了：%s 已登录。回到浏览器里的 OmniLLM 页面，接着用手机扫二维码。这个窗口可以关掉。", "Done: %s is signed in. Go back to the OmniLLM page in your browser and scan the QR code with your phone next. You can close this window."), name)))
+		w("say %s", shq(fmt.Sprintf(t("好了：%s 已登录。回到浏览器里的 OmniLLM 页面。这个窗口可以关掉。", "Done: %s is signed in. Go back to the OmniLLM page in your browser. You can close this window."), name)))
 	}
 	return b.String()
+}
+
+// phoneNext is the sign-in window's closing line when a phone is still to
+// be added (no device yet, remote access on): the page goes on to its QR
+// code. "" otherwise.
+func phoneNext(k provider.Kind) string {
+	st, ok := queryStatus()
+	if !ok || st.Devices > 0 || !st.RelayConfigured {
+		return ""
+	}
+	return fmt.Sprintf("say %s\n", shq(t("接着在那个页面上用手机扫二维码，把手机加进来。", "Then scan the QR code on that page with your phone to add it.")))
 }
 
 // cliWord is the program's command name.
@@ -127,7 +138,7 @@ func openLoginWindow(kind string) error {
 	// control Terminal needed); it is ours, in the hub's folder, 0700.
 	p := filepath.Join(dataDir("hub"), "login-"+kind+".command")
 	_ = os.Remove(p) // a fresh file, never one a link points elsewhere from
-	if err := os.WriteFile(p, []byte(loginScript(k, provider.FindCLI(k), false, true)), 0o700); err != nil {
+	if err := os.WriteFile(p, []byte(loginScript(k, provider.FindCLI(k), false, true)+phoneNext(k)), 0o700); err != nil {
 		return err
 	}
 	_ = os.Chmod(p, 0o700)
@@ -160,8 +171,8 @@ func loginCmd(args []string) {
 	}
 	k := loginKind(args[0])
 	if role() == "device" {
-		die(say(t("这台电脑只当设备用，用的是你 Mac 上的订阅：订阅要在那台 Mac 上登录（在那台 Mac 上运行 omnillm login）。",
-			"This computer is set up as a device and uses the subscription on your Mac: sign in there (run omnillm login on that Mac).")))
+		die(say(t("这台电脑只当设备用，用的是你另一台电脑上的订阅：订阅要在那台电脑上登录（在那台电脑上运行 omnillm login）。",
+			"This computer is set up as a device and uses the subscription on your other computer: sign in there (run omnillm login on that computer).")))
 	}
 	cmd := exec.Command("/bin/bash", "-c", loginScript(k, provider.FindCLI(k), headless(), false))
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
@@ -184,12 +195,24 @@ func loginCmd(args []string) {
 		die(err)
 	}
 	fmt.Println(msg)
-	// A machine without a screen and no phone yet: on to the QR code.
-	if st, ok := queryStatus(); ok {
-		st.Headless = headless()
-		if pairsHere(st) {
-			pairHere()
-		}
+	afterModel()
+}
+
+// afterModel is what a terminal says once a model is connected: on a
+// machine without a screen, straight on to the phone's QR code; elsewhere,
+// the next step while there is no device yet.
+func afterModel() {
+	st, ok := queryStatus()
+	if !ok {
+		return
+	}
+	st.Running, st.Headless = true, headless()
+	if pairsHere(st) {
+		pairHere()
+		return
+	}
+	if st.Devices == 0 && st.RelayConfigured {
+		fmt.Println(runnable(nextStep(st)))
 	}
 }
 

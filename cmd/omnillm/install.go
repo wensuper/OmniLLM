@@ -153,14 +153,8 @@ func installCmd(args []string) {
 	if err != nil {
 		die(err)
 	}
-	// Installed before (even this same version): no first-run windows.
-	first := !exists(filepath.Join(home, ".local", "bin", "omnillm"))
-	prev := keepPrevious(home)
-	bin, err := installBinary(home)
-	if err != nil {
-		die(err)
-	}
-	ensureOnPath(home)
+	// What can stop the install is checked before the program is
+	// replaced: a stop after that would leave no way back.
 	dir := dataDir("hub")
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		die(err)
@@ -169,6 +163,14 @@ func installCmd(args []string) {
 	if err != nil {
 		die(err)
 	}
+	// Installed before (even this same version): no first-run windows.
+	first := !exists(filepath.Join(home, ".local", "bin", "omnillm"))
+	prev := keepPrevious(home)
+	bin, err := installBinary(home)
+	if err != nil {
+		die(err)
+	}
+	ensureOnPath(home)
 	if env == nil {
 		env = map[string]string{}
 	}
@@ -373,11 +375,11 @@ func nextStep(st Status) string {
 		return lead + onMachine(t("下一步：接入一个模型（选一种）：\n"+
 			"· 有 Claude 订阅：运行 omnillm login claude（没装 Claude Code 会先装上，再在浏览器里登录）\n"+
 			"· 有 ChatGPT 订阅：运行 omnillm login chatgpt（没装 Codex 会先装上，再在浏览器里登录）\n"+
-			"· 有 API Key 或想用 %s 上免费的模型：运行 omnillm open，在“模型”里接入",
+			"· 有 API Key 或想用 %s 上免费的模型：运行 omnillm open，点“我有 API Key”",
 			"Next: connect a model (pick one):\n"+
 				"· Claude subscription: run omnillm login claude (installs Claude Code first if needed, then signs in in your browser)\n"+
 				"· ChatGPT subscription: run omnillm login chatgpt (installs Codex first if needed, then signs in in your browser)\n"+
-				"· API key or a free model on %s: run omnillm open and connect it under “Models”"))
+				"· API key or a free model on %s: run omnillm open and choose “I have an API key”"))
 	case !st.RelayConfigured:
 		return onMachine(t("已经可以在 %s 上用。要让其他设备连进来，需要先设置远程连接。",
 			"Ready on %s. To let other devices connect, set up remote access first."))
@@ -391,7 +393,7 @@ func nextStep(st Status) string {
 	// machine's screen themselves; that check is what keeps out someone
 	// who only saw the code, so no assistant answers it for them.
 	case st.Devices == 0 && st.Opened:
-		return onMachine(t("浏览器里已经打开了添加手机的二维码：用手机相机扫一下，在手机上点“添加”；两边的 6 位数一样，就在%s上点“一致，添加”。",
+		return onMachine(t("浏览器里已经打开了添加手机的二维码：用手机相机扫一下，在手机上点“添加”；两边的 6 位数一样，就在%s 上点“一致，添加”。",
 			"The QR code for adding your phone is open in your browser: scan it with your phone’s camera and tap “Add” on the phone. If the 6 digits match on both sides, choose “Matches, add” on %s."))
 	case st.Devices == 0 && st.Headless:
 		return t("下一步：添加手机：在这台机器的终端里运行 omnillm pair，用手机相机扫它显示的二维码；两边的 6 位数一样，就在那里输入 y。",
@@ -399,6 +401,9 @@ func nextStep(st Status) string {
 	case st.Devices == 0:
 		return t("下一步：添加手机：运行 omnillm open --add，用手机相机扫页面上的二维码。",
 			"Next: add your phone: run omnillm open --add and scan the QR code on the page with your phone’s camera.")
+	}
+	if st.Headless || st.Opened {
+		return t("一切正常。", "All set.")
 	}
 	if runtime.GOOS == "darwin" {
 		return t("一切正常。运行 omnillm open 打开控制台，或点菜单栏里的 OmniLLM 图标。",
@@ -420,6 +425,9 @@ func assistantStep(st Status) string {
 	case st.LoginOpened:
 		return fmt.Sprintf(t("你在用 %[1]s：已经打开一个终端窗口，在浏览器里用你的 %[2]s确认登录一次，手机就能用它；登录好 OmniLLM 自己接上。",
 			"You’re using %[1]s: a Terminal window is open. Confirm the sign-in with your %[2]s in the browser once, and your phone can use it; OmniLLM connects it by itself."), name, sub)
+	case st.Opened:
+		return fmt.Sprintf(t("下一步：你在用 %[1]s，但 OmniLLM 还用不上它的登录。在刚打开的浏览器页面里，点“我有 %[2]s”卡片上的“登录”（或“安装并登录”）。",
+			"Next: you’re using %[1]s, but OmniLLM can’t use its sign-in yet. In the browser page that just opened, choose “Sign in” (or “Install and sign in”) on the “I have a %[2]s” card."), name, sub)
 	case st.Headless:
 		return fmt.Sprintf(t("下一步：你在用 %[1]s，但 OmniLLM 还用不上它的登录。在这台机器的终端里亲自运行 omnillm login %[3]s，用你的 %[2]s确认一次（没有浏览器时它会给一个网址和代码，在手机上打开）。",
 			"Next: you’re using %[1]s, but OmniLLM can’t use its sign-in yet. In this machine’s terminal, run omnillm login %[3]s yourself and confirm with your %[2]s (without a browser it gives an address and a code to open on your phone)."), name, sub, word)
@@ -894,19 +902,38 @@ var serviceSettings = []string{"OMNILLM_RELAY", "OMNILLM_WEB_APP", "OMNILLM_HOME
 // keepServiceSettings sets each of serviceSettings that is not in the
 // environment from the installed service's file.
 func keepServiceSettings(home string) {
-	var body string
-	switch runtime.GOOS {
-	case "darwin":
-		b, _ := os.ReadFile(filepath.Join(home, "Library", "LaunchAgents", launchdLabel+".plist"))
-		body = string(b)
-	case "linux":
-		b, _ := os.ReadFile(filepath.Join(home, ".config", "systemd", "user", systemdUnit))
-		body = string(b)
-	}
-	for k, v := range savedSettings(body) {
+	for k, v := range savedSettings(serviceBody(home)) {
 		if os.Getenv(k) == "" {
 			os.Setenv(k, v)
 		}
+	}
+}
+
+// serviceBody is the installed hub service's file ("" when none).
+func serviceBody(home string) string {
+	var b []byte
+	switch runtime.GOOS {
+	case "darwin":
+		b, _ = os.ReadFile(filepath.Join(home, "Library", "LaunchAgents", launchdLabel+".plist"))
+	case "linux":
+		b, _ = os.ReadFile(filepath.Join(home, ".config", "systemd", "user", systemdUnit))
+	}
+	return string(b)
+}
+
+// adoptHome: a hub installed with OMNILLM_HOME keeps it in its service, so
+// every later command (the person's, an assistant's) finds that hub
+// without setting it again.
+func adoptHome() {
+	if os.Getenv("OMNILLM_HOME") != "" {
+		return
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return
+	}
+	if h := savedSettings(serviceBody(home))["OMNILLM_HOME"]; filepath.IsAbs(h) {
+		os.Setenv("OMNILLM_HOME", h)
 	}
 }
 
@@ -1067,25 +1094,34 @@ func ownServers() string {
 }
 
 // privateHome checks OMNILLM_HOME before anything is kept there: a full
-// path to a folder of this user's (never one someone else made, say in
-// /tmp), private (0700). "" when it isn't set.
+// path to a real folder of this user's (not a link, never one someone else
+// made, say in /tmp, and not the home folder itself), private (0700), under
+// parents no one else can swap it out of. "" when it isn't set.
 func privateHome() (string, error) {
 	h := os.Getenv("OMNILLM_HOME")
 	if h == "" {
 		return "", nil
 	}
+	h = filepath.Clean(h)
+	notYours := sayf(t("OMNILLM_HOME（%s）不是一个只属于你的文件夹。换一个你自己的，比如 ~/.omnillm。", "OMNILLM_HOME (%s) isn’t a folder only you control. Use one of your own, such as ~/.omnillm."), h)
 	if !filepath.IsAbs(h) {
 		return "", say(t("OMNILLM_HOME 必须是完整路径（以 / 开头）。", "OMNILLM_HOME must be a full path (starting with /)."))
+	}
+	if home, err := os.UserHomeDir(); err == nil && filepath.Clean(home) == h {
+		return "", notYours
+	}
+	if !safeParents(filepath.Dir(h)) {
+		return "", notYours
 	}
 	if err := os.MkdirAll(h, 0o700); err != nil {
 		return "", err
 	}
-	fi, err := os.Stat(h)
+	fi, err := os.Lstat(h)
 	if err != nil {
 		return "", err
 	}
 	if !fi.IsDir() || !fsown.Mine(fi) {
-		return "", sayf(t("OMNILLM_HOME（%s）不是你自己的文件夹。换一个你自己的，比如 ~/.omnillm。", "OMNILLM_HOME (%s) isn’t a folder of yours. Use one of your own, such as ~/.omnillm."), h)
+		return "", notYours
 	}
 	if fi.Mode().Perm()&0o077 != 0 {
 		if err := os.Chmod(h, 0o700); err != nil {
@@ -1093,6 +1129,33 @@ func privateHome() (string, error) {
 		}
 	}
 	return h, nil
+}
+
+// safeParents: no one but this user (or root) can rename or replace
+// anything inside dir or its parents: each is owned by this user or root,
+// and one others may write to is sticky (like /tmp), where only an entry's
+// owner can move it.
+func safeParents(dir string) bool {
+	for d := dir; ; d = filepath.Dir(d) {
+		// A link on the way must be this user's or root's (like macOS's
+		// /tmp), or its owner could point it elsewhere.
+		if lt, err := os.Lstat(d); err == nil && lt.Mode()&os.ModeSymlink != 0 && !fsown.MineOrRoot(lt) {
+			return false
+		}
+		fi, err := os.Stat(d)
+		if err != nil {
+			if errors.Is(err, os.ErrNotExist) && d != filepath.Dir(d) {
+				continue // made below, by this user
+			}
+			return false
+		}
+		if !fi.IsDir() || !fsown.MineOrRoot(fi) || (fi.Mode().Perm()&0o022 != 0 && fi.Mode()&os.ModeSticky == 0) {
+			return false
+		}
+		if d == filepath.Dir(d) {
+			return true
+		}
+	}
 }
 
 // startDetached runs the hub without a service manager (no autostart).
@@ -1163,8 +1226,8 @@ func loginURL() (string, error) {
 
 func statusCmd(args []string) {
 	if role() == "device" {
-		st := Status{Next: runnable(t("这台电脑用的是你 Mac 上的 OmniLLM，自己不接入模型。对话：omnillm connect chat。",
-			"This computer uses OmniLLM on your Mac and runs no models itself. To chat: omnillm connect chat."))}
+		st := Status{Next: runnable(t("这台电脑用的是你另一台电脑上的 OmniLLM，自己不接入模型。对话：omnillm connect chat。",
+			"This computer uses OmniLLM on another computer of yours and runs no models itself. To chat: omnillm connect chat."))}
 		u := readUpdate(dataDir("device"))
 		st.Update = plain(u.newer(version))
 		if len(args) > 0 && args[0] == "--json" {

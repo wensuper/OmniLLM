@@ -138,9 +138,9 @@ if [ -x "$HOME/.local/bin/omnillm" ]; then
   old=${old#omnillm }
 fi
 if [ -n "$old" ] && [ "$old" = "$new" ]; then
-  say "$(t "已经是这个版本（${new}），重新安装一遍，设置都保留。" "Already on $new; installing it again (settings are kept).")"
+  say "$(t "已经是 ${new}，重新安装……" "Already on ${new}; reinstalling…")"
 elif [ -n "$old" ]; then
-  say "$(t "已装的是 ${old}，换成 ${new}，设置都保留。" "Replacing $old with $new (settings are kept).")"
+  say "$(t "正在从 ${old} 更新到 ${new}……" "Updating ${old} → ${new}…")"
 fi
 "$bin" install "$@"
 }

@@ -493,7 +493,7 @@ func removeChat(r ChatRecord) {
 	if path == "" {
 		path = FindCLI(Codex)
 	}
-	if path != "" {
+	if path != "" && TrustedCLI(path) {
 		if home, err := prepareCodexHome(); err == nil {
 			if dir, err := os.MkdirTemp("", "omnillm-cli-"); err == nil {
 				ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)

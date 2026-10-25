@@ -249,8 +249,8 @@ func TestSourceAndKeyMessages(t *testing.T) {
 		{MsgBadSource, "名字只能用英文字母、数字和 -（不要空格）；接口地址要以 https:// 开头。", "Use letters, digits and - for the name (no spaces), and an address starting with https://."},
 		{MsgKeyMalformed, "这不像完整的 API Key。到服务商网站重新复制一次，再粘贴。", "That doesn’t look like a complete API key. Copy it again from the provider’s site and paste it."},
 		{MsgNoChatModel, "这台 Mac 上的 Ollama 里没有能对话的模型（只有向量 / 重排模型）。在终端运行 ollama pull qwen3 下载一个。", "Ollama on this Mac has no chat model (only embedding or rerank models). Run ollama pull qwen3 in Terminal to get one."},
-		{MsgPairingExpired, "这个二维码或配对文字已过期或已用过。在 Mac 上重新点“添加设备”。", "This QR code or pairing text expired or was already used. Choose “Add device” on your Mac again."},
-		{MsgPairingFailed, "这个二维码或配对文字已过期或已用过。在 Mac 上重新点“添加设备”。", "This QR code or pairing text expired or was already used. Choose “Add device” on your Mac again."},
+		{MsgPairingExpired, "这个二维码或配对文字已过期或已用过。换一个新的再试（控制台里点“添加设备”，或再运行 omnillm pair）。", "This QR code or pairing text expired or was already used. Get a new one (“Add device” in the console, or run omnillm pair again)."},
+		{MsgPairingFailed, "这个二维码或配对文字已过期或已用过。换一个新的再试（控制台里点“添加设备”，或再运行 omnillm pair）。", "This QR code or pairing text expired or was already used. Get a new one (“Add device” in the console, or run omnillm pair again)."},
 	} {
 		if got := Text("zh", c.key); got != c.zh {
 			t.Errorf("%s zh: %q", c.key, got)
