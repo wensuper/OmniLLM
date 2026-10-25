@@ -130,7 +130,8 @@ var probeDelay, probeGap = 30 * time.Second, 20 * time.Second
 // one probe runs per client: a source removed and added again is a new
 // client and is probed, while the old client's probe stops.
 func (h *Hub) probeLaterLocked(c *provider.Client) {
-	if h.ctx == nil || c.Config().Kind != provider.ClaudeCode || h.probing[c] {
+	// Claude by a tiny call (once a week); Codex from its catalog (free).
+	if k := c.Config().Kind; h.ctx == nil || (k != provider.ClaudeCode && k != provider.Codex) || h.probing[c] {
 		return
 	}
 	if h.probing == nil {
