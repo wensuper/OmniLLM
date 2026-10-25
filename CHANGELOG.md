@@ -26,6 +26,7 @@ All notable changes to OmniLLM are documented here. OmniLLM is in early pre-rele
 - On Linux the service keeps the local API setting (`OMNILLM_API`) across updates, as on macOS.
 - On a phone or a device, a signed-out subscription's error now says to run `omnillm login claude|chatgpt` on your computer. `omnillm pair` on a server tells a new computer to install with `--device` first. Reinstalling into a different data folder no longer claims your settings were kept.
 - `omnillm hub region confirm` is the person's step too (not run for an AI assistant). `omnillm open` on a machine without a screen lists what to run there instead of a link no browser can open.
+- The program's own messages say "your computer" instead of "your Mac" when the hub isn't a Mac, in the terminal too (hub and device). A wrong API key at `omnillm hub provider add` says to check the key. Pairing codes say how many minutes they last instead of a clock time (a server's clock is often in UTC).
 - The installer script reports progress only ("Updating X → Y…"); the result is said once.
 
 ### Security

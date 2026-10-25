@@ -57,6 +57,7 @@ func callerHere() omnillm.Caller {
 // subscription's Sonnet, else any subscription model, else the first.
 func defaultModel(ctx context.Context, d *device.Device) string {
 	ms, err := d.Models(ctx)
+	deviceHubOS = d.HubOS()
 	if err != nil {
 		die(err)
 	}
@@ -77,11 +78,11 @@ func pickModel(ms []omnillm.ModelInfo, person bool) string {
 		}
 	}
 	if !person {
-		die(say(t("从脚本里只能用 API Key 或你的 Mac 上的模型；你的 Mac 上现在只有订阅模型，它们只能手动对话。",
-			"From a script, only models that use an API key or run on your Mac work; your Mac has only subscription models, which are chat-only.")))
+		die(say(omnillm.ForHub(lang(), deviceHubOS, t("从脚本里只能用 API Key 或你的 Mac 上的模型；你的 Mac 上现在只有订阅模型，它们只能手动对话。",
+			"From a script, only models that use an API key or run on your Mac work; your Mac has only subscription models, which are chat-only."))))
 	}
 	if len(ms) == 0 {
-		die(say(t("你的 Mac 上还没有可用的模型。", "Your Mac has no models yet.")))
+		die(say(omnillm.ForHub(lang(), deviceHubOS, t("你的 Mac 上还没有可用的模型。", "Your Mac has no models yet."))))
 	}
 	return ms[0].ID
 }
@@ -90,11 +91,12 @@ func pickModel(ms []omnillm.ModelInfo, person bool) string {
 // or /exit leaves. /new starts over, /model switches models.
 func chatLoop(ctx context.Context, d *device.Device, model string) {
 	ms, err := d.Models(ctx)
+	deviceHubOS = d.HubOS()
 	if err != nil {
 		die(err)
 	}
 	if len(ms) == 0 {
-		die(say(t("你的 Mac 上还没有可用的模型。", "Your Mac has no models yet.")))
+		die(say(omnillm.ForHub(lang(), deviceHubOS, t("你的 Mac 上还没有可用的模型。", "Your Mac has no models yet."))))
 	}
 	if model == "" {
 		model = pickModel(ms, atTerminal())

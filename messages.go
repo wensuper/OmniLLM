@@ -343,3 +343,20 @@ func RoundDuration(lang string, d time.Duration) string {
 	}
 	return fmt.Sprintf("about %d %s", n, en)
 }
+
+// ForHub says "your computer" where a message says "your Mac", unless the
+// hub is a Mac (hubOS "darwin"; "" while not known counts as not one).
+func ForHub(lang, hubOS, s string) string {
+	if hubOS == "darwin" {
+		return s
+	}
+	if isZh(lang) {
+		return zhMac.ReplaceAllString(s, "电脑")
+	}
+	return enMac.ReplaceAllString(s, "computer")
+}
+
+var (
+	zhMac = regexp.MustCompile(` ?Mac ?`)
+	enMac = regexp.MustCompile(`\bMac\b`)
+)

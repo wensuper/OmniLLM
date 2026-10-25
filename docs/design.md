@@ -296,6 +296,7 @@
 - **第五轮安全复查的收尾**：`OMNILLM_HOME` 不接受换行等控制字符（它逐行写进服务文件）；只当设备用的数据文件夹（里面只有 `device/` 等 OmniLLM 自己的文件夹）照样认；`OMNILLM_HOME` 查不过时 `uninstall`、`status` 只提示、照常运行，别的命令停下；远程连接和手机网页的设置在换程序之前检查；`omnillm open` 也按 `notAPerson()` 不打链接；设备读不出保存的配对时直说“读不出”，不说“还没配对”。留着：admin 组可写的 Homebrew 文件夹照样接受；属于另一个 admin 账号的 Homebrew 里的 Claude Code / Codex 不再被用，界面显示要重新登录（`omnillm login` 会装一份自己的）。
 - **登录和输入 Key 也不替 AI**（第五轮）：`omnillm login` 遇到 `notAPerson()`、`hub provider add` 在 AI 助手里要读 Key 时，都只说“在你自己的终端里运行”；脚本用管道送 Key（没有助手）照常。认助手时按小写的程序名（`claude`、`codex`），不再跳过 `.app/Contents/` 下的：桌面版自带的命令行程序也是小写（Claude 的 `…/claude.app/Contents/MacOS/claude`，ChatGPT 的 `…/CodexCLI.app/Contents/MacOS/codex`），桌面版本身是大写的 `Claude`、`ChatGPT`。
 - **确认地区也是人的事**（第七轮）：`omnillm hub region confirm` 遇到 `notAPerson()` 只说“在你自己的终端里运行”；“下一步”里也写“亲自运行”。没有屏幕时 `omnillm open` 不给打不开的链接，改为列出 `omnillm pair`、登录、`provider add`、`status`。
+- **“你的 Mac”只对 Mac 说**（第九轮）：`omnillm.ForHub` 把程序自己的提示里的“你的 Mac”换成“你的电脑”，除非主机是 Mac；主机那边按 `runtime.GOOS`，设备命令按模型列表里带来的 `os`（还不知道时按不是 Mac）。刚输入的 Key 用不了时说“核对 Key”，不说“更换”。配对码的有效期说“5 分钟内”，不给钟点。
 - **设备的配对也是人的事**：`install --device` 在 AI 助手里运行（哪怕有伪终端）时不弹配对提示，只说“在你自己的终端里运行 omnillm connect pair，粘贴在那里”；INSTALL.md 第 6 条把 `omnillm connect pair` 和配对文字也算进去，并说明“只当设备用”怎么装。
 - **控制台登录链接不进 AI 的记录**：`omnillm open` 打不开浏览器时，只有人在终端里才把一次性链接打出来；AI 助手运行或输出不是终端时只说“请在终端里亲自运行 omnillm open”。
 - **下载只走 https**：`install.sh` 加 `--proto-redir '=https'`，更新用的 Go 客户端也拒绝跳到 https 以外。

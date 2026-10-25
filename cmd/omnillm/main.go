@@ -18,6 +18,7 @@ import (
 	"html"
 	"io"
 	"log"
+	"math"
 	"net"
 	"net/http"
 	"os"
@@ -204,10 +205,18 @@ func sayf(format string, a ...any) error { return sayErr(fmt.Sprintf(format, a..
 func hubSay(l string, err error) error {
 	if e := omnillm.AsError(err); e.Code == omnillm.CodeInternal {
 		log.Printf("hub: control: %v", err)
-		return say(omnillm.Describe(l, err) + tl(l, "（原因写在 OmniLLM 的日志里）", " (the cause is in OmniLLM’s log)"))
+		return say(omnillm.ForHub(l, runtime.GOOS, omnillm.Describe(l, err)) + tl(l, "（原因写在 OmniLLM 的日志里）", " (the cause is in OmniLLM’s log)"))
 	}
-	return say(omnillm.Describe(l, err))
+	return say(omnillm.ForHub(l, runtime.GOOS, omnillm.Describe(l, err)))
 }
+
+// deviceHubOS is the hub's system as a device command learned it (from
+// the models reply); "" before, or on a hub. Device messages say "your
+// Mac" only when it is one.
+var deviceHubOS string
+
+// onDevice: this command speaks as a device (connect …).
+var onDevice bool
 
 // describe is what a person sees for err: our own sentence as it is, the
 // library's message, and for anything unexpected the generic message plus
@@ -222,6 +231,9 @@ func describe(err error) string {
 		return string(u)
 	}
 	msg := omnillm.Describe(lang(), err)
+	if onDevice {
+		msg = omnillm.ForHub(lang(), deviceHubOS, msg)
+	}
 	if e := omnillm.AsError(err); e.Code == omnillm.CodeInternal {
 		msg += "\n  (" + err.Error() + ")"
 	}
@@ -1185,6 +1197,11 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 			}
 			ms, err := h.AddProvider(ctx, cfg, req.Secret)
 			if err != nil {
+				// The key was just typed: check it, rather than "replace it".
+				if omnillm.AsError(err).Msg == omnillm.MsgCredentialBad {
+					return say(tl(l, "这个 Key 用不了（可能输错了、已作废或余额不足）。到服务商网站核对后再运行一次。",
+						"That key didn’t work (mistyped, revoked or out of credit). Check it on the provider’s site and run the command again."))
+				}
 				return hubSay(l, err)
 			}
 			return c.Send(control.Reply{Event: "ok", Text: connectedText(l, cfg.Name, len(ms))})
@@ -1542,15 +1559,17 @@ func pairOp(ctx context.Context, h *hub.Hub, c *control.Conn, l string, a map[st
 	if err := c.Send(control.Reply{Event: "qr", Text: p.Link}); err != nil {
 		return err
 	}
-	expires := p.Expires.Format(tl(l, "15:04", "3:04 PM"))
+	// How long, not a clock time: a server's clock is often in UTC.
+	mins := int(math.Ceil(time.Until(p.Expires).Minutes()))
+	expires := fmt.Sprintf(tl(l, "%d 分钟内", "for %d minutes"), mins)
 	if a["phone"] == "true" {
 		// Right after an install or sign-in on a server: only the phone.
-		if err := c.Send(control.Reply{Event: "info", Text: fmt.Sprintf(tl(l, "（二维码 %s 前有效。）", "(The QR code works until %s.)"), expires)}); err != nil {
+		if err := c.Send(control.Reply{Event: "info", Text: fmt.Sprintf(tl(l, "（二维码%s有效。）", "(The QR code works %s.)"), expires)}); err != nil {
 			return err
 		}
 	} else if err := c.Send(control.Reply{Event: "info", Text: fmt.Sprintf(tl(l,
-		"手机或平板：用相机扫上面的二维码。电脑或服务器：在那台机器上运行 curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh -s -- --device（已经装了 OmniLLM 就运行 omnillm connect pair），在提示时粘贴下面这段配对文字（%s 前有效，只能用一次；不要发给别人，也不要贴到聊天里）：\n\n%s\n",
-		"Phone or tablet: scan the QR code above with the camera. Computer or server: on it, run curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh -s -- --device (or omnillm connect pair if OmniLLM is already there) and paste this pairing text when asked (valid until %s, single use; don’t send it to anyone or paste it into a chat):\n\n%s\n"),
+		"手机或平板：用相机扫上面的二维码。电脑或服务器：在那台机器上运行 curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh -s -- --device（已经装了 OmniLLM 就运行 omnillm connect pair），在提示时粘贴下面这段配对文字（%s有效，只能用一次；不要发给别人，也不要贴到聊天里）：\n\n%s\n",
+		"Phone or tablet: scan the QR code above with the camera. Computer or server: on it, run curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh -s -- --device (or omnillm connect pair if OmniLLM is already there) and paste this pairing text when asked (valid %s, single use; don’t send it to anyone or paste it into a chat):\n\n%s\n"),
 		expires, p.Code)}); err != nil {
 		return err
 	}
@@ -1574,6 +1593,7 @@ func connectCmd(args []string) {
 	sec := secrets(dir, "omnillm-device")
 	ctx, stop := signalCtx()
 	defer stop()
+	onDevice = true
 	switch args[0] {
 	case "pair":
 		if notAPerson() {
@@ -1637,9 +1657,9 @@ func connectCmd(args []string) {
 			die(err)
 		}
 		if left {
-			fmt.Println(t("这台设备已从你的 Mac 上移除，这里的配对也删了。", "This device was removed from your Mac and its pairing here is deleted."))
+			fmt.Println(t("这台设备已从你另一台电脑上移除，这里的配对也删了。", "This device was removed from your other computer and its pairing here is deleted."))
 		} else {
-			fmt.Println(t("这台设备的配对已删除。你的 Mac 现在连不上，记得在 Mac 的设备列表里也移除它。", "This device’s pairing is deleted. Your Mac can’t be reached now; remove it from the Mac’s device list too."))
+			fmt.Println(t("这台设备的配对已删除。你另一台电脑现在连不上，记得在那边的设备列表里也移除它。", "This device’s pairing is deleted. Your other computer can’t be reached now; remove it from the Mac’s device list too."))
 		}
 	case "models":
 		d := openDevice(ctx, sec, dir)

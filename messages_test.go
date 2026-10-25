@@ -283,3 +283,17 @@ func TestSpacingAndContractions(t *testing.T) {
 		}
 	}
 }
+
+// A hub that isn't a Mac is "your computer" in the program's messages.
+func TestForHub(t *testing.T) {
+	en := Text("en", MsgBudgetDevice)
+	if s := ForHub("en", "darwin", en); s != en {
+		t.Fatal(s)
+	}
+	if s := ForHub("en", "linux", en); strings.Contains(s, "Mac") || !strings.Contains(s, "your computer") {
+		t.Fatal(s)
+	}
+	if s := ForHub("zh", "", Text("zh", MsgBudgetDevice)); strings.Contains(s, "Mac") || strings.Contains(s, "电脑 ") || !strings.Contains(s, "你的电脑上") {
+		t.Fatal(s)
+	}
+}
