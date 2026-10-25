@@ -41,7 +41,7 @@ const T = {
     grpSub: "订阅（不另花钱）", grpKey: "API Key", grpLocal: "你的 Mac 上", latest: "（最新版）", codex: "ChatGPT（Codex · 最新版）", codexV: "ChatGPT（Codex · {0}）",
     forget: "移除这台设备", forgetQ: "这里的对话会删除。以后要用，在 Mac 上重新添加。", removing: "正在移除……",
     forgetFar: "这台设备已移除，对话已删除。你的 Mac 现在连不上，之后记得在 Mac 的“设备”里也移除它。",
-    close: "关闭", deleteChat: "删除这个对话", deleteChatQ: "删除对话“{0}”？", chatsLocal: "对话保存在这台设备上。用订阅模型（Claude、ChatGPT）时，你的 Mac 也会留一份，方便接着聊；一天没用，Mac 上的那份就会删除。", searchChats: "搜索对话", noMatch: "没有找到",
+    close: "关闭", deleteChat: "删除这个对话", rename: "重命名", renameChat: "重命名对话", chatMore: "更多操作", deleteChatQ: "删除对话“{0}”？", chatsLocal: "对话保存在这台设备上。用订阅模型（Claude、ChatGPT）时，你的 Mac 也会留一份，方便接着聊；一天没用，Mac 上的那份就会删除。", searchChats: "搜索对话", noMatch: "没有找到",
     addHome: "添加到主屏幕", addHomeTip: "点浏览器的“分享”按钮，选“添加到主屏幕”。第一次从主屏幕打开时，需要再扫一次码。",
     deviceLine: "这台设备：{0}", empty: "有什么可以帮你？", cut: "（回复太长被截断了。发“继续”让它接着写。）", stopped: "（已停止）",
     today: "今天", copy: "复制", copied: "已复制", again: "重新回答", againWith: "用 {0} 再答一次", thinking: "正在思考",
@@ -86,7 +86,7 @@ const T = {
     grpSub: "Subscriptions (no extra cost)", grpKey: "API key", grpLocal: "On your Mac", latest: " (latest)", codex: "ChatGPT (Codex · latest)", codexV: "ChatGPT (Codex · {0})",
     forget: "Remove this device", forgetQ: "Chats here will be deleted. To use this device later, add it on your Mac again.", removing: "Removing…",
     forgetFar: "This device was removed and its chats deleted. Your Mac can’t be reached right now, so remove it under “Devices” on your Mac later too.",
-    close: "Close", deleteChat: "Delete this chat", deleteChatQ: "Delete the chat “{0}”?", chatsLocal: "Chats are kept on this device. With subscription models (Claude, ChatGPT), your Mac also keeps a copy so it can continue the chat; it deletes that copy after a day without use.", searchChats: "Search chats", noMatch: "No matching chats",
+    close: "Close", deleteChat: "Delete this chat", rename: "Rename", renameChat: "Rename chat", chatMore: "More", deleteChatQ: "Delete the chat “{0}”?", chatsLocal: "Chats are kept on this device. With subscription models (Claude, ChatGPT), your Mac also keeps a copy so it can continue the chat; it deletes that copy after a day without use.", searchChats: "Search chats", noMatch: "No matching chats",
     addHome: "Add to Home Screen", addHomeTip: "Tap the browser’s “Share” button and choose “Add to Home Screen”. The first time it’s opened from the Home Screen, you’ll scan the QR code once more.",
     deviceLine: "This device: {0}", empty: "How can I help?", cut: "(The reply was cut off. Send “continue” to have it go on.)", stopped: "(stopped)",
     today: "Today", copy: "Copy", copied: "Copied", again: "Answer again", againWith: "Answer again with {0}", thinking: "Thinking",
@@ -965,12 +965,50 @@ function hero() {
   if (S.hello === S.cur.id) h.append(el("p", t("connectedMac"), "hello"));
   return h;
 }
-// paintTitle: the chat's title in the bar (phones) and the browser tab.
+// paintTitle: the chat's title in the bar (phones), at the top of the talk
+// (wide screens, once the chat has begun) and in the browser tab. Both
+// titles rename the chat when clicked.
 function paintTitle() {
   const title = S.cur && S.cur.title;
-  $("bar-title").textContent = title || t("newChat");
+  if (!$("bar-title").querySelector("input")) $("bar-title").textContent = title || t("newChat");
+  const begun = !!(S.cur && S.cur.messages.length);
+  $("chat-head").hidden = !begun;
+  if (begun && !$("head-title").querySelector("input")) { $("head-title").textContent = title || t("newChat"); $("head-title").title = t("renameChat"); }
+  $("bar-title").title = begun ? t("renameChat") : "";
   document.title = title ? title + " · OmniLLM" : "OmniLLM";
 }
+// renameIn turns a title (the button itself, or a list row's button) into
+// a text field: Enter or leaving it keeps the new name, Esc goes back. An
+// empty name keeps the old one.
+function renameIn(btn, chat) {
+  if (!chat || !chat.messages.length || btn.querySelector("input")) return;
+  const old = chat.title || "";
+  const f = el("input", undefined, "rename-in");
+  f.type = "text"; f.value = old; f.maxLength = 80; f.setAttribute("aria-label", t("renameChat"));
+  btn.textContent = ""; btn.append(f);
+  f.focus(); f.select();
+  let done = false;
+  const finish = async (keep) => {
+    if (done) return; done = true;
+    const v = f.value.trim();
+    if (keep && v && v !== old) {
+      chat.title = v;
+      if (!S.quiet) await seal("chats", S.chats.some((c) => c.id === chat.id) ? S.chats : [chat, ...S.chats]).catch(() => {});
+    }
+    f.remove();
+    paintTitle(); renderList();
+  };
+  f.addEventListener("keydown", (e) => {
+    if (e.isComposing || e.keyCode === 229) return;
+    if (e.key === "Enter") { e.preventDefault(); finish(true); }
+    else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); finish(false); }
+  });
+  f.addEventListener("blur", () => finish(true));
+  // The field sits inside the title's button: its clicks must not reach it.
+  f.addEventListener("click", (e) => e.stopPropagation());
+}
+$("head-title").addEventListener("click", () => renameIn($("head-title"), S.cur));
+$("bar-title").addEventListener("click", () => renameIn($("bar-title"), S.cur));
 function icon(cls) { const i = el("span", "", "ic " + cls); i.setAttribute("aria-hidden", "true"); return i; }
 function iconButton(cls, label) {
   const b = el("button", undefined, "ibtn"); b.type = "button";
@@ -1223,24 +1261,56 @@ function renderList() {
     const a = el("button", c.title || t("newChat")); a.type = "button"; a.title = c.title || "";
     if (c.id === S.cur.id) a.setAttribute("aria-current", "true");
     a.addEventListener("click", () => {
+      // Two clicks on the same chat within 400 ms rename it. The first one
+      // redraws the list (it opens the chat), so the browser's own dblclick
+      // would land on a button that is gone.
+      const now = Date.now(), last = rowClick;
+      rowClick = { id: c.id, at: now };
+      if (last.id === c.id && now - last.at < 400 && c.messages.length) { rowClick = { id: "", at: 0 }; return renameIn(a, c); }
+      if (c === S.cur) { closeDrawer(); return; }
       if (S.busy && c !== S.cur) { closeDrawer(); return toastText(t("waitReply")); }
       S.cur = c; if (S.models.length) pickModel(); renderLog(); renderList(); closeDrawer();
     });
     li.append(a);
     if (c.messages.length) {
-      const x = iconButton("i-trash s16", t("deleteChat")); x.classList.add("chat-del");
-      x.addEventListener("click", async () => {
-        if (S.busy && c === S.cur) return toastText(t("waitReply"));
-        if (!await ask(t("deleteChatQ", c.title || t("newChat")), t("delete"), true)) return;
-        S.chats = S.chats.filter((o) => o.id !== c.id);
-        if (c === S.cur) { S.cur = S.chats[0] || newChat(); renderLog(); }
-        if (!S.quiet) await seal("chats", S.chats).catch(() => {});
-        renderList();
-      });
+      // ⋯: Rename and Delete, as in other chat apps.
+      const x = iconButton("i-more s16", t("chatMore")); x.classList.add("chat-del");
+      x.setAttribute("aria-haspopup", "menu"); x.setAttribute("aria-expanded", "false");
+      x.addEventListener("click", (e) => { e.stopPropagation(); rowMenu(li, x, a, c); });
       li.append(x);
     }
     ul.append(li);
   }
+}
+
+let rowClick = { id: "", at: 0 }; // the last click on a chat row (double click renames)
+// rowMenu opens a chat row's small menu under its ⋯ button.
+function rowMenu(li, btn, title, c) {
+  const open = document.querySelector(".row-menu");
+  if (open) { const same = open.parentElement === li; closeRowMenu(); if (same) return; }
+  const m = el("div", undefined, "pop row-menu"); m.setAttribute("role", "menu");
+  const item = (ic, label, run, bad) => {
+    const b = el("button", undefined, "pop-item" + (bad ? " danger" : "")); b.type = "button"; b.setAttribute("role", "menuitem");
+    b.append(icon(ic + " s16"), el("span", label, "nm"));
+    b.addEventListener("click", (e) => { e.stopPropagation(); closeRowMenu(); run(); });
+    return b;
+  };
+  m.append(item("i-pen", t("rename"), () => renameIn(title, c)), item("i-trash", t("delete"), async () => {
+    if (S.busy && c === S.cur) return toastText(t("waitReply"));
+    if (!await ask(t("deleteChatQ", c.title || t("newChat")), t("delete"), true)) return;
+    S.chats = S.chats.filter((o) => o.id !== c.id);
+    if (c === S.cur) { S.cur = S.chats[0] || newChat(); renderLog(); }
+    if (!S.quiet) await seal("chats", S.chats).catch(() => {});
+    renderList();
+  }, true));
+  li.append(m); btn.setAttribute("aria-expanded", "true"); li.classList.add("menu-open");
+  m.querySelector("button").focus();
+}
+function closeRowMenu() {
+  const m = document.querySelector(".row-menu");
+  if (!m) return;
+  const li = m.parentElement; m.remove(); li.classList.remove("menu-open");
+  const b = li.querySelector(".chat-del"); if (b) b.setAttribute("aria-expanded", "false");
 }
 
 async function saveChats() {
@@ -1592,6 +1662,7 @@ document.querySelectorAll("#lang-list [data-lang]").forEach((b) => b.addEventLis
 }));
 $("keys-btn").addEventListener("click", () => { macMenu(false); showKeys(); });
 document.addEventListener("click", (e) => {
+  if (!e.target.closest(".row-menu")) closeRowMenu();
   if (!$("mac-menu").hidden && !e.target.closest(".drawer-foot")) macMenu(false);
   if (!$("mmenu").hidden && !e.target.closest(".mwrap")) pickMenu(false);
 });
@@ -1681,6 +1752,7 @@ document.addEventListener("keydown", (e) => {
   if ($("chat").hidden || S.quiet || e.isComposing || e.keyCode === 229) return;
   const mod = MAC ? e.metaKey : e.ctrlKey;
   if (e.key === "Escape") {
+    if (document.querySelector(".row-menu")) { e.preventDefault(); closeRowMenu(); return; }
     if (V.rec) { e.preventDefault(); stopVoice(); return; }
     if (!$("mmenu").hidden) { e.preventDefault(); pickMenu(false); $("mpick").focus(); return; }
     if (!$("mac-menu").hidden) { e.preventDefault(); macMenu(false); $("mac").focus(); return; }
