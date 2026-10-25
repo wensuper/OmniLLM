@@ -4,6 +4,12 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.51](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.51) - 2026-10-25
+
+### Fixed
+
+- Codex’s model name now appears right after the hub starts, even if its version was looked up earlier in the week: reading Codex’s catalog costs nothing, so it isn’t limited to once a week like the Claude probe.
+
 ## [0.2.0-alpha.50](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.50) - 2026-10-25
 
 ### Changed

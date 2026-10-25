@@ -192,7 +192,10 @@ func (h *Hub) probeModels(ctx context.Context, c *provider.Client) {
 	}
 	first := true
 	for _, m := range ms {
-		if m.Provider != c.Config().Name || !h.needsProbe(ctx, m.ID) {
+		// Codex's version comes from its catalog, which costs nothing:
+		// looked at every time, not once a week.
+		codex := c.Config().Kind == provider.Codex
+		if m.Provider != c.Config().Name || (!codex && !h.needsProbe(ctx, m.ID)) {
 			continue
 		}
 		if !first && !sleepCtx(ctx, probeGap) {
@@ -237,12 +240,12 @@ func (h *Hub) probe(ctx context.Context, c *provider.Client, m Model) bool {
 		return false
 	}
 	// Codex names its model in its own catalog, read on this machine: no
-	// call is sent, no usage counted.
+	// call is sent, no usage counted (and nothing to remember as asked).
 	if c.Config().Kind == provider.Codex {
 		if _, name, err := provider.CodexModel(ctx, c.Config().Path); err == nil {
 			h.noteModel(m.ID, name)
-			return true
 		}
+		return true
 	}
 	// Kept before the call, so a call that fails half-way still counts
 	// toward once a week.
