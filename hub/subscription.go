@@ -236,6 +236,14 @@ func (h *Hub) probe(ctx context.Context, c *provider.Client, m Model) bool {
 	if err := h.checkRegion(ctx, m.Provider); err != nil {
 		return false
 	}
+	// Codex names its model in its own catalog, read on this machine: no
+	// call is sent, no usage counted.
+	if c.Config().Kind == provider.Codex {
+		if _, name, err := provider.CodexModel(ctx, c.Config().Path); err == nil {
+			h.noteModel(m.ID, name)
+			return true
+		}
+	}
 	// Kept before the call, so a call that fails half-way still counts
 	// toward once a week.
 	var before time.Time

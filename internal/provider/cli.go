@@ -399,6 +399,7 @@ func (c *Client) streamCLI(ctx context.Context, model string, req omnillm.Reques
 // it ends. With chats, the conversation keeps the program's session: a
 // follow-up of a kept one sends only its new message.
 func (c *Client) spawnCLI(ctx context.Context, model string, msgs []omnillm.Message, release egress.Release, chats *Chats, owner string) (*cliStream, error) {
+	codexName := "" // Codex's model for people ("GPT-6-Astra"), when it was picked here
 	scratch, err := os.MkdirTemp("", "omnillm-cli-")
 	if err != nil {
 		release(egress.ClientError, 0)
@@ -500,8 +501,16 @@ func (c *Client) spawnCLI(ctx context.Context, model string, msgs []omnillm.Mess
 			}
 			args = append(args, codexToolsOff...)
 		}
-		if model != "" && model != "default" {
-			args = append(args, "-m", model)
+		// No model chosen: the one Codex itself would take, named with -m
+		// so the version shown is the one that answers (codexmodel.go).
+		pick := model
+		if pick == "" || pick == "default" {
+			if slug, name, err := CodexModel(ctx, c.cfg.Path); err == nil {
+				pick, codexName = slug, name
+			}
+		}
+		if pick != "" && pick != "default" {
+			args = append(args, "-m", pick)
 		}
 		// Images as files in the private scratch folder, attached with -i
 		// (Codex reads them itself; its tools stay off).
@@ -541,7 +550,7 @@ func (c *Client) spawnCLI(ctx context.Context, model string, msgs []omnillm.Mess
 	sc := bufio.NewScanner(out)
 	sc.Buffer(make([]byte, 64<<10), 8<<20)
 	s := &cliStream{cmd: cmd, cancel: cancel, parent: ctx, release: release, kind: c.cfg.Kind, sc: sc,
-		stderr: stderr, scratch: scratch, owner: c, alias: model, chat: turn}
+		stderr: stderr, scratch: scratch, owner: c, alias: model, chat: turn, model: codexName}
 	// A reply nobody reads to the end or closes still frees its slot when
 	// the time limit stops the program.
 	go func() {

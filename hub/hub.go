@@ -723,15 +723,19 @@ func (h *Hub) info(m Model) omnillm.ModelInfo {
 		// weekly probe) reports which one, it is the family alone.
 		mi.DisplayName, mi.Latest = subscriptionModelName(provider.ClaudeCode, m.Upstream), true
 	case provider.Codex:
-		// Codex's replies do not name their model, and the hub runs it
-		// with --ignore-user-config and no -m: the model in the owner's
-		// ~/.codex/config.toml is not the one that answers. So no
-		// Version, only Codex's own newest default.
+		// Codex's replies do not name their model; the hub reads the one
+		// Codex takes from its catalog and runs it with -m (codexmodel.go),
+		// so that name is the version. The owner's ~/.codex/config.toml
+		// plays no part (--ignore-user-config).
 		mi.DisplayName, mi.Latest = subscriptionModelName(provider.Codex, m.Upstream), true
 	}
 	// The version the provider last said it answered with ("Claude Opus"
-	// behind the alias "opus" is "Claude Opus 5.5" today).
-	if resolved != "" {
+	// behind the alias "opus" is "Claude Opus 5.5" today). Codex keeps its
+	// name ("ChatGPT (Codex)") and carries the model as Version, which each
+	// screen words as "ChatGPT (Codex · GPT-6-Astra)".
+	if resolved != "" && kind == provider.Codex {
+		mi.Version, mi.Latest = resolved, false
+	} else if resolved != "" {
 		mi.DisplayName, mi.Latest = resolved, false
 	}
 	if c != nil {

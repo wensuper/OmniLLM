@@ -4,6 +4,12 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.50](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.50) - 2026-10-25
+
+### Changed
+
+- ChatGPT (Codex) shows the model it actually runs, for example “ChatGPT (Codex · GPT-6-Astra)”, instead of “(latest)”. The hub reads Codex’s own model catalog on your Mac (no model is called and no usage is counted), takes the model Codex lists first, and runs Codex with that model explicitly, so the name shown is the one that answers. If the catalog can’t be read, it falls back to Codex’s own default and shows “latest” as before.
+
 ## [0.2.0-alpha.49](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.49) - 2026-10-25
 
 ### Changed

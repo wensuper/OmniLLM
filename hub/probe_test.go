@@ -354,3 +354,20 @@ func TestSignedOutSubscriptionShowsBeforeAnyCall(t *testing.T) {
 		t.Fatalf("signed in again, but the models still say login: %v", p)
 	}
 }
+
+func TestCodexShowsItsModelAsTheVersion(t *testing.T) {
+	ctx := context.Background()
+	st := store.NewMemory()
+	h, err := New(ctx, Options{Secrets: secret.NewMemory(), Store: st})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.PutJSON(ctx, st, "model/codex/default", Model{ID: "codex/default", Provider: "codex", Upstream: "default", DisplayName: "ChatGPT (Codex)", HumanOnly: true}); err != nil {
+		t.Fatal(err)
+	}
+	h.noteModel("codex/default", "GPT-6-Astra")
+	ms, _ := h.Models(ctx)
+	if len(ms) != 1 || ms[0].Version != "GPT-6-Astra" || ms[0].Latest || ms[0].DisplayName != "ChatGPT (Codex)" {
+		t.Fatalf("%+v", ms)
+	}
+}
