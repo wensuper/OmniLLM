@@ -51,7 +51,22 @@ func PrivateGroup(fi os.FileInfo) bool {
 		// the files): the private-group convention, gid equal to uid.
 		return int(st.Gid) == os.Getuid()
 	}
-	return g.Name == u.Username && !hasMembers(g.Name)
+	return g.Name == u.Username && !hasMembers(g.Name) && !sharedPrimary(int(st.Gid), u.Uid)
+}
+
+// sharedPrimary: another account in /etc/passwd has gid as its primary
+// group (unreadable: assume so).
+func sharedPrimary(gid int, uid string) bool {
+	b, err := os.ReadFile("/etc/passwd")
+	if err != nil {
+		return true
+	}
+	for _, line := range strings.Split(string(b), "\n") {
+		if f := strings.Split(line, ":"); len(f) >= 4 && f[3] == strconv.Itoa(gid) && f[2] != uid {
+			return true
+		}
+	}
+	return false
 }
 
 // hasMembers: /etc/group lists members for the group (someone added to
@@ -59,7 +74,7 @@ func PrivateGroup(fi os.FileInfo) bool {
 func hasMembers(name string) bool {
 	b, err := os.ReadFile("/etc/group")
 	if err != nil {
-		return false
+		return true // can't tell: not private
 	}
 	for _, line := range strings.Split(string(b), "\n") {
 		if f := strings.Split(line, ":"); len(f) == 4 && f[0] == name {

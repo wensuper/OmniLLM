@@ -128,6 +128,8 @@ A computer with a browser needs nothing installed:
 2. Open the link in that computer’s browser (carry it over yourself; it works like a key, so don’t send it to anyone) and choose *Add*.
 3. As with a phone, check that the 6-digit numbers on both sides match, then click *Matches, add* on the hub.
 
+If your hub itself has no screen (a server), run `omnillm pair` there instead of using its console: it prints the pairing text, and you type y there when the digits match.
+
 A server without a browser uses the command line. It gets just the program: no background service, and no sudo.
 
 1. In the hub’s console, click *Add device*, switch to *Computer or server*, and open *No browser on that computer? Use the command line* at the bottom.

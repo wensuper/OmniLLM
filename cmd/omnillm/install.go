@@ -166,7 +166,9 @@ func installCmd(args []string) {
 		die(err)
 	}
 	// Installed before (even this same version): no first-run windows.
+	// "Settings are kept" only when this data folder held a hub's state.
 	first := !exists(filepath.Join(home, ".local", "bin", "omnillm"))
+	hadState := exists(filepath.Join(dir, "state.json"))
 	prev := keepPrevious(home)
 	bin, err := installBinary(home)
 	if err != nil {
@@ -241,11 +243,11 @@ func installCmd(args []string) {
 	st.Service = service
 	st.Headless = headless()
 	switch {
-	case prev != "" && compareVersions(version, prev) < 0:
+	case prev != "" && hadState && compareVersions(version, prev) < 0:
 		fmt.Printf(t("OmniLLM 已从 %s 换回 %s，在后台运行，设置都在。\n", "OmniLLM went from %s back to %s and runs in the background; your settings are kept.\n"), prev, version)
-	case prev != "":
+	case prev != "" && hadState:
 		fmt.Printf(t("OmniLLM 已从 %s 更新到 %s，在后台运行，设置都在。\n", "OmniLLM is updated from %s to %s and runs in the background; your settings are kept.\n"), prev, version)
-	case !first:
+	case !first && hadState:
 		fmt.Printf(t("OmniLLM %s 已经装好，在后台运行，设置都在。\n", "OmniLLM %s is already installed and runs in the background; your settings are kept.\n"), version)
 	case readUpdate(dir).Manual:
 		fmt.Println(runnable(fmt.Sprintf(t("OmniLLM 已安装，在后台运行%s。自动更新是关着的：要打开，运行 omnillm update --auto on。", "OmniLLM is installed and runs in the background%s. Automatic updates are off; to turn them on, run omnillm update --auto on."), startsWhen(service))))
@@ -497,6 +499,41 @@ func installingAssistant() provider.Kind {
 	return ""
 }
 
+// otherAssistants are coding assistants without a subscription OmniLLM
+// connects, known by their program names.
+var otherAssistants = []string{"cursor-agent", "gemini", "opencode", "aider", "goose", "amp", "crush", "qwen"}
+
+// otherAssistant: one of otherAssistants is among this command's
+// ancestors, or says so in its environment.
+func otherAssistant() bool {
+	for _, v := range []string{"GEMINI_CLI", "CURSOR_AGENT", "OPENCODE"} {
+		if os.Getenv(v) != "" {
+			return true
+		}
+	}
+	pid := os.Getppid()
+	for i := 0; i < 16 && pid > 1; i++ {
+		out, err := exec.Command("ps", "-o", "ppid=,comm=", "-p", strconv.Itoa(pid)).Output()
+		if err != nil {
+			return false
+		}
+		f := strings.Fields(string(out))
+		if len(f) < 2 {
+			return false
+		}
+		name := filepath.Base(strings.Join(f[1:], " "))
+		for _, a := range otherAssistants {
+			if name == a {
+				return true
+			}
+		}
+		if pid, err = strconv.Atoi(f[0]); err != nil {
+			return false
+		}
+	}
+	return false
+}
+
 // onAPIKey: the assistant runs on an API key or another provider's
 // endpoint, not a subscription; there is no subscription sign-in to ask
 // for, and the key itself is connected in the console or the terminal.
@@ -515,11 +552,16 @@ func onAPIKey(k provider.Kind) bool {
 
 // pairsHere: a machine without a screen, a person at its terminal, a model
 // to use and no device yet: the phone is added right in this terminal.
-// notAPerson: an AI assistant runs this command (Claude Code, Codex), or
-// its input is /dev/null (how INSTALL.md has any assistant run the
-// installer): pairing prompts are never shown to it.
+// homeRejected: OMNILLM_HOME failed privateHome (a command that runs
+// anyway, like uninstall, leaves its contents alone).
+var homeRejected bool
+
+// notAPerson: an AI assistant runs this command (Claude Code, Codex, or
+// another one known by name), or its input is /dev/null (how INSTALL.md
+// has any assistant run the installer): pairing prompts are never shown
+// to it.
 func notAPerson() bool {
-	if installingAssistant() != "" {
+	if installingAssistant() != "" || otherAssistant() {
 		return true
 	}
 	in, err1 := os.Stdin.Stat()
@@ -940,6 +982,11 @@ var serviceSettings = []string{"OMNILLM_RELAY", "OMNILLM_WEB_APP", "OMNILLM_HOME
 // environment from the installed service's file.
 func keepServiceSettings(home string) {
 	for k, v := range savedSettings(serviceBody(home)) {
+		// One no longer valid (checks got stricter) is dropped, so it
+		// can't stop every later update.
+		if (k == "OMNILLM_RELAY" && !validRelay(v)) || (k == "OMNILLM_WEB_APP" && !validWebApp(v)) || (k == "OMNILLM_API" && !validAPI(v)) {
+			continue
+		}
 		if os.Getenv(k) == "" {
 			os.Setenv(k, v)
 		}
@@ -1040,6 +1087,13 @@ func validWebApp(w string) bool {
 
 func installSystemd(home, bin, dir string, env map[string]string) error {
 	unit := filepath.Join(home, ".config", "systemd", "user", systemdUnit)
+	// The unit is read line by line: a path with a line break (from HOME
+	// or XDG_CONFIG_HOME) would add lines of its own.
+	for _, p := range []string{unit, bin, dir} {
+		if strings.ContainsFunc(p, func(r rune) bool { return r < 0x20 || r == 0x7f }) {
+			return fmt.Errorf("install: a path holds a control character: %q", p)
+		}
+	}
 	// The same carried settings as launchd (relay, web page, local API):
 	// keepServiceSettings has put the old unit's into this environment.
 	full := serviceEnv(env, nil)
@@ -1395,6 +1449,11 @@ func uninstallCmd(args []string) {
 		_ = exec.Command("systemctl", "--user", "daemon-reload").Run()
 	}
 	fmt.Println(t("后台服务已停止并移除。", "The background service is stopped and removed."))
+	if homeRejected {
+		// Its contents may not be ours to act on.
+		fmt.Println(t("数据文件夹没有通过检查，里面的东西没有动；需要的话自己检查后删除。", "The data folder didn’t pass the check, so nothing in it was touched; look at it and delete it yourself if needed."))
+		return
+	}
 	// Conversations kept for subscription chats go every time: they are
 	// the only conversation text the hub leaves on disk (design §13.4).
 	if st, err := store.OpenFile(filepath.Join(dataDir("hub"), "state.json")); err == nil {

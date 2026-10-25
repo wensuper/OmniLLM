@@ -116,7 +116,7 @@ var texts = map[string][2]string{ // zh, en
 	MsgNoChatModel:        {"这台 Mac 上的 Ollama 里没有能对话的模型（只有向量 / 重排模型）。在终端运行 ollama pull qwen3 下载一个。", "Ollama on this Mac has no chat model (only embedding or rerank models). Run ollama pull qwen3 in Terminal to get one."},
 	MsgLocalToken:         {"本机接口的令牌缺失或不对。令牌在这台设备 OmniLLM 数据文件夹里的 device/local.token 文件中（只有本用户能读）。", "The local token is missing or wrong. It is in device/local.token inside OmniLLM’s data folder on this device (readable only by you)."},
 	MsgRelayUnavailable:   {"远程连接暂时不可用。检查你的 Mac 的网络后再试一次。", "Remote access is unavailable right now. Check your Mac’s network, then try again."},
-	MsgCLILogin:           {"你的 Mac 上的 %s 没有登录或登录已过期。在 Mac 的终端%s，然后再试。", "%s on your Mac is signed out. In Terminal on your Mac, %s, then try again."},
+	MsgCLILogin:           {"你的电脑上的 %s 没有登录或登录已过期。在那台电脑的终端里%s，然后再试。", "%s on your computer is signed out. In a terminal on that computer, %s, then try again."},
 	MsgCLINotFound:        {"要用 %s，你的 Mac 上需要先安装 %s 并登录。", "To use %s, install %s on your Mac and log in first."},
 	MsgCLIUnsafe:          {"你的 Mac 上这个版本的 %s 关不掉工具（能运行命令或读文件），为了安全暂时不用它。请更新 OmniLLM。", "This version of %s on your Mac couldn’t be kept from using tools (running commands or reading files), so OmniLLM won’t use it for now. Update OmniLLM."},
 	MsgBadImage:           {"图片不能用：只支持 PNG、JPEG、GIF、WebP，每张不超过 2 MB，每条消息最多 4 张。", "That image can’t be used: PNG, JPEG, GIF or WebP only, up to 2 MB each and 4 per message."},
@@ -220,9 +220,9 @@ func (e *Error) render(lang string, s slot, i int) string {
 	case slotLogin:
 		switch subscriptionOf(e.Args) {
 		case "claude":
-			return pick(lang, "运行 claude，输入 /login", "run claude and type /login")
+			return pick(lang, "运行 omnillm login claude", "run omnillm login claude")
 		case "codex":
-			return pick(lang, "运行 codex login", "run codex login")
+			return pick(lang, "运行 omnillm login chatgpt", "run omnillm login chatgpt")
 		}
 	case slotWait:
 		if e.RetryAfter > 0 {

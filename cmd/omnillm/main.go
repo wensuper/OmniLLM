@@ -444,14 +444,17 @@ func main() {
 	// A data folder set with OMNILLM_HOME is checked for every command
 	// (device ones too), not only at install and hub start.
 	// uninstall and status still work with one that fails it (it may have
-	// been accepted by an earlier version): they say so instead.
-	if _, err := privateHome(); err != nil {
-		switch a := append(os.Args, "")[1]; a {
-		case "help", "version", "--version", "-h", "--help":
-		case "uninstall", "status":
+	// been accepted by an earlier version): they say so instead, and
+	// uninstall then leaves that folder's contents alone.
+	switch a := append(os.Args, "")[1]; a {
+	case "help", "version", "--version", "-h", "--help":
+	default:
+		if _, err := privateHome(); err != nil {
+			if a != "uninstall" && a != "status" {
+				die(err)
+			}
 			fmt.Fprintln(os.Stderr, err)
-		default:
-			die(err)
+			homeRejected = true
 		}
 	}
 	if len(os.Args) < 2 {
@@ -1523,8 +1526,8 @@ func pairOp(ctx context.Context, h *hub.Hub, c *control.Conn, l string, a map[st
 			return err
 		}
 	} else if err := c.Send(control.Reply{Event: "info", Text: fmt.Sprintf(tl(l,
-		"手机或平板：用相机扫上面的二维码。电脑或服务器：运行 omnillm connect pair，粘贴下面这段配对文字（%s 前有效，只能用一次；不要发给别人，也不要贴到聊天里）：\n\n%s\n",
-		"Phone or tablet: scan the QR code above with the camera. Computer or server: run omnillm connect pair and paste this pairing text (valid until %s, single use; don’t send it to anyone or paste it into a chat):\n\n%s\n"),
+		"手机或平板：用相机扫上面的二维码。电脑或服务器：在那台机器上运行 curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh -s -- --device（已经装了 OmniLLM 就运行 omnillm connect pair），在提示时粘贴下面这段配对文字（%s 前有效，只能用一次；不要发给别人，也不要贴到聊天里）：\n\n%s\n",
+		"Phone or tablet: scan the QR code above with the camera. Computer or server: on it, run curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh -s -- --device (or omnillm connect pair if OmniLLM is already there) and paste this pairing text when asked (valid until %s, single use; don’t send it to anyone or paste it into a chat):\n\n%s\n"),
 		expires, p.Code)}); err != nil {
 		return err
 	}

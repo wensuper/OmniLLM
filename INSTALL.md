@@ -102,7 +102,7 @@ Then stop. Don't change any OmniLLM settings unless the person asks.
 | hub.log says `The data folder path is too long` (Chinese: `数据文件夹的路径太长`) | Set `OMNILLM_HOME=~/.omnillm` for the install command and run it again. Later commands find that folder by themselves. |
 | `didn’t start, so OmniLLM went back to` (Chinese: `没能启动，已自动换回`) | An update didn't start and the previous version is running again. Nothing to do; the person may report it as an issue. |
 | `Couldn’t reach GitHub` (Chinese: `连不上 GitHub`), or `The download didn’t finish` (Chinese: `下载没有完成`), with no sandbox in the way | Ask the person to check the network, then run Step 2 again. |
-| `OMNILLM_HOME …` with `isn’t a folder only you control`, `already holds other things` or `must be a full path` (Chinese: `不是一个只属于你的文件夹`, `已经有别的东西`, `必须是完整路径`) | Run it again with `OMNILLM_HOME=~/.omnillm` (an empty folder of their own). |
+| `OMNILLM_HOME …` with `isn’t a folder only you control`, `already holds other things` or `must be a full path` (Chinese: `不是一个只属于你的文件夹`, `已经有别的东西`, `必须是完整路径`) | On a first install, run it again with `OMNILLM_HOME=~/.omnillm` (an empty folder of their own). If OmniLLM was already set up, a different folder starts a new, empty OmniLLM (phones, keys and sign-ins would have to be added again): tell the person and ask before doing it. |
 | The console says the login link expired | Run `~/.local/bin/omnillm open` again (`open --add` to land on the QR code); each link works once, for 2 minutes. |
 | No browser on this machine (a server) | See the `headless` row in Step 3. The console listens only on this machine's `127.0.0.1`. |
 
