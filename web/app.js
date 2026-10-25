@@ -26,11 +26,11 @@ const T = {
     getHubSend: "在电脑上安装 OmniLLM：在终端里运行这一行",
     scan: "扫描二维码", pasteInstead: "扫不了码？粘贴配对文字", pastePh: "粘贴配对文字（以 omnillm3- 开头）", add: "添加", cancel: "取消", back: "返回", delete: "删除", remove: "移除", gotIt: "知道了",
     scanHint: "把电脑屏幕上的二维码放进框里", camDenied: "没有拿到摄像头权限。在浏览器设置里允许这个网站用摄像头后再试，或者用“粘贴配对文字”。",
-    pairTitle: "添加这台设备", pairConnecting: "正在连接你的 Mac……",
-    pairAsk: "要把这台设备添加到你的 Mac 吗？只有你刚在 Mac 上点了“添加设备”才继续。", pairVia: "经由 {0}",
+    pairTitle: "添加这台设备", pairConnecting: "正在连接你的电脑……",
+    pairAsk: "要把这台设备添加到你的电脑吗？只有你刚在电脑上点了“添加设备”或运行了 omnillm pair 才继续。", pairVia: "经由 {0}",
     pairReplace: "这会替换这台设备现在的配对（{0}），之前的 Mac 就不能再从这里用了。",
-    pairCheck: "在 Mac 上看到同样的数字，就在 Mac 上点“一致，添加”。", pairWait: "等你在 Mac 上确认……", pairMismatch: "数字不一样？取消", pairDone: "已添加。",
-    pairDropped: "连接断了。在 Mac 上点“换一个二维码”再扫。", connectedMac: "已连上你的 Mac",
+    pairCheck: "电脑上显示同样的数字，就在那边确认：控制台里点“一致，添加”，终端里输入 y。", pairWait: "等你在电脑上确认……", pairMismatch: "数字不一样？取消", pairDone: "已添加。",
+    pairDropped: "连接断了。在电脑上换一个二维码再扫（控制台点“换一个二维码”，终端里重新运行 omnillm pair）。", connectedMac: "已连上你的 Mac",
     notCode: "这不是 OmniLLM 的配对二维码或配对文字。请从电脑上“添加设备”里重新复制。", needTLS: "你的 Mac 用的远程连接不支持手机网页（需要 wss:// 地址）。请在 Mac 上设置一个公开的远程连接。",
     chats: "对话", newChat: "新对话", placeholder: "输入消息", stop: "停止", send: "发送", menu: "菜单", model: "模型",
     addImage: "添加图片", voice: "语音输入", voiceStop: "停止语音输入", listening: "正在听，说完再点一下……", voiceFirst: "语音由浏览器识别：Chrome 交给 Google，Safari 交给 Apple。识别出的文字只填进输入框，你确认后再发。", voiceDenied: "没有麦克风权限。在浏览器的网站设置里允许麦克风，再点一次。", voiceNoMic: "没找到麦克风。", voiceNoSpeech: "没听到声音，再说一次试试。", voiceNetwork: "语音识别要联网，现在连不上。", voiceFailed: "语音输入没能开始，再试一次。", removeImage: "移除图片", tooManyImages: "每条消息最多 4 张图片。", imageFailed: "这张图片打不开，换一张试试。", imageTooBig: "图片太大，换一张小一点的。", imageTitle: "图片",
@@ -71,11 +71,11 @@ const T = {
     getHubSend: "Install OmniLLM on your computer: run this line in a terminal",
     scan: "Scan QR code", pasteInstead: "Can’t scan? Paste the pairing text", pastePh: "Paste the pairing text (starts with omnillm3-)", add: "Add", cancel: "Cancel", back: "Back", delete: "Delete", remove: "Remove", gotIt: "Got it",
     scanHint: "Point at the QR code on your computer’s screen", camDenied: "No camera access. Allow the camera for this site in your browser settings and try again, or use “Paste the pairing text”.",
-    pairTitle: "Add this device", pairConnecting: "Connecting to your Mac…",
-    pairAsk: "Add this device to your Mac? Continue only if you just chose “Add device” on your Mac.", pairVia: "Via {0}",
+    pairTitle: "Add this device", pairConnecting: "Connecting to your computer…",
+    pairAsk: "Add this device to your computer? Continue only if you just chose “Add device” or ran omnillm pair there.", pairVia: "Via {0}",
     pairReplace: "This replaces this device’s current pairing ({0}); the previous Mac can no longer be used from here.",
-    pairCheck: "If your Mac shows the same number, choose “Matches, add” there.", pairWait: "Waiting for you to confirm on your Mac…", pairMismatch: "Numbers don’t match? Cancel", pairDone: "Added.",
-    pairDropped: "The connection dropped. Choose “New QR code” on your Mac and scan again.", connectedMac: "Connected to your Mac",
+    pairCheck: "If your computer shows the same number, confirm there: “Matches, add” in the console, or type y in the terminal.", pairWait: "Waiting for you to confirm on your computer…", pairMismatch: "Numbers don’t match? Cancel", pairDone: "Added.",
+    pairDropped: "The connection dropped. Get a new QR code on your computer (“New QR code” in the console, or run omnillm pair again) and scan it.", connectedMac: "Connected to your Mac",
     notCode: "This is not an OmniLLM pairing QR code or pairing text. Copy it again from “Add device” on your computer.", needTLS: "Your Mac’s remote access can’t be used from a phone browser (it needs a wss:// address). Set up public remote access on your Mac.",
     chats: "Chats", newChat: "New chat", placeholder: "Message", stop: "Stop", send: "Send", menu: "Menu", model: "Model",
     addImage: "Add image", voice: "Voice input", voiceStop: "Stop voice input", listening: "Listening… tap again when you’re done", voiceFirst: "Your browser turns speech into text: Chrome uses Google, Safari uses Apple. The words only fill the box; you send them.", voiceDenied: "No microphone permission. Allow the microphone in the browser’s site settings, then try again.", voiceNoMic: "No microphone found.", voiceNoSpeech: "Didn’t hear anything. Try again.", voiceNetwork: "Voice input needs the internet, which isn’t reachable right now.", voiceFailed: "Voice input couldn’t start. Try again.", removeImage: "Remove image", tooManyImages: "Up to 4 images per message.", imageFailed: "This image can’t be opened; try another one.", imageTooBig: "Image too large; try a smaller one.", imageTitle: "Image",
@@ -110,7 +110,16 @@ const oneLang = (v) => (v === "zh" || v === "en" ? v : "");
 const browserLang = (navigator.language || "en").toLowerCase().startsWith("zh") ? "zh" : "en";
 const lang = oneLang(localStorageGet("lang")) || oneLang(localStorageGet("maclang")) || browserLang;
 document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
-function t(k, ...a) { let s = (T[lang][k] ?? T.en[k] ?? k); a.forEach((v, i) => { s = s.replace("{" + i + "}", v); }); return s; }
+// The hub's system, from the models reply (kept for the next start): a
+// hub that isn't a Mac is "your computer" in the words people see. The
+// set-up steps for a computer without OmniLLM yet keep their Mac hints.
+let hubOS = localStorageGet("hubos") || "";
+const MAC_HINTS = new Set(["step1", "getHubBody", "getHubBodyPaste"]);
+function computerWords(k, s) {
+  if (!hubOS || hubOS === "darwin" || MAC_HINTS.has(k)) return s;
+  return lang === "zh" ? s.replace(/ ?Mac ?/g, "电脑") : s.replace(/\bMac\b/g, "computer");
+}
+function t(k, ...a) { let s = computerWords(k, T[lang][k] ?? T.en[k] ?? k); a.forEach((v, i) => { s = s.replace("{" + i + "}", v); }); return s; }
 const $ = (id) => document.getElementById(id);
 function el(tag, text, cls) { const e = document.createElement(tag); if (text !== undefined) e.textContent = text; if (cls) e.className = cls; return e; }
 // quoted sets a text whose quoted UI names (“添加设备”) never break inside:
@@ -759,6 +768,8 @@ async function loadModels() {
   if (S.device) seal("models", { added: S.device.added, ms }).catch(() => {});
   fillPicker(ms);
   macLang();
+  const os = omnillm.hubOS ? omnillm.hubOS() : "";
+  if (os && os !== hubOS) { hubOS = os; localStorageSet("hubos", os); }
   if (!ms.length) { const o = el("option", t("noModelsOpt")); o.value = ""; o.disabled = true; sel.append(o); sel.value = ""; paintPick(); return; }
   if (pickModel()) renderLog(true);
   if (S.cur) renderList(); // the drawer names models by name now
@@ -1750,7 +1761,7 @@ async function unpaired(note) {
   S.gen++; // saves already on their way are dropped (seal)
   if (askDone) askDone(false); // an open question is about a pairing that is gone
   S.device = null; S.chats = []; S.cur = null; S.models = []; S.listed = false; S.paused = null; S.hello = null;
-  await idb.del("device"); await idb.del("chats"); await idb.del("models");
+  await idb.del("device"); await idb.del("chats"); await idb.del("models"); localStorageSet("hubos", "");
   closeDrawer(); $("chat-search").value = ""; show("welcome");
   $("welcome-err").textContent = "";
   welcomeNote(note);

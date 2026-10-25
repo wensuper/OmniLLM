@@ -29,7 +29,7 @@ const T = {
     subSignedOut: "{1} 已经装好，还没登录。",
     subPending: "{1} 已登录，正在接入……",
     subElsewhere: "Codex 已经登录，但这次的登录 OmniLLM 用不上。点“登录”，用同一个账号再登一次就好。",
-    subOpenAgain: "重新打开", subCmdHere: "在这台电脑的终端里运行这一行：",
+    subOpenAgain: "重新打开", subCmdHere: "在{here}的终端里运行这一行：",
     subRemoved: "{1} 已登录，之前被你从这里移除了。",
     subInstall: "安装并登录", subSignIn: "登录", subReconnect: "重新接入",
     subHow: "会打开一个终端窗口，每一步都写在里面；登录在浏览器里完成。",
@@ -50,7 +50,7 @@ const T = {
     connect: "验证并接入",
     w2Title: "添加一台设备",
     skipPair: "先跳过，以后再加",
-    w3Title: "试一下",
+    w3Title: "试一下", pairedTry: "好了：设备已添加。在它上面发第一条消息试试。",
     model: "模型", message: "消息", send: "发送", finish: "完成",
     todaySpend: "今天的花费", estimate: "API Key 按官方价格估算，订阅和本机模型不花钱", devices: "设备", models: "模型", apps: "应用", usage: "用量",
     addDevice: "添加设备", addProvider: "接入模型", addApp: "添加应用", add: "添加",
@@ -76,8 +76,8 @@ const T = {
     removeDevice: "移除设备", removeApp: "移除应用",
     discardQ: "放弃没保存的修改？", discard: "放弃", keepEditing: "继续编辑",
     providers: "模型来源", keyLast4: "接入方式", subLogin: "订阅登录（只留在{here}上）",
-    problemLogin: "登录已失效：在终端运行 claude，再输入 /login", problemLoginOther: "登录已失效：在终端里运行 claude，再输入 /login",
-    problemLoginCodex: "登录已失效：在终端运行 codex login", problemLoginCodexOther: "登录已失效：在终端里运行 codex login",
+    problemLogin: "登录已失效：在终端运行 omnillm login claude", problemLoginOther: "登录已失效：在终端里运行 omnillm login claude",
+    problemLoginCodex: "登录已失效：在终端运行 omnillm login chatgpt", problemLoginCodexOther: "登录已失效：在终端里运行 omnillm login chatgpt",
     problemLimit: "用量到上限，约 {0}后恢复", problemLimitNow: "用量到上限，稍后恢复", hours: "{0} 小时", hour: "1 小时", minutes: "{0} 分钟", minute: "1 分钟",
     noDevices: "还没有设备。点“添加设备”。", deviceCount: "{0} 台设备", deviceCountOne: "1 台设备", always: "始终",
     appsBody: "供脚本和程序后台调用，仅可使用 API Key 和{here}上的模型。",
@@ -151,7 +151,7 @@ const T = {
     subSignedOut: "{1} is installed but not signed in.",
     subPending: "{1} is signed in; connecting…",
     subElsewhere: "Codex is signed in, but OmniLLM can’t use that sign-in. Choose “Sign in” and sign in once more with the same account.",
-    subOpenAgain: "Open again", subCmdHere: "In a terminal on this computer, run:",
+    subOpenAgain: "Open again", subCmdHere: "In a terminal on {here}, run:",
     subRemoved: "{1} is signed in; you removed it from here earlier.",
     subInstall: "Install and sign in", subSignIn: "Sign in", subReconnect: "Connect again",
     subHow: "A Terminal window opens with every step written out; you sign in in your browser.",
@@ -172,7 +172,7 @@ const T = {
     connect: "Check and connect",
     w2Title: "Add a device",
     skipPair: "Skip for now",
-    w3Title: "Try it",
+    w3Title: "Try it", pairedTry: "All set: the device is added. Send your first message from it.",
     model: "Model", message: "Message", send: "Send", finish: "Done",
     todaySpend: "Spent today", estimate: "API keys at their official prices; subscriptions and local models cost nothing", devices: "Devices", models: "Models", apps: "Apps", usage: "Usage",
     addDevice: "Add device", addProvider: "Connect a model", addApp: "Add app", add: "Add",
@@ -198,8 +198,8 @@ const T = {
     removeDevice: "Remove device", removeApp: "Remove app",
     discardQ: "Discard unsaved changes?", discard: "Discard", keepEditing: "Keep editing",
     providers: "Model sources", keyLast4: "Connected with", subLogin: "Subscription login (stays on {here})",
-    problemLogin: "Signed out: in Terminal, run claude, then type /login", problemLoginOther: "Signed out: in a terminal, run claude, then type /login",
-    problemLoginCodex: "Signed out: in Terminal, run codex login", problemLoginCodexOther: "Signed out: in a terminal, run codex login",
+    problemLogin: "Signed out: in Terminal, run omnillm login claude", problemLoginOther: "Signed out: in a terminal, run omnillm login claude",
+    problemLoginCodex: "Signed out: in Terminal, run omnillm login chatgpt", problemLoginCodexOther: "Signed out: in a terminal, run omnillm login chatgpt",
     problemLimit: "Usage limit reached; back in about {0}", problemLimitNow: "Usage limit reached; back soon", hours: "{0} hours", hour: "1 hour", minutes: "{0} minutes", minute: "1 minute",
     noDevices: "No devices yet. Choose “Add device”.", deviceCount: "{0} devices", deviceCountOne: "1 device", always: "Always",
     appsBody: "For scripts and programs: background calls only, with API keys and models on {here}.",
@@ -645,7 +645,8 @@ async function showWizard() {
     } catch (_) { /* no local model */ }
   } else if (S.devices.length === 0 && !store("omnillm.skipPair")) {
     stepTo(2);
-    startPair($("pair-area"), () => { stepTo(3); fillModels(); }, false);
+    // A device added: that is the goal; its first message is sent there.
+    startPair($("pair-area"), () => { store("omnillm.wizard", "done"); toast(t("pairedTry")); refresh(); }, false);
   } else {
     stepTo(3);
     fillModels();
@@ -2153,6 +2154,10 @@ async function boot() {
   const m = /(?:^|[#&])login=([0-9a-f]{64})/.exec(location.hash);
   // "Add a phone or computer…" in the menu bar opens the console with &add.
   const wantAdd = /[#&]add(?:&|$)/.test(location.hash);
+  // The installer opened the sign-in window for this subscription: its
+  // card waits for that sign-in (and looks every few seconds).
+  const si = /[#&]signin=(claude-code|codex)(?:&|$)/.exec(location.hash);
+  if (si) subsWaiting[si[1]] = Date.now();
   if (m) {
     history.replaceState(null, "", "/console/");
     try { const r = await api("login", { token: m[1] }); sessionSecret(r.session); } catch (e) { show("login-needed"); return; }

@@ -42,6 +42,7 @@ import (
 	"github.com/wensuper/OmniLLM/hub"
 	"github.com/wensuper/OmniLLM/internal/control"
 	"github.com/wensuper/OmniLLM/internal/e2e"
+	"github.com/wensuper/OmniLLM/internal/fsown"
 	"github.com/wensuper/OmniLLM/internal/provider"
 	"github.com/wensuper/OmniLLM/internal/qrcode"
 	"github.com/wensuper/OmniLLM/localapi"
@@ -406,14 +407,14 @@ func guideCmd() {
 	fmt.Println(runnable(t("想做什么：\n"+
 		"  加手机或另一台电脑   omnillm pair\n"+
 		"  接上订阅             omnillm login claude（或 chatgpt）\n"+
-		"  接上 API Key         omnillm hub provider add anthropic（或 openai）\n"+
+		"  接上 API Key         omnillm hub provider add anthropic（OpenAI 的 Key 换成 openai）\n"+
 		"  看现在怎么样         omnillm status\n"+console+
 		"  更新                 omnillm update\n"+
 		"  全部命令             omnillm help --all",
 		"What do you want to do?\n"+
 			"  Add a phone or computer  omnillm pair\n"+
 			"  Connect a subscription   omnillm login claude (or chatgpt)\n"+
-			"  Connect an API key       omnillm hub provider add anthropic (or openai)\n"+
+			"  Connect an API key       omnillm hub provider add anthropic (openai for an OpenAI key)\n"+
 			"  See how things are       omnillm status\n"+console+
 			"  Update                   omnillm update\n"+
 			"  Every command            omnillm help --all")))
@@ -422,8 +423,8 @@ func guideCmd() {
 // pairedNote is what a terminal says once a device is added: it is ready,
 // and the three things worth remembering.
 func pairedNote() string {
-	return onMachine(t("好了：这台设备已经能用%s 上的模型了，在它上面直接对话就行。\n以后：再加手机 omnillm pair · 看状态 omnillm status · 忘了怎么用，输入 omnillm",
-		"Done: that device can now use the models on %s; just chat on it.\nLater: add another phone with omnillm pair · see how things are with omnillm status · forgot how? type omnillm"))
+	return onMachine(t("新加的设备已经能用%s 上的模型了，在它上面直接对话就行。\n以后：再加手机 omnillm pair · 看状态 omnillm status · 忘了怎么用，输入 omnillm",
+		"The new device can now use the models on %s; just chat on it.\nLater: add another phone with omnillm pair · see how things are with omnillm status · forgot how? type omnillm"))
 }
 
 func helpCmd(args []string) {
@@ -561,8 +562,8 @@ func secrets(dir, service string) secret.Store {
 		if err != nil {
 			die(err)
 		}
-		if st.Mode().Perm()&0o077 != 0 {
-			die(say(t("主密钥文件只能自己可读（0600）：", "The master key file must be readable only by you (0600): ") + f))
+		if st.Mode().Perm()&0o077 != 0 || !fsown.Mine(st) {
+			die(say(t("主密钥文件必须是你自己的，并且只有你能读（0600）：", "The master key file must be yours and readable only by you (0600): ") + f))
 		}
 		b, err := os.ReadFile(f)
 		if err != nil {
@@ -1477,7 +1478,12 @@ func pairOp(ctx context.Context, h *hub.Hub, c *control.Conn, l string, a map[st
 		return err
 	}
 	expires := p.Expires.Format(tl(l, "15:04", "3:04 PM"))
-	if err := c.Send(control.Reply{Event: "info", Text: fmt.Sprintf(tl(l,
+	if a["phone"] == "true" {
+		// Right after an install or sign-in on a server: only the phone.
+		if err := c.Send(control.Reply{Event: "info", Text: fmt.Sprintf(tl(l, "（二维码 %s 前有效。）", "(The QR code works until %s.)"), expires)}); err != nil {
+			return err
+		}
+	} else if err := c.Send(control.Reply{Event: "info", Text: fmt.Sprintf(tl(l,
 		"手机或平板：用相机扫上面的二维码。电脑或服务器：运行 omnillm connect pair，粘贴下面这段配对文字（%s 前有效，只能用一次；不要发给别人，也不要贴到聊天里）：\n\n%s\n",
 		"Phone or tablet: scan the QR code above with the camera. Computer or server: run omnillm connect pair and paste this pairing text (valid until %s, single use; don’t send it to anyone or paste it into a chat):\n\n%s\n"),
 		expires, p.Code)}); err != nil {
@@ -1487,7 +1493,7 @@ func pairOp(ctx context.Context, h *hub.Hub, c *control.Conn, l string, a map[st
 	if err != nil {
 		return hubSay(l, err)
 	}
-	return c.Send(control.Reply{Event: "done", Text: fmt.Sprintf(tl(l, "已添加设备“%s”（%s），每天额度 %s。", "Added “%s” (%s), daily limit %s."), d.Name, d.ID, limitTextIn(l, d.Budget))})
+	return c.Send(control.Reply{Event: "done", Text: fmt.Sprintf(tl(l, "已添加设备“%s”，每天额度 %s。", "Added “%s”, daily limit %s."), d.Name, limitTextIn(l, d.Budget))})
 }
 
 // ---------------- connect (device) ----------------
@@ -1523,7 +1529,8 @@ func connectCmd(args []string) {
 		if err != nil {
 			die(err)
 		}
-		fmt.Printf(t("已添加到你的 Mac（这台设备在 Mac 上叫“%s”）。\n", "Added to your Mac (it lists this device as “%s”).\n"), info.Name)
+		// The other side may be a Mac or a server: not known here yet.
+		fmt.Printf(t("已添加到你的电脑（这台设备在那边叫“%s”）。\n", "Added to your computer (it lists this device as “%s”).\n"), info.Name)
 	case "run":
 		fs := flag.NewFlagSet("connect run", flag.ContinueOnError)
 		listen := fs.String("listen", "127.0.0.1:8766", "")

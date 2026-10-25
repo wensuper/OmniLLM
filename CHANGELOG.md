@@ -4,6 +4,24 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.49](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.49) - 2026-10-25
+
+### Changed
+
+- On a server, `curl … | sh` now goes straight on to the phone's QR code too (it reads your answer from the terminal), and shows only what a phone needs: the QR code and how long it works. Device IDs are no longer shown after pairing.
+- With the console just opened and no model yet, the next step points only at that page. Once any model is connected, the installer no longer insists on signing in the AI assistant you installed with.
+- The console waits for the sign-in window the installer opened and goes on to the QR code as soon as you're signed in; the window's last line says to go back to the browser. After the first device is added, the wizard ends ("send your first message from it").
+- Installing again doesn't reopen the sign-in window, and says it is already installed.
+- The installer says when OmniLLM starts by itself, and warns on Linux when it would stop at logout or after a restart.
+- The phone page no longer assumes your OmniLLM runs on a Mac: pairing says "your computer" (with both ways to confirm), and a hub that isn't a Mac is called "your computer" everywhere.
+- The console's signed-out fix and the API-key line use the same commands as everywhere else (`omnillm login claude`, `omnillm hub provider add anthropic`).
+
+### Security
+
+- A data folder set with `OMNILLM_HOME` must be your own (it is made private), and the hub service now keeps it, so an update with it no longer rolls itself back.
+- The master key file, the control socket and the Claude Code / Codex programs are used only when they are your own (or, for programs, the system's) and others can't change them.
+- Downloads follow redirects only while they stay on https. A relay or phone page other than the project's, set once, is named at every install.
+
 ## [0.2.0-alpha.48](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.48) - 2026-10-24
 
 ### Security

@@ -100,7 +100,7 @@ func loginScript(k provider.Kind, cli string, headless, window bool) string {
 			w("%s login --connect %s >/dev/null 2>&1", shq(self), word)
 		}
 		w("say ''")
-		w("say %s", shq(fmt.Sprintf(t("好了：%s 已登录。OmniLLM 会自己接上，这个窗口可以关掉。", "Done: %s is signed in. OmniLLM connects it by itself; you can close this window."), name)))
+		w("say %s", shq(fmt.Sprintf(t("好了：%s 已登录。回到浏览器里的 OmniLLM 页面，接着用手机扫二维码。这个窗口可以关掉。", "Done: %s is signed in. Go back to the OmniLLM page in your browser and scan the QR code with your phone next. You can close this window."), name)))
 	}
 	return b.String()
 }

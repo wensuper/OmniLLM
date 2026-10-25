@@ -18,6 +18,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -32,6 +33,7 @@ import (
 	"github.com/wensuper/OmniLLM/hub"
 	"github.com/wensuper/OmniLLM/internal/control"
 	"github.com/wensuper/OmniLLM/internal/e2e"
+	"github.com/wensuper/OmniLLM/internal/fsown"
 	"github.com/wensuper/OmniLLM/internal/provider"
 	"github.com/wensuper/OmniLLM/internal/relaylink"
 	"github.com/wensuper/OmniLLM/store"
@@ -147,6 +149,12 @@ func installCmd(args []string) {
 		die(err)
 	}
 	keepServiceSettings(home)
+	homeDir, err := privateHome()
+	if err != nil {
+		die(err)
+	}
+	// Installed before (even this same version): no first-run windows.
+	first := !exists(filepath.Join(home, ".local", "bin", "omnillm"))
 	prev := keepPrevious(home)
 	bin, err := installBinary(home)
 	if err != nil {
@@ -168,6 +176,11 @@ func installCmd(args []string) {
 	// `omnillm hub pair` (the question, the pairing text, errors) and its
 	// log would always be English for a person who installed in Chinese.
 	env["OMNILLM_LANG"] = lang()
+	// The hub keeps its data where this install looked for it (and an
+	// update finds it there again).
+	if homeDir != "" {
+		env["OMNILLM_HOME"] = homeDir
+	}
 	service, err := installService(home, bin, dir, env)
 	if err != nil {
 		die(err)
@@ -228,20 +241,33 @@ func installCmd(args []string) {
 		fmt.Printf(t("OmniLLM 已从 %s 换回 %s，在后台运行，设置都在。\n", "OmniLLM went from %s back to %s and runs in the background; your settings are kept.\n"), prev, version)
 	case prev != "":
 		fmt.Printf(t("OmniLLM 已从 %s 更新到 %s，在后台运行，设置都在。\n", "OmniLLM is updated from %s to %s and runs in the background; your settings are kept.\n"), prev, version)
+	case !first:
+		fmt.Printf(t("OmniLLM %s 已经装好，在后台运行，设置都在。\n", "OmniLLM %s is already installed and runs in the background; your settings are kept.\n"), version)
 	case readUpdate(dir).Manual:
-		fmt.Println(runnable(t("OmniLLM 已安装，在后台运行（登录时自动启动）。自动更新是关着的：要打开，运行 omnillm update --auto on。", "OmniLLM is installed and runs in the background; it starts at login. Automatic updates are off; to turn them on, run omnillm update --auto on.")))
+		fmt.Println(runnable(fmt.Sprintf(t("OmniLLM 已安装，在后台运行%s。自动更新是关着的：要打开，运行 omnillm update --auto on。", "OmniLLM is installed and runs in the background%s. Automatic updates are off; to turn them on, run omnillm update --auto on."), startsWhen(service))))
 	default:
-		fmt.Println(t("OmniLLM 已安装，在后台运行（登录时自动启动），以后会自己更新。", "OmniLLM is installed and runs in the background; it starts at login and updates itself."))
+		fmt.Printf(t("OmniLLM 已安装，在后台运行%s，以后会自己更新。\n", "OmniLLM is installed and runs in the background%s, and updates itself.\n"), startsWhen(service))
+	}
+	if s := stopsWhen(service); s != "" {
+		fmt.Println(runnable(s))
+	}
+	if s := ownServers(); s != "" {
+		fmt.Println(s)
 	}
 	// The assistant running this install (Claude Code, Codex) comes with a
-	// subscription; when the hub can't use it yet, that sign-in comes first.
-	st.Assistant = string(assistantToConnect())
+	// subscription; when the hub can't use it yet and no model is
+	// connected, that sign-in comes first.
+	st.Assistant = string(assistantToConnect(st.Providers))
+	signIn := st.Assistant != "" && first && runtime.GOOS == "darwin"
 	if !noOpen && !st.Headless {
 		// No device yet and a model to use: the console opens on the QR
-		// code for adding one; otherwise where the next step is.
+		// code for adding one; otherwise where the next step is. With the
+		// sign-in window coming, the console waits for that sign-in.
 		extra := ""
 		if st.Devices == 0 && st.Assistant == "" && st.Providers > 0 && st.RelayConfigured {
 			extra = "&add"
+		} else if signIn {
+			extra = "&signin=" + st.Assistant
 		}
 		if url, err := loginURL(); err == nil && openLogin(url+extra) == nil {
 			st.Opened = true
@@ -252,7 +278,7 @@ func installCmd(args []string) {
 		// The sign-in window opens after the browser, so it is the one in
 		// front; only on a first install (an update or a rerun doesn't
 		// open it again).
-		if st.Assistant != "" && prev == "" && runtime.GOOS == "darwin" && openLoginWindow(st.Assistant) == nil {
+		if signIn && openLoginWindow(st.Assistant) == nil {
 			st.LoginOpened = true
 		}
 	}
@@ -266,8 +292,9 @@ func installCmd(args []string) {
 	fmt.Println(st.Next)
 	b, _ := json.Marshal(st)
 	// For an AI agent running the install (INSTALL.md): its output is not
-	// a terminal. A person at a terminal has just read the same in words.
-	if !term.IsTerminal(int(os.Stdout.Fd())) {
+	// a terminal, or it is an assistant's pseudo-terminal. A person at a
+	// terminal has just read the same in words.
+	if !term.IsTerminal(int(os.Stdout.Fd())) || installingAssistant() != "" {
 		fmt.Println("OMNILLM_STATUS " + string(b))
 	}
 }
@@ -314,7 +341,7 @@ func nextStep(st Status) string {
 		s := onMachine(t("%s 所在的地区变了，已暂停使用模型。确认是你本人换了地方，运行 omnillm hub region confirm 恢复。",
 			"%s’s region changed; models are paused. If you moved, run omnillm hub region confirm to turn them back on."))
 		return upperFirst(s) // "This Mac’s region …"
-	case st.Assistant != "":
+	case st.Assistant != "" && st.Providers == 0:
 		return assistantStep(st)
 	case st.Providers == 0 && st.Headless:
 		// No browser here: a key is typed in this terminal, never sent in a chat.
@@ -322,11 +349,15 @@ func nextStep(st Status) string {
 		return t("下一步：接入一个模型（选一种；接好后终端里接着显示给手机扫的二维码）：\n"+
 			"· 有 Claude 订阅：运行 omnillm login claude（没装 Claude Code 会先装上，再登录）\n"+
 			"· 有 ChatGPT 订阅：运行 omnillm login chatgpt（没装 Codex 会先装上，再登录）\n"+
-			"· 有 API Key：在这台电脑的终端里亲自运行 omnillm hub provider add anthropic（或 openai、openai-compatible），在提示时粘贴；API Key 不要发到聊天里",
+			"· 有 API Key：在这台电脑的终端里亲自运行 omnillm hub provider add anthropic（OpenAI 的 Key 换成 openai），在提示时粘贴；API Key 不要发到聊天里",
 			"Next: connect a model (pick one; once it’s connected, the terminal goes on to a QR code for your phone):\n"+
 				"· Claude subscription: run omnillm login claude (installs Claude Code first if needed, then signs in)\n"+
 				"· ChatGPT subscription: run omnillm login chatgpt (installs Codex first if needed, then signs in)\n"+
-				"· API key: in this computer’s terminal, run omnillm hub provider add anthropic (or openai, openai-compatible) yourself and paste the key when asked; don’t send it in a chat")
+				"· API key: in this computer’s terminal, run omnillm hub provider add anthropic (openai for an OpenAI key) yourself and paste the key when asked; don’t send it in a chat")
+	case st.Providers == 0 && st.Opened:
+		// The console just opened on its first step: one place to do it.
+		return t("下一步：在刚打开的浏览器页面里接入一个模型：选 Claude 或 ChatGPT 订阅，或者点“我有 API Key”。",
+			"Next: in the browser page that just opened, connect a model: pick your Claude or ChatGPT subscription, or choose “I have an API key”.")
 	case st.Providers == 0:
 		// One command a line: the person picks the one that fits. A
 		// desktop app on this Mac says which subscription they have.
@@ -401,9 +432,9 @@ func assistantStep(st Status) string {
 // hub can't use its subscription yet (not installed where the hub finds
 // it, signed out, or signed in where the hub can't use the login) and the
 // owner did not remove it on purpose; "" otherwise.
-func assistantToConnect() provider.Kind {
+func assistantToConnect(providers int) provider.Kind {
 	k := installingAssistant()
-	if k == "" || onAPIKey(k) {
+	if k == "" || providers > 0 || onAPIKey(k) {
 		return ""
 	}
 	var s struct {
@@ -476,8 +507,19 @@ func onAPIKey(k provider.Kind) bool {
 func pairsHere(st Status) bool {
 	// An AI assistant (even one whose commands run in a pseudo-terminal)
 	// never gets here: pairing is the person's step.
+	// The person's terminal even under "curl … | sh" (stdin is the pipe).
 	return st.Headless && st.Providers > 0 && st.Devices == 0 && st.RelayConfigured && st.RelayUp && st.Assistant == "" &&
-		term.IsTerminal(int(os.Stdin.Fd())) && term.IsTerminal(int(os.Stdout.Fd())) && installingAssistant() == ""
+		hasTTY() && term.IsTerminal(int(os.Stdout.Fd())) && installingAssistant() == ""
+}
+
+// hasTTY: this command has a terminal a person types into.
+func hasTTY() bool {
+	f, err := os.Open("/dev/tty")
+	if err != nil {
+		return false
+	}
+	defer f.Close()
+	return term.IsTerminal(int(f.Fd()))
 }
 
 // pairHere adds a phone in this terminal: the QR code to scan, then the
@@ -486,9 +528,17 @@ func pairsHere(st Status) bool {
 func pairHere() {
 	fmt.Println(runnable(t("接着把手机加进来：用手机相机扫下面的二维码，在手机上点“添加”；两边的 6 位数一样，就在这里输入 y。现在不加就按 Ctrl-C，以后运行 omnillm pair。",
 		"Now add your phone: scan the QR code below with your phone’s camera and tap “Add” on the phone; if the 6 digits match on both sides, type y here. To skip for now, press Ctrl-C and run omnillm pair later.")))
+	// The y is typed at the terminal, also when the installer's stdin
+	// is the pipe it was downloaded through.
+	if !term.IsTerminal(int(os.Stdin.Fd())) {
+		if tty, err := os.Open("/dev/tty"); err == nil {
+			defer tty.Close()
+			os.Stdin = tty
+		}
+	}
 	// What came before (the install, the sign-in, the key) succeeded:
 	// a pairing that expires or is refused here says so and ends well.
-	if err := stream(filepath.Join(dataDir("hub"), "control.sock"), control.Request{Op: "pair", Args: map[string]string{"name": "", "models": "", "budget_usd": "0", "background_only": "false"}}, ""); err != nil {
+	if err := stream(filepath.Join(dataDir("hub"), "control.sock"), control.Request{Op: "pair", Args: map[string]string{"name": "", "models": "", "budget_usd": "0", "background_only": "false", "phone": "true"}}, ""); err != nil {
 		fmt.Println(err)
 		fmt.Println(runnable(t("手机可以以后再加：运行 omnillm pair。", "You can add your phone later: run omnillm pair.")))
 		return
@@ -602,8 +652,12 @@ func secretEnv(dir string) (map[string]string, error) {
 }
 
 // ensureMasterKey creates kf once (exclusively, 0600) or checks the one
-// that is there. It never replaces an existing key.
+// that is there: this user's, private, and well-formed. It never replaces
+// an existing key.
 func ensureMasterKey(kf string) error {
+	if fi, err := os.Lstat(kf); err == nil && (!fi.Mode().IsRegular() || !fsown.Mine(fi) || fi.Mode().Perm()&0o077 != 0) {
+		return sayf(t("主密钥文件 %s 必须是你自己的普通文件，并且只有你能读（0600）。", "The master key file %s must be a regular file of yours, readable only by you (0600)."), kf)
+	}
 	if b, err := os.ReadFile(kf); err == nil {
 		if raw, err := base64.StdEncoding.DecodeString(strings.TrimSpace(string(b))); err != nil || len(raw) != 32 {
 			// Never silently replace a key: the secrets file depends on it.
@@ -835,7 +889,7 @@ func systemdQuote(v string) string {
 // serviceSettings are the settings "omnillm install" writes into the
 // service from the environment. Installing again (an update, from a
 // terminal that has none of them set) keeps what the service has.
-var serviceSettings = []string{"OMNILLM_RELAY", "OMNILLM_WEB_APP"}
+var serviceSettings = []string{"OMNILLM_RELAY", "OMNILLM_WEB_APP", "OMNILLM_HOME"}
 
 // keepServiceSettings sets each of serviceSettings that is not in the
 // environment from the installed service's file.
@@ -952,6 +1006,95 @@ func installSystemd(home, bin, dir string, env map[string]string) error {
 	return nil
 }
 
+// lingering: systemd keeps this user's services running without a login
+// (and starts them at boot).
+var lingering = func() bool {
+	u, err := user.Current()
+	if err != nil {
+		return false
+	}
+	out, err := exec.Command("loginctl", "show-user", u.Username, "-p", "Linger").Output()
+	return err == nil && strings.TrimSpace(string(out)) == "Linger=yes"
+}
+
+// startsWhen is when the service starts by itself, as " (…)" after "runs
+// in the background"; "" when it doesn't (stopsWhen says so).
+func startsWhen(service string) string {
+	switch {
+	case service == "launchd":
+		return t("（登录时自动启动）", "; it starts at login")
+	case service == "systemd" && lingering():
+		return t("（开机后自动启动）", "; it starts when the computer starts")
+	}
+	return ""
+}
+
+// stopsWhen warns when OmniLLM won't keep running by itself: no systemd
+// user service, or one that stops at logout.
+func stopsWhen(service string) string {
+	switch {
+	case service == "none":
+		return t("注意：这台电脑没有 systemd 用户服务，OmniLLM 现在在运行，但重启或退出登录后不会自己启动；到时再运行 omnillm install。",
+			"Note: this computer has no systemd user services, so OmniLLM runs now but won’t start again by itself after a restart or a logout; run omnillm install then.")
+	case service == "systemd" && !lingering():
+		return t("注意：退出这台电脑的登录后 OmniLLM 会停下。要让它一直运行，运行 loginctl enable-linger（被拒绝的话请管理员帮忙）。",
+			"Note: OmniLLM stops when you log out of this computer. To keep it running, run loginctl enable-linger (ask your admin if that’s refused).")
+	}
+	return ""
+}
+
+// ownServers names a relay or web page other than the project's that this
+// install keeps using (set once through OMNILLM_RELAY / OMNILLM_WEB_APP),
+// so it is never a silent choice.
+func ownServers() string {
+	var parts []string
+	if r := os.Getenv("OMNILLM_RELAY"); r == "off" {
+		parts = append(parts, t("不用远程连接", "no remote access"))
+	} else if r != "" {
+		if u, err := url.Parse(r); err == nil {
+			parts = append(parts, t("远程连接 ", "remote access via ")+u.Host)
+		}
+	}
+	if w := os.Getenv("OMNILLM_WEB_APP"); w != "" {
+		if u, err := url.Parse(w); err == nil {
+			parts = append(parts, t("手机网页 ", "phone page at ")+u.Host)
+		}
+	}
+	if len(parts) == 0 {
+		return ""
+	}
+	return t("按你的设置：", "As you set it up: ") + strings.Join(parts, t("，", ", ")) + t("。", ".")
+}
+
+// privateHome checks OMNILLM_HOME before anything is kept there: a full
+// path to a folder of this user's (never one someone else made, say in
+// /tmp), private (0700). "" when it isn't set.
+func privateHome() (string, error) {
+	h := os.Getenv("OMNILLM_HOME")
+	if h == "" {
+		return "", nil
+	}
+	if !filepath.IsAbs(h) {
+		return "", say(t("OMNILLM_HOME 必须是完整路径（以 / 开头）。", "OMNILLM_HOME must be a full path (starting with /)."))
+	}
+	if err := os.MkdirAll(h, 0o700); err != nil {
+		return "", err
+	}
+	fi, err := os.Stat(h)
+	if err != nil {
+		return "", err
+	}
+	if !fi.IsDir() || !fsown.Mine(fi) {
+		return "", sayf(t("OMNILLM_HOME（%s）不是你自己的文件夹。换一个你自己的，比如 ~/.omnillm。", "OMNILLM_HOME (%s) isn’t a folder of yours. Use one of your own, such as ~/.omnillm."), h)
+	}
+	if fi.Mode().Perm()&0o077 != 0 {
+		if err := os.Chmod(h, 0o700); err != nil {
+			return "", err
+		}
+	}
+	return h, nil
+}
+
 // startDetached runs the hub without a service manager (no autostart).
 func startDetached(bin, dir string, env map[string]string) error {
 	logf, err := os.OpenFile(filepath.Join(dir, "hub.log"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
@@ -1051,7 +1194,7 @@ func statusCmd(args []string) {
 	st = waitRelay(st, 5*time.Second)
 	st.Headless = headless()
 	if ok {
-		st.Assistant = string(assistantToConnect())
+		st.Assistant = string(assistantToConnect(st.Providers))
 	}
 	st.Next = runnable(nextStep(st))
 	hu := readUpdate(dataDir("hub"))
@@ -1162,7 +1305,7 @@ func installDevice() {
 	}
 	tty, err := os.Open("/dev/tty")
 	if err != nil {
-		fmt.Println(runnable(t("下一步：在你的 Mac 上打开 OmniLLM 控制台，点“添加设备”，选“电脑或服务器”，再点“用命令行”复制配对文字，然后在这里运行 omnillm connect pair 粘贴。", "Next: on your Mac, open the OmniLLM console, choose “Add device”, pick “Computer or server”, then “Use the command line”, and copy the pairing text, then run omnillm connect pair here and paste it.")))
+		fmt.Println(runnable(t("下一步：拿到配对文字（Mac 上：OmniLLM 控制台点“添加设备”，选“电脑或服务器”，再点“用命令行”复制；服务器上：运行 omnillm pair），然后在这里运行 omnillm connect pair 粘贴。", "Next: get a pairing text (on a Mac: in the OmniLLM console choose “Add device”, pick “Computer or server”, then “Use the command line” and copy it; on a server: run omnillm pair), then run omnillm connect pair here and paste it.")))
 		return
 	}
 	tty.Close()

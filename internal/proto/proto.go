@@ -47,7 +47,10 @@ type Envelope struct {
 	Name string `json:"name,omitempty"`
 	// Lang in a models reply is the language the owner chose on the hub
 	// ("zh", "en"; empty: not chosen), so a device's screens match the Mac's.
-	Lang     string              `json:"lang,omitempty"`
+	Lang string `json:"lang,omitempty"`
+	// OS in a models reply is the hub's system (runtime.GOOS), so a
+	// device calls it "your Mac" only when it is one.
+	OS       string              `json:"os,omitempty"`
 	DeviceID string              `json:"device_id,omitempty"`
 	Models   []omnillm.ModelInfo `json:"models,omitempty"`
 	Req      *omnillm.Request    `json:"req,omitempty"`

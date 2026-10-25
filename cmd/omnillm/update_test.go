@@ -126,12 +126,14 @@ func mkdir(p string) error { return os.MkdirAll(p, 0o700) }
 func writeFile(p, s string) error { return os.WriteFile(p, []byte(s), 0o600) }
 
 func TestSavedSettingsRoundTrip(t *testing.T) {
-	relay, web := "wss://relay.example.com/x?a=1&b=2", "https://web.example.com"
-	plist := "<key>OMNILLM_RELAY</key><string>" + xmlEscape(relay) + "</string><key>OMNILLM_WEB_APP</key><string>" + xmlEscape(web) + "</string>"
-	unit := "[Service]\nEnvironment=OMNILLM_RELAY=" + systemdQuote(relay) + "\nEnvironment=OMNILLM_WEB_APP=" + systemdQuote(web) + "\n"
+	relay, web, home := "wss://relay.example.com/x?a=1&b=2", "https://web.example.com", "/srv/omni $data"
+	plist := "<key>OMNILLM_RELAY</key><string>" + xmlEscape(relay) + "</string><key>OMNILLM_WEB_APP</key><string>" + xmlEscape(web) + "</string>" +
+		"<key>OMNILLM_HOME</key><string>" + xmlEscape(home) + "</string>"
+	unit := "[Service]\nEnvironment=OMNILLM_RELAY=" + systemdQuote(relay) + "\nEnvironment=OMNILLM_WEB_APP=" + systemdQuote(web) +
+		"\nEnvironment=OMNILLM_HOME=" + systemdQuote(home) + "\n"
 	for name, body := range map[string]string{"launchd": plist, "systemd": unit} {
 		got := savedSettings(body)
-		if got["OMNILLM_RELAY"] != relay || got["OMNILLM_WEB_APP"] != web {
+		if got["OMNILLM_RELAY"] != relay || got["OMNILLM_WEB_APP"] != web || got["OMNILLM_HOME"] != home {
 			t.Errorf("%s: %v", name, got)
 		}
 	}

@@ -287,6 +287,14 @@
 - **控制通道文件夹**：每次都 chmod 0700，并且必须是真文件夹（Lstat，不跟随链接）。
 留着没改、写在 security.md 的：托管方可以给 verify web 和给手机不同的页面；链接配对只显示连接服务地址、不显示主机指纹（靠“只有你刚点了添加设备才继续”）；本机接口固定 8765 端口，别的本机用户先占住时应用会把令牌发给它（只影响同一台电脑上的其他账户）。
 
+### 5.9b 2026-10-25 安装和引导复查（安全部分）
+
+- **`OMNILLM_HOME` 只信自己的文件夹**：安装时必须是完整路径、属于当前用户，权限收成 0700（`privateHome`）；它写进主机服务的环境，也像远程连接设置一样从已装的服务里读回（以前服务不带它，带着它更新会找不到主机、自动退回旧版）。
+- **只信自己的文件**：主密钥文件必须是自己的普通文件、0600（安装和启动都查）；连控制通道前看套接字属于自己（`control.Call`），别人放的假主机答不了 `status`、`console.login`；找 Claude Code / Codex 时只认自己或 root 的、别人改不了的程序（`FindCLI`），并多看 nvm 的目录。共用的判断在 `internal/fsown`。
+- **下载只走 https**：`install.sh` 加 `--proto-redir '=https'`，更新用的 Go 客户端也拒绝跳到 https 以外。
+- **自己设的服务器说出来**：用 `OMNILLM_RELAY` / `OMNILLM_WEB_APP` 设过别的远程连接或手机网页，每次安装都说一句“按你的设置：…”。
+- **留着没改**：AI 助手如果刻意伪装（脱离父进程、去掉 `CLAUDECODE`、自己开伪终端）可以替人在 `pairHere` 里输入 y；这和它直接运行 `omnillm pair` 一样，而能这样做的助手已经能在这台电脑上做任何事，不在防护范围内。更新在没有 cosign 时靠 GitHub 的 TLS 和校验和。
+
 ### 5.10 安全默认值一览
 
 | 项 | 默认值 |
@@ -497,6 +505,15 @@ NEXA（`pgclient`，Go）直接引入 OmniLLM 库。用户只装 NEXA：在 NEXA
 
 网页客户端本来就在打开时自己换新版（§13），不在这里。
 
+2026-10-25 复查（三路走查 + 在全新的 Ubuntu 虚拟机里按 README 真装一次）后改的：
+- **“自动启动”按实际说**：Mac 是“登录时自动启动”；Linux 上 systemd 开了 linger 才说“开机后自动启动”，没开或没有 systemd 时多一行“注意：……”说退出登录或重启后会停、怎么办（`startsWhen` / `stopsWhen`）。
+- **再跑一次不当第一次**：`~/.local/bin/omnillm` 在装之前就有，就不再弹登录窗口，第一句说“已经装好”。
+- **服务器上 `curl … | sh` 也直接到二维码**：`pairsHere` 看的是 `/dev/tty`，不是标准输入（管道）；这时的配对只给手机二维码和有效时间，不给电脑用的配对文字；任何地方都不再显示设备编号。完成的那句改成“新加的设备已经能用……”，中英一致。
+- **控制台开着时只指一处**：没有模型、控制台刚打开时，“下一步”只说“在刚打开的页面里选订阅或点‘我有 API Key’”。
+- **一个人用的说法**：API Key 那行写“OpenAI 的 Key 换成 openai”，不再列 `openai-compatible`；控制台里登录失效的修法统一成 `omnillm login claude|chatgpt`。
+- **手机网页**：配对时的话不再假定是 Mac（“电脑”，并说控制台点“一致，添加”、终端里输入 y）；配好后主机在模型列表里带上自己的系统（`os`），不是 Mac 的主机，网页上的“你的 Mac”都说成“你的电脑”。
+- **控制台向导**：安装程序打开登录窗口时，控制台带 `&signin=<种类>` 打开，那张卡片直接进入“等你登录”并每 3 秒看一次，登录好就到二维码；登录窗口最后一句说“回到浏览器里的 OmniLLM 页面，接着用手机扫二维码”。向导里加好第一台设备就结束（提示“在它上面发第一条消息试试”），不再要求在控制台里试一句。
+
 ### 10.8 订阅的引导登录（2026-10-21）
 
 很多人只有 Claude / ChatGPT 桌面版，或装了 Claude Code / Codex 却没登录。主机只用官方命令行程序（原则 1），所以要让“装上并登录”一步到位，而且登录始终是本人在浏览器里完成，OmniLLM 不碰登录信息。
@@ -514,9 +531,9 @@ NEXA（`pgclient`，Go）直接引入 OmniLLM 库。用户只装 NEXA：在 NEXA
 - **怎么打开**：独立程序给控制台一个钩子（`console.Server.OpenLogin`，库自己不运行任何东西，原则 7）。macOS 上写一个只有自己能读写的 `.command` 文件，用 `open -a Terminal` 打开：不需要“控制终端”的授权，窗口里每条命令都先打印出来。其他系统给出 `omnillm login …` 让人自己运行。
 - **脚本**（`loginScript`）：`set -o pipefail`（`curl … | bash` 下载失败也算失败），没装就运行官方安装程序（Claude Code：`curl -fsSL https://claude.ai/install.sh | bash`；Codex：`curl -fsSL https://chatgpt.com/codex/install.sh | CODEX_NON_INTERACTIVE=1 sh`，不然它会问“现在启动 Codex 吗”，答了“是”就进了 Codex 自己的界面、走不到登录；都装到 `~/.local/bin`，不用 sudo），先说一句“安装程序的输出里让你做的事不用管”，装完在 `~/.local/bin` 或 PATH 里确认程序在，再运行官方登录（`claude auth login --claudeai`；`codex -c 'cli_auth_credentials_store="file"' login`，没有浏览器的机器加 `--device-auth`）。每一步失败都说下一步。
 - **接上**：卡片点了之后每 3 秒问一次（最多 10 分钟，页面回到前台立刻问；等待时按钮变成「重新打开」，过 45 秒再给出命令）。接上只接这一个订阅（`Hub.ConnectSubscription`，不顺手接 Ollama）。别处加了或删了来源，状态缓存立即作废，一登录好就接上、提示“已接入 Claude 订阅”，向导自己走到“添加设备”。终端里 `omnillm login claude|chatgpt` 运行同一个脚本，结束后经控制通道 `subscription.connect` 立刻接上。
-- **装的时候先接上正在用的那个**：`omnillm install` 和 `omnillm status` 看自己是不是在 AI 助手里运行（Claude Code 设的 `CLAUDECODE=1`，否则顺着父进程找 `claude` / `codex`），再经控制通道 `subscription.state` 问主机这个订阅接上没有。没接上（没装在主机找得到的地方、没登录、或登录存在主机用不了的地方）且主人没有特意移除时：状态里带 `assistant`，“下一步”第一句就说它（“你在用 Codex，但 OmniLLM 还用不上它的登录……”）；有屏幕的 Mac 上安装程序直接打开同一个登录终端窗口，控制台这次不停在二维码上。这样用 Claude Code 或 Codex 装的人，至少手上这个订阅一定接上。认的时候最近的上级进程优先（Claude Code 里开的 Codex 算 Codex），`.app/Contents/` 下的桌面版不算；它跑在 API Key 或别家接口上时（`ANTHROPIC_API_KEY`、`ANTHROPIC_AUTH_TOKEN`、`ANTHROPIC_BASE_URL`、Bedrock/Vertex 开关，或 `OPENAI_API_KEY`）不问订阅登录。登录窗口只在第一次安装时打开，并且在控制台之后打开（在最前面）；窗口里登录成功后脚本自己运行 `omnillm login --connect`，不靠控制台页面开着。控制台只有在已有模型、有远程连接时才停在二维码上。
+- **装的时候先接上正在用的那个**：`omnillm install` 和 `omnillm status` 看自己是不是在 AI 助手里运行（Claude Code 设的 `CLAUDECODE=1`，否则顺着父进程找 `claude` / `codex`），再经控制通道 `subscription.state` 问主机这个订阅接上没有。没接上（没装在主机找得到的地方、没登录、或登录存在主机用不了的地方）且主人没有特意移除时：状态里带 `assistant`，“下一步”第一句就说它（“你在用 Codex，但 OmniLLM 还用不上它的登录……”）；有屏幕的 Mac 上安装程序直接打开同一个登录终端窗口，控制台这次不停在二维码上。这样用 Claude Code 或 Codex 装的人，至少手上这个订阅一定接上。认的时候最近的上级进程优先（Claude Code 里开的 Codex 算 Codex），`.app/Contents/` 下的桌面版不算；它跑在 API Key 或别家接口上时（`ANTHROPIC_API_KEY`、`ANTHROPIC_AUTH_TOKEN`、`ANTHROPIC_BASE_URL`、Bedrock/Vertex 开关，或 `OPENAI_API_KEY`）不问订阅登录。登录窗口只在第一次安装时打开，并且在控制台之后打开（在最前面）；窗口里登录成功后脚本自己运行 `omnillm login --connect`，不靠控制台页面开着。控制台只有在已有模型、有远程连接时才停在二维码上。2026-10-25 起只在还没有任何模型时这样问：人改用 API Key 或本地模型接上一个以后，“下一步”就往下走，`assistant` 也不再出现。
 - **只输 `omnillm`**：说现在怎么样（运行行 + `nextStep` 那一句），再按“想做什么”列几条最常用的命令（加手机 `omnillm pair`、接订阅、接 API Key、看状态、更新、全部命令；有屏幕时多一条打开控制台）；只当设备用的机器列对话、问一句、换 Mac 配对；没装好就给安装命令。完整命令表还是 `omnillm help`。终端里配好一台设备后，说一屏完成：“好了：这台设备已经能用……；以后：再加手机 omnillm pair · 看状态 omnillm status · 忘了怎么用，输入 omnillm”。设备那边配对时的提示不再假定对方是 Mac（“另一边（你的 Mac 或服务器）……Mac 上点‘一致，添加’，服务器上输入 y”）。
-- **没有屏幕的服务器，一条命令到手机**：`omnillm pair`（同 `omnillm hub pair`）在终端里显示二维码、核对 6 位数后输入 y。人在终端里（标准输入输出都是终端）、已有模型、还没有设备、远程连接通着时，`omnillm install`、`omnillm login claude|chatgpt`、`omnillm hub provider add` 做完都直接接着显示这个二维码，所以装好后只要一条“接上模型”的命令就能把手机加进来；“下一步”也这么说。AI 助手运行时不会这样做（不是终端，或认出是 Claude Code / Codex，哪怕它用伪终端跑命令），配对和登录都留给人（INSTALL.md 第 6、7 条）；这一步配不成（过期、选了不一致、Ctrl-C）只说一句“以后运行 omnillm pair”，前面的安装、登录照样算成功。“没有屏幕”按 `headless()`：Linux 上没有 DISPLAY / WAYLAND_DISPLAY，Mac 上是 SSH 进来的会话。登录窗口里的 `omnillm login --connect` 用默认数据目录，自定义 `OMNILLM_HOME` 的实例靠控制台页面接上。状态里的 `console_opened`、`login_opened` 告诉 AI 屏幕上现在是什么。只当设备用的机器拒绝运行（订阅要登录在主机上）。
+- **没有屏幕的服务器，一条命令到手机**：`omnillm pair`（同 `omnillm hub pair`）在终端里显示二维码、核对 6 位数后输入 y。人在终端里（输出是终端、有 `/dev/tty`，所以 `curl … | sh` 也算）、已有模型、还没有设备、远程连接通着时，`omnillm install`、`omnillm login claude|chatgpt`、`omnillm hub provider add` 做完都直接接着显示这个二维码，所以装好后只要一条“接上模型”的命令就能把手机加进来；“下一步”也这么说。AI 助手运行时不会这样做（不是终端，或认出是 Claude Code / Codex，哪怕它用伪终端跑命令），配对和登录都留给人（INSTALL.md 第 6、7 条）；这一步配不成（过期、选了不一致、Ctrl-C）只说一句“以后运行 omnillm pair”，前面的安装、登录照样算成功。“没有屏幕”按 `headless()`：Linux 上没有 DISPLAY / WAYLAND_DISPLAY，Mac 上是 SSH 进来的会话。登录窗口里的 `omnillm login --connect` 用默认数据目录，自定义 `OMNILLM_HOME` 的实例靠控制台页面接上。状态里的 `console_opened`、`login_opened` 告诉 AI 屏幕上现在是什么。只当设备用的机器拒绝运行（订阅要登录在主机上）。
 - **提示文字**：安装结束和 `omnillm status` 在没有模型时，订阅那两行直接给 `omnillm login claude` / `omnillm login chatgpt`；发现桌面版时第一行先说“发现 Claude 桌面版：同一个订阅也能给手机用”。
 - **为什么不直接用桌面版自带的程序**：Claude 桌面版和 ChatGPT 桌面版里都带着一份命令行程序，但路径随版本变、不是给外部用的，登录也各自分开；装官方命令行版是最稳的一条路，一分钟。
 - **查状态的开销**：每看一次要运行几次官方程序，`SubscriptionStates` 的结果复用 2 秒，用自己的超时（关掉的页面不会留下半截结果）；会碰到钥匙串的 Codex 自查（`CodexLoggedInOwn`）30 秒最多一次。

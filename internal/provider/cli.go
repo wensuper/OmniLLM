@@ -28,6 +28,7 @@ import (
 
 	omnillm "github.com/wensuper/OmniLLM"
 	"github.com/wensuper/OmniLLM/internal/egress"
+	"github.com/wensuper/OmniLLM/internal/fsown"
 	"github.com/wensuper/OmniLLM/internal/redact"
 )
 
@@ -74,6 +75,11 @@ func cliDirs() []string {
 	if home != "" {
 		dirs = append(dirs, filepath.Join(home, ".local", "bin"), filepath.Join(home, ".claude", "local"),
 			filepath.Join(home, ".npm-global", "bin"), filepath.Join(home, ".bun", "bin"), filepath.Join(home, ".volta", "bin"))
+		// npm under nvm: each Node version has its own bin, newest last.
+		nvm, _ := filepath.Glob(filepath.Join(home, ".nvm", "versions", "node", "*", "bin"))
+		for i := len(nvm) - 1; i >= 0; i-- {
+			dirs = append(dirs, nvm[i])
+		}
 	}
 	return append(dirs, "/opt/homebrew/bin", "/usr/local/bin", "/usr/bin")
 }
@@ -88,7 +94,10 @@ func FindCLI(k Kind) string {
 			continue
 		}
 		p := filepath.Join(d, cliName(k))
-		if st, err := os.Stat(p); err == nil && st.Mode().IsRegular() && st.Mode().Perm()&0o111 != 0 {
+		// Only a program this user or the system installed, that no one
+		// else may change: a writable folder on PATH can't plant one.
+		if st, err := os.Stat(p); err == nil && st.Mode().IsRegular() && st.Mode().Perm()&0o111 != 0 &&
+			st.Mode().Perm()&0o002 == 0 && fsown.MineOrRoot(st) {
 			return p
 		}
 	}

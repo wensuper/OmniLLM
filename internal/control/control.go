@@ -17,6 +17,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/wensuper/OmniLLM/internal/fsown"
 )
 
 // Request is one command.
@@ -163,6 +165,11 @@ func Serve(ctx context.Context, ln net.Listener, h Handler) {
 // Call connects and sends req; onReply sees every reply and may answer
 // confirm events by returning (answer, true).
 func Call(path string, req Request, onReply func(Reply) (answer bool, answered bool)) error {
+	// Only a socket this user's own hub made: another local user's fake
+	// one (in a folder they made) must not answer for it.
+	if fi, err := os.Lstat(path); err == nil && !fsown.Mine(fi) {
+		return fmt.Errorf("control: %s belongs to another user", path)
+	}
 	c, err := net.Dial("unix", path)
 	if err != nil {
 		return fmt.Errorf("the hub is not running (no control socket at %s)", path)

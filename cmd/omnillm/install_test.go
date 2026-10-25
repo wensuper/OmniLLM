@@ -116,13 +116,17 @@ func TestNextStepForTheFirstDevice(t *testing.T) {
 	}
 }
 
-// The assistant running the install comes first: its own subscription is
-// the sign-in asked for, whatever else is connected.
+// The assistant running the install comes first while no model is
+// connected: its own subscription is the sign-in asked for. Once any model
+// is connected (the person chose a key instead), next moves on.
 func TestNextStepAsksForTheInstallingAssistantsSignIn(t *testing.T) {
 	t.Setenv("OMNILLM_LANG", "zh")
-	st := Status{Running: true, Providers: 1, RelayConfigured: true, RelayUp: true, Assistant: "codex"}
+	st := Status{Running: true, RelayConfigured: true, RelayUp: true, Assistant: "codex"}
 	if s := nextStep(st); !strings.Contains(s, "你在用 Codex，但 OmniLLM 还用不上它的登录") || !strings.Contains(s, "omnillm login chatgpt") {
 		t.Fatal(s)
+	}
+	if s := nextStep(Status{Running: true, Providers: 1, RelayConfigured: true, RelayUp: true, Assistant: "codex"}); strings.Contains(s, "omnillm login") {
+		t.Fatal("a connected model moves on:", s)
 	}
 	st.LoginOpened = true
 	if s := nextStep(st); !strings.Contains(s, "已经打开一个终端窗口") || strings.Contains(s, "omnillm login") {
@@ -257,7 +261,63 @@ func TestPairedNote(t *testing.T) {
 		t.Fatal(s)
 	}
 	t.Setenv("OMNILLM_LANG", "en")
-	if s := pairedNote(); !strings.HasPrefix(s, "Done: ") || !strings.Contains(s, "type omnillm") {
+	if s := pairedNote(); !strings.HasPrefix(s, "The new device can now use") || !strings.Contains(s, "type omnillm") {
 		t.Fatal(s)
+	}
+}
+
+// The console that just opened on its first step is where a model is
+// connected: next points there, not at other commands.
+func TestNextStepWithTheConsoleOpenAndNoModel(t *testing.T) {
+	t.Setenv("OMNILLM_LANG", "en")
+	s := nextStep(Status{Running: true, RelayConfigured: true, RelayUp: true, Opened: true})
+	if !strings.Contains(s, "browser page that just opened") || strings.Contains(s, "omnillm open") || strings.Contains(s, "omnillm login") {
+		t.Fatal(s)
+	}
+}
+
+// OMNILLM_HOME: a full path, a folder of this user's, made private.
+func TestPrivateHome(t *testing.T) {
+	t.Setenv("OMNILLM_HOME", "")
+	if h, err := privateHome(); h != "" || err != nil {
+		t.Fatal(h, err)
+	}
+	t.Setenv("OMNILLM_HOME", "relative/dir")
+	if _, err := privateHome(); err == nil {
+		t.Fatal("a relative path is refused")
+	}
+	if os.Getuid() != 0 {
+		t.Setenv("OMNILLM_HOME", "/")
+		if _, err := privateHome(); err == nil {
+			t.Fatal("a folder of another user (root) is refused")
+		}
+	}
+	d := filepath.Join(t.TempDir(), "h")
+	if err := os.MkdirAll(d, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("OMNILLM_HOME", d)
+	if h, err := privateHome(); h != d || err != nil {
+		t.Fatal(h, err)
+	}
+	if fi, _ := os.Stat(d); fi.Mode().Perm() != 0o700 {
+		t.Fatalf("mode %v", fi.Mode().Perm())
+	}
+}
+
+// A master key someone else could read is never used.
+func TestMasterKeyMustBePrivate(t *testing.T) {
+	kf := filepath.Join(t.TempDir(), "master.key")
+	if err := ensureMasterKey(kf); err != nil {
+		t.Fatal(err)
+	}
+	if err := ensureMasterKey(kf); err != nil {
+		t.Fatal("its own key is kept:", err)
+	}
+	if err := os.Chmod(kf, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := ensureMasterKey(kf); err == nil {
+		t.Fatal("a readable key is refused")
 	}
 }

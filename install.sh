@@ -74,7 +74,7 @@ asset="omnillm_${os}_${arch}.tar.gz"
 # 200: a release exists. 404: none published yet (build from source).
 # Anything else (network error, blocked request): stop; never fall back to
 # an unverified build because a download failed.
-code=$(curl -sSL --proto '=https' --tlsv1.2 -o "$work/checksums.txt" -w '%{http_code}' "$BASE/checksums.txt" 2>/dev/null || true)
+code=$(curl -sSL --proto '=https' --proto-redir '=https' --tlsv1.2 -o "$work/checksums.txt" -w '%{http_code}' "$BASE/checksums.txt" 2>/dev/null || true)
 case "$code" in
   200|404) ;;
   *) fail "$(t "连不上 GitHub（HTTP ${code:-none}），请检查网络后再运行一次。" "Couldn’t reach GitHub (HTTP ${code:-none}). Check the network and run this again.")" ;;
@@ -83,7 +83,7 @@ if [ "$code" = "404" ]; then
   # No stable release: use the newest pre-release, if any. Only the tag
   # name is taken from the API answer, and it must look like a version;
   # downloads still come from this repository's release files.
-  api=$(curl -fsSL --proto '=https' --tlsv1.2 -H 'Accept: application/vnd.github+json' \
+  api=$(curl -fsSL --proto '=https' --proto-redir '=https' --tlsv1.2 -H 'Accept: application/vnd.github+json' \
     "https://api.github.com/repos/$REPO/releases?per_page=30" 2>/dev/null) || fail "$(t "连不上 GitHub，请检查网络后再运行一次。" "Couldn’t reach GitHub. Check the network and run this again.")"
   # The API lists releases in no version order (alpha.10 comes after
   # alpha.5), so pick the highest version: numbers compare as numbers.
@@ -92,25 +92,25 @@ if [ "$code" = "404" ]; then
     printf '%s' "$tag" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$' || fail "$(t "GitHub 给出的版本名不对，没有安装。" "GitHub returned an unexpected version name, so nothing was installed.")"
     BASE="https://github.com/$REPO/releases/download/$tag"
     say "$(t "最新版本是 ${tag#v}（预发布版）。" "The newest version is ${tag#v} (a pre-release).")"
-    code=$(curl -sSL --proto '=https' --tlsv1.2 -o "$work/checksums.txt" -w '%{http_code}' "$BASE/checksums.txt" 2>/dev/null || true)
+    code=$(curl -sSL --proto '=https' --proto-redir '=https' --tlsv1.2 -o "$work/checksums.txt" -w '%{http_code}' "$BASE/checksums.txt" 2>/dev/null || true)
     [ "$code" = "200" ] || fail "$(t "版本 ${tag} 缺少校验文件（HTTP ${code:-none}），没有安装。" "Version $tag has no checksum file (HTTP ${code:-none}), so nothing was installed.")"
   fi
 fi
 if [ "$code" = "200" ]; then
   case "$os" in darwin) osname=macOS ;; *) osname=Linux ;; esac
   say "$(t "正在下载 OmniLLM（${osname} ${arch}）……" "Downloading OmniLLM ($osname $arch)…")"
-  curl -fsSL --proto '=https' --tlsv1.2 -o "$work/$asset" "$BASE/$asset" || fail "$(t "下载没有完成，请检查网络后再运行一次。" "The download didn’t finish. Check the network and run this again.")"
+  curl -fsSL --proto '=https' --proto-redir '=https' --tlsv1.2 -o "$work/$asset" "$BASE/$asset" || fail "$(t "下载没有完成，请检查网络后再运行一次。" "The download didn’t finish. Check the network and run this again.")"
   want=$(grep "  $asset\$" "$work/checksums.txt" | cut -d' ' -f1)
   [ -n "$want" ] || fail "$(t "校验文件里没有这个系统的程序，没有安装。" "The checksum file has no program for this system, so nothing was installed.")"
   got=$(sha256 "$work/$asset")
   [ "$want" = "$got" ] || fail "$(t "下载的文件和发布的不一致，没有安装。" "The downloaded file doesn’t match the published one, so nothing was installed.")"
   say "$(t "下载已核对无误。" "Download verified.")"
   if command -v cosign >/dev/null 2>&1; then
-    if curl -fsSL --proto '=https' --tlsv1.2 -o "$work/checksums.txt.sigstore.json" "$BASE/checksums.txt.sigstore.json" 2>/dev/null; then
+    if curl -fsSL --proto '=https' --proto-redir '=https' --tlsv1.2 -o "$work/checksums.txt.sigstore.json" "$BASE/checksums.txt.sigstore.json" 2>/dev/null; then
       sigargs="--bundle $work/checksums.txt.sigstore.json"
     else
-      curl -fsSL --proto '=https' --tlsv1.2 -o "$work/checksums.txt.pem" "$BASE/checksums.txt.pem" || fail "$(t "缺少签名证书，没有安装。" "The signature certificate is missing, so nothing was installed.")"
-      curl -fsSL --proto '=https' --tlsv1.2 -o "$work/checksums.txt.sig" "$BASE/checksums.txt.sig" || fail "$(t "缺少签名，没有安装。" "The signature is missing, so nothing was installed.")"
+      curl -fsSL --proto '=https' --proto-redir '=https' --tlsv1.2 -o "$work/checksums.txt.pem" "$BASE/checksums.txt.pem" || fail "$(t "缺少签名证书，没有安装。" "The signature certificate is missing, so nothing was installed.")"
+      curl -fsSL --proto '=https' --proto-redir '=https' --tlsv1.2 -o "$work/checksums.txt.sig" "$BASE/checksums.txt.sig" || fail "$(t "缺少签名，没有安装。" "The signature is missing, so nothing was installed.")"
       sigargs="--certificate $work/checksums.txt.pem --signature $work/checksums.txt.sig"
     fi
     # shellcheck disable=SC2086

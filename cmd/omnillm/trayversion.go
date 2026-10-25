@@ -166,7 +166,7 @@ func installerFor(tag string) string {
 // addresses only, no proxy from the environment), bounded in time, and
 // it sends nothing but the request itself.
 func updateClient() *http.Client {
-	return &http.Client{Transport: provider.GuardedTransport(), Timeout: 30 * time.Second}
+	return &http.Client{Transport: provider.GuardedTransport(), Timeout: 30 * time.Second, CheckRedirect: httpsOnly}
 }
 
 func get(ctx context.Context, c *http.Client, url string, max int64) ([]byte, error) {
@@ -483,4 +483,16 @@ func sourcesLine(st Status) string {
 		return t("模型来源  还没有接入", "Model sources  none yet")
 	}
 	return fmt.Sprintf(t("模型来源  %d 个", "Model sources  %d"), st.Providers)
+}
+
+// httpsOnly follows a redirect only while it stays on https (as install.sh
+// does with --proto-redir), at most 10 times.
+func httpsOnly(req *http.Request, via []*http.Request) error {
+	if len(via) >= 10 {
+		return errors.New("too many redirects")
+	}
+	if via[0].URL.Scheme == "https" && req.URL.Scheme != "https" {
+		return errors.New("redirect away from https")
+	}
+	return nil
 }

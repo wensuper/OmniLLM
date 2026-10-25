@@ -44,6 +44,7 @@ func main() {
 		"pairCancel": js.FuncOf(pairCancel),
 		"name":       js.FuncOf(name),
 		"lang":       js.FuncOf(lang),
+		"hubOS":      js.FuncOf(hubOS),
 	}
 	js.Global().Set("omnillm", js.ValueOf(api))
 	js.Global().Call("dispatchEvent", js.Global().Get("Event").New("omnillm-ready"))
@@ -289,6 +290,16 @@ func lang(_ js.Value, _ []js.Value) any {
 		return ""
 	}
 	return d.Lang()
+}
+
+// hubOS is the hub's system ("darwin", "linux", "" when not known), as of
+// the last models reply.
+func hubOS(_ js.Value, _ []js.Value) any {
+	d, err := current()
+	if err != nil {
+		return ""
+	}
+	return d.HubOS()
 }
 
 // chat(id, model, messagesJSON, onDelta) → {in, out, finish}. onDelta is

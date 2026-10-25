@@ -77,7 +77,7 @@ In a terminal, as your normal user:
 curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh
 ```
 
-The installer downloads the release for your system, checks its SHA-256 checksum (and its signature, if [cosign](https://github.com/sigstore/cosign) is installed), installs `~/.local/bin/omnillm`, starts the hub as a background service, and opens the console in your browser. In the terminal you installed from, use `~/.local/bin/omnillm` until you open a new window.
+The installer downloads the release for your system, checks its SHA-256 checksum (and its signature, if [cosign](https://github.com/sigstore/cosign) is installed), installs `~/.local/bin/omnillm`, starts the hub as a background service, and opens the console in your browser (on a server without a screen, it prints the next step instead). In the terminal you installed from, use `~/.local/bin/omnillm` until you open a new window.
 
 ## Quick start
 

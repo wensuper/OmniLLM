@@ -229,6 +229,7 @@ type Device struct {
 	lastOK atomic.Int64 // unix nanos of the hub's last answer
 	name   atomic.Value // string: this device's name on the hub, from the last models reply
 	lang   atomic.Value // string: the owner's language on the hub ("zh", "en", ""), from the last models reply
+	hubOS  atomic.Value // string: the hub's system ("darwin", "linux", ""), from the last models reply
 }
 
 // Open loads the saved pairing. Connecting happens on first use.
@@ -282,6 +283,10 @@ func (d *Device) Name() string { n, _ := d.name.Load().(string); return n }
 // last models reply; "" when not chosen or not yet known (an older hub
 // doesn't say).
 func (d *Device) Lang() string { l, _ := d.lang.Load().(string); return l }
+
+// HubOS is the hub's system ("darwin", "linux"), as of the last models
+// reply; "" when not yet known (an older hub doesn't say).
+func (d *Device) HubOS() string { s, _ := d.hubOS.Load().(string); return s }
 
 // Close drops the connection.
 func (d *Device) Close() error {
@@ -639,6 +644,7 @@ func (d *Device) models(ctx context.Context) ([]omnillm.ModelInfo, error) {
 		d.name.Store(env.Name)
 	}
 	d.lang.Store(env.Lang)
+	d.hubOS.Store(env.OS)
 	for i := range env.Models {
 		env.Models[i].Locality = omnillm.Remote
 	}

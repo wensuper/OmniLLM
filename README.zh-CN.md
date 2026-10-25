@@ -77,7 +77,7 @@ flowchart LR
 curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh
 ```
 
-安装脚本会下载对应系统的发布包，核对 SHA-256 校验和（装了 [cosign](https://github.com/sigstore/cosign) 还会核对签名），把程序装到 `~/.local/bin/omnillm`，以后台服务启动主机，并在浏览器里打开控制台。刚装完的那个终端窗口还不认识 `omnillm`：新开一个窗口，或者用完整路径 `~/.local/bin/omnillm`。
+安装脚本会下载对应系统的发布包，核对 SHA-256 校验和（装了 [cosign](https://github.com/sigstore/cosign) 还会核对签名），把程序装到 `~/.local/bin/omnillm`，以后台服务启动主机，并在浏览器里打开控制台（没有屏幕的服务器上，改为在终端里给出下一步）。刚装完的那个终端窗口还不认识 `omnillm`：新开一个窗口，或者用完整路径 `~/.local/bin/omnillm`。
 
 ## 快速开始
 
