@@ -51,7 +51,7 @@ relay 以无登录的 `omnillm-relay` 账号运行（`install-server.sh` 第一�
 
 上线后必须用真实浏览器验一次（原则 9），健康检查通过、主机连上都不算：
 1. 程序、服务单元（`omnillm-relay.service`）、Tengine 站点配置**分开上**，一次只换一样。
-2. 每换一样，先等主机重新连上（`omnillm status` 里 `relay_up` 为 true，Tengine reload 会断开所有长连接），再做浏览器测试：testkit 的 `conntime.mjs` 用无界面 Chromium 打开 `https://omni.ixxzh.com` 配对一台临时设备、刷新三次、测完移除，三次都要在几秒内连上你的 Mac。
+2. 每换一样，先等主机重新连上（`omnillm status` 里 `relay_up` 为 true，Tengine reload 会断开所有长连接），再做浏览器测试：testkit 的 `conntime.mjs` 用无界面 Chromium 打开 `https://omni.ixxzh.com` 配对一台临时设备、等页面进入对话界面、刷新三次、测完移除，三次都要在几秒内连上你的 Mac。
 3. 不通过就只退回刚换的那一样，再查原因。
 4. 最后 `omnillm verify web`，确认线上网页就是签名发布构建的那一份。
 
@@ -74,7 +74,8 @@ relay 以无登录的 `omnillm-relay` 账号运行（`install-server.sh` 第一�
 **原因**：139 上几个站点共用同一个 443 端口。别的站点都发 TLS 会话票据，只有 relay 站点关掉了。Chromium 连 relay 时的 TLS 握手因此失败；Go 的 TLS 客户端处理方式不同，照常连上。所以出现了“主机全正常、浏览器全不通”的局面。
 
 **为什么排查绕了弯路**
-- 每次 Tengine reload 都会断开所有经过它的长连接，主机要过几秒到一分钟才能连回来。有几次测试在主机还没连回来时就开始了，结果不能用，其中一次被误读成“日志那几行也有问题”。
+- 测试脚本本身有竞争：它一收到主机的“配对完成”就刷新页面，而浏览器要再过一会儿才收到主机的最后一条消息、把配对存下来；刷新得太早，配对就丢了，看起来和“连不上”一样。“日志那几行也有问题”就是这样误判出来的（10-25 修正：`conntime.mjs` 等页面进入对话界面再刷新，之后连测 4 次全部通过）。
+- 每次 Tengine reload 都会断开所有经过它的长连接，主机要过几秒到一分钟才能连回来，测试要等主机连回来再开始。
 - 这台 Mac 走 Cloudflare WARP，偶尔会解析失败或连接被重置，也会干扰测试结果。
 - 真正起决定作用的证据，是在浏览器里直接抓到的 TLS 报错。以后先看浏览器自己的报错（WebSocket 的错误事件、控制台），再看配对结果。
 
