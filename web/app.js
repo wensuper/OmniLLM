@@ -610,7 +610,7 @@ async function connectPair(text) {
 function errText(e, code) {
   if (e && e.code) {
     if (code && e.code === "hub_offline" && relayIsPlain(code)) return t("needTLS");
-    return e.message;
+    return computerWords("", e.message); // the program's words: "your Mac" only on a Mac
   }
   return String(e && e.message || e);
 }

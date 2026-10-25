@@ -19,6 +19,9 @@ All notable changes to OmniLLM are documented here. OmniLLM is in early pre-rele
 - On a server, "All set" no longer tells you to open a console you can't open there. After `omnillm login` or `omnillm hub provider add` on a computer with a screen, the next step (adding a phone) follows.
 - A computer set up as a device, and pairing errors, say "your other computer" or "the console / omnillm pair", not "your Mac". The phone's confirmation reads "Continue only if the QR code you just scanned is showing on your own computer".
 - An AI assistant setting up a device (`--device`) never gets the pairing prompt; it tells you to run `omnillm connect pair` in your own terminal. INSTALL.md says the pairing text never goes through a chat.
+- `omnillm pair` and `omnillm connect pair` don't start a pairing for an AI assistant (or with input from /dev/null, as INSTALL.md runs the installer); they say it is your step in your own terminal. A device that isn't paired yet says so, and where the pairing text comes from.
+- Messages from your computer reach the phone page as "your computer" for a hub that isn't a Mac.
+- On Linux the service keeps the local API setting (`OMNILLM_API`) across updates, as on macOS.
 - The installer script reports progress only ("Updating X → Y…"); the result is said once.
 
 ### Security

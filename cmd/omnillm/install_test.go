@@ -370,3 +370,19 @@ func TestUnitHasNoPrivateTmp(t *testing.T) {
 		t.Fatal("the hub unit must not use PrivateTmp")
 	}
 }
+
+// A command whose input is /dev/null (how INSTALL.md runs the installer
+// for any assistant) never gets a pairing prompt.
+func TestNullInputIsNotAPerson(t *testing.T) {
+	f, err := os.Open(os.DevNull)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	old := os.Stdin
+	os.Stdin = f
+	defer func() { os.Stdin = old }()
+	if !notAPerson() {
+		t.Fatal("input from /dev/null is not a person")
+	}
+}

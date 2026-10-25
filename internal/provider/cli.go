@@ -199,11 +199,18 @@ func CLILoggedIn(ctx context.Context, k Kind, path string) bool {
 // key, relay token, proxies) is passed on.
 func cliEnv(path, scratch string) []string {
 	home, _ := os.UserHomeDir()
-	dirs := []string{filepath.Dir(path)}
+	var dirs []string
+	cand := []string{filepath.Dir(path)}
 	if real, err := filepath.EvalSymlinks(path); err == nil {
-		dirs = append(dirs, filepath.Dir(real))
+		cand = append(cand, filepath.Dir(real))
 	}
-	dirs = append(dirs, "/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin", "/usr/sbin", "/sbin")
+	// Only folders others can't write to: the program's interpreter (node
+	// for npm installs) is found here too.
+	for _, d := range append(cand, "/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin", "/usr/sbin", "/sbin") {
+		if fi, err := os.Stat(d); err == nil && fi.IsDir() && fi.Mode().Perm()&0o002 == 0 && fsown.MineOrRoot(fi) {
+			dirs = append(dirs, d)
+		}
+	}
 	env := []string{"HOME=" + home, "PATH=" + strings.Join(dirs, ":"), "TMPDIR=" + scratch, "LANG=en_US.UTF-8", "NO_COLOR=1"}
 	for _, k := range []string{"USER", "LOGNAME", "SHELL"} {
 		if v := os.Getenv(k); v != "" {

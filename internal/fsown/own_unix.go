@@ -45,5 +45,10 @@ func PrivateGroup(fi os.FileInfo) bool {
 		return false
 	}
 	g, err := user.LookupGroupId(strconv.Itoa(int(st.Gid)))
-	return err == nil && g.Name == u.Username
+	if err != nil {
+		// Not in /etc/group (an LDAP account; release builds read only
+		// the files): the private-group convention, gid equal to uid.
+		return int(st.Gid) == os.Getuid()
+	}
+	return g.Name == u.Username
 }

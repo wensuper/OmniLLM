@@ -396,8 +396,8 @@ func nextStep(st Status) string {
 		return onMachine(t("浏览器里已经打开了添加手机的二维码：用手机相机扫一下，在手机上点“添加”；两边的 6 位数一样，就在%s 上点“一致，添加”。",
 			"The QR code for adding your phone is open in your browser: scan it with your phone’s camera and tap “Add” on the phone. If the 6 digits match on both sides, choose “Matches, add” on %s."))
 	case st.Devices == 0 && st.Headless:
-		return t("下一步：添加手机：在这台机器的终端里运行 omnillm pair，用手机相机扫它显示的二维码；两边的 6 位数一样，就在那里输入 y。",
-			"Next: add your phone: in this machine’s terminal, run omnillm pair and scan the QR code it shows with your phone’s camera. If the 6 digits match on both sides, type y there.")
+		return t("下一步：添加手机：在这台机器的终端里亲自运行 omnillm pair，用手机相机扫它显示的二维码；两边的 6 位数一样，就在那里输入 y。",
+			"Next: add your phone: in this machine’s terminal, run omnillm pair yourself and scan the QR code it shows with your phone’s camera. If the 6 digits match on both sides, type y there.")
 	case st.Devices == 0:
 		return t("下一步：添加手机：运行 omnillm open --add，用手机相机扫页面上的二维码。",
 			"Next: add your phone: run omnillm open --add and scan the QR code on the page with your phone’s camera.")
@@ -512,12 +512,41 @@ func onAPIKey(k provider.Kind) bool {
 
 // pairsHere: a machine without a screen, a person at its terminal, a model
 // to use and no device yet: the phone is added right in this terminal.
+// notAPerson: an AI assistant runs this command (Claude Code, Codex), or
+// its input is /dev/null (how INSTALL.md has any assistant run the
+// installer): pairing prompts are never shown to it.
+func notAPerson() bool {
+	if installingAssistant() != "" {
+		return true
+	}
+	in, err1 := os.Stdin.Stat()
+	null, err2 := os.Stat(os.DevNull)
+	return err1 == nil && err2 == nil && os.SameFile(in, null)
+}
+
+// unpairedNext is the next step on a device not paired yet: the person
+// gets a pairing text from their hub and pastes it in their own terminal.
+func unpairedNext() string {
+	return t("下一步：拿到配对文字（Mac 上：OmniLLM 控制台点“添加设备”，选“电脑或服务器”，再点“用命令行”复制；服务器上：在它的终端里运行 omnillm pair），然后在这台机器上你自己的终端里运行 omnillm connect pair，粘贴在那里；不要贴进聊天。",
+		"Next: get a pairing text (on a Mac: in the OmniLLM console choose “Add device”, pick “Computer or server”, then “Use the command line” and copy it; on a server: run omnillm pair in its terminal), then in your own terminal on this machine run omnillm connect pair and paste it there; don’t paste it into a chat.")
+}
+
+// deviceNext is what a device-only machine says it is: ready to chat once
+// paired, else how to pair.
+func deviceNext() string {
+	if !device.Paired(context.Background(), secrets(dataDir("device"), "omnillm-device")) {
+		return t("这台电脑只当设备用，还没有配对。", "This computer is set up as a device and isn’t paired yet. ") + unpairedNext()
+	}
+	return t("这台电脑用的是你另一台电脑上的 OmniLLM，自己不接入模型。对话：omnillm connect chat。",
+		"This computer uses OmniLLM on another computer of yours and runs no models itself. To chat: omnillm connect chat.")
+}
+
 func pairsHere(st Status) bool {
 	// An AI assistant (even one whose commands run in a pseudo-terminal)
 	// never gets here: pairing is the person's step.
 	// The person's terminal even under "curl … | sh" (stdin is the pipe).
 	return st.Headless && st.Providers > 0 && st.Devices == 0 && st.RelayConfigured && st.RelayUp && st.Assistant == "" &&
-		hasTTY() && term.IsTerminal(int(os.Stdout.Fd())) && installingAssistant() == ""
+		hasTTY() && term.IsTerminal(int(os.Stdout.Fd())) && !notAPerson()
 }
 
 // hasTTY: this command has a terminal a person types into.
@@ -897,7 +926,7 @@ func systemdQuote(v string) string {
 // serviceSettings are the settings "omnillm install" writes into the
 // service from the environment. Installing again (an update, from a
 // terminal that has none of them set) keeps what the service has.
-var serviceSettings = []string{"OMNILLM_RELAY", "OMNILLM_WEB_APP", "OMNILLM_HOME"}
+var serviceSettings = []string{"OMNILLM_RELAY", "OMNILLM_WEB_APP", "OMNILLM_HOME", "OMNILLM_API"}
 
 // keepServiceSettings sets each of serviceSettings that is not in the
 // environment from the installed service's file.
@@ -1003,19 +1032,22 @@ func validWebApp(w string) bool {
 
 func installSystemd(home, bin, dir string, env map[string]string) error {
 	unit := filepath.Join(home, ".config", "systemd", "user", systemdUnit)
+	// The same carried settings as launchd (relay, web page, local API):
+	// keepServiceSettings has put the old unit's into this environment.
+	full := serviceEnv(env, nil)
+	keys := make([]string, 0, len(full))
+	for k := range full {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
 	var envLines strings.Builder
-	for k, v := range env {
-		fmt.Fprintf(&envLines, "Environment=%s=%s\n", k, systemdQuote(v))
+	for _, k := range keys {
+		fmt.Fprintf(&envLines, "Environment=%s=%s\n", k, systemdQuote(full[k]))
 	}
-	if relay := relayFromEnv(); relay != "" {
-		fmt.Fprintf(&envLines, "Environment=OMNILLM_RELAY=%s\n", systemdQuote(relay))
-	}
-	if web := webAppFromEnv(); web != "" {
-		fmt.Fprintf(&envLines, "Environment=OMNILLM_WEB_APP=%s\n", systemdQuote(web))
-	}
+	logPath := strings.ReplaceAll(filepath.Join(dir, "hub.log"), "%", "%%") // systemd expands %
 	body := "[Unit]\nDescription=OmniLLM hub\nAfter=network-online.target\n\n[Service]\n" +
 		"ExecStart=" + systemdQuote(bin) + " hub run\n" + envLines.String() +
-		"StandardOutput=append:" + filepath.Join(dir, "hub.log") + "\nStandardError=append:" + filepath.Join(dir, "hub.log") + "\n" +
+		"StandardOutput=append:" + logPath + "\nStandardError=append:" + logPath + "\n" +
 		"Restart=on-failure\nRestartSec=3\nNoNewPrivileges=yes\nUMask=0077\n\n[Install]\nWantedBy=default.target\n"
 	if err := os.MkdirAll(filepath.Dir(unit), 0o755); err != nil {
 		return err
@@ -1177,7 +1209,10 @@ func parentsOK(dir string) bool {
 			}
 			return false
 		}
-		if !fi.IsDir() || !fsown.MineOrRoot(fi) || (fi.Mode().Perm()&0o022 != 0 && fi.Mode()&os.ModeSticky == 0) {
+		// Writable by others only if sticky (like /tmp); by the group only
+		// if it is this user's own private group (umask 002 systems).
+		if !fi.IsDir() || !fsown.MineOrRoot(fi) || (fi.Mode().Perm()&0o002 != 0 && fi.Mode()&os.ModeSticky == 0) ||
+			(fi.Mode().Perm()&0o020 != 0 && fi.Mode()&os.ModeSticky == 0 && !fsown.PrivateGroup(fi)) {
 			return false
 		}
 		if d == filepath.Dir(d) {
@@ -1254,8 +1289,7 @@ func loginURL() (string, error) {
 
 func statusCmd(args []string) {
 	if role() == "device" {
-		st := Status{Next: runnable(t("这台电脑用的是你另一台电脑上的 OmniLLM，自己不接入模型。对话：omnillm connect chat。",
-			"This computer uses OmniLLM on another computer of yours and runs no models itself. To chat: omnillm connect chat."))}
+		st := Status{Next: runnable(deviceNext())}
 		u := readUpdate(dataDir("device"))
 		st.Update = plain(u.newer(version))
 		if len(args) > 0 && args[0] == "--json" {
@@ -1396,14 +1430,13 @@ func installDevice() {
 	}
 	// Pairing is the person's step: an assistant (even with a
 	// pseudo-terminal) gets the next step in words, never the prompt.
-	if installingAssistant() != "" {
-		fmt.Println(runnable(t("下一步：在这台机器上你自己的终端里运行 omnillm connect pair，把配对文字粘贴在那里；不要贴进聊天。",
-			"Next: in your own terminal on this machine, run omnillm connect pair and paste the pairing text there yourself; don’t paste it into a chat.")))
+	if notAPerson() {
+		fmt.Println(runnable(unpairedNext()))
 		return
 	}
 	tty, err := os.Open("/dev/tty")
 	if err != nil {
-		fmt.Println(runnable(t("下一步：拿到配对文字（Mac 上：OmniLLM 控制台点“添加设备”，选“电脑或服务器”，再点“用命令行”复制；服务器上：运行 omnillm pair），然后在这里运行 omnillm connect pair 粘贴。", "Next: get a pairing text (on a Mac: in the OmniLLM console choose “Add device”, pick “Computer or server”, then “Use the command line” and copy it; on a server: run omnillm pair), then run omnillm connect pair here and paste it.")))
+		fmt.Println(runnable(unpairedNext()))
 		return
 	}
 	tty.Close()

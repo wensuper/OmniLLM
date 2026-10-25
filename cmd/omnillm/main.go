@@ -373,6 +373,9 @@ func subUsage() {
 // list is omnillm help.
 func guideCmd() {
 	switch {
+	case role() == "device" && !device.Paired(context.Background(), secrets(dataDir("device"), "omnillm-device")):
+		fmt.Println(runnable(deviceNext()))
+		return
 	case role() == "device":
 		fmt.Println(runnable(t("这台电脑用的是你另一台电脑上的 OmniLLM。\n\n想做什么：\n"+
 			"  对话                 omnillm connect chat\n"+
@@ -438,6 +441,13 @@ func helpCmd(args []string) {
 func main() {
 	log.SetFlags(0)
 	adoptHome()
+	// A data folder set with OMNILLM_HOME is checked for every command
+	// (device ones too), not only at install and hub start.
+	if len(os.Args) < 2 || (os.Args[1] != "help" && os.Args[1] != "version" && os.Args[1] != "--version" && os.Args[1] != "-h" && os.Args[1] != "--help") {
+		if _, err := privateHome(); err != nil {
+			die(err)
+		}
+	}
 	if len(os.Args) < 2 {
 		guideCmd()
 		return
@@ -700,6 +710,11 @@ func hubCmd(args []string) {
 	case "audit":
 		call(sock, control.Request{Op: args[0]})
 	case "pair":
+		if notAPerson() {
+			fmt.Println(runnable(t("添加设备是你自己的一步：在这台机器上你自己的终端里运行 omnillm pair，扫码、核对 6 位数都在那里做。",
+				"Adding a device is your own step: in your own terminal on this machine, run omnillm pair; the scan and the 6-digit check happen there.")))
+			return
+		}
 		a, err := pairArgs(args[1:])
 		if err != nil {
 			dieArgs(err)
@@ -1521,6 +1536,10 @@ func connectCmd(args []string) {
 	defer stop()
 	switch args[0] {
 	case "pair":
+		if notAPerson() {
+			fmt.Println(runnable(unpairedNext()))
+			return
+		}
 		paired, err := device.CheckPaired(ctx, sec)
 		if err != nil {
 			die(sayf(t("读不出这台设备保存的配对（%s）。如果它已经配对过，请用配对时的同一个用户运行；确实要重新配对，先运行 omnillm connect forget。", "Can’t read this device’s saved pairing (%s). If it is already paired, run as the same user it was paired as; to pair again, run omnillm connect forget first."), dir))

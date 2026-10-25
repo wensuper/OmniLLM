@@ -212,7 +212,7 @@ func latestRelease(ctx context.Context, c *http.Client) (string, error) {
 // icon) again. detached: the installer runs in its own session, and under
 // systemd in its own unit, so it outlives this process when it restarts
 // the service this process belongs to (systemd would stop every process in
-// the service, and the service's /tmp is private, hence dir).
+// the service).
 func runInstaller(ctx context.Context, c *http.Client, dir string, args []string, logw io.Writer, detached bool) error {
 	script, err := get(ctx, c, installerFor(readUpdate(dir).Latest), 1<<20)
 	if err != nil {
