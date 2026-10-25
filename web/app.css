@@ -341,7 +341,7 @@ p.note.err { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12p
 @media (hover: hover) { .newchat:hover { background: var(--surface-2); } }
 .search { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 10px; border-radius: var(--r-s); background: var(--surface-2); color: var(--ink-3); }
 .search:focus-within { box-shadow: var(--focus); }
-.search input { flex: 1; min-width: 0; border: 0; background: transparent; outline: 0; font: 16px var(--font); color: var(--ink); -webkit-appearance: none; appearance: none; padding: 6px 0; }
+.search input { flex: 1; min-width: 0; border: 0; background: transparent; outline: 0; box-shadow: none; /* the ring is on .search */ font: 16px var(--font); color: var(--ink); -webkit-appearance: none; appearance: none; padding: 6px 0; }
 .search input::placeholder { color: var(--ink-3); }
 #chat-list { list-style: none; margin: 0 -4px; padding: 0 4px; overflow-y: auto; flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 1px; }
 #chat-list .grp { font-size: 12px; font-weight: 500; color: var(--ink-3); padding: 12px 8px 4px; letter-spacing: .02em; }
