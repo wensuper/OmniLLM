@@ -155,6 +155,8 @@ func installCmd(args []string) {
 	}
 	// What can stop the install is checked before the program is
 	// replaced: a stop after that would leave no way back.
+	relayFromEnv()
+	webAppFromEnv()
 	dir := dataDir("hub")
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		die(err)
@@ -349,12 +351,12 @@ func nextStep(st Status) string {
 		// No browser here: a key is typed in this terminal, never sent in a chat.
 		// Each command goes on to the phone's QR code once it connects.
 		return t("下一步：接入一个模型（选一种；接好后终端里接着显示给手机扫的二维码）：\n"+
-			"· 有 Claude 订阅：运行 omnillm login claude（没装 Claude Code 会先装上，再登录）\n"+
-			"· 有 ChatGPT 订阅：运行 omnillm login chatgpt（没装 Codex 会先装上，再登录）\n"+
+			"· 有 Claude 订阅：在这台电脑的终端里亲自运行 omnillm login claude（没装 Claude Code 会先装上，再登录）\n"+
+			"· 有 ChatGPT 订阅：在这台电脑的终端里亲自运行 omnillm login chatgpt（没装 Codex 会先装上，再登录）\n"+
 			"· 有 API Key：在这台电脑的终端里亲自运行 omnillm hub provider add anthropic（OpenAI 的 Key 换成 openai），在提示时粘贴；API Key 不要发到聊天里",
 			"Next: connect a model (pick one; once it’s connected, the terminal goes on to a QR code for your phone):\n"+
-				"· Claude subscription: run omnillm login claude (installs Claude Code first if needed, then signs in)\n"+
-				"· ChatGPT subscription: run omnillm login chatgpt (installs Codex first if needed, then signs in)\n"+
+				"· Claude subscription: in this computer’s terminal, run omnillm login claude yourself (installs Claude Code first if needed, then signs in)\n"+
+				"· ChatGPT subscription: in this computer’s terminal, run omnillm login chatgpt yourself (installs Codex first if needed, then signs in)\n"+
 				"· API key: in this computer’s terminal, run omnillm hub provider add anthropic (openai for an OpenAI key) yourself and paste the key when asked; don’t send it in a chat")
 	case st.Providers == 0 && st.Opened:
 		// The console just opened on its first step: one place to do it.
@@ -373,12 +375,12 @@ func nextStep(st Status) string {
 			lead = t("发现 ChatGPT 桌面版：同一个订阅也能给手机用，只要再用官方命令行版 Codex 登录一次（免费）。\n", "Found the ChatGPT desktop app: the same subscription can serve your phone once you sign in with Codex, the official command-line program (free).\n")
 		}
 		return lead + onMachine(t("下一步：接入一个模型（选一种）：\n"+
-			"· 有 Claude 订阅：运行 omnillm login claude（没装 Claude Code 会先装上，再在浏览器里登录）\n"+
-			"· 有 ChatGPT 订阅：运行 omnillm login chatgpt（没装 Codex 会先装上，再在浏览器里登录）\n"+
+			"· 有 Claude 订阅：在终端里亲自运行 omnillm login claude（没装 Claude Code 会先装上，再在浏览器里登录）\n"+
+			"· 有 ChatGPT 订阅：在终端里亲自运行 omnillm login chatgpt（没装 Codex 会先装上，再在浏览器里登录）\n"+
 			"· 有 API Key 或想用 %s 上免费的模型：运行 omnillm open，点“我有 API Key”",
 			"Next: connect a model (pick one):\n"+
-				"· Claude subscription: run omnillm login claude (installs Claude Code first if needed, then signs in in your browser)\n"+
-				"· ChatGPT subscription: run omnillm login chatgpt (installs Codex first if needed, then signs in in your browser)\n"+
+				"· Claude subscription: in a terminal, run omnillm login claude yourself (installs Claude Code first if needed, then signs in in your browser)\n"+
+				"· ChatGPT subscription: in a terminal, run omnillm login chatgpt yourself (installs Codex first if needed, then signs in in your browser)\n"+
 				"· API key or a free model on %s: run omnillm open and choose “I have an API key”"))
 	case !st.RelayConfigured:
 		return onMachine(t("已经可以在 %s 上用。要让其他设备连进来，需要先设置远程连接。",
@@ -475,14 +477,15 @@ func installingAssistant() provider.Kind {
 			break
 		}
 		comm := strings.Join(f[1:], " ")
-		// The desktop apps (Claude.app, Codex.app) are not the programs.
-		if !strings.Contains(comm, ".app/Contents/") {
-			switch name := strings.ToLower(filepath.Base(comm)); {
-			case name == "claude":
-				return provider.ClaudeCode
-			case name == "codex" || strings.HasPrefix(name, "codex-"):
-				return provider.Codex
-			}
+		// The programs are lowercase, also when a desktop app bundles them
+		// (…/claude.app/Contents/MacOS/claude, ChatGPT's
+		// …/CodexCLI.app/Contents/MacOS/codex); the apps themselves are
+		// "Claude" and "ChatGPT".
+		switch name := filepath.Base(comm); {
+		case name == "claude":
+			return provider.ClaudeCode
+		case name == "codex" || strings.HasPrefix(name, "codex-"):
+			return provider.Codex
 		}
 		if pid, err = strconv.Atoi(f[0]); err != nil {
 			break
@@ -534,7 +537,12 @@ func unpairedNext() string {
 // deviceNext is what a device-only machine says it is: ready to chat once
 // paired, else how to pair.
 func deviceNext() string {
-	if !device.Paired(context.Background(), secrets(dataDir("device"), "omnillm-device")) {
+	paired, err := device.CheckPaired(context.Background(), secrets(dataDir("device"), "omnillm-device"))
+	if err != nil {
+		return sayf(t("读不出这台设备保存的配对（%s）。请用配对时的同一个用户运行；确实要重新配对，先运行 omnillm connect forget。",
+			"Can’t read this device’s saved pairing (%s). Run as the same user it was paired as; to pair again, run omnillm connect forget first."), dataDir("device")).Error()
+	}
+	if !paired {
 		return t("这台电脑只当设备用，还没有配对。", "This computer is set up as a device and isn’t paired yet. ") + unpairedNext()
 	}
 	return t("这台电脑用的是你另一台电脑上的 OmniLLM，自己不接入模型。对话：omnillm connect chat。",
@@ -1139,6 +1147,11 @@ func privateHome() (string, error) {
 	if !filepath.IsAbs(h) {
 		return "", say(t("OMNILLM_HOME 必须是完整路径（以 / 开头）。", "OMNILLM_HOME must be a full path (starting with /)."))
 	}
+	// It goes into a service file line by line: no line breaks or other
+	// control characters.
+	if strings.ContainsFunc(h, func(r rune) bool { return r < 0x20 || r == 0x7f }) {
+		return "", notYours
+	}
 	if home, err := os.UserHomeDir(); err == nil && filepath.Clean(home) == h {
 		return "", notYours
 	}
@@ -1163,7 +1176,7 @@ func privateHome() (string, error) {
 	if fi.Mode().Perm()&0o077 != 0 {
 		// Only a folder that is empty or already OmniLLM's is made
 		// private; never one of the person's own folders (~/Public).
-		if ents, err := os.ReadDir(h); err != nil || (len(ents) > 0 && !exists(filepath.Join(h, "hub"))) {
+		if ents, err := os.ReadDir(h); err != nil || (len(ents) > 0 && !ownFolder(ents)) {
 			return "", sayf(t("OMNILLM_HOME（%s）里已经有别的东西。换一个空文件夹，比如 ~/.omnillm。", "OMNILLM_HOME (%s) already holds other things. Use an empty folder, such as ~/.omnillm."), h)
 		}
 		if err := os.Chmod(h, 0o700); err != nil {
@@ -1171,6 +1184,18 @@ func privateHome() (string, error) {
 		}
 	}
 	return h, nil
+}
+
+// ownFolder: a folder OmniLLM made (it holds one of its own folders).
+func ownFolder(ents []os.DirEntry) bool {
+	for _, e := range ents {
+		for _, d := range purgeDirs() {
+			if e.Name() == filepath.Base(d) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // safeParents: no one but this user (or root) can rename or replace

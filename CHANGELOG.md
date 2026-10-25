@@ -20,6 +20,8 @@ All notable changes to OmniLLM are documented here. OmniLLM is in early pre-rele
 - A computer set up as a device, and pairing errors, say "your other computer" or "the console / omnillm pair", not "your Mac". The phone's confirmation reads "Continue only if the QR code you just scanned is showing on your own computer".
 - An AI assistant setting up a device (`--device`) never gets the pairing prompt; it tells you to run `omnillm connect pair` in your own terminal. INSTALL.md says the pairing text never goes through a chat.
 - `omnillm pair` and `omnillm connect pair` don't start a pairing for an AI assistant (or with input from /dev/null, as INSTALL.md runs the installer); they say it is your step in your own terminal. A device that isn't paired yet says so, and where the pairing text comes from.
+- `omnillm login`, and `omnillm hub provider add` asking for a key, don't run for an AI assistant either: signing in and entering a key happen in your own terminal. Codex bundled in the ChatGPT desktop app is recognized as an assistant.
+- The pairing-text prompt says the paste isn't shown, so it is pasted once.
 - Messages from your computer reach the phone page as "your computer" for a hub that isn't a Mac.
 - On Linux the service keeps the local API setting (`OMNILLM_API`) across updates, as on macOS.
 - The installer script reports progress only ("Updating X → Y…"); the result is said once.

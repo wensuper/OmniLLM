@@ -374,7 +374,7 @@ func subUsage() {
 func guideCmd() {
 	switch {
 	case role() == "device" && !device.Paired(context.Background(), secrets(dataDir("device"), "omnillm-device")):
-		fmt.Println(runnable(deviceNext()))
+		fmt.Println(runnable(deviceNext())) // not paired, or the pairing can't be read
 		return
 	case role() == "device":
 		fmt.Println(runnable(t("这台电脑用的是你另一台电脑上的 OmniLLM。\n\n想做什么：\n"+
@@ -443,8 +443,14 @@ func main() {
 	adoptHome()
 	// A data folder set with OMNILLM_HOME is checked for every command
 	// (device ones too), not only at install and hub start.
-	if len(os.Args) < 2 || (os.Args[1] != "help" && os.Args[1] != "version" && os.Args[1] != "--version" && os.Args[1] != "-h" && os.Args[1] != "--help") {
-		if _, err := privateHome(); err != nil {
+	// uninstall and status still work with one that fails it (it may have
+	// been accepted by an earlier version): they say so instead.
+	if _, err := privateHome(); err != nil {
+		switch a := append(os.Args, "")[1]; a {
+		case "help", "version", "--version", "-h", "--help":
+		case "uninstall", "status":
+			fmt.Fprintln(os.Stderr, err)
+		default:
 			die(err)
 		}
 	}
@@ -515,7 +521,7 @@ func openCmd(args []string) {
 	if err := openLogin(url); err != nil {
 		// The link is a console session: only for a person at this
 		// terminal, never into an assistant's transcript.
-		if installingAssistant() != "" || !term.IsTerminal(int(os.Stdout.Fd())) {
+		if notAPerson() || !term.IsTerminal(int(os.Stdout.Fd())) {
 			fmt.Println(runnable(onMachine(t("这里打不开浏览器。请在%s 的终端里亲自运行 omnillm open。", "No browser opened here. In a terminal on %s, run omnillm open yourself."))))
 			return
 		}
@@ -670,6 +676,14 @@ func hubCmd(args []string) {
 		kind := args[2]
 		key := ""
 		if kind != "ollama" {
+			// A key reaches an assistant's command only through its chat:
+			// it is typed in the person's own terminal. (A script piping
+			// a key in, with no assistant around, is fine.)
+			if installingAssistant() != "" {
+				fmt.Println(runnable(t("API Key 由你自己输入：在这台机器上你自己的终端里运行 omnillm hub provider add "+kind+"，在提示时粘贴；不要贴进聊天。",
+					"You enter the API key yourself: in your own terminal on this machine, run omnillm hub provider add "+kind+" and paste it when asked; don’t paste it into a chat.")))
+				return
+			}
 			key = readSecret(t("粘贴 API Key（不会显示）：", "Paste the API key (not shown): "))
 		}
 		call(sock, control.Request{Op: "provider.add", Args: map[string]string{"kind": kind, "name": *name, "base_url": *base}, Secret: key})
@@ -1545,9 +1559,9 @@ func connectCmd(args []string) {
 			die(sayf(t("读不出这台设备保存的配对（%s）。如果它已经配对过，请用配对时的同一个用户运行；确实要重新配对，先运行 omnillm connect forget。", "Can’t read this device’s saved pairing (%s). If it is already paired, run as the same user it was paired as; to pair again, run omnillm connect forget first."), dir))
 		}
 		if paired {
-			die(say(t("这台设备已经配对过（"+dir+"）。要换一台 Mac 或重新配对，先运行 omnillm connect forget。", "This device is already paired ("+dir+"). To pair again (or with another Mac), run omnillm connect forget first.")))
+			die(say(t("这台设备已经配对过（"+dir+"）。要换一台电脑或重新配对，先运行 omnillm connect forget。", "This device is already paired ("+dir+"). To pair again (or with another computer), run omnillm connect forget first.")))
 		}
-		code := readSecret(t("粘贴配对文字（你 Mac 上“添加设备”或服务器上 omnillm pair 给的）：", "Paste the pairing text (from “Add device” on your Mac, or omnillm pair on your server): "))
+		code := readSecret(t("粘贴配对文字（你 Mac 上“添加设备”或服务器上 omnillm pair 给的；不会显示，粘贴一次后回车）：", "Paste the pairing text (from “Add device” on your Mac, or omnillm pair on your server; not shown, paste once and press Return): "))
 		host, _ := os.Hostname()
 		info, err := device.Pair(ctx, device.Options{Secrets: sec}, code, host, func(sas string) {
 			if len(sas) == 6 {

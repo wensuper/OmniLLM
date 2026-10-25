@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/user"
 	"strconv"
+	"strings"
 	"syscall"
 )
 
@@ -50,5 +51,25 @@ func PrivateGroup(fi os.FileInfo) bool {
 		// the files): the private-group convention, gid equal to uid.
 		return int(st.Gid) == os.Getuid()
 	}
-	return g.Name == u.Username
+	return g.Name == u.Username && !hasMembers(g.Name)
+}
+
+// hasMembers: /etc/group lists members for the group (someone added to
+// the user's own group can write what the group can).
+func hasMembers(name string) bool {
+	b, err := os.ReadFile("/etc/group")
+	if err != nil {
+		return false
+	}
+	for _, line := range strings.Split(string(b), "\n") {
+		if f := strings.Split(line, ":"); len(f) == 4 && f[0] == name {
+			for _, m := range strings.Split(strings.TrimSpace(f[3]), ",") {
+				if m != "" && m != name { // the user themself doesn't count
+					return true
+				}
+			}
+			return false
+		}
+	}
+	return false
 }

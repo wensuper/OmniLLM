@@ -174,6 +174,11 @@ func loginCmd(args []string) {
 		die(say(t("这台电脑只当设备用，用的是你另一台电脑上的订阅：订阅要在那台电脑上登录（在那台电脑上运行 omnillm login）。",
 			"This computer is set up as a device and uses the subscription on your other computer: sign in there (run omnillm login on that computer).")))
 	}
+	// Signing in is the person's step: an assistant gets it in words.
+	if notAPerson() {
+		fmt.Println(runnable(fmt.Sprintf(t("登录是你自己的一步：在这台机器上你自己的终端里运行 omnillm login %s。", "Signing in is your own step: in your own terminal on this machine, run omnillm login %s."), loginWord(k))))
+		return
+	}
 	cmd := exec.Command("/bin/bash", "-c", loginScript(k, provider.FindCLI(k), headless(), false))
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 	if err := cmd.Run(); err != nil {
