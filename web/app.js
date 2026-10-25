@@ -970,12 +970,22 @@ function hero() {
 // titles rename the chat when clicked.
 function paintTitle() {
   const title = S.cur && S.cur.title;
-  if (!$("bar-title").querySelector("input")) $("bar-title").textContent = title || t("newChat");
   const begun = !!(S.cur && S.cur.messages.length);
+  titleButton($("bar-title"), title || t("newChat"), begun);
   $("chat-head").hidden = !begun;
-  if (begun && !$("head-title").querySelector("input")) { $("head-title").textContent = title || t("newChat"); $("head-title").title = t("renameChat"); }
-  $("bar-title").title = begun ? t("renameChat") : "";
+  if (begun) titleButton($("head-title"), title || t("newChat"), true);
+  $("chat-head").classList.toggle("lifted", $("log").scrollTop > 4);
   document.title = title ? title + " · OmniLLM" : "OmniLLM";
+}
+// titleButton: the name, and a small chevron when it opens the chat's menu
+// (Rename, Delete). Left as it is while the name is being edited.
+function titleButton(b, text, menu) {
+  if (b.querySelector("input")) return;
+  b.textContent = "";
+  b.append(el("span", text, "head-name"));
+  if (menu) b.append(icon("i-chev s14 head-chev"));
+  b.disabled = !menu && b.id === "head-title";
+  b.title = menu ? t("chatMore") : "";
 }
 // renameIn turns a title (the button itself, or a list row's button) into
 // a text field: Enter or leaving it keeps the new name, Esc goes back. An
@@ -1007,8 +1017,18 @@ function renameIn(btn, chat) {
   // The field sits inside the title's button: its clicks must not reach it.
   f.addEventListener("click", (e) => e.stopPropagation());
 }
-$("head-title").addEventListener("click", () => renameIn($("head-title"), S.cur));
-$("bar-title").addEventListener("click", () => renameIn($("bar-title"), S.cur));
+// The title at the top opens the chat's menu; a double click renames it at once.
+for (const id of ["head-title", "bar-title"]) {
+  const b = $(id);
+  b.addEventListener("click", (e) => {
+    if (!S.cur || !S.cur.messages.length || b.querySelector("input")) return;
+    e.stopPropagation();
+    rowMenu(b.parentElement, b, b, S.cur);
+  });
+  b.addEventListener("dblclick", (e) => { e.preventDefault(); closeRowMenu(); renameIn(b, S.cur); });
+}
+// The bar under the title gets a hairline once the talk scrolls under it.
+$("log").addEventListener("scroll", () => $("chat-head").classList.toggle("lifted", $("log").scrollTop > 4), { passive: true });
 function icon(cls) { const i = el("span", "", "ic " + cls); i.setAttribute("aria-hidden", "true"); return i; }
 function iconButton(cls, label) {
   const b = el("button", undefined, "ibtn"); b.type = "button";
@@ -1284,7 +1304,8 @@ function renderList() {
 }
 
 let rowClick = { id: "", at: 0 }; // the last click on a chat row (double click renames)
-// rowMenu opens a chat row's small menu under its ⋯ button.
+// rowMenu opens a chat's small menu (Rename, Delete) under the button that
+// asked for it: a list row's ⋯, or the title at the top.
 function rowMenu(li, btn, title, c) {
   const open = document.querySelector(".row-menu");
   if (open) { const same = open.parentElement === li; closeRowMenu(); if (same) return; }
@@ -1310,7 +1331,7 @@ function closeRowMenu() {
   const m = document.querySelector(".row-menu");
   if (!m) return;
   const li = m.parentElement; m.remove(); li.classList.remove("menu-open");
-  const b = li.querySelector(".chat-del"); if (b) b.setAttribute("aria-expanded", "false");
+  li.querySelectorAll("[aria-expanded]").forEach((b) => b.setAttribute("aria-expanded", "false"));
 }
 
 async function saveChats() {

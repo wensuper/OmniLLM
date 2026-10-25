@@ -150,7 +150,7 @@
     <div class="main">
       <header class="bar">
         <button id="menu" type="button" class="ibtn" data-ta="chats"><span class="ic i-menu s20"></span></button>
-        <button id="bar-title" type="button" class="bar-t"></button>
+        <button id="bar-title" type="button" class="bar-t" aria-haspopup="menu" aria-expanded="false"></button>
         <button id="new" type="button" class="ibtn" data-ta="newChat"><span class="ic i-compose s20"></span></button>
       </header>
       <!-- Sidebar hidden on a wide screen: show it again, or start a chat. -->
@@ -158,8 +158,8 @@
         <button id="side-show" type="button" class="ibtn" data-ta="showSide"><span class="ic i-side s20"></span></button>
         <button id="new-float" type="button" class="ibtn" data-ta="newChat"><span class="ic i-compose s20"></span></button>
       </div>
-      <!-- The chat's name at the top (wide screens; phones have it in the bar). Click to rename. -->
-      <div id="chat-head" class="chat-head" hidden><button id="head-title" type="button" class="head-t"></button></div>
+      <!-- The chat's name at the top (wide screens; phones have it in the bar). Click: its menu. -->
+      <div id="chat-head" class="chat-head" hidden><button id="head-title" type="button" class="head-t" aria-haspopup="menu" aria-expanded="false"></button></div>
       <main id="log" class="log" aria-live="polite"></main>
       <div class="dock">
         <div class="dock-in">

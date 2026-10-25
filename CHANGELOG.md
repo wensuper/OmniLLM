@@ -4,6 +4,12 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.55](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.55) - 2026-10-25
+
+### Changed
+
+- Web chat: the chat’s name now sits at the top left in its own title bar, with a small arrow. Click it for *Rename* and *Delete* (the same menu as *…* in the chat list); double-click it to rename right away. A thin line appears under the bar only once the chat scrolls beneath it. With the sidebar hidden, the name moves right to clear the two buttons. On phones, tapping the name in the top bar opens the same menu.
+
 ## [0.2.0-alpha.54](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.54) - 2026-10-25
 
 ### Added
