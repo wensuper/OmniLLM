@@ -137,7 +137,7 @@ Codex 有时把登录存在系统钥匙串里，OmniLLM 用不了；控制台会
    curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh -s -- --device
    ```
 
-   装完它会提示你粘贴配对文字（通过 AI 助手或脚本安装时没有提示，之后运行 `omnillm connect pair` 再粘贴）。
+   装完它会提示你粘贴配对文字（通过 AI 助手或脚本安装时不会问，之后在你自己的终端里运行 `omnillm connect pair`，在那里粘贴）。
 3. 从控制台复制配对文字（以 `omnillm3-` 开头；每一行都有自己的「复制」），粘贴过去，回车。粘贴时终端里看不到字，是正常的。配对文字由你自己搬运，比如通过 SSH 粘贴；不要发给别人，也不要贴进聊天。
 4. 和手机一样，核对两边的 6 位数，在主机上点「一致，添加」。
 

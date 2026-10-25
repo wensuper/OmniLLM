@@ -1394,6 +1394,13 @@ func installDevice() {
 		fmt.Println(runnable(t("这台电脑已经配对过，可以直接用：omnillm connect chat", "This computer is already paired. Ready: omnillm connect chat")))
 		return
 	}
+	// Pairing is the person's step: an assistant (even with a
+	// pseudo-terminal) gets the next step in words, never the prompt.
+	if installingAssistant() != "" {
+		fmt.Println(runnable(t("下一步：在这台机器上你自己的终端里运行 omnillm connect pair，把配对文字粘贴在那里；不要贴进聊天。",
+			"Next: in your own terminal on this machine, run omnillm connect pair and paste the pairing text there yourself; don’t paste it into a chat.")))
+		return
+	}
 	tty, err := os.Open("/dev/tty")
 	if err != nil {
 		fmt.Println(runnable(t("下一步：拿到配对文字（Mac 上：OmniLLM 控制台点“添加设备”，选“电脑或服务器”，再点“用命令行”复制；服务器上：运行 omnillm pair），然后在这里运行 omnillm connect pair 粘贴。", "Next: get a pairing text (on a Mac: in the OmniLLM console choose “Add device”, pick “Computer or server”, then “Use the command line” and copy it; on a server: run omnillm pair), then run omnillm connect pair here and paste it.")))

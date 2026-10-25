@@ -137,7 +137,7 @@ A server without a browser uses the command line. It gets just the program: no b
    curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh -s -- --device
    ```
 
-   When it finishes, it asks you to paste the pairing text. (When an AI assistant or a script runs the install, there’s no prompt; run `omnillm connect pair` afterward and paste it then.)
+   When it finishes, it asks you to paste the pairing text. (When an AI assistant or a script runs the install, it doesn’t ask; run `omnillm connect pair` yourself in your own terminal afterward and paste it there.)
 3. Copy the pairing text from the console (it starts with `omnillm3-`; each line has its own *Copy*), paste it there, and press Return. Nothing shows while you paste; that’s normal. You carry the pairing text over yourself, for example by pasting it over SSH. Don’t send it to anyone or paste it into a chat.
 4. As with a phone, check that the 6-digit numbers on both sides match, then click *Matches, add* on the hub.
 
