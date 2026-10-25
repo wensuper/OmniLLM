@@ -522,6 +522,13 @@ func openCmd(args []string) {
 		url += "&add"
 	}
 	if err := openLogin(url); err != nil {
+		// No screen here: what works on this machine instead of a link no
+		// browser can open.
+		if headless() {
+			fmt.Println(runnable(t("这台机器没有屏幕，控制台在这里打不开。在它的终端里亲自运行：\n· 加手机或电脑：omnillm pair\n· 接上模型：omnillm login claude（或 chatgpt），或 omnillm hub provider add anthropic\n· 看状态：omnillm status",
+				"This machine has no screen, so the console can’t open here. In its terminal, run yourself:\n· Add a phone or computer: omnillm pair\n· Connect a model: omnillm login claude (or chatgpt), or omnillm hub provider add anthropic\n· See how things are: omnillm status")))
+			return
+		}
 		// The link is a console session: only for a person at this
 		// terminal, never into an assistant's transcript.
 		if notAPerson() || !term.IsTerminal(int(os.Stdout.Fd())) {
@@ -792,6 +799,11 @@ func hubCmd(args []string) {
 	case "region":
 		if len(args) != 2 || args[1] != "confirm" {
 			dieArgs(badCommand(append([]string{"hub"}, args...)...))
+		}
+		if notAPerson() {
+			fmt.Println(runnable(t("确认换了地区是你自己的决定：在这台机器上你自己的终端里运行 omnillm hub region confirm。",
+				"Confirming the new region is your own decision: in your own terminal on this machine, run omnillm hub region confirm.")))
+			return
 		}
 		call(sock, control.Request{Op: "region.confirm"})
 	default:

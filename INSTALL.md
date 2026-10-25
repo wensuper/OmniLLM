@@ -87,7 +87,7 @@ Use the `next` field of `omnillm status --json` (or the `OMNILLM_STATUS` line) a
 | `next` starts with `All set` (Chinese: `一切正常`) | "OmniLLM is ready." |
 | anything else | Say what `next` says. |
 
-If the person asks to add a phone or another device (now or later): run `~/.local/bin/omnillm open --add`; the QR code opens in the browser, and they scan it and compare the 6 digits themselves. On a machine without a screen, they run `~/.local/bin/omnillm pair` in its terminal themselves (rule 6).
+If the person asks to add a phone or another device (now or later): on a machine without a screen (`headless` true), they run `~/.local/bin/omnillm pair` in its terminal themselves (rule 6). Otherwise run `~/.local/bin/omnillm open --add`; the QR code opens in the browser, and they scan it and compare the 6 digits themselves.
 
 Then stop. Don't change any OmniLLM settings unless the person asks.
 

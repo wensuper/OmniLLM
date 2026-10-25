@@ -344,8 +344,8 @@ func nextStep(st Status) string {
 	case st.WebCheck.Mismatch():
 		return webCheckText(*st.WebCheck)
 	case st.RegionPaused:
-		s := onMachine(t("%s 所在的地区变了，已暂停使用模型。确认是你本人换了地方，运行 omnillm hub region confirm 恢复。",
-			"%s’s region changed; models are paused. If you moved, run omnillm hub region confirm to turn them back on."))
+		s := onMachine(t("%s 所在的地区变了，已暂停使用模型。确认是你本人换了地方，在终端里亲自运行 omnillm hub region confirm 恢复。",
+			"%s’s region changed; models are paused. If you moved, run omnillm hub region confirm yourself in a terminal to turn them back on."))
 		return upperFirst(s) // "This Mac’s region …"
 	case st.Assistant != "" && st.Providers == 0:
 		return assistantStep(st)
