@@ -1659,7 +1659,7 @@ func connectCmd(args []string) {
 		if left {
 			fmt.Println(t("这台设备已从你另一台电脑上移除，这里的配对也删了。", "This device was removed from your other computer and its pairing here is deleted."))
 		} else {
-			fmt.Println(t("这台设备的配对已删除。你另一台电脑现在连不上，记得在那边的设备列表里也移除它。", "This device’s pairing is deleted. Your other computer can’t be reached now; remove it from the Mac’s device list too."))
+			fmt.Println(t("这台设备的配对已删除。你另一台电脑现在连不上，之后在那边也移除它（控制台“设备”里，或在它的终端里运行 omnillm hub devices 查名字，再 omnillm hub revoke 名字）。", "This device’s pairing is deleted. Your other computer can’t be reached now; remove it there later too (under “Devices” in its console, or in its terminal: omnillm hub devices for the name, then omnillm hub revoke NAME)."))
 		}
 	case "models":
 		d := openDevice(ctx, sec, dir)
