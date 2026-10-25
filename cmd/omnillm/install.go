@@ -1016,7 +1016,7 @@ func installSystemd(home, bin, dir string, env map[string]string) error {
 	body := "[Unit]\nDescription=OmniLLM hub\nAfter=network-online.target\n\n[Service]\n" +
 		"ExecStart=" + systemdQuote(bin) + " hub run\n" + envLines.String() +
 		"StandardOutput=append:" + filepath.Join(dir, "hub.log") + "\nStandardError=append:" + filepath.Join(dir, "hub.log") + "\n" +
-		"Restart=on-failure\nRestartSec=3\nNoNewPrivileges=yes\nPrivateTmp=yes\nUMask=0077\n\n[Install]\nWantedBy=default.target\n"
+		"Restart=on-failure\nRestartSec=3\nNoNewPrivileges=yes\nUMask=0077\n\n[Install]\nWantedBy=default.target\n"
 	if err := os.MkdirAll(filepath.Dir(unit), 0o755); err != nil {
 		return err
 	}
@@ -1116,6 +1116,11 @@ func privateHome() (string, error) {
 	if err := os.MkdirAll(h, 0o700); err != nil {
 		return "", err
 	}
+	// Again now that every folder exists: none appeared meanwhile that
+	// someone else owns.
+	if !safeParents(filepath.Dir(h)) {
+		return "", notYours
+	}
 	fi, err := os.Lstat(h)
 	if err != nil {
 		return "", err
@@ -1124,6 +1129,11 @@ func privateHome() (string, error) {
 		return "", notYours
 	}
 	if fi.Mode().Perm()&0o077 != 0 {
+		// Only a folder that is empty or already OmniLLM's is made
+		// private; never one of the person's own folders (~/Public).
+		if ents, err := os.ReadDir(h); err != nil || (len(ents) > 0 && !exists(filepath.Join(h, "hub"))) {
+			return "", sayf(t("OMNILLM_HOME（%s）里已经有别的东西。换一个空文件夹，比如 ~/.omnillm。", "OMNILLM_HOME (%s) already holds other things. Use an empty folder, such as ~/.omnillm."), h)
+		}
 		if err := os.Chmod(h, 0o700); err != nil {
 			return "", err
 		}
@@ -1132,10 +1142,28 @@ func privateHome() (string, error) {
 }
 
 // safeParents: no one but this user (or root) can rename or replace
-// anything inside dir or its parents: each is owned by this user or root,
-// and one others may write to is sticky (like /tmp), where only an entry's
-// owner can move it.
+// anything inside dir or its parents, as written and as the links on the
+// way resolve: each is owned by this user or root, and one others may
+// write to is sticky (like /tmp), where only an entry's owner can move it.
 func safeParents(dir string) bool {
+	if !parentsOK(dir) {
+		return false
+	}
+	// The real path of the part that exists, walked too.
+	d := dir
+	for {
+		if real, err := filepath.EvalSymlinks(d); err == nil {
+			return real == d || parentsOK(real)
+		}
+		if d == filepath.Dir(d) {
+			return false
+		}
+		d = filepath.Dir(d)
+	}
+}
+
+// parentsOK is safeParents for the path as written.
+func parentsOK(dir string) bool {
 	for d := dir; ; d = filepath.Dir(d) {
 		// A link on the way must be this user's or root's (like macOS's
 		// /tmp), or its owner could point it elsewhere.

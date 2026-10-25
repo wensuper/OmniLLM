@@ -7,3 +7,6 @@ func Mine(os.FileInfo) bool { return true }
 
 // MineOrRoot: as Mine.
 func MineOrRoot(os.FileInfo) bool { return true }
+
+// PrivateGroup: as Mine.
+func PrivateGroup(os.FileInfo) bool { return true }

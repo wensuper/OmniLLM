@@ -118,7 +118,8 @@ func nodeNewer(a, b string) bool {
 // TrustedCLI: p is a program only this user or the system could have put
 // there. The link (if it is one) and its folder, the real file and its
 // folder are each owned by this user or root and not writable by others;
-// the real file isn't writable by its group either. A folder on PATH that
+// the real file isn't writable by its group either, unless that is the
+// user's own private group (npm under umask 002). A folder on PATH that
 // someone else can write to can't plant a program (or a link to one).
 // Checked when the program is found and again before every run.
 func TrustedCLI(p string) bool {
@@ -134,7 +135,10 @@ func TrustedCLI(p string) bool {
 		return false
 	}
 	st, err := os.Stat(real)
-	if err != nil || !st.Mode().IsRegular() || st.Mode().Perm()&0o111 == 0 || st.Mode().Perm()&0o022 != 0 || !fsown.MineOrRoot(st) {
+	if err != nil || !st.Mode().IsRegular() || st.Mode().Perm()&0o111 == 0 || st.Mode().Perm()&0o002 != 0 || !fsown.MineOrRoot(st) {
+		return false
+	}
+	if st.Mode().Perm()&0o020 != 0 && !fsown.PrivateGroup(st) {
 		return false
 	}
 	for _, d := range []string{filepath.Dir(p), filepath.Dir(real)} {

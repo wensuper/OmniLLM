@@ -358,3 +358,15 @@ func TestAllSetOnAServer(t *testing.T) {
 		t.Fatal(s)
 	}
 }
+
+// The Linux unit has no PrivateTmp: it would put the hub in a user
+// namespace where root and other users can't be told apart.
+func TestUnitHasNoPrivateTmp(t *testing.T) {
+	b, err := os.ReadFile("install.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(b), "PrivateTmp=yes") {
+		t.Fatal("the hub unit must not use PrivateTmp")
+	}
+}

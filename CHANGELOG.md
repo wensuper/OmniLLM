@@ -25,7 +25,7 @@ All notable changes to OmniLLM are documented here. OmniLLM is in early pre-rele
 - A data folder set with `OMNILLM_HOME` must be your own (it is made private), and the hub service now keeps it, so an update with it no longer rolls itself back.
 - The master key file, the control socket and the Claude Code / Codex programs are used only when they are your own (or, for programs, the system's) and others can't change them.
 - Downloads follow redirects only while they stay on https. A relay or phone page other than the project's, set once, is named at every install.
-- Claude Code and Codex are run only from places no other user can change (the link, the file and both folders), checked again before every run. `OMNILLM_HOME` can't be a link or sit under a folder someone else can swap; the hub checks it at start too.
+- Claude Code and Codex are run only from places no other user can change (the link, the file and both folders), checked again before every run. `OMNILLM_HOME` can't be a link or sit under a folder someone else can swap; the hub checks it at start too. On Linux the hub service no longer uses a private /tmp (it hid who owns a file from these checks); programs installed by npm under the usual umask 002 are still found.
 - When no browser opens, `omnillm open` prints its one-time console link only for a person at the terminal, never into an AI assistant's output.
 
 ## [0.2.0-alpha.48](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.48) - 2026-10-24
