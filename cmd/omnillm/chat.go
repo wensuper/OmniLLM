@@ -28,6 +28,8 @@ func openFailed(ctx context.Context, sec secret.Store, dir string, err error) {
 	switch {
 	case cerr != nil:
 		die(sayf(t("读不出这台设备保存的配对（%s）。请用配对时的同一个用户运行。", "Can’t read this device’s saved pairing (%s). Run as the same user it was paired as."), dir))
+	case !paired && role() == "hub":
+		die(say(runnable(t("这台电脑就是主机；omnillm connect 命令在和它配对的电脑上用。想在这里试模型，用 omnillm open 打开控制台。", "This computer is the hub; omnillm connect commands run on a computer paired with it. To try the models here, open the console with omnillm open."))))
 	case !paired:
 		die(sayf(t("这台设备还没配对（在 %s 里没有找到配对），先运行 omnillm connect pair。", "This device isn’t paired yet (no pairing in %s). Run omnillm connect pair first."), dir))
 	}

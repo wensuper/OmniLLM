@@ -144,3 +144,30 @@ func TestRequestCarriesTheCallersLanguage(t *testing.T) {
 		}
 	}
 }
+
+// A hub already answering keeps its socket: a second Listen is refused.
+func TestListenRefusesALiveSocket(t *testing.T) {
+	dir, err := os.MkdirTemp("/tmp", "omctl")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+	sock := filepath.Join(dir, "c.sock")
+	ln, err := Listen(sock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+	go func() {
+		for {
+			c, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			c.Close()
+		}
+	}()
+	if _, err := Listen(sock); !errors.Is(err, ErrAlreadyRunning) {
+		t.Fatalf("got %v", err)
+	}
+}

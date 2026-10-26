@@ -118,6 +118,11 @@ func Listen(path string) (net.Listener, error) {
 	if err := os.Chmod(dir, 0o700); err != nil {
 		return nil, fmt.Errorf("control: %s must be private (0700)", dir)
 	}
+	// A hub answering there already: never take its socket over.
+	if c, err := net.DialTimeout("unix", path, time.Second); err == nil {
+		c.Close()
+		return nil, ErrAlreadyRunning
+	}
 	_ = os.Remove(path)
 	ln, err := net.Listen("unix", path)
 	if err != nil {
@@ -161,6 +166,9 @@ func Serve(ctx context.Context, ln net.Listener, h Handler) {
 		}()
 	}
 }
+
+// ErrAlreadyRunning: a hub already answers on the socket.
+var ErrAlreadyRunning = errors.New("control: a hub is already running")
 
 // ErrNotRunning: no hub of this user's answers on the socket.
 var ErrNotRunning = errors.New("the hub is not running")

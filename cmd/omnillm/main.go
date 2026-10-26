@@ -106,11 +106,8 @@ func ctl(sock string, req control.Request, onReply func(control.Reply) (bool, bo
 	}
 	if errors.Is(err, control.ErrNotRunning) {
 		switch {
-		case role() == "device" && !device.Paired(context.Background(), secrets(dataDir("device"), "omnillm-device")):
-			return say(runnable(deviceNext()))
 		case role() == "device":
-			return say(runnable(t("这台电脑只当设备用，主机命令要在它配对的那台电脑上运行。这里能用：omnillm connect chat、ask、models。",
-				"This computer is set up as a device; hub commands run on the computer it is paired with. Here: omnillm connect chat, ask or models.")))
+			return say(runnable(deviceHubHint()))
 		case role() == "" && !exists(dataDir("hub")):
 			return say(t("这台电脑上还没有安装 OmniLLM。安装方法见 https://github.com/wensuper/OmniLLM/blob/main/README.zh-CN.md#安装",
 				"OmniLLM isn’t installed on this computer yet. See https://github.com/wensuper/OmniLLM#installation"))
@@ -260,6 +257,10 @@ func describe(err error) string {
 	msg := omnillm.Describe(lang(), err)
 	if onDevice {
 		msg = omnillm.ForHub(lang(), deviceHubOS, msg)
+		// Removed on the other side: this side still holds the pairing.
+		if omnillm.AsError(err).Msg == omnillm.MsgDeviceRevoked {
+			msg += runnable(t("在这台电脑上先运行 omnillm connect forget，再运行 omnillm connect pair。", " On this computer, run omnillm connect forget, then omnillm connect pair."))
+		}
 	}
 	if e := omnillm.AsError(err); e.Code == omnillm.CodeInternal {
 		msg += "\n  (" + err.Error() + ")"
@@ -702,6 +703,11 @@ func hubCmd(args []string) {
 	if len(args) == 0 {
 		subUsage()
 	}
+	// A device-only machine has no hub: say so before anything else (an
+	// assistant would otherwise relay "run omnillm pair here").
+	if role() == "device" && args[0] != "run" {
+		die(say(runnable(deviceHubHint())))
+	}
 	dir := dataDir("hub")
 	sock := filepath.Join(dir, "control.sock")
 	switch args[0] {
@@ -1030,6 +1036,12 @@ func hubRun(dir, sock string, args []string) {
 	// keeps its secrets and state there.
 	if _, err := privateHome(); err != nil {
 		log.Fatal(err)
+	}
+	// One hub per data folder: a second one (say, run to watch the log)
+	// would fight the service for the relay and take its socket.
+	if c, err := net.DialTimeout("unix", sock, time.Second); err == nil {
+		c.Close()
+		die(sayf(t("OmniLLM 已经在运行（后台服务）。它的日志在 %s；要在前台运行，先停掉后台服务。", "OmniLLM is already running (the background service). Its log is at %s; to run it in the foreground, stop the service first."), filepath.Join(dir, "hub.log")))
 	}
 	switch *relayURL {
 	case "":
@@ -1952,4 +1964,13 @@ func envOr(k, def string) string {
 func appUsage() string {
 	return t("用法：omnillm hub app add 名字 | set 名字 [--name N] [--paused true|false] [--budget-usd X | --no-limit] | rm 名字（列出应用：omnillm hub apps）",
 		"Usage: omnillm hub app add NAME | set NAME [--name N] [--paused true|false] [--budget-usd X | --no-limit] | rm NAME (to list them: omnillm hub apps)")
+}
+
+// deviceHubHint: hub commands on a device-only machine.
+func deviceHubHint() string {
+	if !device.Paired(context.Background(), secrets(dataDir("device"), "omnillm-device")) {
+		return deviceNext()
+	}
+	return t("这台电脑只当设备用，主机命令要在它配对的那台电脑上运行。这里能用：omnillm connect chat、ask、models。",
+		"This computer is set up as a device; hub commands run on the computer it is paired with. Here: omnillm connect chat, ask or models.")
 }

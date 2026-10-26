@@ -39,6 +39,10 @@ All notable changes to OmniLLM are documented here. OmniLLM is in early pre-rele
 - Phone page: a load that fails says why (the browser blocks site data, or there's no network) instead of "the program stopped".
 - Command line: a device with no usable models says so and how to check its model list, rather than claiming the Mac has none; `hub device set` warns when the device is left with no usable model.
 
+- `omnillm hub run` while the background service runs says OmniLLM is already running (and where its log is) instead of starting a second hub that fights the first.
+- Phone page: a paired phone that opens a new pairing link and goes back returns to a working chat.
+- Command line: a device removed on the hub is told to run `connect forget` then `connect pair`; `connect` commands on the hub itself say it is the hub.
+
 ### Security
 
 - Model replies shown in a terminal have control characters removed, so a reply can't use escape sequences (to write the clipboard or fake a prompt).

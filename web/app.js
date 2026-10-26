@@ -499,7 +499,14 @@ $("paste-go").addEventListener("click", () => {
   // the 6 digits, as a scan does. Only replacing a pairing still asks.
   pair(v, false);
 });
-$("pair-retry").addEventListener("click", () => { show(S.device ? "chat" : "welcome"); });
+// Back from pairing: the chat (opened now when this start went straight
+// to a pairing link), else the welcome.
+function leavePairing() {
+  if (!S.device) return show("welcome");
+  if (S.cur) return show("chat");
+  openChat();
+}
+$("pair-retry").addEventListener("click", leavePairing);
 // Different numbers (someone else's pairing), or Cancel while connecting:
 // stop it and go back. A phone that already left its old pairing has none
 // to go back to.
@@ -507,7 +514,7 @@ function stopPairing() {
   S.pairStopped = true;
   try { omnillm.pairCancel(); } catch {}
   sasShown(false); $("pair-stop").hidden = true;
-  show(S.device && !S.leftOld ? "chat" : "welcome");
+  if (S.leftOld) show("welcome"); else leavePairing();
 }
 $("pair-mismatch").addEventListener("click", stopPairing);
 $("pair-stop").addEventListener("click", stopPairing);
@@ -538,7 +545,7 @@ async function pair(text, fromLink) {
         $("pair-cancel").onclick = () => res(false);
       });
       $("pair-ask").hidden = true;
-      if (!go) { show(S.device ? "chat" : "welcome"); return; }
+      if (!go) { leavePairing(); return; }
     }
     await connectPair(text);
   } finally { S.pairing = false; }
