@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -666,8 +667,15 @@ func TestLanguageIsSharedWithTheMenuBar(t *testing.T) {
 // command instead of a button that would do nothing.
 func TestSubscriptionCards(t *testing.T) {
 	// No real program is found or asked (and nothing is connected with
-	// the owner's real subscription): an empty home and PATH.
-	t.Setenv("HOME", t.TempDir())
+	// the owner's real subscription): an empty home and PATH. Removed
+	// without failing the test: a sign-in check the page started may still
+	// be setting up the Google sign-in's folder in it.
+	home, err := os.MkdirTemp("", "omnillm-subs-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(home) })
+	t.Setenv("HOME", home)
 	t.Setenv("PATH", "/usr/bin:/bin")
 	r := newRig(t, false)
 	sid := r.login(t)
