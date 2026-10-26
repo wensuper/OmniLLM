@@ -459,10 +459,7 @@ $("boot-retry").addEventListener("click", cleanReload);
   // from the address bar and history at once (inside another app it stays,
   // so "Open in Browser" takes it along).
   let link = "";
-  if (location.hash.startsWith("#pair=")) {
-    link = location.hash.slice(6);
-    if (!IN_APP) history.replaceState(null, "", location.pathname + location.search);
-  }
+  if (location.hash.startsWith("#pair=")) link = location.hash.slice(6); // left in the address until loaded: a reload while loading keeps it
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
   watchUpdates();
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
@@ -478,10 +475,7 @@ $("boot-retry").addEventListener("click", cleanReload);
   if (S.pendingLink) { link = S.pendingLink; S.pendingLink = ""; }
   // A link that arrived while loading may have changed the address without
   // a hashchange event (seen once in 10 rounds): read the address itself.
-  if (!link && location.hash.startsWith("#pair=")) {
-    link = location.hash.slice(6);
-    if (!IN_APP) history.replaceState(null, "", location.pathname + location.search);
-  }
+  if (!link && location.hash.startsWith("#pair=")) link = location.hash.slice(6);
   try {
     S.device = await unseal("device");
     S.chats = (await unseal("chats")) || [];
@@ -507,6 +501,7 @@ $("boot-retry").addEventListener("click", cleanReload);
   // Ready only now: a link arriving while the pairing was read waits here.
   S.ready = true;
   if (!link && S.pendingLink) { link = S.pendingLink; S.pendingLink = ""; }
+  if (link && !IN_APP) history.replaceState(null, "", location.pathname + location.search);
   if (S.device && !link) return openChat();
   if (link) return S.device ? pair(link, true) : arrive(link);
   welcome(gateView() || "start");
@@ -517,11 +512,21 @@ $("boot-retry").addEventListener("click", cleanReload);
 addEventListener("hashchange", () => {
   if (!location.hash.startsWith("#pair=")) return;
   const code = location.hash.slice(6);
-  if (!IN_APP) history.replaceState(null, "", location.pathname + location.search);
-  // Still loading: main() picks it up once the device code is ready.
+  // Still loading: main() picks it up once the device code is ready (the
+  // address keeps it meanwhile, for a reload).
   if (!S.ready) { S.pendingLink = code; return; }
-  if (!S.busy && !S.pairing) { if (S.device) pair(code, true); else arrive(code); }
+  if (!IN_APP) history.replaceState(null, "", location.pathname + location.search);
+  // Busy (a reply, a pairing): it waits for that to end.
+  if (S.busy || S.pairing) { S.pendingLink = code; return; }
+  if (S.device) pair(code, true); else arrive(code);
 });
+// takePending opens a link that waited for a reply or a pairing to end.
+function takePending() {
+  const code = S.pendingLink;
+  if (!code || !S.ready || S.busy || S.pairing) return;
+  S.pendingLink = "";
+  if (S.device) pair(code, true); else arrive(code);
+}
 
 // ---------- before pairing: the place first ----------
 // gateView is the screen that comes before pairing here, or "" to pair in
@@ -751,7 +756,7 @@ async function pair(text, fromLink) {
       if (!go) { leavePairing(); return; }
     }
     await connectPair(text);
-  } finally { S.pairing = false; setTimeout(reloadIfIdle, 1500); } // an update that waited for this
+  } finally { S.pairing = false; setTimeout(takePending); setTimeout(reloadIfIdle, 1500); } // a link or an update that waited for this
 }
 // pairFailed says what went wrong in the page's words: a code that ran out
 // gets the way to a new one; then a new scan (phones) or paste (computers).
@@ -1852,7 +1857,7 @@ async function run(chat, model, fresh, old) {
     }
   } finally {
     delete reply.live;
-    S.busy = null; busyUI(false);
+    S.busy = null; busyUI(false); setTimeout(takePending);
     setTimeout(reloadIfIdle, 1500); // a new version waited for this reply
     // The picker learns the version too (the hub now knows it).
     if (S.versionSeen) { S.versionSeen = false; loadModels().catch(() => {}); }

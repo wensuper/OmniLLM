@@ -1106,7 +1106,7 @@ func stream(sock string, req control.Request, empty string) error {
 		switch r.Event {
 		case "info", "ok", "done":
 			if r.Text != "" {
-				fmt.Println(stripControls(r.Text))
+				fmt.Println(runnable(stripControls(r.Text))) // its commands as this terminal can run them
 			}
 			if d := string(bytes.TrimSpace(r.Data)); empty != "" && (d == "null" || d == "[]") {
 				fmt.Println(empty)
@@ -1256,6 +1256,9 @@ func hubRun(dir, sock string, args []string) {
 	// The local API for programs on this Mac (the console's Apps): on by
 	// default, loopback only, every request with an app token. Taken here so
 	// the console shows the address only once it is really there.
+	if con != nil {
+		con.APIOff = *api == "" || *api == "off" || !validAPI(*api) // by its setting, not a busy port
+	}
 	if *api != "" && *api != "off" {
 		if ln, err := localapi.Listen(*api); err != nil {
 			if !validAPI(*api) {
@@ -1283,7 +1286,7 @@ func hubRun(dir, sock string, args []string) {
 	go watchWeb(ctx, dir, *webApp)
 	log.Print(t("OmniLLM 已启动。", "OmniLLM is running."))
 	if *relayURL == "" {
-		log.Print(t("没有设置远程连接（--relay），其他设备暂时连不上。", "Remote access not set up (--relay); other devices can’t connect yet."))
+		log.Print(t("远程连接关着（OMNILLM_RELAY=off），其他设备连不进来。", "Remote access is off (OMNILLM_RELAY=off), so other devices can’t connect.") + sentenceGap() + relayOnText(lang()))
 	} else {
 		sum := sha256.Sum256([]byte(token))
 		log.Printf(t("远程连接登记令牌的哈希（自己部署 relay 时填进 --hub-token-hash）：%x", "Remote access registration token hash (for your own relay’s --hub-token-hash): %x"), sum)

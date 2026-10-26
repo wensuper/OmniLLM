@@ -85,6 +85,7 @@ const T = {
     appsBody: "供脚本和程序后台调用，仅可使用 API Key 和{here}上的模型。",
     appsHelp: "接入方式", apAddr: "接口地址", apKey: "Key", apKeyV: "应用的令牌", apFmt: "格式", apFmtV: "兼容 OpenAI，也支持 Anthropic",
     apWho: "可连接", apWhoV: "仅{here}上的程序",
+    appsOffSet: "给应用用的本机接口被设置关掉了（OMNILLM_API=off），应用暂时连不上。要打开：在终端运行 OMNILLM_API=127.0.0.1:8765 omnillm install。",
     appsOff: "给应用用的本机接口没能打开，应用暂时连不上。如果不是你特意关掉的，多半是别的程序占用了它的端口（默认 8765）：关掉那个程序后，在终端运行 omnillm install。",
     appTokenUse: "在程序里这样设置（大多数工具认这两个变量；也可以在设置里填同样的地址和 Key）：",
     appTokenTry: "试一下（应该列出它能用的模型）：",
@@ -209,6 +210,7 @@ const T = {
     appsBody: "For scripts and programs: background calls only, with API keys and models on {here}.",
     appsHelp: "How to connect", apAddr: "Address", apKey: "Key", apKeyV: "The app’s token", apFmt: "Format", apFmtV: "OpenAI-compatible; Anthropic works too",
     apWho: "Reachable from", apWhoV: "Programs on {here} only",
+    appsOffSet: "The local API for apps is turned off (OMNILLM_API=off), so apps can’t connect. To turn it on, run OMNILLM_API=127.0.0.1:8765 omnillm install in Terminal.",
     appsOff: "The local API for apps isn’t on, so apps can’t connect. Unless you turned it off on purpose, another program is probably using its port (8765 by default): close it, then run omnillm install in Terminal.",
     appTokenUse: "Set it up in the program (most tools read these two variables; or enter the same address and key in its settings):",
     appTokenTry: "Try it (it should list the models it can use):",
@@ -1961,7 +1963,7 @@ function renderApps() {
   const where = $("apps-where");
   where.textContent = "";
   where.hidden = !!S.api_url;
-  if (!S.api_url) where.append(el("span", t("appsOff"), "tag warn-tag"));
+  if (!S.api_url) where.append(el("span", t(S.api_off ? "appsOffSet" : "appsOff"), "tag warn-tag"));
   $("apps-help").hidden = !S.api_url;
   const tb = $("apps");
   tb.textContent = "";

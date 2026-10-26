@@ -71,6 +71,9 @@ type Server struct {
 	// models with an app token ("http://127.0.0.1:8765/v1"); "" when the
 	// local API is off (the Apps tab says so).
 	APIURL string
+	// APIOff, set by the host: the local API is off by its setting
+	// (OMNILLM_API=off or an address not on this Mac), not a busy port.
+	APIOff bool
 	// WebCheck, set by the host, is its last check of the web page phones
 	// open against the signed release (nil: not checked yet).
 	WebCheck func() any
@@ -569,6 +572,7 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 		"lang": s.hub.UILang(ctx),
 		// Where apps connect (the Apps tab); "" when the local API is off.
 		"api_url": s.APIURL,
+		"api_off": s.APIOff,
 		// The phones' web page against the signed release (top bar warns).
 		"web_check": s.webCheck(),
 	})

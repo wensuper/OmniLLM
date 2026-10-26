@@ -79,6 +79,9 @@ func verifyWeb(ctx context.Context, c *http.Client, base string) webCheck {
 	app, err := get(ctx, c, base+"app.js", 8<<20)
 	if err != nil {
 		w.Error = "web" // the page itself didn't answer
+		if strings.Contains(err.Error(), "HTTP 404") {
+			w.Error = "web_none" // it answered, with no OmniLLM page there
+		}
 		return w
 	}
 	m := buildStamp.FindSubmatch(app)
@@ -333,6 +336,8 @@ func webCheckText(w webCheck) string {
 			"Warning: the web page your phones use (%s) isn’t an OmniLLM release build (it has no build number). Don’t use it on your phones until this is cleared up."), w.URL)
 	case w.Error == "github_limited":
 		return fmt.Sprintf(t("没能核对手机用的网页（%s）：GitHub 暂时不让这台电脑再查了（同一个网络地址每小时最多 60 次）。过一会儿再试。", "Couldn’t check the web page your phones use (%s): GitHub isn’t answering this computer for now (it allows 60 checks an hour per network address). Try again in a while."), w.URL)
+	case w.Error == "web_none":
+		return fmt.Sprintf(t("这个地址上没有 OmniLLM 的网页（%s）。检查地址后再试。", "There’s no OmniLLM web page at %s. Check the address and try again."), w.URL)
 	case w.Error == "web":
 		return fmt.Sprintf(t("没能核对手机用的网页（%s）：这个网页没有应答。检查网络后再试。", "Couldn’t check the web page your phones use (%s): the page didn’t answer. Check the network and try again."), w.URL)
 	case w.Error != "":
@@ -449,14 +454,21 @@ func githubError(err error) string {
 }
 
 // cosignOffline: cosign stopped before verifying because it couldn't reach
-// Sigstore (its trust root or transparency log), not because the signature
-// is wrong. It exits 1 either way; only its message tells them apart.
+// Sigstore (its trust root or transparency log keys), not because the
+// signature is wrong. It exits 1 either way. Only the start of its first
+// error line is read, cosign's own words: further on it quotes the
+// certificate, which whoever signed it chose (a subject naming "tuf").
 func cosignOffline(stderr string) bool {
-	s := strings.ToLower(stderr)
-	for _, w := range []string{"setting up clients", "tuf", "dial tcp", "connection refused", "i/o timeout", "no such host", "tls handshake", "context deadline exceeded", "network is unreachable"} {
-		if strings.Contains(s, w) {
-			return true
+	for _, line := range strings.Split(stderr, "\n") {
+		if !strings.HasPrefix(line, "Error: ") {
+			continue
 		}
+		for _, p := range []string{"Error: setting up clients", "Error: getting rekor public keys", "Error: fetching trusted root", "Error: getting trusted root", "Error: tuf:"} {
+			if strings.HasPrefix(line, p) {
+				return true
+			}
+		}
+		return false
 	}
 	return false
 }

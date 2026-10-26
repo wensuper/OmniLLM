@@ -142,7 +142,14 @@ func TestCosignOffline(t *testing.T) {
 	if !cosignOffline("Error: setting up clients and keys: getting rekor public keys: tuf: failed to download 13.root.json: dial tcp 127.0.0.1:9: connect: connection refused") {
 		t.Fatal("offline taken for a verdict")
 	}
-	if cosignOffline("Error: none of the expected identities matched what was in the certificate") {
-		t.Fatal("a rejection taken for offline")
+	for _, rejected := range []string{
+		"Error: none of the expected identities matched what was in the certificate",
+		// The subject is the signer's choice: their words don't count.
+		"Error: none of the expected identities matched what was in the certificate, got subjects [https://github.com/x/tuf/.github/workflows/dial tcp.yml@refs/heads/tuf] with issuer https://token.actions.githubusercontent.com",
+		"main.go:74: error during command execution: tuf: dial tcp: connection refused",
+	} {
+		if cosignOffline(rejected) {
+			t.Fatalf("a rejection taken for offline: %s", rejected)
+		}
 	}
 }
