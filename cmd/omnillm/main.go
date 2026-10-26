@@ -97,12 +97,24 @@ func ctl(sock string, req control.Request, onReply func(control.Reply) (bool, bo
 	}
 	err := control.Call(sock, req, onReply)
 	if errors.Is(err, control.ErrNotRunning) {
+		switch {
+		case role() == "device":
+			return say(runnable(omnillm.ForHub(lang(), "", t("这台电脑只当设备用，主机命令要在你的 Mac 上运行。这里能用：omnillm connect chat、ask、models。",
+				"This computer is set up as a device; hub commands run on your Mac. Here: omnillm connect chat, ask or models."))))
+		case role() == "" && !exists(dataDir("hub")):
+			return say(t("这台电脑上还没有安装 OmniLLM。安装方法见 https://github.com/wensuper/OmniLLM/blob/main/README.zh-CN.md#安装",
+				"OmniLLM isn’t installed on this computer yet. See https://github.com/wensuper/OmniLLM#installation"))
+		}
 		return say(runnable(notRunning()))
 	}
 	return err
 }
 
 func die(err error) {
+	if errors.Is(err, context.Canceled) { // Ctrl-C
+		fmt.Fprintln(os.Stderr)
+		os.Exit(130)
+	}
 	fmt.Fprintln(os.Stderr, describe(err))
 	os.Exit(1)
 }
@@ -272,7 +284,7 @@ func usageText(all bool) string {
                                      列出来（--json 输出原始数据）
   omnillm hub usage [--day today|yesterday|7d]
                                      用量；--day 看哪一天：今天、昨天或最近 7 天
-  omnillm hub audit
+  omnillm hub audit                  今天每次调用的记录（JSON，给脚本用）
   omnillm hub pair [--name N] [--models 名字或ID,…] [--budget-usd 5] [--background-only]
   omnillm hub revoke <名字或ID>      立即移除设备（名字里有空格或括号时加引号：omnillm hub revoke "iPhone (2)"）
   omnillm hub device set <名字或ID> [--name N] [--paused true|false] [--budget-usd X | --no-limit] [--models 名字或ID,… | --all-models]
@@ -316,7 +328,7 @@ func usageText(all bool) string {
                                      list them (--json: the raw data)
   omnillm hub usage [--day today|yesterday|7d]
                                      usage; --day: which day: today, yesterday or the last 7 days
-  omnillm hub audit
+  omnillm hub audit                  today’s calls, one record each, as JSON (for scripts)
   omnillm hub pair [--name N] [--models name-or-id,…] [--budget-usd 5] [--background-only]
   omnillm hub revoke <name-or-id>    remove a device now (quote a name with spaces or brackets: omnillm hub revoke "iPhone (2)")
   omnillm hub device set <name-or-id> [--name N] [--paused true|false] [--budget-usd X | --no-limit] [--models name-or-id,… | --all-models]
@@ -695,8 +707,8 @@ func hubCmd(args []string) {
 			return
 		}
 		if len(args) < 3 || args[1] != "add" || strings.HasPrefix(args[2], "-") {
-			dieArgs(usageErr(t("用法：omnillm hub provider add <openai|anthropic|ollama|openai-compatible> [--name N] [--base-url U]",
-				"Usage: omnillm hub provider add <openai|anthropic|ollama|openai-compatible> [--name N] [--base-url U]")))
+			dieArgs(usageErr(t("用法：omnillm hub provider add <openai|anthropic|ollama|openai-compatible> | rm 名字 | off 名字 | on 名字（列出来源：omnillm hub providers）",
+				"Usage: omnillm hub provider add <openai|anthropic|ollama|openai-compatible> | rm NAME | off NAME | on NAME (to list them: omnillm hub providers)")))
 		}
 		fs := flag.NewFlagSet("provider add", flag.ContinueOnError)
 		name := fs.String("name", "", "")
@@ -712,6 +724,9 @@ func hubCmd(args []string) {
 		default:
 			dieArgs(usageErr(t("用法：omnillm hub provider add <openai|anthropic|ollama|openai-compatible> [--name N] [--base-url U]",
 				"Usage: omnillm hub provider add <openai|anthropic|ollama|openai-compatible> [--name N] [--base-url U]")))
+		}
+		if kind == "openai-compatible" && (*name == "" || *base == "") {
+			dieArgs(usageErr(t("用法：omnillm hub provider add openai-compatible --name 名字 --base-url https://…", "Usage: omnillm hub provider add openai-compatible --name NAME --base-url https://…")))
 		}
 		// Not running: say so before anyone pastes a key.
 		if _, ok := queryStatus(); !ok {
@@ -776,7 +791,7 @@ func hubCmd(args []string) {
 		}
 		printTable(sock, req, render)
 	case "audit":
-		call(sock, control.Request{Op: args[0]})
+		callOr(sock, control.Request{Op: args[0]}, t("今天还没有调用。", "No calls yet today."))
 	case "pair":
 		if notAPerson() {
 			fmt.Println(runnable(t("添加设备是你自己的一步：在这台机器上你自己的终端里运行 omnillm pair，扫码、核对 6 位数都在那里做。",
@@ -800,7 +815,8 @@ func hubCmd(args []string) {
 			dieArgs(usageErr(t("移除设备：omnillm hub revoke 名字", "To remove a device: omnillm hub revoke NAME")))
 		}
 		if len(args) < 2 || args[1] != "set" {
-			dieArgs(badCommand(append([]string{"hub"}, args[:min(len(args), 2)]...)...))
+			dieArgs(usageErr(t("用法：omnillm hub device set 名字 [--name N] [--paused true|false] [--budget-usd X] [--models …]（列出设备：omnillm hub devices）",
+				"Usage: omnillm hub device set NAME [--name N] [--paused true|false] [--budget-usd X] [--models …] (to list them: omnillm hub devices)")))
 		}
 		a, err := deviceSetArgs(splitTarget(args[2:]))
 		if err != nil {
@@ -809,7 +825,7 @@ func hubCmd(args []string) {
 		call(sock, control.Request{Op: "device.set", Args: a})
 	case "app":
 		if len(args) < 2 {
-			dieArgs(badCommand("hub", "app"))
+			dieArgs(usageErr(appUsage()))
 		}
 		if (args[1] == "add" || args[1] == "rm") && len(args) < 3 {
 			dieArgs(usageErr(t("请写出应用的名字。", "Name the app.")))
@@ -831,11 +847,12 @@ func hubCmd(args []string) {
 			}
 			call(sock, control.Request{Op: "app.set", Args: a})
 		default:
-			dieArgs(badCommand("hub", "app", args[1]))
+			dieArgs(usageErr(appUsage()))
 		}
 	case "model":
 		if len(args) < 2 || args[1] != "set" {
-			dieArgs(badCommand(append([]string{"hub"}, args[:min(len(args), 2)]...)...))
+			dieArgs(usageErr(t("用法：omnillm hub model set 名字 [--name 新名字] [--shown true|false] [--human-only true|false]（列出模型：omnillm hub models）",
+				"Usage: omnillm hub model set NAME [--name NEW-NAME] [--shown true|false] [--human-only true|false] (to list them: omnillm hub models)")))
 		}
 		a, err := modelSetArgs(splitTarget(args[2:]))
 		if err != nil {
@@ -1420,7 +1437,11 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 			if err := h.RemoveProvider(ctx, p.Name); err != nil {
 				return hubSay(l, err)
 			}
-			return c.Send(control.Reply{Event: "ok", Text: fmt.Sprintf(tl(l, "已移除“%s”，它的模型不再能用。", "Removed “%s”; its models can’t be used any more."), sourceNameIn(l, p))})
+			text := fmt.Sprintf(tl(l, "已移除“%s”，它的模型不再能用。", "Removed “%s”; its models can’t be used any more."), sourceNameIn(l, p))
+			if p.KeyLast4 != "" {
+				text += tl(l, "保存的 API Key 也删了；只想停用的话，下次用 omnillm hub provider off 名字。", " Its saved API key is deleted too; to only stop using a source, use omnillm hub provider off NAME next time.")
+			}
+			return c.Send(control.Reply{Event: "ok", Text: text})
 		case "provider.off":
 			ps, err := h.Providers(ctx)
 			if err != nil {
@@ -1736,13 +1757,15 @@ func connectCmd(args []string) {
 		if err := parseFlagsRest(fs, args[1:]); err != nil {
 			dieArgs(err)
 		}
-		for _, w := range fs.Args() {
-			if f := strings.TrimLeft(strings.SplitN(w, "=", 2)[0], "-"); strings.HasPrefix(w, "-") && (f == "model" || f == "image") {
-				dieArgs(usageErr(t("--model 和 --image 要写在问题前面。", "Put --model and --image before the question.")))
+		if !slices.Contains(args[1:], "--") {
+			for _, w := range fs.Args() {
+				if f := strings.TrimLeft(strings.SplitN(w, "=", 2)[0], "-"); strings.HasPrefix(w, "-") && (f == "model" || f == "image") {
+					dieArgs(usageErr(t("--model 和 --image 要写在问题前面。", "Put --model and --image before the question.")))
+				}
 			}
 		}
 		if fs.NArg() == 0 && len(imagePaths) == 0 {
-			dieArgs(usageErr(t("请写出要问的问题。", "Write the question to ask.")))
+			dieArgs(usageErr(t("用法：omnillm connect ask [--model ID] [--image 图片文件] \"问题\"（不读标准输入）", "Usage: omnillm connect ask [--model ID] [--image FILE] \"question\" (standard input isn't read)")))
 		}
 		var images []omnillm.Image
 		for _, p := range imagePaths {
@@ -1897,4 +1920,10 @@ func envOr(k, def string) string {
 		return v
 	}
 	return def
+}
+
+// appUsage is the forms of omnillm hub app.
+func appUsage() string {
+	return t("用法：omnillm hub app add 名字 | set 名字 [--name N] [--paused true|false] [--budget-usd X | --no-limit] | rm 名字（列出应用：omnillm hub apps）",
+		"Usage: omnillm hub app add NAME | set NAME [--name N] [--paused true|false] [--budget-usd X | --no-limit] | rm NAME (to list them: omnillm hub apps)")
 }

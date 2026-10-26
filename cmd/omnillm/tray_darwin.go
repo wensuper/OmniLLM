@@ -204,7 +204,7 @@ func trayReady() {
 		sources.SetTitle(sourcesLine(st))
 		devices.Show()
 		sources.Show()
-		if !st.RelayConfigured || st.RelayUp {
+		if (!st.RelayConfigured || st.RelayUp) && !st.RegionPaused {
 			systray.SetTemplateIcon(trayUp, trayUp)
 		} else {
 			systray.SetTemplateIcon(trayDown, trayDown)

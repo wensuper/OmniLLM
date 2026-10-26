@@ -36,7 +36,7 @@ const T = {
     addImage: "添加图片", voice: "语音输入", voiceStop: "停止语音输入", listening: "正在听，说完再点一下……", voiceFirst: "语音由浏览器识别：Chrome 交给 Google，Safari 交给 Apple。识别出的文字只填进输入框，你确认后再发。", voiceDenied: "没有麦克风权限。在浏览器的网站设置里允许麦克风，再点一次。", voiceNoMic: "没找到麦克风。", voiceNoSpeech: "没听到声音，再说一次试试。", voiceNetwork: "语音识别要联网，现在连不上。", voiceFailed: "语音输入没能开始，再试一次。", removeImage: "移除图片", tooManyImages: "每条消息最多 4 张图片。", imageFailed: "这张图片打不开，换一张试试。", imageTooBig: "图片太大，换一张小一点的。", imageTitle: "图片",
     offline: "你的 Mac 现在连不上，可能在睡眠、关机或断网。恢复后会自动连上。", retry: "重试",
     noNetwork: "这台设备没有联网，联网后会自动连上。", kept: "刚才输入的还在。", loadingModels: "正在连接你的 Mac……",
-    noModels: "这台设备现在没有能用的模型。在 Mac 的控制台里接入模型，或在“设备”里给它开放模型。", noModelsOpt: "没有可用的模型", probLogin: "要在 Mac 上登录", probLimit: "到上限，{0} 恢复", probLoginNote: "{0}在你的 Mac 上没有登录，现在发不出去。在 Mac 上运行 omnillm login {1}，或点控制台里 {2} 卡片上的按钮，登录后就能用。", probLimitNote: "{0}的用量到上限了，{1} 恢复。可以先换一个模型。", probLimitNoTime: "到上限了", probLimitNoteNoTime: "{0}的用量到上限了。可以先换一个模型。", subClaude: "Claude 订阅", subChatGPT: "ChatGPT 订阅", subGemini: "Gemini 订阅",
+    noModels: "这台设备现在没有能用的模型。在 Mac 的控制台里接入模型，或在“设备”里给它开放模型。", noModelsOpt: "没有可用的模型", probLogin: "要在 Mac 上登录", probLimit: "到上限，{0} 恢复", probLoginNote: "你的 Mac 上 {0}的登录已失效，现在发不出去。在 Mac 的终端里运行 omnillm login {1}，或在控制台里点“登录”，然后再试。", langPending: "先发出或移除已添加的图片，再切换语言。", scanFailed: "扫码工具没能载入。用下面的“粘贴配对文字”，或刷新后再试。", addHomeTipAndroid: "点浏览器右上角的 ⋮，选“添加到主屏幕”或“安装应用”。", probLimitNote: "{0}的用量到上限了，{1} 恢复。可以先换一个模型。", probLimitNoTime: "到上限了", probLimitNoteNoTime: "{0}的用量到上限了。可以先换一个模型。", subClaude: "Claude 订阅", subChatGPT: "ChatGPT 订阅", subGemini: "Gemini 订阅",
     modelGone: "原来的模型已从你的 Mac 上移除，换成了 {0}",
     grpSub: "订阅（不另花钱）", grpKey: "API Key", grpLocal: "你的 Mac 上", latest: "（最新版）", codex: "ChatGPT（Codex · 最新版）", codexV: "ChatGPT（Codex · {0}）",
     forget: "移除这台设备", forgetQ: "这里的对话会删除。以后要用，在 Mac 上重新添加。", removing: "正在移除……",
@@ -81,7 +81,7 @@ const T = {
     addImage: "Add image", voice: "Voice input", voiceStop: "Stop voice input", listening: "Listening… tap again when you’re done", voiceFirst: "Your browser turns speech into text: Chrome uses Google, Safari uses Apple. The words only fill the box; you send them.", voiceDenied: "No microphone permission. Allow the microphone in the browser’s site settings, then try again.", voiceNoMic: "No microphone found.", voiceNoSpeech: "Didn’t hear anything. Try again.", voiceNetwork: "Voice input needs the internet, which isn’t reachable right now.", voiceFailed: "Voice input couldn’t start. Try again.", removeImage: "Remove image", tooManyImages: "Up to 4 images per message.", imageFailed: "This image can’t be opened; try another one.", imageTooBig: "Image too large; try a smaller one.", imageTitle: "Image",
     offline: "Your Mac can’t be reached right now. It may be asleep, off or offline, and will reconnect when it’s back.", retry: "Retry",
     noNetwork: "This device is offline; it reconnects when the network is back.", kept: "What you typed is kept.", loadingModels: "Connecting to your Mac…",
-    noModels: "No models are available to this device. On your Mac, connect a model or allow this device more models under Devices.", noModelsOpt: "No models", probLogin: "Sign in on your Mac", probLimit: "At its limit until {0}", probLoginNote: "{0} is signed out on your Mac, so messages to it won’t go through. On your Mac, run omnillm login {1}, or use the button on the {2} card in the console; it works once you’re signed in.", probLimitNote: "{0} has reached its usage limit until {1}. Pick another model for now.", probLimitNoTime: "At its limit", probLimitNoteNoTime: "{0} has reached its usage limit. Pick another model for now.", subClaude: "Claude subscription", subChatGPT: "ChatGPT subscription", subGemini: "Google AI subscription",
+    noModels: "No models are available to this device. On your Mac, connect a model or allow this device more models under Devices.", noModelsOpt: "No models", probLogin: "Sign in on your Mac", probLimit: "At its limit until {0}", probLoginNote: "{0}’s sign-in has expired on your Mac, so messages to it won’t go through. In a terminal on your Mac, run omnillm login {1}, or choose “Sign in” in the console, then try again.", langPending: "Send or remove the added images first, then switch language.", scanFailed: "The scanner couldn’t load. Use “Paste the pairing text” below, or reload and try again.", addHomeTipAndroid: "Tap the browser’s ⋮ menu and choose “Add to Home screen” or “Install app”.", probLimitNote: "{0} has reached its usage limit until {1}. Pick another model for now.", probLimitNoTime: "At its limit", probLimitNoteNoTime: "{0} has reached its usage limit. Pick another model for now.", subClaude: "Your Claude subscription", subChatGPT: "Your ChatGPT subscription", subGemini: "Your Google AI subscription",
     modelGone: "The previous model was removed from your Mac; switched to {0}",
     grpSub: "Subscriptions (no extra cost)", grpKey: "API key", grpLocal: "On your Mac", latest: " (latest)", codex: "ChatGPT (Codex · latest)", codexV: "ChatGPT (Codex · {0})",
     forget: "Remove this device", forgetQ: "Chats here will be deleted. To use this device later, add it on your Mac again.", removing: "Removing…",
@@ -286,7 +286,7 @@ function deviceName() {
 const tabs = "BroadcastChannel" in window ? new BroadcastChannel("omnillm") : null;
 function claimTab() { if (tabs) tabs.postMessage("here"); }
 function takeOver() {
-  try { sessionStorage.setItem("omnillm.draft", $("input").value); } catch {}
+  saveForReload();
   location.reload();
 }
 if (tabs) tabs.onmessage = (e) => {
@@ -352,10 +352,17 @@ function watchUpdates() {
 }
 // S.relang: the Mac now speaks another language; the page reloads in it the
 // same way.
+// saveForReload keeps what a reload would lose: the draft and which chat
+// was open.
+function saveForReload() {
+  try { sessionStorage.setItem("omnillm.draft", $("input").value); sessionStorage.setItem("omnillm.cur", S.cur ? S.cur.id : ""); } catch {}
+}
 function reloadIfIdle() {
   // A quiet tab stays quiet: reloading would take over from the tab in use.
+  // Nor under someone's fingers: the reload after the next reply catches up.
   if (!(UP.ready || S.relang) || S.quiet || S.busy || (S.pending && S.pending.length)) return;
-  try { sessionStorage.setItem("omnillm.draft", $("input").value); } catch {}
+  if (document.activeElement === $("input") && $("input").value.trim()) return;
+  saveForReload();
   location.reload();
 }
 
@@ -593,7 +600,7 @@ async function connectPair(text) {
     S.cur = newChat(); S.hello = S.cur.id;
     setTimeout(openChat, 600);
   } catch (e) {
-    const dropped = S.sasUp && e && e.code === "hub_offline";
+    const dropped = e && e.code === "hub_offline" && !relayIsPlain(text);
     sasShown(false); $("pair-stop").hidden = true;
     $("pair-status").textContent = "";
     if (S.leftOld && S.device === old) {
@@ -631,7 +638,7 @@ function loadJsQR() {
 }
 async function startScan() {
   $("welcome-err").textContent = "";
-  await loadJsQR().catch(() => {});
+  if (!(await loadJsQR().then(() => true, () => false))) { $("welcome-err").textContent = t("scanFailed"); $("paste").open = true; return; }
   try {
     camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
   } catch { $("welcome-err").textContent = t("camDenied"); $("paste").open = true; return; }
@@ -665,7 +672,11 @@ async function openChat() {
   $("device-line").textContent = t("deviceLine", S.device.name);
   $("install-tip").hidden = isStandalone || MOUSE_ONLY;
   setSide(localStorageGet("side") === "off");
-  if (!S.cur) S.cur = S.chats[0] || newChat();
+  if (!S.cur) {
+    let cid = null;
+    try { cid = sessionStorage.getItem("omnillm.cur"); sessionStorage.removeItem("omnillm.cur"); } catch {}
+    S.cur = S.chats.find((c) => c.id === cid) || S.chats[0] || newChat();
+  }
   try { const d = sessionStorage.getItem("omnillm.draft"); if (d) { $("input").value = d; sessionStorage.removeItem("omnillm.draft"); grow(); } } catch {}
   renderList(); renderLog(); sendState();
   await keptModels();
@@ -1141,7 +1152,7 @@ function bubble(m, isLast, who) {
   }
   if (m.note) {
     // Stopped or cut short is a quiet line; anything else went wrong (red).
-    const quietNote = m.note === t("stopped") || m.note === t("cut");
+    const quietNote = [T.zh.stopped, T.en.stopped, T.zh.cut, T.en.cut].includes(m.note);
     b.append(quoted(el("p", undefined, "note" + (quietNote ? " quiet" : "")), m.note.replace(/^[（(]|[）)]$/g, "")));
   }
   if (m.role === "assistant" && m.content && !m.live && !isLast) {
@@ -1693,9 +1704,9 @@ function paintLang() {
 // A language chosen here is kept on this device only; the page reloads in
 // it (what was typed stays).
 document.querySelectorAll("#lang-list [data-lang]").forEach((b) => b.addEventListener("click", () => {
-  if (S.busy) return toastText(t("waitReply"));
+  if (S.busy || (S.pending && S.pending.length)) return toastText(t(S.busy ? "waitReply" : "langPending"));
   localStorageSet("lang", b.dataset.lang);
-  try { sessionStorage.setItem("omnillm.draft", $("input").value); } catch {}
+  saveForReload();
   location.reload();
 }));
 $("keys-btn").addEventListener("click", () => { macMenu(false); showKeys(); });
@@ -1792,7 +1803,7 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
     if (document.querySelector(".row-menu")) {
       e.preventDefault();
-      const opener = document.querySelector('[aria-expanded="true"]');
+      const m = document.querySelector(".row-menu"), opener = m && m.parentElement.querySelector('[aria-expanded="true"]');
       closeRowMenu();
       if (opener) opener.focus();
       return;
@@ -1834,7 +1845,7 @@ $("chat-search").placeholder = t("searchChats"); $("chat-search").setAttribute("
 $("chat-search").addEventListener("input", () => { if (S.cur) renderList(); });
 $("drawer-close").setAttribute("aria-label", t("close")); $("drawer-close").title = t("close");
 $("drawer-close").addEventListener("click", closeDrawer);
-$("install-tip").addEventListener("click", () => { macMenu(false); ask(t("addHomeTip"), t("gotIt")); });
+$("install-tip").addEventListener("click", () => { macMenu(false); ask(t(/Android/.test(navigator.userAgent) ? "addHomeTipAndroid" : "addHomeTip"), t("gotIt")); });
 // Remove this device: on the Mac too (so it leaves the device list), then
 // here. If the Mac can't be reached it is still removed here, and the
 // welcome screen says to remove it on the Mac as well.

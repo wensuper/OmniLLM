@@ -286,7 +286,14 @@ func withDot(a, b string) string {
 // language ("Claude 订阅", "Claude subscription").
 func findProvider(l string, ps []hub.ProviderInfo, q string) (hub.ProviderInfo, error) {
 	return findNamed(l, ps, q, func(p hub.ProviderInfo) (string, []string) {
-		return p.Name, []string{sourceNameIn("zh", p), sourceNameIn("en", p)}
+		names := []string{sourceNameIn("zh", p), sourceNameIn("en", p)}
+		switch p.Kind {
+		case provider.ClaudeCode:
+			names = append(names, "claude") // as in omnillm login claude
+		case provider.Codex:
+			names = append(names, "chatgpt")
+		}
+		return p.Name, names
 	},
 		tl(l, "没有叫“%s”的模型来源。运行 omnillm hub providers 查看。", "No model source is called “%s”. Run omnillm hub providers to see them."),
 		tl(l, "有几个模型来源都叫“%s”。请用 ID：%s", "Several model sources are called “%s”. Use the ID: %s"))

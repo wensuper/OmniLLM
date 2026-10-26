@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"slices"
 	"strings"
 
 	omnillm "github.com/wensuper/OmniLLM"
@@ -77,6 +79,9 @@ func pickModel(ms []omnillm.ModelInfo, person bool) string {
 			return m.ID
 		}
 	}
+	if len(ms) == 0 {
+		die(say(omnillm.ForHub(lang(), deviceHubOS, t("你的 Mac 上还没有可用的模型。", "Your Mac has no models yet."))))
+	}
 	if !person {
 		die(say(omnillm.ForHub(lang(), deviceHubOS, t("输出接到管道或文件、或从脚本运行时，只能用 API Key 或你的 Mac 上的模型；你的 Mac 上现在只有订阅模型，它们只能在终端里手动对话。",
 			"With output going to a pipe or file, or from a script, only models that use an API key or run on your Mac work; your Mac has only subscription models, which are for chatting in a terminal."))))
@@ -100,6 +105,8 @@ func chatLoop(ctx context.Context, d *device.Device, model string) {
 	}
 	if model == "" {
 		model = pickModel(ms, atTerminal())
+	} else if !slices.ContainsFunc(ms, func(m omnillm.ModelInfo) bool { return m.ID == model }) {
+		die(say(t("没有这个模型。运行 omnillm connect models 查看。", "No such model. Run omnillm connect models to see them.")))
 	}
 	name := func(id string) string {
 		for _, m := range ms {
@@ -131,7 +138,7 @@ func chatLoop(ctx context.Context, d *device.Device, model string) {
 			msgs, pending = nil, nil
 			fmt.Fprintln(os.Stderr, t("已重新开始。", "Started over."))
 			continue
-		case strings.HasPrefix(line, "/image"):
+		case line == "/image" || strings.HasPrefix(line, "/image "):
 			path := strings.TrimSpace(strings.TrimPrefix(line, "/image"))
 			if path == "" {
 				fmt.Fprintln(os.Stderr, t("用法：/image 文件", "Usage: /image FILE"))
@@ -169,7 +176,7 @@ func chatLoop(ctx context.Context, d *device.Device, model string) {
 				}
 			}
 			if found == "" {
-				fmt.Fprintln(os.Stderr, t("没有这个模型。", "No such model."))
+				fmt.Fprintln(os.Stderr, t("没有这个模型。输入 /model 看列表。", "No such model. Type /model to see the list."))
 				continue
 			}
 			model = found
@@ -245,6 +252,12 @@ func chatOnce(ctx context.Context, d *device.Device, model string, msgs []omnill
 // to 2 MB; the hub checks it again).
 func readImage(path string) (omnillm.Image, error) {
 	path = strings.Trim(path, "'\"")
+	path = strings.ReplaceAll(path, "\\ ", " ") // a dragged-in path: "My\ Pic.png"
+	if strings.HasPrefix(path, "~/") {
+		if h, err := os.UserHomeDir(); err == nil {
+			path = filepath.Join(h, path[2:])
+		}
+	}
 	st, err := os.Stat(path)
 	if err != nil {
 		return omnillm.Image{}, sayf(t("读不了图片文件 %s。", "Can’t read the image file %s."), path)

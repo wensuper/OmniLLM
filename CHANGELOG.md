@@ -26,6 +26,10 @@ All notable changes to OmniLLM are documented here. OmniLLM is in early pre-rele
 - Command line: `omnillm uninstall -h` and `install -h` show help instead of acting, and a mistyped option stops; hub commands say "OmniLLM isn't running" in your language when it isn't; a mistyped command shows its reason and where the full list is; `connect ask` warns when `--model` comes after the question; Ctrl-C before the first word just stops.
 - Command line: `hub provider add` checks the kind (subscriptions go through `omnillm login`) and that OmniLLM runs before asking for the key; `hub app add` shows the address with the token; `hub models` marks switched-off sources; `status --json` exits 1 when OmniLLM isn't running; uninstall on a device points to `connect forget`.
 
+- Console: a signed-out subscription's card offers Sign in without claiming it is connected; "Connect a model" from the dashboard returns to the dashboard and doesn't offer an Ollama that's already connected; switching language in the wizard keeps what you typed; a first load during an update retries; the menu bar no longer says "Online" while models are paused for a region change.
+- Phone page: a reload (language, new version) returns to the chat you had open; it doesn't reload while you're typing or with images attached; pairing with an unreachable computer says to scan a new code; Android gets its own Add-to-Home-Screen steps.
+- Command line: subscriptions can be named `claude` and `chatgpt`, and `hub providers` shows IDs; removing a source with a key says the key is deleted; `openai-compatible` asks for its name and address before the key; hub commands on a device or without OmniLLM installed say so; `/image` understands `~/` and dragged-in paths; a wrong `--model` is caught at once; `status` checks its options and reports a device's pairing.
+
 ### Security
 
 - A device's message that starts with "/" after any kind of leading space (Unicode spaces, zero-width characters) is still only a message.

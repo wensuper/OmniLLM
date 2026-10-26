@@ -24,7 +24,7 @@ const T = {
     w1Codex: "我有 ChatGPT 订阅",
     w1Agy: "我有 Google AI 订阅（Gemini）", subPlanAgy: "用你的 Google 账号登录；Google AI Pro、Ultra 订阅的额度更多。",
     subSignedOutAgy: "{1} 已经装好。还要给 OmniLLM 单独登录一次（你自己用的不受影响）。",
-    subOn: "已接入", subOnBody: "可以用了。",
+    subOn: "已接入", subOnBody: "可以用了。", subLoginLost: "{1} 的登录失效了，重新登录就能接着用。",
     subDesktop: "发现 {0}。同一个订阅也能给手机用：再装上官方命令行版 {1}（安装不收费，约 1 分钟），用同一个账号登录就好。{2}",
     subNone: "在{here}上装好官方的 {1}（安装不收费，约 1 分钟），用你的订阅账号登录。{2}",
     subPlanClaude: "需要 Claude Pro 或 Max 订阅。", subPlanCodex: "需要 ChatGPT Plus、Pro 等付费订阅。",
@@ -148,7 +148,7 @@ const T = {
     w1Codex: "I have a ChatGPT subscription",
     w1Agy: "I have a Google AI subscription (Gemini)", subPlanAgy: "Sign in with your Google account; Google AI Pro and Ultra plans get more usage.",
     subSignedOutAgy: "{1} is installed. Sign in once more, for OmniLLM only (the one you use yourself isn’t affected).",
-    subOn: "Connected", subOnBody: "Ready to use.",
+    subOn: "Connected", subOnBody: "Ready to use.", subLoginLost: "{1} is signed out; sign in again to keep using it.",
     subDesktop: "Found {0}. The same subscription can serve your phone too: add {1}, the official command-line program (no charge to install, about a minute), and sign in with the same account. {2}",
     subNone: "Install {1}, the official program, on {here} (no charge to install, about a minute) and sign in with your subscription account. {2}",
     subPlanClaude: "Needs a Claude Pro or Max plan.", subPlanCodex: "Needs a paid ChatGPT plan such as Plus or Pro.",
@@ -333,7 +333,8 @@ function applyLang() {
   document.querySelectorAll("[data-tip]").forEach((n) => { n.title = t(n.dataset.tip); });
   document.querySelectorAll("[data-aria]").forEach((n) => { n.setAttribute("aria-label", t(n.dataset.aria)); });
   $("lang").textContent = lang === "zh" ? "English" : "中文";
-  $("try-text").value = t("tryText");
+  const tt = $("try-text"); // only while it is still the default
+  if (!tt.value || tt.value === T.zh.tryText || tt.value === T.en.tryText) tt.value = t("tryText");
 }
 
 function applyTheme(v) {
@@ -571,7 +572,7 @@ async function renderSubs() {
   for (const x of subs) {
     const k = SUB[x.kind];
     if (!k) continue;
-    if (x.connected && subsWaiting[x.kind]) { newly.push(sourceName(x.kind) || k.app); delete subsWaiting[x.kind]; }
+    if (x.connected && !x.signed_out && subsWaiting[x.kind]) { newly.push(sourceName(x.kind) || k.app); delete subsWaiting[x.kind]; }
     box.append(subCard(x, k));
   }
   if (newly.length) toast(t("subConnected", newly.join(lang === "zh" ? "、" : ", ")));
@@ -588,14 +589,14 @@ function subCard(x, k) {
   const card = el("div", undefined, "choice sub-card");
   const head = el("div", undefined, "sub-head");
   head.append(el("h2", t(k.title)));
-  if (x.connected) head.append(el("span", t("subOn"), "tag ok-tag"));
+  // Connected but signed out (the Models tab says so): the card offers the sign-in.
+  const signedOut = !!x.signed_out;
+  if (x.connected && !signedOut) head.append(el("span", t("subOn"), "tag ok-tag"));
   card.append(head);
   const fill = (key) => t(key, desktopName(x.desktop || k.app), k.program, t(k.plan));
-  // Connected but signed out (the Models tab says so): the card offers the sign-in.
-  const signedOut = S && (S.providers || []).some((p) => p.kind === x.kind && p.problem === "login");
   if (x.connected && !signedOut) { delete subsWaiting[x.kind]; card.append(el("p", t("subOnBody"), "muted")); return card; }
   let text, btn = null, act = null;
-  if (signedOut) { text = fill("subSignedOut"); btn = t("subSignIn"); act = "login"; }
+  if (signedOut) { text = fill("subLoginLost"); btn = t("subSignIn"); act = "login"; }
   else if (x.logged_in && x.removed) { text = fill("subRemoved"); btn = t("subReconnect"); act = "connect"; }
   else if (x.logged_in && x.problem) { text = x.problem; btn = t("recheck"); act = "connect"; }
   else if (x.logged_in) { card.append(el("p", fill("subPending"), "muted")); return card; }
@@ -653,13 +654,14 @@ async function showWizard() {
   const h = $("w1").querySelector("h1");
   h.dataset.t = fromDash ? "addProvider" : "w1Title"; // kept through a language switch
   h.textContent = t(h.dataset.t);
-  if (S.providers.length === 0 || fromDash) renderSubs();
-  if (S.providers.length === 0) {
+  if (S.providers.length === 0 || fromDash) {
+    renderSubs();
     stepTo(1);
     try {
       const o = await api("ollama");
       const chat = (o.models || []).filter((m) => !/embed|bge|nomic|minilm|e5-/i.test(m));
-      $("ollama-box").hidden = !(o.available && chat.length);
+      // Offered only while it isn't a source yet.
+      $("ollama-box").hidden = !(o.available && chat.length) || S.providers.some((p) => p.kind === "ollama");
       $("ollama-models").textContent = chat.join(", ");
     } catch (_) { /* no local model */ }
   } else if (S.devices.length === 0 && !store("omnillm.skipPair")) {
@@ -724,12 +726,12 @@ $("recheck").addEventListener("click", async (ev) => {
     const kinds = r.connected || [], all = r.failed || [];
     // Notes (an Ollama without a chat model) are said, never in red, and
     // not at all when a model on this Mac is already connected.
-    const haveLocal = (fromDash && localBefore) || S.providers.some((p) => p.local && !p.off);
+    const haveLocal = S.providers.some((p) => p.local && !p.off);
     const failed = all.filter((f) => !f.note), notes = haveLocal ? [] : all.filter((f) => f.note);
     const name = (k) => sourceName(k) || k;
     const lines = [];
     if (kinds.length) lines.push(t("connectedNames", kinds.map(name).join(lang === "zh" ? "、" : ", ")));
-    else if (!failed.length && !notes.length) lines.push(S.providers.length || (fromDash && sourcesBefore) ? t("recheckNoMore") : t("recheckNone"));
+    else if (!failed.length && !notes.length) lines.push(S.providers.length ? t("recheckNoMore") : t("recheckNone"));
     for (const f of failed) lines.push(t("srcFailed", name(f.kind), f.message));
     for (const f of notes) lines.push(f.message);
     toast(lines.join(lang === "zh" ? "" : " "), failed.length > 0);
@@ -2090,12 +2092,7 @@ function afterPair(id) {
 }
 // The wizard's first step shows while S.providers is empty; how many are
 // really connected is kept for "Check again".
-let sourcesBefore = 0, localBefore = false;
-$("add-provider").addEventListener("click", () => {
-  store("omnillm.wizard", ""); fromDash = true; sourcesBefore = S.providers.length;
-  localBefore = S.providers.some((p) => p.local && !p.off);
-  S.providers = []; showWizard();
-});
+$("add-provider").addEventListener("click", () => { fromDash = true; showWizard(); });
 $("wiz-back").addEventListener("click", async () => { fromDash = false; store("omnillm.wizard", "done"); try { await refresh(); } catch (e) { toast(e.message, true); } });
 // "Add app": a name field in place, then the app's token, shown this once
 // with its Copy button.
@@ -2140,6 +2137,7 @@ appForm.addEventListener("submit", async (ev) => {
 function useLang(l) {
   lang = l; store("omnillm.lang", lang); applyLang();
   if (S) { renderStatus(); if (!$("dash").hidden) showDash(); }
+  if (S && !$("wizard").hidden) { if (!$("w1").hidden) renderSubs(); if (!$("w3").hidden) fillModels(); }
   if (pairRedraw) pairRedraw();
 }
 // followLang takes the hub's choice when it differs from the page's; true
@@ -2190,7 +2188,11 @@ async function boot() {
     history.replaceState(null, "", "/console/");
     try { const r = await api("login", { token: m[1] }); sessionSecret(r.session); } catch (e) { show("login-needed"); return; }
   }
-  try { await refresh(); } catch (e) { if (e.status === 401) show("login-needed"); else toast(e.message, true); return; }
+  try { await refresh(); } catch (e) {
+    if (e.status === 401) show("login-needed");
+    else { toast(e.message, true); setTimeout(boot, 3000); } // restarting (an update): try again
+    return;
+  }
   if (wantAdd && !$("dash").hidden) {
     document.querySelector('.tabs button[data-tab="devices"]').click();
     $("add-device").click();

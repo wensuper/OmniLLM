@@ -738,9 +738,18 @@ func orEmpty(xs []string) []string {
 // says whether the page may offer to open the login for the owner.
 func (s *Server) subs(w http.ResponseWriter, r *http.Request) {
 	out := []map[string]any{}
+	// A connected one whose sign-in expired: its card offers the sign-in.
+	signedOut := map[string]bool{}
+	if ps, err := s.hub.Providers(r.Context()); err == nil {
+		for _, p := range ps {
+			if p.Problem == "login" {
+				signedOut[string(p.Kind)] = true
+			}
+		}
+	}
 	for _, st := range s.hub.SubscriptionStates(r.Context()) {
 		m := map[string]any{"kind": st.Kind, "installed": st.Installed, "logged_in": st.LoggedIn, "connected": st.Connected,
-			"desktop": st.Desktop, "elsewhere": st.Elsewhere, "removed": st.Removed}
+			"desktop": st.Desktop, "elsewhere": st.Elsewhere, "removed": st.Removed, "signed_out": st.Connected && signedOut[string(st.Kind)]}
 		if st.Problem != nil {
 			m["problem"] = omnillm.Describe(lang(r), st.Problem)
 		}

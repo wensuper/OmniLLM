@@ -1365,13 +1365,27 @@ func loginURL() (string, error) {
 }
 
 func statusCmd(args []string) {
+	fs := flag.NewFlagSet("status", flag.ContinueOnError)
+	jsonOut := fs.Bool("json", false, "")
+	if err := parseFlags(fs, args); err != nil {
+		dieArgs(err)
+	}
+	if *jsonOut {
+		args = []string{"--json"}
+	} else {
+		args = nil
+	}
 	if role() == "device" {
-		st := Status{Next: runnable(deviceNext())}
+		paired := device.Paired(context.Background(), secrets(dataDir("device"), "omnillm-device"))
+		st := Status{Next: runnable(deviceNext()), Running: paired}
 		u := readUpdate(dataDir("device"))
 		st.Update = plain(u.newer(version))
-		if len(args) > 0 && args[0] == "--json" {
+		if *jsonOut {
 			b, _ := json.Marshal(st)
 			fmt.Println(string(b))
+			if !paired {
+				os.Exit(1)
+			}
 			return
 		}
 		fmt.Println(st.Next)

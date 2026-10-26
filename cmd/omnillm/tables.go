@@ -165,7 +165,7 @@ func providersTable(data []byte, now time.Time) (string, error) {
 	if len(ps) == 0 {
 		return t("还没有模型来源。运行 omnillm open，在“模型”里接入。", "No model sources yet. Run omnillm open and connect one under “Models”."), nil
 	}
-	out := [][]string{{t("来源", "Source"), t("接入方式", "Connected with"), t("状态", "Status")}}
+	out := [][]string{{t("来源", "Source"), t("接入方式", "Connected with"), t("状态", "Status"), "ID"}}
 	for _, p := range ps {
 		how := "—"
 		switch {
@@ -177,7 +177,7 @@ func providersTable(data []byte, now time.Time) (string, error) {
 			how = onMachine(t("只在 %s 上", "%s only"))
 			how = upperFirst(how) // "This Mac only"
 		}
-		out = append(out, []string{sourceNameIn(lang(), p), how, problemText(p, now)})
+		out = append(out, []string{sourceNameIn(lang(), p), how, problemText(p, now), p.Name})
 	}
 	return table(out), nil
 }
@@ -402,7 +402,7 @@ func table(rows [][]string) string {
 func width(s string) int {
 	n := 0
 	for _, r := range s {
-		if unicode.Is(unicode.Han, r) || (r >= 0x3000 && r <= 0x303f) || (r >= 0xff00 && r <= 0xff60) {
+		if unicode.In(r, unicode.Han, unicode.Hiragana, unicode.Katakana, unicode.Hangul) || (r >= 0x3000 && r <= 0x303f) || (r >= 0xff00 && r <= 0xff60) || r >= 0x1f300 {
 			n += 2
 		} else {
 			n++
