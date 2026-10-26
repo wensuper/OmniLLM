@@ -39,7 +39,7 @@ const T = {
     w1Key: "我有 API Key",
     w1Free: "想免费：安装 Ollama，用{here}上的模型。",
     recheck: "重新检查", recheckNone: "还没发现已登录的订阅，也没发现{here}上的模型。", recheckNoMore: "没有发现别的已登录订阅或{here}上的模型。", connectedNames: "已接入 {0}。",
-    srcClaude: "Claude 订阅", srcCodex: "ChatGPT 订阅（Codex）", srcOllama: "Ollama（{here}）", srcFailed: "{0}：{1}",
+    srcClaude: "Claude 订阅", srcCodex: "ChatGPT 订阅（Codex）", srcOllama: "Ollama（{here}）", srcLocal: "{here}上的模型（{0}）", srcFailed: "{0}：{1}",
     ollamaFound: "发现了{here}上的本地模型（Ollama）",
     ollamaUse: "使用{here}上的模型",
     source: "来源", otherCompatible: "其他 OpenAI 兼容服务",
@@ -161,7 +161,7 @@ const T = {
     w1Key: "I have an API key",
     w1Free: "Want it free? Install Ollama to use models on {here}.",
     recheck: "Check again", recheckNone: "No signed-in subscription or model on {here} found yet.", recheckNoMore: "No other signed-in subscription or model on {here} found.", connectedNames: "Connected {0}.",
-    srcClaude: "Claude subscription", srcCodex: "ChatGPT subscription (Codex)", srcOllama: "Ollama ({here})", srcFailed: "{0}: {1}",
+    srcClaude: "Claude subscription", srcCodex: "ChatGPT subscription (Codex)", srcOllama: "Ollama ({here})", srcLocal: "Model on {here} ({0})", srcFailed: "{0}: {1}",
     ollamaFound: "A local model (Ollama) is running on {here}",
     ollamaUse: "Use models on {here}",
     source: "Source", otherCompatible: "Other OpenAI-compatible service",
@@ -289,7 +289,10 @@ const composing = (e) => e.isComposing || e.keyCode === 229;
 function noImeSubmit(form) { form.addEventListener("keydown", (e) => { if (e.key === "Enter" && composing(e)) e.preventDefault(); }); }
 // sourceName: a model source as people call it ("Claude subscription"),
 // from its kind; null when it has no fixed name.
-const sourceName = (kind) => kind === "claude-code" ? t("srcClaude") : kind === "codex" ? t("srcCodex") : kind === "ollama" ? t("srcOllama") : null;
+// Only the Ollama app itself is "Ollama"; another server on this Mac
+// (llama.cpp, LM Studio) added under its own name goes by that name.
+const sourceName = (kind, name) => kind === "claude-code" ? t("srcClaude") : kind === "codex" ? t("srcCodex")
+  : kind === "ollama" ? (name && name !== "ollama" ? t("srcLocal", name) : t("srcOllama")) : null;
 
 // rich sets text where `backticked` parts are commands, shown in code style.
 // Still text only: the parts become text nodes and <code> elements.
@@ -703,8 +706,10 @@ $("recheck").addEventListener("click", async (ev) => {
   try {
     const r = await api("providers/detect", {});
     const kinds = r.connected || [], all = r.failed || [];
-    // Notes (an Ollama without a chat model) are said, never in red.
-    const failed = all.filter((f) => !f.note), notes = all.filter((f) => f.note);
+    // Notes (an Ollama without a chat model) are said, never in red, and
+    // not at all when a model on this Mac is already connected.
+    const haveLocal = (fromDash && localBefore) || S.providers.some((p) => p.local && !p.off);
+    const failed = all.filter((f) => !f.note), notes = haveLocal ? [] : all.filter((f) => f.note);
     const name = (k) => sourceName(k) || k;
     const lines = [];
     if (kinds.length) lines.push(t("connectedNames", kinds.map(name).join(lang === "zh" ? "、" : ", ")));
@@ -1890,7 +1895,7 @@ function renderModels() {
     const tr = el("tr", undefined, p.off ? "paused" : "");
     // Sources by the names people know them by; "(this Mac)" is in
     // Ollama's own name.
-    const own = sourceName(p.kind), label = own || p.display_name || p.name;
+    const own = sourceName(p.kind, p.name), label = own || p.display_name || p.name;
     const how = p.subscription ? t("subLogin") : p.key_last4 ? t("key") + " …" + p.key_last4 : t("local");
     // On a phone-width window the row stacks: the name, then how it is
     // connected; Remove on the right.
@@ -2070,8 +2075,12 @@ function afterPair(id) {
 }
 // The wizard's first step shows while S.providers is empty; how many are
 // really connected is kept for "Check again".
-let sourcesBefore = 0;
-$("add-provider").addEventListener("click", () => { store("omnillm.wizard", ""); fromDash = true; sourcesBefore = S.providers.length; S.providers = []; showWizard(); });
+let sourcesBefore = 0, localBefore = false;
+$("add-provider").addEventListener("click", () => {
+  store("omnillm.wizard", ""); fromDash = true; sourcesBefore = S.providers.length;
+  localBefore = S.providers.some((p) => p.local && !p.off);
+  S.providers = []; showWizard();
+});
 $("wiz-back").addEventListener("click", async () => { fromDash = false; store("omnillm.wizard", "done"); try { await refresh(); } catch (e) { toast(e.message, true); } });
 // "Add app": a name field in place, then the app's token, shown this once
 // with its Copy button.

@@ -224,6 +224,12 @@ func sourceLabelIn(l string, k provider.Kind, name string) string {
 	case provider.Codex:
 		return tl(l, "ChatGPT 订阅（Codex）", "ChatGPT subscription (Codex)")
 	case provider.Ollama:
+		// Only the Ollama app itself is "Ollama"; another server on this
+		// machine (llama.cpp, LM Studio) added with its own name is a
+		// model on this machine, by that name.
+		if name != "" && name != "ollama" {
+			return onMachineIn(l, tl(l, "%s 上的模型", "Model on %s")) + tl(l, "（"+name+"）", " ("+name+")")
+		}
 		return onMachineIn(l, tl(l, "Ollama（%s）", "Ollama (%s)"))
 	}
 	return name
