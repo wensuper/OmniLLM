@@ -29,6 +29,7 @@
 - 命令行：没有服务管理时，更新也能换掉旧版本起的主机，换不上会直说；`hub provider add ollama` 的地址可以不写 `/v1`；对话中途模型被关掉会换一个能用的；本机或局域网的 openai-compatible 服务在要 Key 之前就说清不支持的原因。
 - 命令行：`hub provider add ollama --base-url http://localhost:11434` 能用了（以前只试 localhost 的第一个地址）；本机 http 的 openai-compatible 服务在要 Key 前就会拒绝；Ollama 地址用不了时说明原因；设备上的 `omnillm help` 列出设备的命令。
 - 手机网页：有新版本时不会在配对过程中重载页面；电脑不再应答时说“连不上”，不再说“出了点问题”。
+- 命令行：`omnillm help` 列出 `omnillm login gemini`。
 - 命令行：来源的名字和地址在要 Key 之前就检查；地址没人应答时提示检查地址（不再说“稍后再试”）；远程连接关着时配对会直说；只用 `connect pair` 配对过的电脑也算设备。
 - 手机网页：开着两个标签页时，重载后正在用的那页不会再存不了对话；切回一个标签页时保留在那里打的字。
 - 控制台：Ollama 一个模型都没有时，“重新检查”也会说该 pull 哪个，提示停留得够读完。

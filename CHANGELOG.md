@@ -42,6 +42,7 @@ All notable changes to OmniLLM are documented here. OmniLLM is in early pre-rele
 - Command line: `hub provider add ollama --base-url http://localhost:11434` works (it tried only the first of localhost's addresses); a local openai-compatible server over http is refused before the key; an Ollama address that can't be used says why; `omnillm help` on a device lists the device's commands.
 - Phone page: a new version no longer reloads the page in the middle of pairing; a computer that stops answering reads as "can't be reached", not "something went wrong".
 
+- Command line: `omnillm help` lists `omnillm login gemini`.
 - Command line: a source's name and address are checked before the key is asked for; an address where nothing answers says to check it (not "try again later"); pairing with remote access switched off says so; a computer paired with `connect pair` alone counts as a device.
 - Phone page: with two tabs open, a reload no longer leaves the tab you use unable to save; switching back to a tab keeps what you typed there.
 - Console: *Check again* with an Ollama that has no models at all says what to pull, and the note stays long enough to read.
