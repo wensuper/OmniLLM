@@ -48,7 +48,7 @@ const T = {
     expLinkTitle: "这个链接过期或用过了", expLinkSub: "在电脑的“添加设备”里点“换一个链接”，复制新链接再粘贴。",
     failTitle: "没能添加这台设备", scanNew: "扫描新的二维码", pasteNew: "粘贴新的链接",
     thisPhone: "这台手机", thisTablet: "这台平板", thisComputer: "这台电脑", yourComputer: "你的电脑",
-    pairDropped: "连接断了。在电脑上换一个二维码再扫（控制台点“换一个二维码”，终端里重新运行 omnillm pair）。", connectedMac: "已连上你的 Mac",
+    pairDropped: "连接断了。在电脑上换一个二维码再扫（控制台点“换一个二维码”，终端里重新运行 omnillm pair）。", pairDroppedLink: "连接断了。在你电脑控制台的“添加设备”里点“换一个链接”，复制新链接再粘贴到这里。", connectedMac: "已连上你的 Mac",
     notCode: "这不是 OmniLLM 的配对二维码或配对文字。请从电脑上“添加设备”里重新复制。", needTLS: "你的 Mac 的远程连接只能在它自己的网络里用，手机网页连不上。在 Mac 的终端里用 wss:// 地址重新安装（OMNILLM_RELAY=wss://… omnillm install；不设就用默认的），再换一个新的二维码扫。",
     chats: "对话", newChat: "新对话", placeholder: "输入消息", stop: "停止", send: "发送", menu: "菜单", model: "模型",
     addImage: "添加图片", voice: "语音输入", voiceStop: "停止语音输入", listening: "正在听，说完再点一下……", voiceFirst: "语音由浏览器识别：Chrome 交给 Google，Safari 交给 Apple。识别出的文字只填进输入框，你确认后再发。", voiceDenied: "没有麦克风权限。在浏览器的网站设置里允许麦克风，再点一次。", voiceNoMic: "没找到麦克风。", voiceNoSpeech: "没听到声音，再说一次试试。", voiceNetwork: "语音识别要联网，现在连不上。", voiceFailed: "语音输入没能开始，再试一次。", removeImage: "移除图片", tooManyImages: "每条消息最多 4 张图片。", imageFailed: "这张图片打不开，换一张试试。", imageTooBig: "图片太大，换一张小一点的。", imageTitle: "图片",
@@ -111,7 +111,7 @@ const T = {
     expLinkTitle: "This link expired or was already used", expLinkSub: "In “Add device” on your computer, choose “New link”, then copy it and paste it here.",
     failTitle: "Couldn’t add this device", scanNew: "Scan the new QR code", pasteNew: "Paste a new link",
     thisPhone: "This phone", thisTablet: "This tablet", thisComputer: "This computer", yourComputer: "Your computer",
-    pairDropped: "The connection dropped. Get a new QR code on your computer (“New QR code” in the console, or run omnillm pair again) and scan it.", connectedMac: "Connected to your Mac",
+    pairDropped: "The connection dropped. Get a new QR code on your computer (“New QR code” in the console, or run omnillm pair again) and scan it.", pairDroppedLink: "The connection dropped. In “Add device” in your computer’s console, choose “New link”, then copy it and paste it here.", connectedMac: "Connected to your Mac",
     notCode: "This is not an OmniLLM pairing QR code or pairing text. Copy it again from “Add device” on your computer.", needTLS: "Your Mac’s remote access only works on its own network, so a phone browser can’t use it. On your Mac, install again with a wss:// address (OMNILLM_RELAY=wss://… omnillm install, or leave it unset for the default), then scan a new QR code.",
     chats: "Chats", newChat: "New chat", placeholder: "Message", stop: "Stop", send: "Send", menu: "Menu", model: "Model",
     addImage: "Add image", voice: "Voice input", voiceStop: "Stop voice input", listening: "Listening… tap again when you’re done", voiceFirst: "Your browser turns speech into text: Chrome uses Google, Safari uses Apple. The words only fill the box; you send them.", voiceDenied: "No microphone permission. Allow the microphone in the browser’s site settings, then try again.", voiceNoMic: "No microphone found.", voiceNoSpeech: "Didn’t hear anything. Try again.", voiceNetwork: "Voice input needs the internet, which isn’t reachable right now.", voiceFailed: "Voice input couldn’t start. Try again.", removeImage: "Remove image", tooManyImages: "Up to 4 images per message.", imageFailed: "This image can’t be opened; try another one.", imageTooBig: "Image too large; try a smaller one.", imageTitle: "Image",
@@ -356,7 +356,13 @@ function deviceName() {
 const tabs = "BroadcastChannel" in window ? new BroadcastChannel("omnillm") : null;
 function claimTab() { if (tabs) tabs.postMessage("here"); }
 function takeOver() {
-  if (S.volatile) return; // a reload would lose the pairing here
+  if (S.volatile) {
+    // A reload would lose the pairing here; this tab still holds it (and
+    // its chats) in memory, so it simply becomes the one in use again.
+    S.quiet = false; takingOver = false; claimTab();
+    if (S.device && !S.online && !S.dialing) connect();
+    return;
+  }
   saveForReload();
   location.reload();
 }
@@ -468,7 +474,6 @@ $("boot-retry").addEventListener("click", cleanReload);
     if (off) addEventListener("online", () => location.reload(), { once: true }); // back online: load again
     return;
   }
-  S.ready = true;
   boot("bootStorage"); bootWatch();
   if (S.pendingLink) { link = S.pendingLink; S.pendingLink = ""; }
   // A link that arrived while loading may have changed the address without
@@ -499,6 +504,9 @@ $("boot-retry").addEventListener("click", cleanReload);
   // Can this browser keep a pairing? Known before pairing, not after.
   if (!S.device) { try { await wrapKey(); } catch (e) { console.warn(e); bootFailed(t("bootStorageFailed")); return; } }
   B.done = true; clearTimeout(B.timer);
+  // Ready only now: a link arriving while the pairing was read waits here.
+  S.ready = true;
+  if (!link && S.pendingLink) { link = S.pendingLink; S.pendingLink = ""; }
   if (S.device && !link) return openChat();
   if (link) return S.device ? pair(link, true) : arrive(link);
   welcome(gateView() || "start");
@@ -518,11 +526,17 @@ addEventListener("hashchange", () => {
 // ---------- before pairing: the place first ----------
 // gateView is the screen that comes before pairing here, or "" to pair in
 // place. Not knowing is not a reason to stop anyone.
+// Each gate passed stays passed; one passed doesn't skip the others (the
+// Home Screen one leads on to "can't keep the pairing" in a private tab).
+// The in-app one already says the page can't keep it.
 function gateView() {
-  if (isStandalone || S.device || S.gatePassed) return "";
-  if (IN_APP) return "inapp";
-  if (IOS_HOME) return "home";
-  if (S.volatile) return "vol";
+  const p = S.passed || (S.passed = passedBefore());
+  if (isStandalone || S.device) return "";
+  if (IN_APP && !p.has("inapp")) return "inapp";
+  // The in-app screen also stands for the Home Screen one ("can't find it"
+  // leads there): passed, it is the person's choice to stay.
+  if (IOS_HOME && !p.has("home") && !p.has("inapp")) return "home";
+  if (S.volatile && !p.has("vol") && !p.has("inapp")) return "vol";
   return "";
 }
 // arrive takes a pairing link opened here (a scan, a click). Before a gate
@@ -534,9 +548,17 @@ function arrive(link) {
   S.heldLink = link;
   welcome(v);
 }
+// passedBefore is the gates passed before a language switch reloaded the page.
+function passedBefore() {
+  try { const v = sessionStorage.getItem("omnillm.passed"); sessionStorage.removeItem("omnillm.passed"); const set = new Set(v ? v.split(",") : []); if (set.has("vol") || set.has("inapp")) S.volatileSaid = true; return set; } catch { return new Set(); } // (the warning was said before the reload)
+}
 // "Use it here": the person chose this place after all.
 function passGate() {
-  S.gatePassed = true;
+  const v = $("welcome").dataset.view;
+  gateView(); S.passed.add(v);
+  if (v === "vol" || v === "inapp") S.volatileSaid = true; // just said before pairing: not again after
+  const next = gateView();
+  if (next) return welcome(next); // the link keeps waiting
   if (IN_APP) history.replaceState(null, "", location.pathname + location.search); // pairing here now: the link leaves the address
   const l = S.heldLink;
   S.heldLink = "";
@@ -558,6 +580,7 @@ document.querySelectorAll("[data-setlang]").forEach((b) => {
     if (b.dataset.setlang === lang) return;
     localStorageSet("lang", b.dataset.setlang);
     if (S.heldLink) history.replaceState(null, "", location.pathname + location.search + "#pair=" + S.heldLink);
+    try { if (S.passed && S.passed.size) sessionStorage.setItem("omnillm.passed", [...S.passed].join()); } catch {}
     S.reloading = true;
     location.reload();
   });
@@ -704,9 +727,10 @@ function hostRow(text) {
 async function pair(text, fromLink) {
   if (S.pairing) return;
   const m = text.match(/omnillm[123]-[A-Za-z0-9_-]+/);
+  if (IN_APP && location.hash) history.replaceState(null, "", location.pathname + location.search); // even a broken one: not again on every reload
+  if (!m && S.device) { toastText(t("notCode")); return S.cur ? show("chat") : openChat(); } // still paired: stay in (or open) the chats
   if (!m) { welcome("start"); if (!COMPUTER) openPaste(); $("welcome-err").textContent = t("notCode"); return; }
   text = m[0];
-  if (IN_APP && location.hash) history.replaceState(null, "", location.pathname + location.search);
   $("paste-text").value = "";
   S.pairing = true;
   welcomeNote("");
@@ -735,7 +759,7 @@ function pairFailed(e, text) {
   const used = e && (e.code === "pairing_expired" || e.code === "pairing_failed");
   const dropped = e && e.code === "hub_offline" && !relayIsPlain(text);
   if (used) pairScreen("bad", t(COMPUTER ? "expLinkTitle" : "expScanTitle"), t(COMPUTER ? "expLinkSub" : "expScanSub"));
-  else pairScreen("bad", t("failTitle"), dropped ? t("pairDropped") : errText(e, text));
+  else pairScreen("bad", t("failTitle"), dropped ? t(COMPUTER ? "pairDroppedLink" : "pairDropped") : errText(e, text));
   // Still paired with another computer: back to it.
   if (S.device) { $("pair-retry").hidden = false; return; }
   $("pair-again").hidden = false;
@@ -866,7 +890,8 @@ function stopScan(keep) {
 }
 // ---------- chat ----------
 async function openChat() {
-  if (S.volatile && !S.volatileSaid) { S.volatileSaid = true; setTimeout(() => { const n = el("p", t("volatile"), "note warn-note"); $("log").prepend(n); setTimeout(() => n.remove(), 15000); }, 500); }
+  // Said once, until it is read (a note in the log was wiped by redraws).
+  if (S.volatile && !S.volatileSaid) { S.volatileSaid = true; setTimeout(() => ask(t("volatile"), t("gotIt")), 500); }
   show("chat");
   $("input").placeholder = t("placeholder");
   $("device-line").textContent = t("deviceLine", S.device.name);
