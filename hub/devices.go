@@ -720,9 +720,16 @@ func (h *Hub) modelsFor(ctx context.Context, d Device) ([]omnillm.ModelInfo, err
 	}
 	h.freshLogins()
 	ms = h.forDevices(ctx, ms)
+	// Something to choose between: Auto first. Not when the owner took
+	// every model out of Auto (it would only ever fail).
 	if len(ms) >= 2 {
-		// Something to choose between: Auto first.
-		ms = append([]omnillm.ModelInfo{autoInfo()}, ms...)
+		prefs := h.modelPrefs(ctx)
+		for _, m := range ms {
+			if !prefs[m.ID].NoAuto {
+				ms = append([]omnillm.ModelInfo{autoInfo()}, ms...)
+				break
+			}
+		}
 	}
 	return ms, nil
 }

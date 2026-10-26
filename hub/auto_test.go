@@ -299,3 +299,77 @@ func TestAutoUsesTheOwnersName(t *testing.T) {
 		t.Fatalf("%q %q %v", label, text, err)
 	}
 }
+
+// Every model out of Auto: Auto isn't offered (it could only fail).
+func TestAutoNotListedWhenAllAreOut(t *testing.T) {
+	h, _, _ := autoHub(t)
+	ctx := context.Background()
+	for _, id := range []string{"anth/claude-haiku-4", "anth/claude-sonnet-5", "anth/claude-opus-5", "oai/gpt-6-sol"} {
+		_ = h.SetModelAuto(ctx, id, false)
+	}
+	ms, _ := h.modelsFor(ctx, Device{ID: "d"})
+	if len(ms) != 4 || ms[0].ID == AutoModel {
+		t.Fatalf("%+v", ms)
+	}
+	_ = h.SetModelAuto(ctx, "oai/gpt-6-sol", true)
+	if ms, _ := h.modelsFor(ctx, Device{ID: "d"}); ms[0].ID != AutoModel {
+		t.Fatalf("one model back in Auto: %+v", ms)
+	}
+}
+
+// A program asking Auto where only people's models are: told why.
+func TestAutoForAProgramWithPeoplesModelsOnly(t *testing.T) {
+	h, _, _ := autoHub(t)
+	ctx := context.Background()
+	yes := true
+	for _, id := range []string{"anth/claude-haiku-4", "anth/claude-sonnet-5", "anth/claude-opus-5", "oai/gpt-6-sol"} {
+		if err := h.SetModel(ctx, id, ModelUpdate{HumanOnly: &yes}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	_, err := h.Complete(ctx, omnillm.Request{Model: AutoModel, Caller: omnillm.Background, Messages: []omnillm.Message{user("hi")}})
+	if omnillm.AsError(err).Msg != omnillm.MsgHumanOnly {
+		t.Fatalf("%v", err)
+	}
+}
+
+// namingStream names its model itself, as the subscription programs do.
+type namingStream struct{ i int }
+
+func (n *namingStream) Recv() (omnillm.Chunk, error) {
+	n.i++
+	switch n.i {
+	case 1:
+		return omnillm.Chunk{Model: "Claude Haiku 4.5"}, nil
+	case 2:
+		return omnillm.Chunk{Text: "hi", Model: "Claude Haiku 4.5"}, nil
+	}
+	return omnillm.Chunk{}, io.EOF
+}
+func (n *namingStream) Usage() omnillm.Usage { return omnillm.Usage{} }
+func (n *namingStream) FinishReason() string { return "stop" }
+func (n *namingStream) Close() error         { return nil }
+
+// One name per model that answers: the model's own naming doesn't come
+// through as a second one (it would read as another model taking over,
+// and would overwrite the owner's name).
+func TestAutoNamesEachModelOnce(t *testing.T) {
+	h, _, _ := autoHub(t)
+	a := &autoStream{h: h, req: omnillm.Request{Messages: []omnillm.Message{user("hi")}},
+		cands: []autoCand{{info: omnillm.ModelInfo{ID: "x/y", DisplayName: "Work Claude", Renamed: true}}}, s: &namingStream{}, tried: 1}
+	var names []string
+	var text string
+	for {
+		ch, err := a.Recv()
+		if ch.Model != "" {
+			names = append(names, ch.Model)
+		}
+		text += ch.Text
+		if err != nil {
+			break
+		}
+	}
+	if len(names) != 1 || names[0] != "Work Claude" || text != "hi" {
+		t.Fatalf("%v %q", names, text)
+	}
+}

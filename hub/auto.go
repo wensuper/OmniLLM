@@ -357,6 +357,15 @@ func (h *Hub) completeAuto(ctx context.Context, p principal, req omnillm.Request
 		return nil, err
 	}
 	if len(cands) == 0 {
+		// Only people's models are there and a program asked: say that,
+		// not "signed out" (picking one by hand would fail the same way).
+		if req.Caller != omnillm.Interactive {
+			r := req
+			r.Caller = omnillm.Interactive
+			if people, err := h.autoCandidates(ctx, p, r, tier, nil); err == nil && len(people) > 0 {
+				return nil, &omnillm.Error{Code: omnillm.CodeModelNotAllowed, Msg: omnillm.MsgHumanOnly}
+			}
+		}
 		return nil, &omnillm.Error{Code: omnillm.CodeModelNotAllowed, Msg: omnillm.MsgNoAutoModel}
 	}
 	a := &autoStream{h: h, p: p, req: req, cands: cands, tier: tier, key: key}
@@ -439,6 +448,13 @@ func (a *autoStream) Recv() (omnillm.Chunk, error) {
 			return omnillm.Chunk{Model: autoLabel(a.cands[a.i].info)}, nil
 		}
 		ch, err := a.s.Recv()
+		// One name per model that answers: the one sent above. A second
+		// name always means another model took over (the screens rely on
+		// it), and a name the owner gave stays.
+		ch.Model = ""
+		if ch.Text == "" && err == nil {
+			continue
+		}
 		if !a.started && err != nil && !errors.Is(err, io.EOF) && autoRetry(err) && a.tried < len(a.cands) && a.tried < autoAttempts {
 			// Failed before its first word: the next one takes over.
 			a.h.opts.Logf("hub: auto %s: %s passed over (%s)", a.tier, a.cands[a.i].info.ID, omnillm.AsError(err).Code)
