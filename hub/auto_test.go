@@ -113,10 +113,16 @@ func ask(t *testing.T, h *Hub, msgs ...omnillm.Message) (label, text string, err
 	}
 	defer s.Close()
 	var b strings.Builder
+	first := true
 	for {
 		ch, err := s.Recv()
-		if ch.Model != "" && label == "" {
-			label = ch.Model
+		// The chosen model is named before any words.
+		if first && err == nil && (ch.Model == "" || ch.Text != "") {
+			t.Errorf("first chunk %+v: no name alone", ch)
+		}
+		first = false
+		if ch.Model != "" {
+			label = ch.Model // a model that takes over is named again
 		}
 		b.WriteString(ch.Text)
 		if errors.Is(err, io.EOF) {

@@ -332,47 +332,11 @@ func (h *Hub) completeAuto(ctx context.Context, p principal, req omnillm.Request
 	if len(cands) == 0 {
 		return nil, &omnillm.Error{Code: omnillm.CodeModelNotAllowed, Msg: omnillm.MsgNoAutoModel}
 	}
-	var last error
-	for i, c := range cands {
-		if i == autoAttempts {
-			break
-		}
-		r := req
-		r.Model = c.info.ID
-		s, err := h.complete(ctx, p, r)
-		if err != nil {
-			last = err
-			if !autoRetry(err) {
-				return nil, err
-			}
-			continue
-		}
-		// Read up to the first words: a failure before them passes the
-		// message on to the next model.
-		var held []omnillm.Chunk
-		var serr error
-		for {
-			ch, err := s.Recv()
-			if err != nil {
-				serr = err
-				break
-			}
-			held = append(held, ch)
-			if ch.Text != "" {
-				break
-			}
-		}
-		if serr != nil && !errors.Is(serr, io.EOF) && autoRetry(serr) && i+1 < len(cands) && i+1 < autoAttempts {
-			s.Close()
-			last = serr
-			h.opts.Logf("hub: auto %s: %s passed over (%s)", tier, c.info.ID, omnillm.AsError(serr).Code)
-			continue
-		}
-		h.auto.keep(key, autoStick{model: c.info.ID, tier: tier, at: h.opts.Now()}, c.info.Provider)
-		h.opts.Logf("hub: auto %s → %s", tier, c.info.ID)
-		return &autoStream{Stream: s, held: append([]omnillm.Chunk{{Model: autoLabel(c.info)}}, held...), err: serr}, nil
+	a := &autoStream{h: h, p: p, req: req, cands: cands, tier: tier, key: key}
+	if err := a.next(ctx); err != nil {
+		return nil, err
 	}
-	return nil, last
+	return a, nil
 }
 
 // autoLabel is the chosen model's name for the reply ("Claude Sonnet 5.5",
@@ -387,24 +351,88 @@ func autoLabel(m omnillm.ModelInfo) string {
 	return m.DisplayName
 }
 
-// autoStream passes on what was read to choose, then the rest.
+// autoStream is Auto's reply. It says which model was chosen at once
+// (a Chunk with only Model, before any words, so a screen can name the
+// model that is thinking), and says it again if that model fails before
+// its first word and the next one takes over. Once words come, it is
+// that model's reply to the end.
 type autoStream struct {
-	omnillm.Stream
-	held []omnillm.Chunk
-	err  error // what ended the stream while choosing, after held
+	h     *Hub
+	p     principal
+	req   omnillm.Request
+	cands []autoCand
+	tier  autoTier
+	key   [32]byte
+
+	i       int // the candidate answering
+	tried   int
+	s       omnillm.Stream
+	told    bool // its name was passed on
+	started bool // its first words came
+	ctx     context.Context
+}
+
+// next starts the next candidate that takes the request; the last error
+// when none does.
+func (a *autoStream) next(ctx context.Context) error {
+	a.ctx = ctx
+	var last error
+	for a.tried < len(a.cands) && a.tried < autoAttempts {
+		c := a.cands[a.tried]
+		a.tried++
+		r := a.req
+		r.Model = c.info.ID
+		s, err := a.h.complete(ctx, a.p, r)
+		if err != nil {
+			last = err
+			if !autoRetry(err) {
+				return err
+			}
+			continue
+		}
+		a.i, a.s, a.told = a.tried-1, s, false
+		a.h.opts.Logf("hub: auto %s → %s", a.tier, c.info.ID)
+		return nil
+	}
+	if last == nil {
+		last = &omnillm.Error{Code: omnillm.CodeModelNotAllowed, Msg: omnillm.MsgNoAutoModel}
+	}
+	return last
 }
 
 func (a *autoStream) Recv() (omnillm.Chunk, error) {
-	if len(a.held) > 0 {
-		ch := a.held[0]
-		a.held = a.held[1:]
-		return ch, nil
+	for {
+		if !a.told {
+			a.told = true
+			return omnillm.Chunk{Model: autoLabel(a.cands[a.i].info)}, nil
+		}
+		ch, err := a.s.Recv()
+		if a.started {
+			return ch, err
+		}
+		if err != nil && !errors.Is(err, io.EOF) && autoRetry(err) && a.tried < len(a.cands) && a.tried < autoAttempts {
+			// Failed before its first word: the next one takes over.
+			a.h.opts.Logf("hub: auto %s: %s passed over (%s)", a.tier, a.cands[a.i].info.ID, omnillm.AsError(err).Code)
+			a.s.Close()
+			if nerr := a.next(a.ctx); nerr != nil {
+				return omnillm.Chunk{}, nerr
+			}
+			continue
+		}
+		if ch.Text != "" || err != nil {
+			a.started = true
+			if err == nil || errors.Is(err, io.EOF) {
+				c := a.cands[a.i].info
+				a.h.auto.keep(a.key, autoStick{model: c.ID, tier: a.tier, at: a.h.opts.Now()}, c.Provider)
+			}
+		}
+		return ch, err
 	}
-	if a.err != nil {
-		return omnillm.Chunk{}, a.err
-	}
-	return a.Stream.Recv()
 }
+
+func (a *autoStream) Usage() omnillm.Usage { return a.s.Usage() }
+func (a *autoStream) FinishReason() string { return a.s.FinishReason() }
+func (a *autoStream) Close() error         { return a.s.Close() }
 
 // SetModelAuto keeps a model in Auto's choices or out of them.
 func (h *Hub) SetModelAuto(ctx context.Context, id string, on bool) error {

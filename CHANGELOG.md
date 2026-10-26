@@ -4,6 +4,16 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.62](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.62) - 2026-10-26
+
+### Fixed
+
+- Auto no longer shows “Switched to Auto” on every new message: a reply counts as a switch only once your Mac has said which model it chose, and only when that model differs from the last one.
+
+### Changed
+
+- The thinking line says which model is thinking (“Claude Opus 5.5 is thinking”; “Auto is picking a model” for the moment before Auto has chosen). Auto names its choice as soon as it makes it, not with the first words, and names the new one if it has to pass a model over.
+
 ## [0.2.0-alpha.61](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.61) - 2026-10-26
 
 ### Added

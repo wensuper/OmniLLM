@@ -44,7 +44,7 @@ const T = {
     close: "关闭", deleteChat: "删除这个对话", rename: "重命名", renameChat: "重命名对话", chatMore: "更多操作", deleteChatQ: "删除对话“{0}”？", chatsLocal: "对话保存在这台设备上。用订阅模型（Claude、ChatGPT）时，你的 Mac 也会留一份，方便接着聊；一天没用，Mac 上的那份就会删除。", searchChats: "搜索对话", noMatch: "没有找到",
     addHome: "添加到主屏幕", addHomeTip: "点浏览器的“分享”按钮，选“添加到主屏幕”。第一次从主屏幕打开时，需要再扫一次码。",
     deviceLine: "这台设备：{0}", empty: "有什么可以帮你？", cut: "（回复太长被截断了。发“继续”让它接着写。）", stopped: "（已停止）",
-    today: "今天", copy: "复制", copied: "已复制", again: "重新回答", againWith: "用 {0} 再答一次", thinking: "正在思考",
+    today: "今天", copy: "复制", copied: "已复制", again: "重新回答", againWith: "用 {0} 再答一次", thinking: "正在思考", thinkingBy: "{0} 正在思考", autoPicking: "Auto 正在选模型",
     earlier: "之前的回答（{0}）", earlierOpen: "之前的回答（{0}）",
     yourMac: "你的 Mac", macOn: "在线", macOff: "连不上 · 醒来后自动恢复", macWait: "正在连接……", macPaused: "已暂停这台设备", macNoNet: "这台设备没有联网",
     language: "语言", langMac: "跟随你的 Mac", shortcuts: "键盘快捷键", hideSide: "收起侧栏", showSide: "展开侧栏", dropHere: "松开就能添加图片",
@@ -89,7 +89,7 @@ const T = {
     close: "Close", deleteChat: "Delete this chat", rename: "Rename", renameChat: "Rename chat", chatMore: "More", deleteChatQ: "Delete the chat “{0}”?", chatsLocal: "Chats are kept on this device. With subscription models (Claude, ChatGPT), your Mac also keeps a copy so it can continue the chat; it deletes that copy after a day without use.", searchChats: "Search chats", noMatch: "No matching chats",
     addHome: "Add to Home Screen", addHomeTip: "Tap the browser’s “Share” button and choose “Add to Home Screen”. The first time it’s opened from the Home Screen, you’ll scan the QR code once more.",
     deviceLine: "This device: {0}", empty: "How can I help?", cut: "(The reply was cut off. Send “continue” to have it go on.)", stopped: "(stopped)",
-    today: "Today", copy: "Copy", copied: "Copied", again: "Answer again", againWith: "Answer again with {0}", thinking: "Thinking",
+    today: "Today", copy: "Copy", copied: "Copied", again: "Answer again", againWith: "Answer again with {0}", thinking: "Thinking", thinkingBy: "{0} is thinking", autoPicking: "Auto is picking a model",
     earlier: "Earlier answer ({0})", earlierOpen: "Earlier answer ({0})",
     yourMac: "Your Mac", macOn: "Online", macOff: "Can’t reach it · back when it wakes", macWait: "Connecting…", macPaused: "Paused this device", macNoNet: "This device is offline",
     language: "Language", langMac: "Follow your Mac", shortcuts: "Keyboard shortcuts", hideSide: "Hide sidebar", showSide: "Show sidebar", dropHere: "Drop to add images",
@@ -1014,14 +1014,17 @@ function renderLog(keep) {
     if (m.prev) { log.append(earlier(m)); return; }
     let who = false;
     if (m.role === "assistant" && m.by) {
-      // Under Auto the model may change from one reply to the next: say so.
-      const key = m.model === "auto" ? m.by : m.model || m.by;
-      if (last && key !== last) {
-        const line = switchLine(t("switchedTo", m.by));
-        if (userEl && !(msgs[i - 1] && msgs[i - 1].prev)) userEl.before(line); else log.append(line);
+      // Under Auto the model may change from one reply to the next: say
+      // so, once the Mac has said which one (not while it is choosing).
+      const key = m.model === "auto" ? autoPicked(m) : m.model || m.by;
+      if (key) {
+        if (last && key !== last) {
+          const line = switchLine(t("switchedTo", m.by));
+          if (userEl && !(msgs[i - 1] && msgs[i - 1].prev)) userEl.before(line); else log.append(line);
+        }
+        who = !last;
+        last = key;
       }
-      who = !last;
-      last = key;
     }
     const isLast = i === msgs.length - 1;
     if (isLast) S.lastWho = who;
@@ -1237,6 +1240,19 @@ function holdBack(text) {
   const starts = mark[0] === "`" || mark.length > 1 || i === 0 || !/\w/.test(line[i - 1]);
   return opens && starts ? text.slice(0, at + i) + text.slice(at + i + mark.length) : text;
 }
+// autoPicked: the model Auto chose for a reply ("Claude Opus 5.5"), "" while
+// the Mac is still choosing. Replies kept before it was stored apart carry
+// it in their name ("Auto · Claude Opus 5.5").
+function autoPicked(m) {
+  if (m.picked) return m.picked;
+  return m.by && m.by.startsWith("Auto · ") ? m.by.slice(7) : "";
+}
+// thinkingWho: which model is thinking, as the reply will be signed; Auto
+// says it is choosing until the Mac names the model.
+function thinkingWho(m) {
+  if (m.model === "auto") { const p = autoPicked(m); return p ? t("thinkingBy", p) : t("autoPicking"); }
+  return m.by ? t("thinkingBy", m.by) : t("thinking");
+}
 function thinking(m) {
   const box = el("div", undefined, "thinking-box");
   const w = el("div", undefined, "thinking");
@@ -1245,7 +1261,7 @@ function thinking(m) {
   // Thinking from the moment it is sent: the Mac's receipt comes a round
   // trip later and is no step of the person's (a lost connection says so
   // in the banner and the reply's error, not here).
-  w.append(orb, el("span", t("thinking"), "think-text"));
+  w.append(orb, el("span", thinkingWho(m), "think-text"));
   const dots = el("span", undefined, "dots"); dots.setAttribute("aria-hidden", "true");
   dots.append(el("i"), el("i"), el("i"));
   w.append(dots);
@@ -1606,7 +1622,10 @@ async function run(chat, model, fresh, old) {
   try {
     const r = await omnillm.chat(id, model, JSON.stringify(msgs), (d, exact) => {
       // "Claude Opus 5.5", as the hub reports it; under Auto, the one it chose.
-      if (exact) { reply.by = model === "auto" ? "Auto · " + exact : exact; S.versionSeen = true; }
+      if (exact) {
+        if (model === "auto") { reply.picked = exact; reply.by = "Auto · " + exact; } else reply.by = exact;
+        S.versionSeen = true;
+      }
       reply.content += d || ""; if (!raf) raf = requestAnimationFrame(flush);
     });
     if (r.finish === "length") reply.note = t("cut");
