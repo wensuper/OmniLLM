@@ -1796,7 +1796,7 @@ async function run(chat, model, fresh, old) {
   const flush = () => {
     raf = 0;
     const stick = nearBottom();
-    const nb = bubble(reply, true); node.replaceWith(nb); node = nb;
+    const nb = bubble(reply, true, S.lastWho); node.replaceWith(nb); node = nb; // its head stays while it streams
     if (stick) toBottom(); else if (reply.content) $("jump").hidden = false;
   };
   // quiet: the error is said elsewhere (the banner, or the "model
@@ -1806,7 +1806,12 @@ async function run(chat, model, fresh, old) {
     const r = await omnillm.chat(id, model, JSON.stringify(msgs), (d, exact) => {
       // "Claude Opus 5.5", as the hub reports it; under Auto, the one it chose.
       if (exact) {
-        if (model === "auto") { reply.picked = exact; reply.by = "Auto · " + exact; } else reply.by = exact;
+        if (model === "auto" && exact !== reply.picked) {
+          // Auto has chosen (or another model took over): its head or the
+          // "Switched to" line goes in now, not when the reply is done.
+          reply.picked = exact; reply.by = "Auto · " + exact;
+          renderLog(true); node = log.querySelector(":scope > .msg.last");
+        } else if (model !== "auto") reply.by = exact;
         S.versionSeen = true;
       }
       reply.content += d || ""; if (!raf) raf = requestAnimationFrame(flush);

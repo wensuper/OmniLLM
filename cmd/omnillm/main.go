@@ -974,6 +974,9 @@ func hubCmd(args []string) {
 		}
 		call(sock, control.Request{Op: "daily_total.set", Args: map[string]string{"micro_usd": strconv.FormatInt(v, 10)}})
 	case "region":
+		if len(args) == 1 {
+			dieArgs(usageErr(t("用法：omnillm hub region confirm（地区变了、模型暂停时，确认是你本人换了地方）", "Usage: omnillm hub region confirm (after the region changed and models paused: confirm you moved)")))
+		}
 		if len(args) != 2 || args[1] != "confirm" {
 			dieArgs(badCommand(append([]string{"hub"}, args...)...))
 		}
@@ -1948,7 +1951,7 @@ func connectCmd(args []string) {
 		}
 		for _, m := range ms {
 			note := ""
-			if m.HumanOnly {
+			if m.HumanOnly || (m.ID == "auto" && !backgroundAuto(ms)) { // Auto then has only chat-only models
 				note = t("（只能手动对话）", " (chat only)")
 			}
 			fmt.Printf("%-28s %s%s\n", stripControls(m.ID), modelName(m), note)
@@ -2014,7 +2017,7 @@ func connectCmd(args []string) {
 			die(err)
 		}
 		defer s.Close()
-		said := false
+		said := ""
 		for {
 			c, err := s.Recv()
 			if errors.Is(err, io.EOF) {

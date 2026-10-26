@@ -12,6 +12,8 @@
 - 手机网页：不能保存配对的浏览器（无痕窗口）里再开一个标签页，原来那页回来时接着用，不再卡住。
 - 控制台：来源被关掉的订阅不再在“来源已关闭”下面写“可以用了”。
 - 命令行：`status` 和 `omnillm` 菜单列出 Gemini 订阅（`omnillm login gemini`）；只当设备用的电脑上 `omnillm connect` 和 `-h` 显示设备的命令；`hub region confirm` 先确认主机在运行；`hub pair` 不接受 `--budget-usd` 和 `--no-limit` 同时写，给 AI 助手的命令保留选项；`hub app add` 在本机接口没打开时直说；`hub provider off|on` 认 `google`、`agy`；终端里的模型名和 ID 去掉控制字符；帮助里 `login` 一行不再挤在一起。
+- 手机网页：回答出字时顶上的模型名不再消失；用 Auto 时，主机一说选了哪个模型就显示出来。
+- 命令行：Auto 换了模型时再说一次“(Auto · 模型)”；`omnillm hub region` 给出用法；从脚本运行 `connect models` 时，必要时把 Auto 标成只能手动对话。
 - 命令行：所有模型都只能手动对话时，Auto 不再是脚本、管道的默认，本机接口也不再只给程序一个 Auto；`connect chat`、`connect ask` 说出 Auto 选的模型；`omnillm connect -h`、`omnillm hub -h` 显示帮助；`hub models` 多一列“Auto 可选”，`hub model set` 支持 `--auto true|false`；远程连接关着时 `hub pair` 先说加不了设备；地区没变时 `hub region confirm` 说不用确认。
 - 安全：Gemini 订阅的 agy 设置只保留 `trustedWorkspaces`、`showTips`；设置和钩子写临时文件再改名，内容没变不写；删除对话时也删掉它的标题、锁和摘要记录，以前版本留下的顺带清掉。
 

@@ -101,11 +101,11 @@ func backgroundAuto(ms []omnillm.ModelInfo) bool {
 	return slices.ContainsFunc(ms, func(m omnillm.ModelInfo) bool { return m.ID != "auto" && !m.HumanOnly })
 }
 
-// autoSays prints, once per reply, which model Auto chose (on stderr, so a
-// pipe gets only the answer).
-func autoSays(model string, c omnillm.Chunk, said *bool) {
-	if model == "auto" && c.Model != "" && !*said {
-		*said = true
+// autoSays prints which model Auto chose (on stderr, so a pipe gets only
+// the answer), again when another one takes over before the first word.
+func autoSays(model string, c omnillm.Chunk, said *string) {
+	if model == "auto" && c.Model != "" && c.Model != *said {
+		*said = c.Model
 		fmt.Fprintf(os.Stderr, "(Auto · %s)\n", stripControls(c.Model))
 	}
 }
@@ -263,7 +263,7 @@ func chatOnce(ctx context.Context, d *device.Device, model string, msgs []omnill
 	}
 	defer s.Close()
 	var b strings.Builder
-	said := false
+	said := ""
 	for {
 		c, err := s.Recv()
 		if errors.Is(err, io.EOF) {
