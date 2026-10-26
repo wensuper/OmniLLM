@@ -4,6 +4,12 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.66](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.66) - 2026-10-26
+
+### Fixed
+
+- Phone page, in Chinese: the Home Screen steps for Safari name its button as Safari does (“共享”, not “分享”).
+
 ## [0.2.0-alpha.65](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.65) - 2026-10-26
 
 ### Changed
