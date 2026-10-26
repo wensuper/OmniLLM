@@ -314,7 +314,7 @@ func usageText(all bool) string {
                                      改应用的名字、开启或暂停、每天额度、能用的模型
   omnillm hub app rm <名字或ID>      移除应用，它的令牌立即失效
   omnillm hub model set <名字或ID> [--name 新名字] [--shown true|false] [--human-only true|false] [--auto true|false] [--price-in X --price-out Y]
-                                     改名（--name "" 恢复原名）、是否在设备上显示、只能手动对话、价格
+                                     改名（--name "" 恢复原名）、是否在设备上显示、只能手动对话、Auto 可选、价格
   omnillm hub daily-total <美元> | --no-limit
                                      {daily}
   omnillm hub region confirm         确认主机所在地区变化并恢复调用
@@ -359,7 +359,7 @@ func usageText(all bool) string {
                                      rename an app, pause or resume it, change its daily limit or models
   omnillm hub app rm <name-or-id>    remove an app; its token stops working at once
   omnillm hub model set <name-or-id> [--name new-name] [--shown true|false] [--human-only true|false] [--auto true|false] [--price-in X --price-out Y]
-                                     rename (--name "" restores the original), show on devices, chat only, prices
+                                     rename (--name "" restores the original), show on devices, chat only, in Auto, prices
   omnillm hub daily-total <usd> | --no-limit
                                      {daily}
   omnillm hub region confirm         accept the hub’s new region and resume calls
@@ -745,6 +745,10 @@ func hubCmd(args []string) {
 	if role() == "device" && (args[0] != "run" || os.Getenv("OMNILLM_DETACHED") != "1") {
 		die(say(runnable(deviceHubHint())))
 	}
+	// -h anywhere after the command is the help, never a name or a value.
+	if slices.ContainsFunc(args[1:], func(w string) bool { return w == "-h" || w == "-help" || w == "--help" }) {
+		dieArgs(errHelp)
+	}
 	dir := dataDir("hub")
 	sock := filepath.Join(dir, "control.sock")
 	switch args[0] {
@@ -882,6 +886,9 @@ func hubCmd(args []string) {
 		}
 		printTable(sock, req, render)
 	case "audit":
+		if len(args) > 1 {
+			dieArgs(usageErr(fmt.Sprintf(t("多了“%s”。", "Unexpected “%s”."), args[1])))
+		}
 		empty := "" // a script gets the JSON as it is ([] or null)
 		if term.IsTerminal(int(os.Stdout.Fd())) {
 			empty = t("今天还没有调用。", "No calls yet today.")

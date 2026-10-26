@@ -339,7 +339,7 @@ func removeAgyConversation(id string) {
 	}
 	// Its row in agy's summary index (the id is a checked UUID, so it can
 	// go into the statement as it is).
-	if sq, err := exec.LookPath("sqlite3"); err == nil {
+	if sq, ok := sqlite3(); ok {
 		db := filepath.Join(c, "conversation_summaries.db")
 		if _, err := os.Stat(db); err == nil {
 			_ = exec.Command(sq, db, "DELETE FROM conversation_summaries WHERE conversation_id = '"+id+"';").Run()
@@ -469,9 +469,9 @@ func sweepAgyOrphans(c string) {
 			}
 		}
 	}
-	sq, err := exec.LookPath("sqlite3")
+	sq, ok := sqlite3()
 	db := filepath.Join(c, "conversation_summaries.db")
-	if err != nil {
+	if !ok {
 		return
 	}
 	if _, err := os.Stat(db); err != nil {
@@ -486,4 +486,14 @@ func sweepAgyOrphans(c string) {
 		cond += " AND conversation_id NOT IN (" + strings.Join(keep, ",") + ")"
 	}
 	_ = exec.Command(sq, db, "DELETE FROM conversation_summaries WHERE "+cond+";").Run()
+}
+
+// sqlite3 is the sqlite3 program, as trusted as the CLIs themselves (owned
+// by root or this user, in folders only they can write).
+func sqlite3() (string, bool) {
+	p, err := exec.LookPath("sqlite3")
+	if err != nil || !TrustedCLI(p) {
+		return "", false
+	}
+	return p, true
 }

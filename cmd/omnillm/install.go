@@ -405,8 +405,8 @@ func nextStep(st Status) string {
 		return t("模型来源都关掉了，设备现在用不了任何模型。打开一个：omnillm hub provider on 名字（omnillm hub providers 里能看到）。",
 			"Every model source is switched off, so devices can’t use any model. Turn one on: omnillm hub provider on NAME (see omnillm hub providers).")
 	case !st.RelayConfigured:
-		return onMachine(t("已经可以在 %s 上用。要让其他设备连进来，需要先设置远程连接。",
-			"Ready on %s. To let other devices connect, set up remote access first."))
+		return onMachine(t("已经可以在 %s 上用。远程连接关着（OMNILLM_RELAY=off），其他设备连不进来；不带这个设置重新启动 OmniLLM 才能加设备。",
+			"Ready on %s. Remote access is off (OMNILLM_RELAY=off), so other devices can’t connect; start OmniLLM without that setting to add one."))
 	case !st.RelayUp:
 		return onMachine(t("远程连接断开，设备暂时连不上；OmniLLM 会自己重连。请检查 %s 的网络。",
 			"Remote access is down, so devices can’t connect now; OmniLLM keeps retrying. Check %s’s network."))
