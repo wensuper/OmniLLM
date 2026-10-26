@@ -14,12 +14,6 @@ All notable changes to OmniLLM are documented here. OmniLLM is in early pre-rele
 
 ### Fixed
 
-- A model server on this Mac other than the Ollama app (for example llama.cpp’s llama-server) that was added under its own name showed as “Ollama (this Mac)”. It now shows as “Model on this Mac (its name)” in the console and on the command line. *Check again* no longer mentions Ollama when a model on this Mac is already connected.
-
-## [0.2.0-alpha.57](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.57) - 2026-10-26
-
-### Fixed
-
 - Phone page: a hub that gives this device no models now says so, instead of an error shown as "can't connect".
 - Phone page: "can't reach your Mac" reads the same everywhere; a signed-out subscription is named and fixed the same way in the note and the error; a usage limit that resets on another day shows the day; stopping before the first word no longer shows a red error; loading failures say one sentence.
 - Console: the wizard's last step can always be finished; removing a model source says its models disappear everywhere and a saved API key is deleted; a connected subscription that is signed out shows Sign in on its card; a paused region or a mismatched phone page is spelled out on a narrow window too.
@@ -59,6 +53,12 @@ All notable changes to OmniLLM are documented here. OmniLLM is in early pre-rele
 - Model replies shown in a terminal have control characters removed, so a reply can't use escape sequences (to write the clipboard or fake a prompt).
 - `uninstall --purge` on a device deletes its pairing; a control socket that belongs to another user gets its own warning.
 - A device's message that starts with "/" after any kind of leading space (Unicode spaces, zero-width characters) is still only a message.
+
+## [0.2.0-alpha.57](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.57) - 2026-10-26
+
+### Fixed
+
+- Console: *Check again* showed a red error when Ollama had only a non-chat model (such as an embedding model), though nothing had failed. It is now a plain note: Ollama on this Mac has no chat model yet; to use it, run `ollama pull qwen3` in Terminal.
 
 ## [0.2.0-alpha.56](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.56) - 2026-10-25
 
