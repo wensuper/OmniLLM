@@ -364,6 +364,25 @@ func usageText(all bool) string {
   omnillm relay token                make a hub registration token and its hash
 `), "{daily}", daily, 1)
 	}
+	if role() == "device" {
+		return t(`用法（这台电脑只当设备用）：
+  omnillm connect chat               在终端里和另一台电脑上的模型对话
+  omnillm connect ask "问题"         问一句
+  omnillm connect models             能用哪些模型
+  omnillm connect run                给本机程序开一个本机接口
+  omnillm connect forget             删除这里的配对
+  omnillm update                     更新
+  omnillm help --all                 全部命令
+`, `Usage (this computer is set up as a device):
+  omnillm connect chat               chat in this terminal with the models on your other computer
+  omnillm connect ask "question"     one question
+  omnillm connect models             which models it can use
+  omnillm connect run                a local API for programs on this computer
+  omnillm connect forget             delete the pairing here
+  omnillm update                     update
+  omnillm help --all                 every command
+`)
+	}
 	return t(`用法：
   omnillm install                    一步装好：主机作为后台服务运行，打开控制台
   omnillm open                       打开本机控制台
@@ -746,8 +765,15 @@ func hubCmd(args []string) {
 			dieArgs(usageErr(t("用法：omnillm hub provider add <openai|anthropic|ollama|openai-compatible> [--name N] [--base-url U]",
 				"Usage: omnillm hub provider add <openai|anthropic|ollama|openai-compatible> [--name N] [--base-url U]")))
 		}
-		if kind == "openai-compatible" && *name != "" && *base != "" {
-			if err := (provider.Config{Kind: provider.OpenAICompatible, Name: *name, BaseURL: *base, NeedsKey: true}).Validate(); err != nil && strings.Contains(err.Error(), "not public") {
+		if kind == "openai-compatible" && *base != "" {
+			// The address alone (as https, with a fixed name): a server on
+			// this computer or its network is refused before any key.
+			probe := *base
+			if u, err := url.Parse(probe); err == nil && u.Scheme == "http" {
+				u.Scheme = "https"
+				probe = u.String()
+			}
+			if err := (provider.Config{Kind: provider.OpenAICompatible, Name: "x", BaseURL: probe, NeedsKey: true}).Validate(); err != nil && strings.Contains(err.Error(), "not public") {
 				dieArgs(say(runnable(t("openai-compatible 的来源必须在互联网上（https、公开地址）；这台电脑或局域网里的模型服务不支持。本机模型可以用 Ollama：omnillm hub provider add ollama。",
 					"openai-compatible sources must be on the internet (https, a public address); a model server on this computer or your network isn't supported. Ollama is: omnillm hub provider add ollama."))))
 			}
@@ -1311,11 +1337,17 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 			ms, err := h.AddProvider(ctx, cfg, req.Secret)
 			if err != nil {
 				// The key was just typed: check it, rather than "replace it".
+				if cfg.Kind == provider.Ollama && omnillm.AsError(err).Msg == omnillm.MsgBadSource {
+					if strings.Contains(omnillm.AsError(err).Detail, "this machine") {
+						return say(tl(l, "OmniLLM 只用这台电脑上的 Ollama（http://127.0.0.1:11434）；别的电脑上的 Ollama 不支持。", "OmniLLM only uses an Ollama on this computer (http://127.0.0.1:11434); an Ollama on another computer isn't supported."))
+					}
+					return say(tl(l, "地址以 http:// 开头，例如 http://127.0.0.1:11434。", "The address starts with http://, e.g. http://127.0.0.1:11434."))
+				}
 				if cfg.Kind == provider.Ollama && omnillm.AsError(err).Msg == omnillm.MsgUpstream && !nothingAnswers(err) {
 					return say(tl(l, "那个地址有东西应答，但不是 Ollama 的接口；地址要以 /v1 结尾（默认 http://127.0.0.1:11434/v1）。", "Something answers at "+cfg.BaseURL+", but not Ollama’s API; the address ends in /v1 (default http://127.0.0.1:11434/v1)."))
 				}
 				if cfg.Kind == provider.Ollama && omnillm.AsError(err).Msg == omnillm.MsgUpstream {
-					return say(onMachineIn(l, tl(l, "%s 上的 Ollama 没有在运行（"+cfg.BaseURL+" 没有应答）。先打开 Ollama，再运行一次这条命令。", "Ollama isn’t running on %s (nothing answers at "+cfg.BaseURL+"). Start Ollama, then run the command again.")))
+					return say(strings.Replace(onMachineIn(l, tl(l, "%s 上的 Ollama 没有在运行（URL 没有应答）。先打开 Ollama，再运行一次这条命令。", "Ollama isn’t running on %s (nothing answers at URL). Start Ollama, then run the command again.")), "URL", cfg.BaseURL, 1))
 				}
 				if omnillm.AsError(err).Msg == omnillm.MsgCredentialBad {
 					return say(tl(l, "这个 Key 用不了（可能输错了、已作废或余额不足）。到服务商网站核对后再运行一次。",
@@ -1412,7 +1444,14 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 			}
 			text := fmt.Sprintf(tl(l, "已更新“%s”。", "Updated “%s”."), d.Name)
 			if ms, err := h.OwnerModels(ctx); err == nil && usableModels(ms, d.Models, true, d.BackgroundOnly) == 0 {
-				text += tl(l, "它现在一个模型都用不了（给它的模型在设备上隐藏了，或来源已关闭）。", " It can't use any model now (the ones it may use are hidden from devices or switched off).")
+				switch {
+				case len(ms) == 0:
+					text += tl(l, "还没有接入任何模型。", " No model is connected yet.")
+				case d.BackgroundOnly && usableModels(ms, d.Models, true, false) > 0:
+					text += tl(l, "它只做后台调用，而这些模型只能手动对话。", " It runs in the background only, and these models are chat-only.")
+				default:
+					text += tl(l, "它现在一个模型都用不了（给它的模型在设备上隐藏了，或来源已关闭）。", " It can't use any model now (the ones it may use are hidden from devices or switched off).")
+				}
 			}
 			return c.Send(control.Reply{Event: "ok", Text: text})
 		case "revoke":
@@ -1757,6 +1796,9 @@ func connectCmd(args []string) {
 		listen := fs.String("listen", "127.0.0.1:8766", "")
 		if err := parseFlags(fs, args[1:]); err != nil {
 			dieArgs(err)
+		}
+		if !validAPI(*listen) || *listen == "off" {
+			dieArgs(usageErr(t("--listen 必须在这台电脑上（127.0.0.1:端口）。", "--listen must be on this computer (127.0.0.1:PORT).")))
 		}
 		d, err := device.Open(ctx, device.Options{Secrets: sec, Logf: func(f string, a ...any) { log.Printf(f, a...) }})
 		if err != nil {

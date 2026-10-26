@@ -335,7 +335,16 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	}
 	// A name of its own per session: a console tab opened later (the menu
 	// bar opens a new one each time) doesn't replace this tab's cookie.
-	http.SetCookie(w, &http.Cookie{Name: cookieName + "_" + sid[:8], Value: sid, Path: "/console", HttpOnly: true, SameSite: http.SameSiteStrictMode})
+	// Cookies of sessions that are gone (other tabs, earlier days) go now,
+	// so they don't pile up on 127.0.0.1.
+	s.mu.Lock()
+	for _, c := range r.Cookies() {
+		if _, live := s.sessions[c.Value]; sessionCookie(c.Name) && !live {
+			http.SetCookie(w, &http.Cookie{Name: c.Name, Value: "", Path: "/console", MaxAge: -1, HttpOnly: true, SameSite: http.SameSiteStrictMode})
+		}
+	}
+	s.mu.Unlock()
+	http.SetCookie(w, &http.Cookie{Name: cookieName + "_" + sid[:8], Value: sid, Path: "/console", MaxAge: int(sessionMax / time.Second), HttpOnly: true, SameSite: http.SameSiteStrictMode})
 	writeJSON(w, map[string]string{"session": sec})
 }
 

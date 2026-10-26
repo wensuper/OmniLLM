@@ -218,7 +218,17 @@ func GuardedTransport() *http.Transport {
 		if len(ips) == 0 {
 			return nil, errors.New("provider: no address")
 		}
-		return d.DialContext(ctx, network, net.JoinHostPort(ips[0].IP.String(), port))
+		// Each checked address in turn ("localhost" is ::1 first on macOS;
+		// Ollama listens on 127.0.0.1 only).
+		var last error
+		for _, ip := range ips {
+			c, err := d.DialContext(ctx, network, net.JoinHostPort(ip.IP.String(), port))
+			if err == nil {
+				return c, nil
+			}
+			last = err
+		}
+		return nil, last
 	}
 	t.ResponseHeaderTimeout = 2 * time.Minute
 	t.MaxResponseHeaderBytes = 64 << 10

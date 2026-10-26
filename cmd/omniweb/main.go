@@ -77,6 +77,10 @@ func errValue(err error) js.Value {
 		l = "zh"
 	}
 	code, msg := "error", ""
+	// A wait that ran out (the Mac stopped answering): it can't be reached.
+	if errors.Is(err, context.DeadlineExceeded) {
+		err = omnillm.ErrHubOffline
+	}
 	var oe *omnillm.Error
 	if errors.As(err, &oe) {
 		code, msg = string(oe.Code), oe.Msg

@@ -186,7 +186,15 @@ function wrapKey() {
 // seal stores value encrypted. A write that started before unpaired()
 // (S.gen moved on meanwhile) is dropped, so a late save can't bring back
 // a pairing or chats that were just removed.
-async function seal(name, value) {
+// Saves of one name happen in order: a later snapshot never lands first.
+const sealQueue = {};
+function seal(name, value) {
+  const run = () => sealNow(name, value);
+  const p = (sealQueue[name] || Promise.resolve()).then(run, run);
+  sealQueue[name] = p.catch(() => {});
+  return p;
+}
+async function sealNow(name, value) {
   const gen = S.gen;
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv, additionalData: new TextEncoder().encode(name) }, await wrapKey(),
@@ -363,6 +371,10 @@ function reloadIfIdle() {
   // Nor under someone's fingers: the reload after the next reply catches up.
   if (!(UP.ready || S.relang) || S.quiet || S.busy || (S.pending && S.pending.length)) return;
   if (S.volatile) return; // a reload would lose the pairing here
+  // Not in the middle of pairing (scanning, the question, the digits, a
+  // pasted text): it runs once that is over.
+  const scr = [...document.querySelectorAll(".screen")].find((x) => !x.hidden);
+  if (S.pairing || (scr && (scr.id === "pairing" || scr.id === "scanner")) || $("paste-text").value.trim()) return;
   if (document.activeElement === $("input") && $("input").value.trim()) return;
   saveForReload();
   location.reload();
@@ -524,6 +536,7 @@ $("paste-go").addEventListener("click", () => {
 // Back from pairing: the chat (opened now when this start went straight
 // to a pairing link), else the welcome.
 function leavePairing() {
+  setTimeout(reloadIfIdle, 1500); // an update that waited for pairing
   if (!S.device) return show("welcome");
   if (S.cur) return show("chat");
   openChat();
@@ -570,7 +583,7 @@ async function pair(text, fromLink) {
       if (!go) { leavePairing(); return; }
     }
     await connectPair(text);
-  } finally { S.pairing = false; }
+  } finally { S.pairing = false; setTimeout(reloadIfIdle, 1500); } // an update that waited for this
 }
 
 // relayURL reads the relay address out of a pairing text (both formats:
@@ -1920,6 +1933,7 @@ function ask(text, yes, danger, cancel = !!danger) {
 async function unpaired(note) {
   if (S.quiet) return; // the tab in use handles it
   S.gen++; // saves already on their way are dropped (seal)
+  try { sessionStorage.removeItem("omnillm.draft"); sessionStorage.removeItem("omnillm.cur"); } catch {}
   if (askDone) askDone(false); // an open question is about a pairing that is gone
   S.device = null; S.chats = []; S.cur = null; S.models = []; S.listed = false; S.paused = null; S.hello = null;
   await idb.del("device"); await idb.del("chats"); await idb.del("models"); localStorageSet("hubos", "");
@@ -1931,7 +1945,8 @@ async function unpaired(note) {
 // Hidden while a reply comes in (a phone switching apps may throw the page
 // away): keep what has arrived so far.
 document.addEventListener("visibilitychange", () => {
-  if (!document.hidden) return;
+  // Back in view: the page wasn't thrown away, so the plain copy goes.
+  if (!document.hidden) { try { sessionStorage.removeItem("omnillm.draft"); sessionStorage.removeItem("omnillm.cur"); } catch {} return; }
   if (S.busy) saveChats().catch(() => {});
   if (!S.quiet && S.device) saveForReload(); // what's typed, too
 });

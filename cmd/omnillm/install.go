@@ -198,6 +198,13 @@ func installCmd(args []string) {
 		wait = 45 * time.Second // an update: a cold start must not look like a broken one
 	}
 	st, ok := waitRunning(wait)
+	// An update: the old hub may answer a moment longer while it stops.
+	for end := time.Now().Add(wait); ok && prev != "" && st.Version != "" && plain(st.Version) != plain(version) && time.Now().Before(end); {
+		time.Sleep(500 * time.Millisecond)
+		if s, sok := queryStatus(); sok {
+			st = s
+		}
+	}
 	// An older hub that is still the one answering (it couldn't be
 	// stopped): the update didn't take; say so instead of "updated".
 	if ok && prev != "" && st.Version != "" && plain(st.Version) != plain(version) {
@@ -1508,6 +1515,11 @@ func uninstallCmd(args []string) {
 	if !ownHome(home) {
 		goos = "" // HOME is elsewhere: the account's real services stay
 	}
+	// A hub started without a service manager (that, or HOME elsewhere):
+	// stopped directly.
+	if goos == "" || (goos == "linux" && !serviceInstalled()) {
+		stopRunningHub(dataDir("hub"))
+	}
 	switch goos {
 	case "darwin":
 		for _, l := range []string{trayLabel, launchdLabel} {
@@ -1622,19 +1634,24 @@ func stopRunningHub(dir string) {
 	if !answers() {
 		return
 	}
-	// Its pid file, or (a hub from before it wrote one) the process at the
-	// other end of its socket.
-	pid := 0
-	if b, err := os.ReadFile(filepath.Join(dir, "hub.pid")); err == nil {
-		pid, _ = strconv.Atoi(strings.TrimSpace(string(b)))
-	}
-	if pid <= 1 {
-		if c, err := net.DialTimeout("unix", sock, time.Second); err == nil {
-			if uc, ok := c.(*net.UnixConn); ok {
-				pid = socketPeer(uc)
-			}
-			c.Close()
+	// The process at the other end of its socket (it is the one answering);
+	// its pid file only where the system can't say. Never a pid the two
+	// disagree on (a stale file).
+	peer, file := 0, 0
+	if c, err := net.DialTimeout("unix", sock, time.Second); err == nil {
+		if uc, ok := c.(*net.UnixConn); ok {
+			peer = socketPeer(uc)
 		}
+		c.Close()
+	}
+	if b, err := os.ReadFile(filepath.Join(dir, "hub.pid")); err == nil {
+		file, _ = strconv.Atoi(strings.TrimSpace(string(b)))
+	}
+	pid := peer
+	if pid <= 1 {
+		pid = file
+	} else if file > 1 && file != peer {
+		_ = os.Remove(filepath.Join(dir, "hub.pid")) // stale
 	}
 	if pid <= 1 || pid == os.Getpid() {
 		return

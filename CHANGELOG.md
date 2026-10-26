@@ -51,6 +51,9 @@ All notable changes to OmniLLM are documented here. OmniLLM is in early pre-rele
 - Phone page: what you're typing is kept if the phone closes the page in the background; a page that couldn't load offline loads again by itself once online.
 - Command line: an update replaces even a hub started by an older version without a service manager, and says so if it couldn't; `hub provider add ollama` accepts the address without `/v1`; a model switched off mid-chat is replaced by one that works; local openai-compatible servers are refused with the real reason before the key is asked.
 
+- Command line: `hub provider add ollama --base-url http://localhost:11434` works (it tried only the first of localhost's addresses); a local openai-compatible server over http is refused before the key; an Ollama address that can't be used says why; `omnillm help` on a device lists the device's commands.
+- Phone page: a new version no longer reloads the page in the middle of pairing; a computer that stops answering reads as "can't be reached", not "something went wrong".
+
 ### Security
 
 - Model replies shown in a terminal have control characters removed, so a reply can't use escape sequences (to write the clipboard or fake a prompt).
