@@ -142,21 +142,45 @@ const (
 	autoUsedSince = time.Hour
 )
 
-// autoKey names a conversation: who is talking and how it began. A new
-// message adds to the end, so the key stays the same all along.
-func autoKey(p principal, req omnillm.Request) [32]byte {
-	h := sha256.New()
-	h.Write([]byte(p.key))
-	h.Write([]byte{0})
+// autoKey names a conversation: who is talking, its first message and
+// the start of its first reply (two chats that both began with "hi" got
+// different replies). A new message adds to the end, so the key stays the
+// same all along. reply: the first reply's start when the request has no
+// reply yet (the turn that is answering it).
+func autoKey(p principal, req omnillm.Request, reply string) [32]byte {
+	user, seen := "", false
 	for _, m := range req.Messages {
-		if m.Role == "user" {
-			h.Write([]byte(m.Content))
+		if m.Role == "user" && !seen {
+			user, seen = m.Content, true
+		} else if m.Role == "assistant" && seen {
+			reply = m.Content
 			break
 		}
+	}
+	if len(reply) > autoKeyReply {
+		reply = reply[:autoKeyReply]
+	}
+	h := sha256.New()
+	for _, s := range []string{p.key, user, reply} {
+		h.Write([]byte(s))
+		h.Write([]byte{0})
 	}
 	var k [32]byte
 	copy(k[:], h.Sum(nil))
 	return k
+}
+
+// autoKeyReply: how much of the first reply names a conversation.
+const autoKeyReply = 400
+
+// firstTurn: the request holds no reply yet.
+func firstTurn(req omnillm.Request) bool {
+	for _, m := range req.Messages {
+		if m.Role == "assistant" {
+			return false
+		}
+	}
+	return true
 }
 
 func (a *autoState) stuck(k [32]byte, now time.Time) (autoStick, bool) {
@@ -223,6 +247,9 @@ func (h *Hub) autoCandidates(ctx context.Context, p principal, req omnillm.Reque
 	var out []autoCand
 	for _, m := range all {
 		mp := prefs[m.ID]
+		if mp.Name != "" {
+			m.DisplayName, m.Renamed = mp.Name, true // the owner's name signs the reply
+		}
 		switch {
 		case len(p.models) > 0 && !contains(p.models, m.ID),
 			off[m.Provider], mp.NoAuto,
@@ -317,9 +344,9 @@ func (h *Hub) completeAuto(ctx context.Context, p principal, req omnillm.Request
 		req.Caller = omnillm.Background
 	}
 	tier := autoTierOf(req)
-	key := autoKey(p, req)
+	key := autoKey(p, req, "")
 	var stick *autoStick
-	if s, ok := h.auto.stuck(key, h.opts.Now()); ok {
+	if s, ok := h.auto.stuck(key, h.opts.Now()); ok && !firstTurn(req) {
 		stick = &s
 		if s.tier > tier && s.tier != tierImage {
 			tier = s.tier // a conversation doesn't get easier mid-way
@@ -342,6 +369,9 @@ func (h *Hub) completeAuto(ctx context.Context, p principal, req omnillm.Request
 // autoLabel is the chosen model's name for the reply ("Claude Sonnet 5.5",
 // "GPT-6-Sol"); a later, more exact name from the model replaces it.
 func autoLabel(m omnillm.ModelInfo) string {
+	if m.Renamed {
+		return m.DisplayName
+	}
 	if m.Kind == string(provider.Codex) {
 		if m.Version != "" {
 			return m.Version
@@ -367,8 +397,10 @@ type autoStream struct {
 	i       int // the candidate answering
 	tried   int
 	s       omnillm.Stream
-	told    bool // its name was passed on
-	started bool // its first words came
+	told    bool            // its name was passed on
+	started bool            // its first words came
+	kept    bool            // the chat's model is remembered
+	reply   strings.Builder // a first turn's reply start, which names the chat
 	ctx     context.Context
 }
 
@@ -407,10 +439,7 @@ func (a *autoStream) Recv() (omnillm.Chunk, error) {
 			return omnillm.Chunk{Model: autoLabel(a.cands[a.i].info)}, nil
 		}
 		ch, err := a.s.Recv()
-		if a.started {
-			return ch, err
-		}
-		if err != nil && !errors.Is(err, io.EOF) && autoRetry(err) && a.tried < len(a.cands) && a.tried < autoAttempts {
+		if !a.started && err != nil && !errors.Is(err, io.EOF) && autoRetry(err) && a.tried < len(a.cands) && a.tried < autoAttempts {
 			// Failed before its first word: the next one takes over.
 			a.h.opts.Logf("hub: auto %s: %s passed over (%s)", a.tier, a.cands[a.i].info.ID, omnillm.AsError(err).Code)
 			a.s.Close()
@@ -419,15 +448,36 @@ func (a *autoStream) Recv() (omnillm.Chunk, error) {
 			}
 			continue
 		}
-		if ch.Text != "" || err != nil {
+		if ch.Text != "" {
 			a.started = true
-			if err == nil || errors.Is(err, io.EOF) {
-				c := a.cands[a.i].info
-				a.h.auto.keep(a.key, autoStick{model: c.ID, tier: a.tier, at: a.h.opts.Now()}, c.Provider)
-			}
 		}
+		a.remember(ch.Text, err)
 		return ch, err
 	}
+}
+
+// remember keeps which model answers this chat: on a later turn at its
+// first words; on the first turn once the reply's start (part of the
+// chat's name) is known or the reply has ended.
+func (a *autoStream) remember(text string, err error) {
+	if a.kept || (err != nil && !errors.Is(err, io.EOF)) {
+		return
+	}
+	key := a.key
+	if firstTurn(a.req) {
+		if a.reply.Len() < autoKeyReply {
+			a.reply.WriteString(text)
+		}
+		if a.reply.Len() < autoKeyReply && err == nil {
+			return
+		}
+		key = autoKey(a.p, a.req, a.reply.String())
+	} else if !a.started {
+		return
+	}
+	a.kept = true
+	c := a.cands[a.i].info
+	a.h.auto.keep(key, autoStick{model: c.ID, tier: a.tier, at: a.h.opts.Now()}, c.Provider)
 }
 
 func (a *autoStream) Usage() omnillm.Usage { return a.s.Usage() }

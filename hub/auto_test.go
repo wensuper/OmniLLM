@@ -269,3 +269,33 @@ func TestAutoGroupOrder(t *testing.T) {
 		t.Fatalf("quick: Flash Low before Opus: %d %d", a, b)
 	}
 }
+
+// Two chats that begin alike are still two chats: each keeps its own model.
+func TestAutoTellsAlikeChatsApart(t *testing.T) {
+	h, _, _ := autoHub(t)
+	ctx := context.Background()
+	p := h.hostPrincipal()
+	hi := omnillm.Request{Model: AutoModel, Caller: omnillm.Interactive, Messages: []omnillm.Message{user("hi")}}
+	h.auto.keep(autoKey(p, hi, "from claude-haiku-4"), autoStick{model: "anth/claude-opus-5", tier: tierHard, at: h.opts.Now()}, "anth")
+	h.auto.keep(autoKey(p, hi, "from gpt-6-sol"), autoStick{model: "oai/gpt-6-sol", tier: tierNormal, at: h.opts.Now()}, "oai")
+	for _, c := range []struct{ reply, want string }{{"from claude-haiku-4", "from claude-opus-5"}, {"from gpt-6-sol", "from gpt-6-sol"}} {
+		_, text, err := ask(t, h, user("hi"), omnillm.Message{Role: "assistant", Content: c.reply}, user("ok"))
+		if err != nil || text != c.want {
+			t.Fatalf("after %q: %q %v", c.reply, text, err)
+		}
+	}
+	_ = ctx
+}
+
+// A model the owner renamed signs Auto's reply with that name.
+func TestAutoUsesTheOwnersName(t *testing.T) {
+	h, _, _ := autoHub(t)
+	name := "我的快模型"
+	if err := h.SetModelPref(context.Background(), "anth/claude-haiku-4", &name, nil); err != nil {
+		t.Fatal(err)
+	}
+	label, text, err := ask(t, h, user("你好"))
+	if err != nil || text != "from claude-haiku-4" || label != name {
+		t.Fatalf("%q %q %v", label, text, err)
+	}
+}

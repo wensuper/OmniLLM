@@ -4,6 +4,15 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.63](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.63) - 2026-10-26
+
+### Fixed
+
+- *New chat* (and deleting the open chat) moves the model picker to Auto at once; before, the picker kept the last chat's model until the list reloaded, so a message sent right away went to that model.
+- When Auto leaves the list (only one model left for a device), its chats switch without saying the previous model was removed.
+- Auto signs a reply with the name you gave the model, if you renamed it.
+- Two chats that begin with the same words (“hi”) no longer share Auto's memory of which model a chat uses: the start of the first reply tells them apart.
+
 ## [0.2.0-alpha.62](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.62) - 2026-10-26
 
 ### Fixed

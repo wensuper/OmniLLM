@@ -903,7 +903,9 @@ function pickModel() {
   sel.value = [want, "auto", localStorageGet("model"), "claude-code/sonnet"].find((id) => id && ms.some((m) => m.id === id)) || ms[0].id;
   paintPick();
   if (!want || want === sel.value) return false;
-  if (S.cur.messages.length) S.cur.gone = t("modelGone", modelName(sel.value));
+  // Auto leaves the list when there is nothing to choose between: no
+  // model was removed, so nothing to say.
+  if (S.cur.messages.length && want !== "auto") S.cur.gone = t("modelGone", modelName(sel.value));
   S.cur.model = sel.value;
   return true;
 }
@@ -980,7 +982,8 @@ function newChat() {
 }
 function startNew() {
   if (S.busy) return toastText(t("waitReply"));
-  S.cur = newChat(); renderLog(); renderList(); closeDrawer(); $("input").focus();
+  // The picker follows the new chat (Auto when the Mac offers it).
+  S.cur = newChat(); if (S.models.length) pickModel(); renderLog(); renderList(); closeDrawer(); $("input").focus();
 }
 for (const id of ["new", "new-side", "new-float"]) $(id).addEventListener("click", startNew);
 
@@ -1415,7 +1418,7 @@ function rowMenu(li, btn, title, c) {
     if (S.busy && c === S.cur) return toastText(t("waitReply"));
     if (!await ask(t("deleteChatQ", c.title || t("newChat")), t("delete"), true)) return;
     S.chats = S.chats.filter((o) => o.id !== c.id);
-    if (c === S.cur) { S.cur = S.chats[0] || newChat(); renderLog(); }
+    if (c === S.cur) { S.cur = S.chats[0] || newChat(); if (S.models.length) pickModel(); renderLog(); }
     if (!S.quiet) await seal("chats", S.chats).catch(() => {});
     renderList();
   }, true));
