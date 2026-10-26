@@ -17,6 +17,7 @@
 - 命令行：Auto 换了模型时再说一次“(Auto · 模型)”；`omnillm hub region` 给出用法；从脚本运行 `connect models` 时，必要时把 Auto 标成只能手动对话。
 - 手机网页：不能保存配对的浏览器只在配对前提醒一次；电脑上配对时连接断了，说换一个链接再粘贴，不再说扫二维码。
 - 命令行：hub 子命令后面写 `-h`、`--help` 显示帮助；`hub audit` 多写了字会说；远程连接关着时 `status` 说清怎么才能加设备；`help --all` 里 `hub model set` 写上 Auto 可选；清理 Gemini 记录的 sqlite3 也先查是谁的。
+- 命令行：`verify web` 出错时用你的语言说清原因；远程连接关着时 `status` 和配对给出打开它的命令（重新安装会沿用 off）；Auto 能选的都只能手动对话时也标成只能手动对话，脚本默认用能答它的模型。
 - 安装和更新：找预发布版时先用主机找到的版本，再问 GitHub 接口，接口限流时读发布订阅，无人值守的更新不再因此失败。
 - 手机网页：配对前的几道关各自记住；iPhone 无痕标签页在配对前就说存不下配对，应用内打开的页面不再说两次；已配对的设备打开坏掉的配对链接时留在对话里。
 - 命令行：所有模型都只能手动对话时，Auto 不再是脚本、管道的默认，本机接口也不再只给程序一个 Auto；`connect chat`、`connect ask` 说出 Auto 选的模型；`omnillm connect -h`、`omnillm hub -h` 显示帮助；`hub models` 多一列“Auto 可选”，`hub model set` 支持 `--auto true|false`；远程连接关着时 `hub pair` 先说加不了设备；地区没变时 `hub region confirm` 说不用确认。

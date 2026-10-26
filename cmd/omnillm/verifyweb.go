@@ -78,7 +78,7 @@ func verifyWeb(ctx context.Context, c *http.Client, base string) webCheck {
 	w := webCheck{At: time.Now(), URL: base}
 	app, err := get(ctx, c, base+"app.js", 8<<20)
 	if err != nil {
-		w.Error = err.Error()
+		w.Error = "web" // the page itself didn't answer
 		return w
 	}
 	m := buildStamp.FindSubmatch(app)
@@ -89,7 +89,7 @@ func verifyWeb(ctx context.Context, c *http.Client, base string) webCheck {
 	w.Build = string(m[1])
 	man, tag, err := findManifest(ctx, c, w.Build)
 	if err != nil {
-		w.Error = err.Error()
+		w.Error = githubError(err)
 		return w
 	}
 	if man == nil {
@@ -115,7 +115,7 @@ func verifyWeb(ctx context.Context, c *http.Client, base string) webCheck {
 				w.Bad = append(w.Bad, p)
 				continue
 			}
-			w.Error = err.Error()
+			w.Error = "web"
 			return w
 		}
 		if sum := sha256.Sum256(b); hex.EncodeToString(sum[:]) != man.Files[p] {
@@ -283,8 +283,12 @@ func webCheckText(w webCheck) string {
 	case len(w.Bad) == 1 && w.Bad[0] == "signature":
 		return fmt.Sprintf(t("警告：GitHub 上 %s 的签名核对没有通过。在弄清楚之前，不要在手机上用这个网页（%s）。",
 			"Warning: the signature of the GitHub release %s didn’t check out. Don’t use the web page (%s) on your phones until this is cleared up."), w.Release, w.URL)
+	case w.Error == "github_limited":
+		return fmt.Sprintf(t("没能核对手机用的网页（%s）：GitHub 暂时不让这台电脑再查了（同一个网络地址每小时最多 60 次）。过一会儿再试。", "Couldn’t check the web page your phones use (%s): GitHub isn’t answering this computer for now (it allows 60 checks an hour per network address). Try again in a while."), w.URL)
+	case w.Error == "web":
+		return fmt.Sprintf(t("没能核对手机用的网页（%s）：这个网页没有应答。检查网络后再试。", "Couldn’t check the web page your phones use (%s): the page didn’t answer. Check the network and try again."), w.URL)
 	case w.Error != "":
-		return fmt.Sprintf(t("没能核对手机用的网页（%s）：%s。稍后再试。", "Couldn’t check the web page your phones use (%s): %s. Try again later."), w.URL, w.Error)
+		return fmt.Sprintf(t("没能核对手机用的网页（%s）：GitHub 没有应答。检查网络后再试。", "Couldn’t check the web page your phones use (%s): GitHub didn’t answer. Check the network and try again."), w.URL)
 	case len(w.Bad) == 1 && w.Bad[0] == "build":
 		return fmt.Sprintf(t("警告：手机用的网页（%s，构建 %s）不是 GitHub 上最近任何一个发布构建的。在弄清楚之前，不要在手机上用它。",
 			"Warning: the web page your phones use (%s, build %s) wasn’t built by any recent GitHub release. Don’t use it on your phones until this is cleared up."), w.URL, w.Build)
@@ -382,4 +386,13 @@ func watchWeb(ctx context.Context, dir, base string) {
 			fmt.Fprintln(os.Stderr, "omnillm: "+webCheckText(w))
 		}
 	}
+}
+
+// githubError is what a failed GitHub check keeps (said in webCheckText,
+// in the language of whoever reads it).
+func githubError(err error) string {
+	if errors.Is(err, errRateLimited) {
+		return "github_limited"
+	}
+	return "github"
 }

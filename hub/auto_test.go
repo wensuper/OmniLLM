@@ -373,3 +373,25 @@ func TestAutoNamesEachModelOnce(t *testing.T) {
 		t.Fatalf("%v %q", names, text)
 	}
 }
+
+// Auto is chat only for devices when everything still in it is: a script
+// then defaults to a model that answers it (the one taken out of Auto).
+func TestAutoChatOnlyWhenOnlyPeoplesModelsAreIn(t *testing.T) {
+	h, _, _ := autoHub(t)
+	ctx := context.Background()
+	yes := true
+	for _, id := range []string{"anth/claude-haiku-4", "anth/claude-sonnet-5", "anth/claude-opus-5"} {
+		if err := h.SetModel(ctx, id, ModelUpdate{HumanOnly: &yes}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	_ = h.SetModelAuto(ctx, "oai/gpt-6-sol", false)
+	ms, _ := h.modelsFor(ctx, Device{ID: "d"})
+	if ms[0].ID != AutoModel || !ms[0].HumanOnly {
+		t.Fatalf("%+v", ms[0])
+	}
+	_ = h.SetModelAuto(ctx, "oai/gpt-6-sol", true)
+	if ms, _ := h.modelsFor(ctx, Device{ID: "d"}); ms[0].HumanOnly {
+		t.Fatalf("a program model back in Auto: %+v", ms[0])
+	}
+}

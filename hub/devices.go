@@ -724,11 +724,19 @@ func (h *Hub) modelsFor(ctx context.Context, d Device) ([]omnillm.ModelInfo, err
 	// every model out of Auto (it would only ever fail).
 	if len(ms) >= 2 {
 		prefs := h.modelPrefs(ctx)
+		in, forPrograms := false, false
 		for _, m := range ms {
 			if !prefs[m.ID].NoAuto {
-				ms = append([]omnillm.ModelInfo{autoInfo()}, ms...)
-				break
+				in = true
+				forPrograms = forPrograms || !m.HumanOnly
 			}
+		}
+		if in {
+			// Chat only when everything it may choose is: a script then
+			// takes a model that answers it, not Auto.
+			a := autoInfo()
+			a.HumanOnly = !forPrograms
+			ms = append([]omnillm.ModelInfo{a}, ms...)
 		}
 	}
 	return ms, nil

@@ -904,7 +904,7 @@ func hubCmd(args []string) {
 			dieArgs(err)
 		}
 		if st, ok := queryStatus(); ok && !st.RelayConfigured {
-			die(say(t("这台主机的远程连接关着（OMNILLM_RELAY=off），加不了设备。不带这个设置启动它，才能加设备。", "Remote access is off on this hub (OMNILLM_RELAY=off), so devices can't be added. Start it without that setting to add one.")))
+			die(say(runnable(t("这台主机的远程连接关着（OMNILLM_RELAY=off），加不了设备。", "Remote access is off on this hub (OMNILLM_RELAY=off), so devices can't be added.") + " " + relayOnText(lang()))))
 		}
 		if notAPerson() {
 			cmd := strings.Join(append([]string{"omnillm pair"}, shellWords(args[1:])...), " ")
@@ -1684,7 +1684,7 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 			return c.Send(control.Reply{Event: "ok", Text: tl(l, "已确认，模型恢复使用。", "Confirmed; models are back on.")})
 		case "pair":
 			if relayURL == "" {
-				return say(tl(l, "这台主机的远程连接关着（OMNILLM_RELAY=off），加不了设备。不带这个设置启动它，才能加设备。", "Remote access is off on this hub (OMNILLM_RELAY=off), so devices can't be added. Start it without that setting to add one."))
+				return say(tl(l, "这台主机的远程连接关着（OMNILLM_RELAY=off），加不了设备。", "Remote access is off on this hub (OMNILLM_RELAY=off), so devices can't be added.") + " " + relayOnText(l))
 			}
 			return pairOp(ctx, h, c, l, a)
 		}
@@ -2189,4 +2189,11 @@ func shellWords(args []string) []string {
 		}
 	}
 	return out
+}
+
+// relayOnText is how remote access comes back on: an install keeps the
+// setting it was given, so it is given the relay again.
+func relayOnText(l string) string {
+	return tl(l, "要打开：运行 OMNILLM_RELAY="+hub.DefaultRelayURL+" omnillm install（在前台运行的，不带 OMNILLM_RELAY=off 重新启动）。",
+		"To turn it on, run OMNILLM_RELAY="+hub.DefaultRelayURL+" omnillm install (a hub run in the foreground: start it again without OMNILLM_RELAY=off).")
 }
