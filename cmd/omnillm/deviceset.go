@@ -77,6 +77,7 @@ func modelSetArgs(target string, args []string) (map[string]string, error) {
 	fs.String("name", "", "")
 	fs.String("shown", "", "true or false")
 	fs.String("human-only", "", "true or false")
+	fs.String("auto", "", "true or false")
 	fs.String("price-in", "", "")
 	fs.String("price-out", "", "")
 	if err := parseFlags(fs, args); err != nil {
@@ -88,8 +89,8 @@ func modelSetArgs(target string, args []string) (map[string]string, error) {
 		return nil, say(t("请写出模型的名字或 ID。", "Name the model (its name or ID)."))
 	}
 	if len(a) == 1 {
-		return nil, say(t("没有要改的。加上 --name、--shown、--human-only 或 --price-in 和 --price-out。",
-			"Nothing to change. Add --name, --shown, --human-only, or --price-in with --price-out."))
+		return nil, say(t("没有要改的。加上 --name、--shown、--human-only、--auto 或 --price-in 和 --price-out。",
+			"Nothing to change. Add --name, --shown, --human-only, --auto, or --price-in with --price-out."))
 	}
 	if _, _, _, err := modelUpdate(lang(), a); err != nil {
 		return nil, err
@@ -110,6 +111,13 @@ func modelUpdate(l string, a map[string]string) (name *string, shown *bool, u hu
 			return nil, nil, u, say(tl(l, "--shown 只能是 true 或 false。", "--shown must be true or false."))
 		}
 		shown = &b
+	}
+	if v, ok := a["auto"]; ok {
+		b, err := strconv.ParseBool(v)
+		if err != nil {
+			return nil, nil, u, say(tl(l, "--auto 只能是 true 或 false。", "--auto must be true or false."))
+		}
+		a["auto"] = strconv.FormatBool(b)
 	}
 	if v, ok := a["human_only"]; ok {
 		b, err := strconv.ParseBool(v)

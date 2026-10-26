@@ -52,10 +52,15 @@ func (b *DeviceBackend) Models(ctx context.Context, tok string) ([]omnillm.Model
 	// Programs on this device call as Background, so models kept for
 	// people (subscriptions) are not offered to them.
 	out := ms[:0]
+	others := false
 	for _, m := range ms {
 		if !m.HumanOnly {
 			out = append(out, m)
+			others = others || m.ID != "auto"
 		}
+	}
+	if !others {
+		return out[:0], nil // Auto alone would have nothing to choose for them
 	}
 	return out, nil
 }

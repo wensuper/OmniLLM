@@ -78,7 +78,7 @@ func pickModel(ms []omnillm.ModelInfo, person bool) string {
 		}
 	}
 	for _, m := range ms {
-		if m.HumanOnly == person {
+		if m.HumanOnly == person && (person || m.ID != "auto" || backgroundAuto(ms)) {
 			return m.ID
 		}
 	}
@@ -93,6 +93,21 @@ func pickModel(ms []omnillm.ModelInfo, person bool) string {
 		die(say(noModelsHere()))
 	}
 	return ms[0].ID
+}
+
+// backgroundAuto: Auto can answer a script or pipe, i.e. some model it
+// chooses from isn't kept for people.
+func backgroundAuto(ms []omnillm.ModelInfo) bool {
+	return slices.ContainsFunc(ms, func(m omnillm.ModelInfo) bool { return m.ID != "auto" && !m.HumanOnly })
+}
+
+// autoSays prints, once per reply, which model Auto chose (on stderr, so a
+// pipe gets only the answer).
+func autoSays(model string, c omnillm.Chunk, said *bool) {
+	if model == "auto" && c.Model != "" && !*said {
+		*said = true
+		fmt.Fprintf(os.Stderr, "(Auto · %s)\n", stripControls(c.Model))
+	}
 }
 
 // chatLoop is a conversation in the terminal. Ctrl-C stops a reply; Ctrl-D
@@ -248,6 +263,7 @@ func chatOnce(ctx context.Context, d *device.Device, model string, msgs []omnill
 	}
 	defer s.Close()
 	var b strings.Builder
+	said := false
 	for {
 		c, err := s.Recv()
 		if errors.Is(err, io.EOF) {
@@ -262,6 +278,7 @@ func chatOnce(ctx context.Context, d *device.Device, model string, msgs []omnill
 			}
 			return b.String(), err
 		}
+		autoSays(model, c, &said)
 		b.WriteString(c.Text)
 		fmt.Print(termSafe(c.Text))
 	}

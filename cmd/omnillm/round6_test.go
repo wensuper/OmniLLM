@@ -460,3 +460,22 @@ func TestRound12PairArgs(t *testing.T) {
 		t.Fatalf("shellWords: %s", got)
 	}
 }
+
+// Auto is no default for a script when every model it could choose is
+// kept for people.
+func TestRound13AutoForScripts(t *testing.T) {
+	auto := omnillm.ModelInfo{ID: "auto"}
+	subs := []omnillm.ModelInfo{auto, {ID: "claude-code/opus", HumanOnly: true}, {ID: "codex/gpt", HumanOnly: true}}
+	if backgroundAuto(subs) {
+		t.Fatal("auto offered to scripts with only chat-only models")
+	}
+	mixed := append(subs, omnillm.ModelInfo{ID: "openai/gpt-x"})
+	if got := pickModel(mixed, false); got != "auto" {
+		t.Fatalf("pickModel = %q", got)
+	}
+	for _, w := range []string{"-h", "--help", "help"} {
+		if !isHelpWord(w) {
+			t.Fatal(w)
+		}
+	}
+}

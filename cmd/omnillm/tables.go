@@ -144,13 +144,13 @@ func modelsTable(data []byte) (string, error) {
 		}
 		return t("否", "No")
 	}
-	out := [][]string{{t("名字", "Name"), t("来源", "Source"), t("只能手动对话", "Chat only"), t("在设备上显示", "Shown on devices"), "ID"}}
+	out := [][]string{{t("名字", "Name"), t("来源", "Source"), t("只能手动对话", "Chat only"), t("在设备上显示", "Shown on devices"), t("Auto 可选", "In Auto"), "ID"}}
 	for _, m := range ms {
 		shown := yes(!m.Hidden)
 		if m.SourceOff {
 			shown = t("否（来源已关闭）", "No (source off)")
 		}
-		out = append(out, []string{modelName(m.ModelInfo), sourceLabelIn(lang(), provider.Kind(m.Kind), m.Provider), yes(m.HumanOnly), shown, m.ID})
+		out = append(out, []string{modelName(m.ModelInfo), sourceLabelIn(lang(), provider.Kind(m.Kind), m.Provider), yes(m.HumanOnly), shown, yes(!m.NoAuto), m.ID})
 	}
 	return table(out), nil
 }
