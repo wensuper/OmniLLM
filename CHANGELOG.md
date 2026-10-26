@@ -6,12 +6,6 @@ All notable changes to OmniLLM are documented here. OmniLLM is in early pre-rele
 
 ## [0.2.0-alpha.59](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.59) - 2026-10-26
 
-### Added
-
-- Google AI subscriptions (Gemini) through Antigravity CLI, Google's official program: run `omnillm login gemini`, or use the new *I have a Google AI subscription (Gemini)* card in the console. It installs Antigravity CLI with Homebrew if needed and signs it in once more, for OmniLLM only (the agy you use yourself isn't affected). Every model Antigravity offers your account is listed, in its order, under subscriptions. As with Claude and ChatGPT, it is for chatting only: all of Antigravity's tools are refused before they run, and your own rule files aren't read. It takes text only. Google has banned accounts that used third-party tools with an Antigravity sign-in; OmniLLM runs the official program itself, but Google hasn't said whether that is allowed, so a Gemini API key is the safer choice.
-
-## [0.2.0-alpha.58](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.58) - 2026-10-26
-
 ### Fixed
 
 - Phone page: a hub that gives this device no models now says so, instead of an error shown as "can't connect".
@@ -57,6 +51,12 @@ All notable changes to OmniLLM are documented here. OmniLLM is in early pre-rele
 - Model replies shown in a terminal have control characters removed, so a reply can't use escape sequences (to write the clipboard or fake a prompt).
 - `uninstall --purge` on a device deletes its pairing; a control socket that belongs to another user gets its own warning.
 - A device's message that starts with "/" after any kind of leading space (Unicode spaces, zero-width characters) is still only a message.
+
+## [0.2.0-alpha.58](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.58) - 2026-10-26
+
+### Fixed
+
+- A model server on this Mac other than the Ollama app (for example llama.cpp’s llama-server) that was added under its own name showed as “Ollama (this Mac)”. It now shows as “Model on this Mac (its name)” in the console and on the command line. *Check again* no longer mentions Ollama when a model on this Mac is already connected.
 
 ## [0.2.0-alpha.57](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.57) - 2026-10-26
 
