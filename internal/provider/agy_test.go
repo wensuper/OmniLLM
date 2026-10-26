@@ -256,3 +256,40 @@ func TestRealAgy(t *testing.T) {
 		}
 	})
 }
+
+func TestSweepAgyOrphans(t *testing.T) {
+	c := t.TempDir()
+	live, gone, fresh := "11111111-1111-4111-8111-111111111111", "22222222-2222-4222-8222-222222222222", "33333333-3333-4333-8333-333333333333"
+	for _, d := range []string{"conversations", "annotations", "presence"} {
+		if err := os.MkdirAll(filepath.Join(c, d), 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write := func(p string, old bool) {
+		if err := os.WriteFile(p, nil, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if old {
+			ago := time.Now().Add(-2 * time.Hour)
+			_ = os.Chtimes(p, ago, ago)
+		}
+	}
+	write(filepath.Join(c, "conversations", live+".db"), true)
+	for _, id := range []string{live, gone} {
+		write(filepath.Join(c, "annotations", id+".pbtxt"), true)
+		write(filepath.Join(c, "presence", id+".lock"), true)
+	}
+	write(filepath.Join(c, "annotations", fresh+".pbtxt"), false)
+	sweepAgyOrphans(c)
+	for p, want := range map[string]bool{
+		filepath.Join(c, "annotations", live+".pbtxt"):  true,
+		filepath.Join(c, "presence", live+".lock"):      true,
+		filepath.Join(c, "annotations", gone+".pbtxt"):  false,
+		filepath.Join(c, "presence", gone+".lock"):      false,
+		filepath.Join(c, "annotations", fresh+".pbtxt"): true,
+	} {
+		if _, err := os.Stat(p); (err == nil) != want {
+			t.Errorf("%s: exists=%v, want %v", filepath.Base(p), err == nil, want)
+		}
+	}
+}

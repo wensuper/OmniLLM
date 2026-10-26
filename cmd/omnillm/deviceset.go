@@ -292,6 +292,8 @@ func findProvider(l string, ps []hub.ProviderInfo, q string) (hub.ProviderInfo, 
 			names = append(names, "claude") // as in omnillm login claude
 		case provider.Codex:
 			names = append(names, "chatgpt")
+		case provider.Antigravity:
+			names = append(names, "gemini")
 		}
 		return p.Name, names
 	},

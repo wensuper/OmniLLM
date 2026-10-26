@@ -31,6 +31,7 @@ import (
 
 	"golang.org/x/term"
 
+	omnillm "github.com/wensuper/OmniLLM"
 	"github.com/wensuper/OmniLLM/device"
 	"github.com/wensuper/OmniLLM/hub"
 	"github.com/wensuper/OmniLLM/internal/control"
@@ -1347,7 +1348,7 @@ func startDetached(bin, dir string, env map[string]string) error {
 	}
 	cmd := exec.Command(bin, "hub", "run")
 	cmd.Stdout, cmd.Stderr = logf, logf
-	cmd.Env = os.Environ()
+	cmd.Env = append(os.Environ(), "OMNILLM_DETACHED=1") // started by an install, not typed
 	for k, v := range env {
 		cmd.Env = append(cmd.Env, k+"="+v)
 	}
@@ -1417,8 +1418,21 @@ func statusCmd(args []string) {
 		args = nil
 	}
 	if role() == "device" {
-		paired := device.Paired(context.Background(), secrets(dataDir("device"), "omnillm-device"))
+		sec := secrets(dataDir("device"), "omnillm-device")
+		paired := device.Paired(context.Background(), sec)
 		st := Status{Next: runnable(deviceNext()), Running: paired}
+		// Paired here, but maybe removed on the other side: ask it, briefly.
+		if paired {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			if d, err := device.Open(ctx, device.Options{Secrets: sec}); err == nil {
+				if _, err := d.Models(ctx); omnillm.AsError(err).Msg == omnillm.MsgDeviceRevoked {
+					onDevice = true
+					st.Next, st.Running, paired = describe(err), false, false
+				}
+				d.Close()
+			}
+			cancel()
+		}
 		u := readUpdate(dataDir("device"))
 		st.Update = plain(u.newer(version))
 		if *jsonOut {
@@ -1570,7 +1584,7 @@ func uninstallCmd(args []string) {
 // purgeDirs is what --purge deletes: only the folders OmniLLM creates,
 // never their parent (OMNILLM_HOME may point anywhere, even at $HOME).
 func purgeDirs() []string {
-	return []string{dataDir("hub"), dataDir("device"), dataDir("relay-certs"), dataDir("codex-home"), dataDir("claude-chats")}
+	return []string{dataDir("hub"), dataDir("device"), dataDir("relay-certs"), dataDir("codex-home"), dataDir("claude-chats"), provider.AgyHome()}
 }
 
 // installDevice sets this machine up as a device only (a server that uses

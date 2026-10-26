@@ -109,7 +109,7 @@ func chatLoop(ctx context.Context, d *device.Device, model string) {
 	if model == "" {
 		model = pickModel(ms, atTerminal())
 	} else if !slices.ContainsFunc(ms, func(m omnillm.ModelInfo) bool { return m.ID == model }) {
-		die(say(t("没有这个模型。运行 omnillm connect models 查看。", "No such model. Run omnillm connect models to see them.")))
+		die(say(runnable(t("没有这个模型。运行 omnillm connect models 查看。", "No such model. Run omnillm connect models to see them."))))
 	}
 	name := func(id string) string {
 		for _, m := range ms {

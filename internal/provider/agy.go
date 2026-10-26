@@ -111,11 +111,19 @@ func prepareAgyHome() (string, error) {
 		return "", err
 	}
 	// Settings: agy rewrites the file itself (trusted folders, its own
-	// defaults), so ours are set again each time and its others kept.
+	// defaults), so ours are set again each time. Of its others only known
+	// harmless ones stay: anything else (an approval mode turned on in an
+	// interactive sign-in, a hooks path) could loosen the fences.
 	sp := filepath.Join(cli, "settings.json")
 	set := map[string]any{}
 	if b, err := os.ReadFile(sp); err == nil {
-		_ = json.Unmarshal(b, &set)
+		old := map[string]any{}
+		_ = json.Unmarshal(b, &old)
+		for _, k := range []string{"trustedWorkspaces", "showTips"} {
+			if v, ok := old[k]; ok {
+				set[k] = v
+			}
+		}
 	}
 	set["toolPermission"] = "strict"
 	set["allowNonWorkspaceAccess"] = false
@@ -130,10 +138,19 @@ func prepareAgyHome() (string, error) {
 	return home, nil
 }
 
-// writePrivate replaces p with data, 0600, never through a link.
+// writePrivate replaces p with data, 0600, never through a link, and in
+// one step: a temporary file renamed over it, so an agy starting meanwhile
+// reads the old fence or the new one, never a missing or half-written one.
+// The same content is left as it is.
 func writePrivate(p string, data []byte) error {
-	_ = os.Remove(p)
-	f, err := os.OpenFile(p, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if fi, err := os.Lstat(p); err == nil && fi.Mode().IsRegular() && fi.Mode().Perm() == 0o600 {
+		if old, err := os.ReadFile(p); err == nil && bytes.Equal(old, data) {
+			return nil
+		}
+	}
+	tmp := p + ".new"
+	_ = os.Remove(tmp)
+	f, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {
 		return err
 	}
@@ -141,7 +158,11 @@ func writePrivate(p string, data []byte) error {
 	if cerr := f.Close(); err == nil {
 		err = cerr
 	}
-	return err
+	if err != nil {
+		_ = os.Remove(tmp)
+		return err
+	}
+	return os.Rename(tmp, p) // replaces a link at p, never follows it
 }
 
 // agyEnv is cliEnv with the hub's agy home.
@@ -311,6 +332,27 @@ func removeAgyConversation(id string) {
 	for _, p := range agyConversationFiles(id) {
 		_ = os.RemoveAll(p)
 	}
+	c := filepath.Join(AgyHome(), ".gemini", "antigravity-cli")
+	// Its title and preview, kept beside the conversation by agy.
+	for _, p := range []string{filepath.Join(c, "annotations", id+".pbtxt"), filepath.Join(c, "presence", id+".lock")} {
+		_ = os.Remove(p)
+	}
+	// Its row in agy's summary index (the id is a checked UUID, so it can
+	// go into the statement as it is).
+	if sq, err := exec.LookPath("sqlite3"); err == nil {
+		db := filepath.Join(c, "conversation_summaries.db")
+		if _, err := os.Stat(db); err == nil {
+			_ = exec.Command(sq, db, "DELETE FROM conversation_summaries WHERE conversation_id = '"+id+"';").Run()
+		}
+	}
+	sweepAgyOrphans(c)
+	// No conversation left: agy's other caches of earlier ones (keyed in
+	// ways that don't name the conversation) and its typed history go too.
+	if ents, err := os.ReadDir(filepath.Join(c, "conversations")); err == nil && len(ents) == 0 {
+		for _, p := range []string{filepath.Join(c, "implicit"), filepath.Join(c, "jetbox_summaries_proto.pb"), filepath.Join(c, "history.jsonl")} {
+			_ = os.RemoveAll(p)
+		}
+	}
 }
 
 // agyLine reads one of agy's stream-json events.
@@ -400,4 +442,48 @@ func (s *cliStream) agyConversation(id string) {
 	if fresh {
 		t.chats.pending(ChatRecord{Kind: t.kind, ID: id, Owner: t.owner, Path: t.path})
 	}
+}
+
+// sweepAgyOrphans removes what agy kept of conversations that are gone
+// (their summary row, title, lock), left by earlier versions that deleted
+// less. Only ones over an hour old: a conversation agy is creating right
+// now may have its summary before its file.
+func sweepAgyOrphans(c string) {
+	live := map[string]bool{}
+	ents, err := os.ReadDir(filepath.Join(c, "conversations"))
+	if err != nil {
+		return
+	}
+	for _, e := range ents {
+		if id, ok := strings.CutSuffix(e.Name(), ".db"); ok && validChatID(id) {
+			live[id] = true
+		}
+	}
+	old := time.Now().Add(-time.Hour)
+	for _, dir := range []string{"annotations", "presence"} {
+		fs, _ := os.ReadDir(filepath.Join(c, dir))
+		for _, f := range fs {
+			id := strings.TrimSuffix(strings.TrimSuffix(f.Name(), ".pbtxt"), ".lock")
+			if fi, err := f.Info(); err == nil && validChatID(id) && !live[id] && fi.ModTime().Before(old) {
+				_ = os.Remove(filepath.Join(c, dir, f.Name()))
+			}
+		}
+	}
+	sq, err := exec.LookPath("sqlite3")
+	db := filepath.Join(c, "conversation_summaries.db")
+	if err != nil {
+		return
+	}
+	if _, err := os.Stat(db); err != nil {
+		return
+	}
+	keep := make([]string, 0, len(live))
+	for id := range live {
+		keep = append(keep, "'"+id+"'") // checked UUIDs
+	}
+	cond := "julianday(last_modified_time) < julianday('now', '-1 hour')" // offsets compared as times, not text
+	if len(keep) > 0 {
+		cond += " AND conversation_id NOT IN (" + strings.Join(keep, ",") + ")"
+	}
+	_ = exec.Command(sq, db, "DELETE FROM conversation_summaries WHERE "+cond+";").Run()
 }

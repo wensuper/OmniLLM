@@ -297,7 +297,7 @@ func usageText(all bool) string {
   omnillm hub usage [--day today|yesterday|7d]
                                      用量；--day 看哪一天：今天、昨天或最近 7 天
   omnillm hub audit                  今天每次调用的记录（JSON，给脚本用）
-  omnillm hub pair [--name N] [--models 名字或ID,…] [--budget-usd 5] [--background-only]
+  omnillm hub pair [--name N] [--models 名字或ID,…] [--budget-usd 5 | --no-limit] [--background-only]
   omnillm hub revoke <名字或ID>      立即移除设备（名字里有空格或括号时加引号：omnillm hub revoke "iPhone (2)"）
   omnillm hub device set <名字或ID> [--name N] [--paused true|false] [--budget-usd X | --no-limit] [--models 名字或ID,… | --all-models]
                                      改设备的名字、开启或暂停、每天额度、能用的模型
@@ -341,7 +341,7 @@ func usageText(all bool) string {
   omnillm hub usage [--day today|yesterday|7d]
                                      usage; --day: which day: today, yesterday or the last 7 days
   omnillm hub audit                  today’s calls, one record each, as JSON (for scripts)
-  omnillm hub pair [--name N] [--models name-or-id,…] [--budget-usd 5] [--background-only]
+  omnillm hub pair [--name N] [--models name-or-id,…] [--budget-usd 5 | --no-limit] [--background-only]
   omnillm hub revoke <name-or-id>    remove a device now (quote a name with spaces or brackets: omnillm hub revoke "iPhone (2)")
   omnillm hub device set <name-or-id> [--name N] [--paused true|false] [--budget-usd X | --no-limit] [--models name-or-id,… | --all-models]
                                      rename a device, pause or resume it, change its daily limit or models
@@ -728,7 +728,7 @@ func hubCmd(args []string) {
 	// A device-only machine has no hub: say so before anything else (an
 	// assistant would otherwise relay "run omnillm pair here").
 	// (hub run from a terminal too; only a service starts it otherwise.)
-	if role() == "device" && (args[0] != "run" || term.IsTerminal(int(os.Stdout.Fd()))) {
+	if role() == "device" && (args[0] != "run" || os.Getenv("OMNILLM_DETACHED") != "1") {
 		die(say(runnable(deviceHubHint())))
 	}
 	dir := dataDir("hub")
@@ -761,8 +761,8 @@ func hubCmd(args []string) {
 		kind := args[2]
 		switch kind {
 		case "openai", "anthropic", "ollama", "openai-compatible":
-		case "claude", "claude-code", "chatgpt", "codex":
-			dieArgs(say(runnable(t("订阅用 omnillm login claude（或 chatgpt）接入。", "Subscriptions connect with omnillm login claude (or chatgpt)."))))
+		case "claude", "claude-code", "chatgpt", "codex", "gemini", "google", "antigravity", "agy":
+			dieArgs(say(runnable(t("订阅用 omnillm login claude、chatgpt 或 gemini 接入。", "Subscriptions connect with omnillm login claude, chatgpt or gemini."))))
 		default:
 			dieArgs(usageErr(t("用法：omnillm hub provider add <openai|anthropic|ollama|openai-compatible> [--name N] [--base-url U]",
 				"Usage: omnillm hub provider add <openai|anthropic|ollama|openai-compatible> [--name N] [--base-url U]")))
@@ -981,11 +981,14 @@ func pairArgs(args []string) (map[string]string, error) {
 	models := fs.String("models", "", "")
 	budget := fs.String("budget-usd", "", "")
 	bg := fs.Bool("background-only", false, "for servers and scripts: calls never count as a person waiting")
+	noLimit := fs.Bool("no-limit", false, "")
 	if err := parseFlags(fs, args); err != nil {
 		return nil, err
 	}
 	a := map[string]string{"name": *name, "models": *models, "budget_usd": "0", "background_only": fmt.Sprint(*bg)}
-	if *budget != "" {
+	if *noLimit {
+		a["budget_usd"] = "nolimit"
+	} else if *budget != "" {
 		micro, err := dollars(lang(), *budget, false)
 		if err != nil {
 			return nil, err
@@ -1742,7 +1745,9 @@ func pairOp(ctx context.Context, h *hub.Hub, c *control.Conn, l string, a map[st
 		}
 	}
 	budget := int64(0)
-	if v := strings.TrimSpace(a["budget_usd"]); v != "" && v != "0" {
+	if v := strings.TrimSpace(a["budget_usd"]); v == "nolimit" {
+		budget = hub.NoLimit
+	} else if v != "" && v != "0" {
 		b, err := dollars(l, v, false)
 		if err != nil {
 			return err
@@ -1804,16 +1809,16 @@ func connectCmd(args []string) {
 	onDevice = true
 	switch args[0] {
 	case "pair":
-		if notAPerson() {
-			fmt.Println(runnable(unpairedNext()))
-			return
-		}
 		paired, err := device.CheckPaired(ctx, sec)
 		if err != nil {
 			die(sayf(t("读不出这台设备保存的配对（%s）。如果它已经配对过，请用配对时的同一个用户运行；确实要重新配对，先运行 omnillm connect forget。", "Can’t read this device’s saved pairing (%s). If it is already paired, run as the same user it was paired as; to pair again, run omnillm connect forget first."), dir))
 		}
 		if paired {
-			die(say(t("这台设备已经配对过（"+dir+"）。要换一台电脑或重新配对，先运行 omnillm connect forget。", "This device is already paired ("+dir+"). To pair again (or with another computer), run omnillm connect forget first.")))
+			die(say(runnable(t("这台设备已经配对过（"+dir+"）。要换一台电脑或重新配对，先运行 omnillm connect forget。", "This device is already paired ("+dir+"). To pair again (or with another computer), run omnillm connect forget first."))))
+		}
+		if notAPerson() {
+			fmt.Println(runnable(unpairedNext()))
+			return
 		}
 		code := readSecret(t("粘贴配对文字（你 Mac 上“添加设备”或服务器上 omnillm pair 给的；不会显示，粘贴一次后回车）：", "Paste the pairing text (from “Add device” on your Mac, or omnillm pair on your server; not shown, paste once and press Return): "))
 		host, _ := os.Hostname()

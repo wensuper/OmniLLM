@@ -591,7 +591,9 @@ function subCard(x, k) {
   head.append(el("h2", t(k.title)));
   // Connected but signed out (the Models tab says so): the card offers the sign-in.
   const signedOut = !!x.signed_out;
-  if (x.connected && !signedOut) head.append(el("span", t("subOn"), "tag ok-tag"));
+  // Switched off by the owner: said, not "Connected".
+  const off = S && (S.providers || []).some((p) => p.kind === x.kind && p.off);
+  if (x.connected && !signedOut) head.append(off ? el("span", t("sourceOffTag"), "tag warn-tag") : el("span", t("subOn"), "tag ok-tag"));
   card.append(head);
   const fill = (key) => t(key, desktopName(x.desktop || k.app), k.program, t(k.plan));
   if (x.connected && !signedOut) { delete subsWaiting[x.kind]; card.append(el("p", t("subOnBody"), "muted")); return card; }

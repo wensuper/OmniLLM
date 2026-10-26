@@ -10,6 +10,13 @@ All notable changes to OmniLLM are documented here. OmniLLM is in early pre-rele
 
 - Auto isn't offered when you've taken every model out of it (it could only fail). A program asking for Auto where only chat-only models are left is told that, not that models are signed out. Auto names each model once: the model's own name no longer arrives as a second one mid-reply, which overwrote a name you gave it and read as a switch.
 - Updates and the web page check no longer stop when GitHub limits this computer's network address (60 API checks an hour without a login, quickly reached by several computers on one network): they read GitHub's release feed instead. If GitHub refuses that too, `omnillm update` says it is GitHub's limit and to try again in a while, not that the network is down.
+- Phone page: the "chats stay on this device" note names Google AI too; a browser that can't keep chats warns once, on the first chat only.
+- Console: a connected subscription whose source is switched off reads "Source off", not "Connected".
+- CLI: `connect pair --no-limit`; an already-paired device says so first, whoever runs `connect pair`; `hub provider add gemini` (google, antigravity, agy) points to `omnillm login gemini`, and `hub provider off gemini` works; `uninstall --purge` removes the Google sign-in too; on a device only an install-started hub may `hub run`; `status` on a removed device exits 1 and says to run `connect forget`; a wrong `connect chat --model` gives a runnable command.
+
+### Security
+
+- Google AI subscription: of agy's own settings only `trustedWorkspaces` and `showTips` are kept; settings and hooks are written to a temporary file and renamed (agy never reads a half-written fence), and left alone when unchanged; deleting a conversation also deletes its title, lock and summary row, and leftovers of conversations deleted by earlier versions are swept.
 
 ## [0.2.0-alpha.64](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.64) - 2026-10-26
 

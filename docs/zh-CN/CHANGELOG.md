@@ -6,6 +6,10 @@
 
 - 所有模型都被排除出 Auto 时，列表里不再显示 Auto（选了只会失败）。程序要 Auto、而能用的只有只能手动对话的模型时，提示说的是这个原因，不再说成“没登录或到上限”。Auto 每个模型只报一次名字：模型自己报的名字不会在回答中途再来一次，不会把你起的名字改掉，也不会被当成换了模型。
 - GitHub 限制这台电脑所在网络地址的查询次数时（不登录每小时 60 次，同一个网络里几台电脑很快就到），更新和网页核对不再停下：改读 GitHub 的发布订阅。两边都被拒时，`omnillm update` 会说是 GitHub 的限制、过一会儿再试，不再说成网络不通。
+- 手机网页：“对话只存在这台设备上”的说明写上 Gemini；不保存对话的浏览器只在第一次打开对话时提醒一次。
+- 控制台：订阅接入了但来源被关掉时写“来源已关闭”，不再写“已接入”。
+- 命令行：`connect pair --no-limit`；已经配对的设备运行 `connect pair` 先说已配对；`hub provider add gemini`（google、antigravity、agy）指向 `omnillm login gemini`，`hub provider off gemini` 能用；`uninstall --purge` 也删掉 Gemini 的登录；设备上只有安装启动的主机能 `hub run`；被移除的设备 `status` 退出码 1 并说先 `connect forget`；`connect chat --model` 写错时给出能运行的命令。
+- 安全：Gemini 订阅的 agy 设置只保留 `trustedWorkspaces`、`showTips`；设置和钩子写临时文件再改名，内容没变不写；删除对话时也删掉它的标题、锁和摘要记录，以前版本留下的顺带清掉。
 
 ## v0.2.0-alpha.64（2026-10-26）
 
