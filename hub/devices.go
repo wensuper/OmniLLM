@@ -802,11 +802,16 @@ type ModelView struct {
 	NoAuto bool `json:"no_auto,omitempty"`
 	// SourceOff: its model source is switched off, so no one gets it now.
 	SourceOff bool `json:"source_off,omitempty"`
-	// The price spend is counted at, USD per million tokens; PriceSet
-	// false: none was set, so the high estimate (FallbackIn/Out) is used.
-	PriceIn  float64 `json:"price_in"`
-	PriceOut float64 `json:"price_out"`
-	PriceSet bool    `json:"price_set"`
+	// The price spend is counted at, USD per million tokens (for a
+	// prompt of up to PriceOver input tokens, when the price has a
+	// long-context tier); PriceSet: the owner set it. PriceSource says
+	// where it comes from: PriceSourceSet, PriceSourcePublished or
+	// PriceSourceEstimated (FallbackIn/Out).
+	PriceIn     float64 `json:"price_in"`
+	PriceOut    float64 `json:"price_out"`
+	PriceSet    bool    `json:"price_set"`
+	PriceSource string  `json:"price_source,omitempty"`
+	PriceOver   int     `json:"price_over,omitempty"`
 }
 
 // OwnerModels lists every model for the owner's own screens.
@@ -825,10 +830,8 @@ func (h *Hub) OwnerModels(ctx context.Context) ([]ModelView, error) {
 		}
 		v := ModelView{ModelInfo: m, Hidden: mp.Hidden, NoAuto: mp.NoAuto, SourceOff: off[m.Provider]}
 		if full, err := h.getModel(ctx, m.ID); err == nil {
-			v.PriceIn, v.PriceOut, v.PriceSet = full.PriceIn, full.PriceOut, full.PriceSet
-			if !full.PriceSet {
-				v.PriceIn, v.PriceOut = FallbackIn, FallbackOut
-			}
+			p, src := h.priceOf(full)
+			v.PriceIn, v.PriceOut, v.PriceSet, v.PriceSource, v.PriceOver = p.In, p.Out, full.PriceSet, src, p.Over
 		}
 		out = append(out, v)
 	}

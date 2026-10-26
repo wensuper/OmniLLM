@@ -145,7 +145,7 @@ func modelsTable(data []byte) (string, error) {
 		return t("否", "No")
 	}
 	out := [][]string{{t("名字", "Name"), t("来源", "Source"), t("只能手动对话", "Chat only"), t("在设备上显示", "Shown on devices"), t("Auto 可选", "In Auto"), t("价格（每百万 token）", "Price (per million tokens)"), "ID"}}
-	estimated := false
+	estimated, published := false, false
 	for _, m := range ms {
 		shown := yes(!m.Hidden)
 		if m.SourceOff {
@@ -157,6 +157,9 @@ func modelsTable(data []byte) (string, error) {
 			price = t("不花钱", "free")
 		case !m.PriceSet && m.PriceIn == 0 && m.PriceOut == 0:
 			price = "—" // a hub from before prices were listed
+		case m.PriceSource == hub.PriceSourcePublished:
+			price += t("（公布价）", " (published)")
+			published = true
 		case !m.PriceSet:
 			price += t("（估）", " (est.)")
 			estimated = true
@@ -164,10 +167,15 @@ func modelsTable(data []byte) (string, error) {
 		out = append(out, []string{modelName(m.ModelInfo), sourceLabelIn(lang(), provider.Kind(m.Kind), m.Provider), yes(m.HumanOnly), shown, yes(!m.NoAuto), price, m.ID})
 	}
 	s := table(out)
+	if published {
+		// Said once: where a published price comes from, and that the owner's own wins.
+		s += "\n" + t("“（公布价）”：提供方网站上的标准价格，随 OmniLLM 内置；设了自己的价格就按你的算。",
+			"“(published)”: the provider’s standard list price, built into OmniLLM; a price you set wins.")
+	}
 	if estimated {
 		// Said once, under the table: where an estimate comes from and how to set the real price.
-		s += "\n" + t("“（估）”：没设价格，按偏高的价格估算花费。设成提供方的价格：omnillm hub model set 名字 --price-in 输入价 --price-out 输出价",
-			"“(est.)”: no price set, so spend is counted high. Set the provider’s price: omnillm hub model set NAME --price-in IN --price-out OUT")
+		s += "\n" + t("“（估）”：没设价格，也没有内置的公布价，按偏高的价格估算花费。设成提供方的价格：omnillm hub model set 名字 --price-in 输入价 --price-out 输出价",
+			"“(est.)”: no price set and no published price built in, so spend is counted high. Set the provider’s price: omnillm hub model set NAME --price-in IN --price-out OUT")
 	}
 	return s, nil
 }

@@ -598,7 +598,8 @@ type Model struct {
 	Provider    string `json:"provider"`
 	Upstream    string `json:"upstream"`
 	DisplayName string `json:"display_name"`
-	// Prices in USD per million tokens. Unset prices are estimated high.
+	// The owner's prices in USD per million tokens. Unset: the provider's
+	// published price if known (prices.go), else estimated high.
 	PriceIn  float64 `json:"price_in"`
 	PriceOut float64 `json:"price_out"`
 	PriceSet bool    `json:"price_set"`
@@ -606,17 +607,9 @@ type Model struct {
 	HumanOnly bool `json:"human_only,omitempty"`
 }
 
-// Conservative estimate when no price is set: better to over-count.
+// Conservative estimate when no price is set and none is published
+// (prices.go): better to over-count.
 const FallbackIn, FallbackOut = 15.0, 75.0
-
-func (m Model) cost(u omnillm.Usage) int64 {
-	in, out := m.PriceIn, m.PriceOut
-	if !m.PriceSet {
-		in, out = FallbackIn, FallbackOut
-	}
-	// USD per million tokens == micro-USD per token.
-	return int64(float64(u.InputTokens)*in + float64(u.OutputTokens)*out)
-}
 
 func validModelID(id string) bool {
 	if id == "" || len(id) > omnillm.MaxModelIDLength || !strings.Contains(id, "/") {

@@ -109,7 +109,8 @@ func (h *Hub) complete(ctx context.Context, p principal, req omnillm.Request) (o
 		}
 	}
 	inEst := estimateInput(req)
-	worst := m.cost(omnillm.Usage{InputTokens: inEst, OutputTokens: req.MaxTokens})
+	price, _ := h.priceOf(m)
+	worst := price.cost(omnillm.Usage{InputTokens: inEst, OutputTokens: req.MaxTokens})
 	if err := h.reserve(ctx, p, worst); err != nil {
 		return nil, err
 	}
@@ -130,7 +131,7 @@ func (h *Hub) complete(ctx context.Context, p principal, req omnillm.Request) (o
 		return nil, err
 	}
 	h.inFlight.Add(1)
-	return &accounted{Stream: s, h: h, p: p, m: m, caller: req.Caller, reserved: worst, inEst: inEst, start: start}, nil
+	return &accounted{Stream: s, h: h, p: p, m: m, price: price, caller: req.Caller, reserved: worst, inEst: inEst, start: start}, nil
 }
 
 // Busy reports a reply still on its way or a device being paired: what a
@@ -165,6 +166,7 @@ type accounted struct {
 	h        *Hub
 	p        principal
 	m        Model
+	price    Price // what the call is charged at, fixed when it starts
 	caller   omnillm.Caller
 	reserved int64
 	inEst    int
@@ -219,7 +221,7 @@ func (a *accounted) settle(outcome string) {
 		if est := int(a.outBytes.Load()/2) + 1; u.OutputTokens == 0 || (outcome != "ok" && u.OutputTokens < est) {
 			u.OutputTokens = est
 		}
-		u.CostMicroUSD = a.m.cost(u)
+		u.CostMicroUSD = a.price.cost(u)
 		a.mu.Lock()
 		a.usage = u
 		a.mu.Unlock()

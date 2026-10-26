@@ -329,3 +329,26 @@ func TestModelSetGoesThroughThePreferences(t *testing.T) {
 		t.Fatal(text, err, ps)
 	}
 }
+
+// A built-in published price is marked as one, in both languages, and the
+// line under the table says the owner's own price wins.
+func TestModelsTablePublishedPrice(t *testing.T) {
+	b, _ := json.Marshal([]hub.ModelView{
+		{ModelInfo: omnillm.ModelInfo{ID: "openai/gpt-4o-mini", DisplayName: "gpt-4o-mini", Provider: "openai", Kind: "openai"}, PriceIn: 0.15, PriceOut: 0.6, PriceSource: hub.PriceSourcePublished},
+		{ModelInfo: omnillm.ModelInfo{ID: "openai/gpt-4o", DisplayName: "gpt-4o", Provider: "openai", Kind: "openai"}, PriceIn: 1, PriceOut: 2, PriceSet: true, PriceSource: hub.PriceSourceSet},
+	})
+	for _, c := range []struct{ lang, mark, note string }{
+		{"zh", "$0.15 / $0.6（公布价）", "设了自己的价格就按你的算"},
+		{"en", "$0.15 / $0.6 (published)", "a price you set wins"},
+	} {
+		t.Setenv("OMNILLM_LANG", c.lang)
+		got, err := modelsTable(b)
+		if err != nil {
+			t.Fatal(err)
+		}
+		lines := strings.Split(got, "\n")
+		if len(lines) != 4 || !strings.Contains(lines[1], c.mark) || !strings.Contains(lines[3], c.note) || strings.Contains(lines[2], "published") || strings.Contains(lines[2], "公布价") || strings.Contains(got, "--price-in") {
+			t.Fatalf("%s:\n%s", c.lang, got)
+		}
+	}
+}

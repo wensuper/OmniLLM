@@ -4,6 +4,12 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.68](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.68) - 2026-10-26
+
+### Changed
+
+- Spend: API-key models you haven't priced are now counted at the provider's published standard price, built in for common Anthropic, OpenAI, Gemini, DeepSeek and Groq models (read from their pricing pages on 2026-10-26), instead of $15 in / $75 out per million tokens for everything — which made daily limits stop cheap models up to ~100× too early. A price you set still wins. It only applies to the provider's own API address, by exact model ID (a dated snapshot counts as its model); a proxy, an unlisted model or one priced "contact sales" is still counted high. Long prompts pay the long-context price where the provider charges one, and announced price changes apply from their date. `omnillm hub models` marks each price as yours, "(published)" or "(est.)"; the console's spend notes say the same.
+
 ## [0.2.0-alpha.67](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.67) - 2026-10-26
 
 ### Changed
