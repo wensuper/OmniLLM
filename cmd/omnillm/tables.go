@@ -144,15 +144,32 @@ func modelsTable(data []byte) (string, error) {
 		}
 		return t("否", "No")
 	}
-	out := [][]string{{t("名字", "Name"), t("来源", "Source"), t("只能手动对话", "Chat only"), t("在设备上显示", "Shown on devices"), t("Auto 可选", "In Auto"), "ID"}}
+	out := [][]string{{t("名字", "Name"), t("来源", "Source"), t("只能手动对话", "Chat only"), t("在设备上显示", "Shown on devices"), t("Auto 可选", "In Auto"), t("价格（每百万 token）", "Price (per million tokens)"), "ID"}}
+	estimated := false
 	for _, m := range ms {
 		shown := yes(!m.Hidden)
 		if m.SourceOff {
 			shown = t("否（来源已关闭）", "No (source off)")
 		}
-		out = append(out, []string{modelName(m.ModelInfo), sourceLabelIn(lang(), provider.Kind(m.Kind), m.Provider), yes(m.HumanOnly), shown, yes(!m.NoAuto), m.ID})
+		price := fmt.Sprintf("$%s / $%s", plainNum(m.PriceIn), plainNum(m.PriceOut))
+		switch {
+		case m.PriceSet && m.PriceIn == 0 && m.PriceOut == 0:
+			price = t("不花钱", "free")
+		case !m.PriceSet && m.PriceIn == 0 && m.PriceOut == 0:
+			price = "—" // a hub from before prices were listed
+		case !m.PriceSet:
+			price += t("（估）", " (est.)")
+			estimated = true
+		}
+		out = append(out, []string{modelName(m.ModelInfo), sourceLabelIn(lang(), provider.Kind(m.Kind), m.Provider), yes(m.HumanOnly), shown, yes(!m.NoAuto), price, m.ID})
 	}
-	return table(out), nil
+	s := table(out)
+	if estimated {
+		// Said once, under the table: where an estimate comes from and how to set the real price.
+		s += "\n" + t("“（估）”：没设价格，按偏高的价格估算花费。设成提供方的价格：omnillm hub model set 名字 --price-in 输入价 --price-out 输出价",
+			"“(est.)”: no price set, so spend is counted high. Set the provider’s price: omnillm hub model set NAME --price-in IN --price-out OUT")
+	}
+	return s, nil
 }
 
 // providersTable is the table `omnillm hub providers` prints: the source
@@ -410,3 +427,6 @@ func width(s string) int {
 	}
 	return n
 }
+
+// plainNum is a price as people write it: 3, 0.15, 75.
+func plainNum(f float64) string { return strconv.FormatFloat(f, 'f', -1, 64) }

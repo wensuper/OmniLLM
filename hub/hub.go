@@ -607,12 +607,12 @@ type Model struct {
 }
 
 // Conservative estimate when no price is set: better to over-count.
-const fallbackIn, fallbackOut = 15.0, 75.0
+const FallbackIn, FallbackOut = 15.0, 75.0
 
 func (m Model) cost(u omnillm.Usage) int64 {
 	in, out := m.PriceIn, m.PriceOut
 	if !m.PriceSet {
-		in, out = fallbackIn, fallbackOut
+		in, out = FallbackIn, FallbackOut
 	}
 	// USD per million tokens == micro-USD per token.
 	return int64(float64(u.InputTokens)*in + float64(u.OutputTokens)*out)

@@ -140,16 +140,17 @@ func TestAppsModelsProvidersTables(t *testing.T) {
 	}
 
 	b, _ = json.Marshal([]hub.ModelView{
-		{ModelInfo: omnillm.ModelInfo{ID: "claude-code/sonnet", DisplayName: "Claude Sonnet", Provider: "claude-code", Kind: "claude-code", Latest: true, HumanOnly: true}},
-		{ModelInfo: omnillm.ModelInfo{ID: "codex/default", DisplayName: "ChatGPT (Codex)", Provider: "codex", Kind: "codex", Latest: true, HumanOnly: true}},
-		{ModelInfo: omnillm.ModelInfo{ID: "groq/llama", DisplayName: "写作", Provider: "groq", Kind: "openai-compatible", Renamed: true}, Hidden: true},
+		{ModelInfo: omnillm.ModelInfo{ID: "claude-code/sonnet", DisplayName: "Claude Sonnet", Provider: "claude-code", Kind: "claude-code", Latest: true, HumanOnly: true}, PriceSet: true},
+		{ModelInfo: omnillm.ModelInfo{ID: "codex/default", DisplayName: "ChatGPT (Codex)", Provider: "codex", Kind: "codex", Latest: true, HumanOnly: true}, PriceSet: true},
+		{ModelInfo: omnillm.ModelInfo{ID: "groq/llama", DisplayName: "写作", Provider: "groq", Kind: "openai-compatible", Renamed: true}, Hidden: true, PriceIn: 15, PriceOut: 75},
 	})
 	got, err = modelsTable(b)
 	if err != nil {
 		t.Fatal(err)
 	}
 	lines = strings.Split(got, "\n")
-	if len(lines) != 4 || !strings.Contains(lines[0], "来源") || !strings.Contains(lines[0], "只能手动对话") || !strings.Contains(lines[0], "在设备上显示") || !strings.HasSuffix(lines[0], "ID") {
+	// Three models and the line saying what "(估)" means.
+	if len(lines) != 5 || !strings.Contains(lines[3], "$15 / $75（估）") || !strings.Contains(lines[1], "不花钱") || !strings.Contains(lines[4], "--price-in") || !strings.Contains(lines[0], "来源") || !strings.Contains(lines[0], "只能手动对话") || !strings.Contains(lines[0], "在设备上显示") || !strings.HasSuffix(lines[0], "ID") {
 		t.Fatal(got)
 	}
 	if !strings.HasPrefix(lines[1], "Claude Sonnet（最新版）") || !strings.Contains(lines[1], "Claude 订阅") || !strings.HasSuffix(lines[1], "claude-code/sonnet") {

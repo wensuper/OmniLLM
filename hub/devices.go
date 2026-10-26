@@ -802,6 +802,11 @@ type ModelView struct {
 	NoAuto bool `json:"no_auto,omitempty"`
 	// SourceOff: its model source is switched off, so no one gets it now.
 	SourceOff bool `json:"source_off,omitempty"`
+	// The price spend is counted at, USD per million tokens; PriceSet
+	// false: none was set, so the high estimate (FallbackIn/Out) is used.
+	PriceIn  float64 `json:"price_in"`
+	PriceOut float64 `json:"price_out"`
+	PriceSet bool    `json:"price_set"`
 }
 
 // OwnerModels lists every model for the owner's own screens.
@@ -818,7 +823,14 @@ func (h *Hub) OwnerModels(ctx context.Context) ([]ModelView, error) {
 		if mp.Name != "" {
 			m.DisplayName, m.Renamed = mp.Name, true
 		}
-		out = append(out, ModelView{ModelInfo: m, Hidden: mp.Hidden, NoAuto: mp.NoAuto, SourceOff: off[m.Provider]})
+		v := ModelView{ModelInfo: m, Hidden: mp.Hidden, NoAuto: mp.NoAuto, SourceOff: off[m.Provider]}
+		if full, err := h.getModel(ctx, m.ID); err == nil {
+			v.PriceIn, v.PriceOut, v.PriceSet = full.PriceIn, full.PriceOut, full.PriceSet
+			if !full.PriceSet {
+				v.PriceIn, v.PriceOut = FallbackIn, FallbackOut
+			}
+		}
+		out = append(out, v)
 	}
 	return out, nil
 }

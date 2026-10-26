@@ -967,8 +967,8 @@ func hubCmd(args []string) {
 		}
 	case "model":
 		if len(args) < 2 || args[1] != "set" {
-			dieArgs(usageErr(t("用法：omnillm hub model set 名字 [--name 新名字] [--shown true|false] [--human-only true|false] [--auto true|false]（列出模型：omnillm hub models）",
-				"Usage: omnillm hub model set NAME [--name NEW-NAME] [--shown true|false] [--human-only true|false] [--auto true|false] (to list them: omnillm hub models)")))
+			dieArgs(usageErr(t("用法：omnillm hub model set 名字 [--name 新名字] [--shown true|false] [--human-only true|false] [--auto true|false] [--price-in 输入价 --price-out 输出价]（列出模型：omnillm hub models）",
+				"Usage: omnillm hub model set NAME [--name NEW-NAME] [--shown true|false] [--human-only true|false] [--auto true|false] [--price-in IN --price-out OUT] (to list them: omnillm hub models)")))
 		}
 		a, err := modelSetArgs(splitTarget(args[2:]))
 		if err != nil {
