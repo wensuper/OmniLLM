@@ -15,7 +15,7 @@ const T = {
     loginBody: "点屏幕顶部菜单栏里的 OmniLLM 图标，选“打开控制台”。", loginBodyOther: "在终端运行：",
     loginOr: "或者在终端运行：", loginOrOther: "",
     loginSafe: "为了安全，控制台只能从{here}上打开。",
-    hubDown: "OmniLLM 没有运行。点菜单栏里的 OmniLLM 图标，选“启动 OmniLLM”，或在终端运行 omnillm install。",
+    hubDown: "OmniLLM 没有运行（正在更新的话，过一会儿会自己回来）。点菜单栏里的 OmniLLM 图标，选“启动 OmniLLM”，或在终端运行 omnillm install。",
     hubDownOther: "OmniLLM 没有运行。在终端运行 omnillm install。",
     ariaLang: "切换语言", ariaTheme: "切换深色或浅色", ariaSteps: "步骤", back: "返回",
     step1: "接入模型", step2: "添加设备", step3: "试一下",
@@ -24,7 +24,7 @@ const T = {
     w1Codex: "我有 ChatGPT 订阅",
     w1Agy: "我有 Google AI 订阅（Gemini）", subPlanAgy: "用你的 Google 账号登录；Google AI Pro、Ultra 订阅的额度更多。",
     subSignedOutAgy: "{1} 已经装好。还要给 OmniLLM 单独登录一次（你自己用的不受影响）。",
-    subOn: "已接入", subOnBody: "可以用了：手机和其他设备现在就能用这个订阅。",
+    subOn: "已接入", subOnBody: "可以用了。",
     subDesktop: "发现 {0}。同一个订阅也能给手机用：再装上官方命令行版 {1}（安装不收费，约 1 分钟），用同一个账号登录就好。{2}",
     subNone: "在{here}上装好官方的 {1}（安装不收费，约 1 分钟），用你的订阅账号登录。{2}",
     subPlanClaude: "需要 Claude Pro 或 Max 订阅。", subPlanCodex: "需要 ChatGPT Plus、Pro 等付费订阅。",
@@ -54,14 +54,14 @@ const T = {
     skipPair: "先跳过，以后再加",
     w3Title: "试一下", pairedTry: "好了：设备已添加。在它上面发第一条消息试试。",
     model: "模型", message: "消息", send: "发送", finish: "完成",
-    todaySpend: "今天的花费", estimate: "API Key 按官方价格估算，订阅和本机模型不花钱", devices: "设备", models: "模型", apps: "应用", usage: "用量",
+    todaySpend: "今天的花费", estimate: "API Key 按官方价格估算，订阅和{here}上的模型不花钱", devices: "设备", models: "模型", apps: "应用", usage: "用量",
     addDevice: "添加设备", addProvider: "接入模型", addApp: "添加应用", add: "添加",
     coTitle: "让“{0}”只能手动对话？", coBody: "打开后，下面这些就用不了“{0}”了：",
     coApp: "应用", coDevice: "只给程序用的设备", coOnly: "它只有这一个能用的模型，会完全停下来",
     coYes: "仍然打开", coHow: "以后要让它们再用上，把这个开关关掉就行。",
     name: "名字", lastSeen: "最近在线", budget: "每天额度", todayBudget: "今天 / 每天额度", where: "对话发往", humanOnly: "只能手动对话",
     showOnDevices: "在设备上显示", subAlways: "订阅模型始终只能手动对话", editModel: "编辑模型 · {0}",
-    enabled: "开启", pausedChip: "已暂停", pausedToast: "已暂停“{0}”", resumedToast: "已开启“{0}”",
+    enabled: "开启", pausedChip: "已暂停", pausedToast: "已暂停“{0}”", sourceOffToast: "已关闭“{0}”", sourceOnToast: "已打开“{0}”", resumedToast: "已开启“{0}”",
     online: "在线", todayAt: "今天 {0}", yesterdayAt: "昨天 {0}",
     hcAdded: "添加于", hcSeen: "最近在线", hcToday: "今天用量", hcModels: "能用的模型", hcOffline: "离线", hcKind: "类型",
     hcBackground: "只给程序用", hcApp: "这台电脑上的程序",
@@ -85,7 +85,7 @@ const T = {
     appsBody: "供脚本和程序后台调用，仅可使用 API Key 和{here}上的模型。",
     appsHelp: "接入方式", apAddr: "接口地址", apKey: "Key", apKeyV: "应用的令牌", apFmt: "格式", apFmtV: "兼容 OpenAI，也支持 Anthropic",
     apWho: "可连接", apWhoV: "仅{here}上的程序",
-    appsOff: "给应用用的本机接口没有打开，应用暂时连不上。重新运行一次安装命令就会打开。",
+    appsOff: "给应用用的本机接口没能打开，应用暂时连不上。如果不是你特意关掉的，多半是别的程序占用了它的端口 8765：关掉那个程序后，在终端运行 omnillm install。",
     appTokenUse: "在程序里这样设置（大多数工具认这两个变量；也可以在设置里填同样的地址和 Key）：",
     appTokenTry: "试一下（应该列出它能用的模型）：",
     usageBody: "按{here}的时间计。花费按公布的价格估算，没有公布价格的按偏高估；订阅和{here}上的模型不花钱。",
@@ -98,7 +98,7 @@ const T = {
     capLine: "{whole}每天总额度：{0}", capLabel: "{whole}每天总额度", capNone: "{whole}每天总额度：不设上限", capEdit: "修改", noApps: "还没有应用。",
     modelsBody: "“只能手动对话”：仅限人工对话，脚本与应用无法调用。订阅模型强制开启，以防账号被判定为自动化使用。",
     codexName: "ChatGPT（Codex · 最新版）", codexVer: "ChatGPT（Codex · {0}）", latest: "（最新版）",
-    remove: "移除", removeConfirm: "移除“{0}”？它会立刻用不了。",
+    remove: "移除", removeConfirm: "移除“{0}”？它会立刻用不了。", removeConfirmSource: "移除“{0}”？它的模型马上从所有设备和应用里消失；用 API Key 接入的，保存的 Key 也会删掉。要再用得重新接入。只想停用的话，关掉它的开关就行。",
     removeConfirmDevice: "移除“{0}”？它会马上断开，那台设备上的对话也会清除。要再用，得重新添加。",
     removed: "已移除", connected: "已接入，{0} 个模型可用", connectedOne: "已接入，1 个模型可用", saved: "已保存",
     local: "只在{here}上", remote: "云端", localChip: "{Here}", sub: "订阅",
@@ -117,7 +117,7 @@ const T = {
     pairCliHero: "在那台电脑的终端里连接", pairCliToggle: "那台电脑没有浏览器？用命令行",
     pairCmd1: "在那台电脑的终端里运行", pairCmd1d: "已经装了也运行这条，不用 sudo",
     pairCmd2: "它要配对文字时，粘贴这段，回车", pairCmd2d: "粘贴后终端里看不到字，是正常的",
-    pairYes: "一致，添加", pairNo: "不一致，不添加", pairLeft: "手机那边取消了，或者连接断了。",
+    pairYes: "一致，添加", pairNo: "不一致，不添加", pairLeft: "那台设备取消了，或者连接断了。",
     pairDone: "已添加“{0}”", pairFailed: "配对没有完成：{0}", pairRelayDrop: "远程连接断了，这次没有添加。网络恢复后再换一个。",
     pairDenied: "没有添加：你选了不一致。", pairExpired: "二维码过期了", pairExpiredLink: "链接过期了", pairExpiredText: "配对文字过期了", pairEnded: "这次没有添加",
     pairExpiredSay: "过期了，换一个就行。", pairNew: "换一个二维码", pairNewLink: "换一个链接", pairNewText: "换一段配对文字", qrAlt: "添加设备的二维码",
@@ -139,7 +139,7 @@ const T = {
     loginBody: "Click the OmniLLM icon in the menu bar and choose “Open the console”.", loginBodyOther: "Run in a terminal:",
     loginOr: "Or run in Terminal:", loginOrOther: "",
     loginSafe: "For safety, the console opens only from {here}.",
-    hubDown: "OmniLLM isn’t running. Click the OmniLLM icon in the menu bar and choose “Start OmniLLM”, or run omnillm install in Terminal.",
+    hubDown: "OmniLLM isn’t running (if it’s updating, it comes back by itself shortly). Click the OmniLLM icon in the menu bar and choose “Start OmniLLM”, or run omnillm install in Terminal.",
     hubDownOther: "OmniLLM isn’t running. Run omnillm install in a terminal.",
     ariaLang: "Language", ariaTheme: "Light or dark", ariaSteps: "Steps", back: "Back",
     step1: "Connect a model", step2: "Add a device", step3: "Try it",
@@ -148,7 +148,7 @@ const T = {
     w1Codex: "I have a ChatGPT subscription",
     w1Agy: "I have a Google AI subscription (Gemini)", subPlanAgy: "Sign in with your Google account; Google AI Pro and Ultra plans get more usage.",
     subSignedOutAgy: "{1} is installed. Sign in once more, for OmniLLM only (the one you use yourself isn’t affected).",
-    subOn: "Connected", subOnBody: "Ready: your phone and other devices can use this subscription now.",
+    subOn: "Connected", subOnBody: "Ready to use.",
     subDesktop: "Found {0}. The same subscription can serve your phone too: add {1}, the official command-line program (no charge to install, about a minute), and sign in with the same account. {2}",
     subNone: "Install {1}, the official program, on {here} (no charge to install, about a minute) and sign in with your subscription account. {2}",
     subPlanClaude: "Needs a Claude Pro or Max plan.", subPlanCodex: "Needs a paid ChatGPT plan such as Plus or Pro.",
@@ -178,14 +178,14 @@ const T = {
     skipPair: "Skip for now",
     w3Title: "Try it", pairedTry: "All set: the device is added. Send your first message from it.",
     model: "Model", message: "Message", send: "Send", finish: "Done",
-    todaySpend: "Spent today", estimate: "API keys at their official prices; subscriptions and local models cost nothing", devices: "Devices", models: "Models", apps: "Apps", usage: "Usage",
+    todaySpend: "Spent today", estimate: "API keys at their official prices; subscriptions and models on {here} cost nothing", devices: "Devices", models: "Models", apps: "Apps", usage: "Usage",
     addDevice: "Add device", addProvider: "Connect a model", addApp: "Add app", add: "Add",
     coTitle: "Make “{0}” chat only?", coBody: "Once it’s on, these can no longer use “{0}”:",
     coApp: "App", coDevice: "Programs-only device", coOnly: "its only usable model: it stops working entirely",
     coYes: "Turn on anyway", coHow: "To let them use it again later, turn this switch off.",
     name: "Name", lastSeen: "Last seen", budget: "Daily limit", todayBudget: "Today / daily limit", where: "Messages go to", humanOnly: "Chat only",
     showOnDevices: "Show on devices", subAlways: "Subscription models are always chat-only", editModel: "Edit model · {0}",
-    enabled: "On", pausedChip: "Paused", pausedToast: "Paused “{0}”", resumedToast: "Turned on “{0}”",
+    enabled: "On", pausedChip: "Paused", pausedToast: "Paused “{0}”", sourceOffToast: "Turned off “{0}”", sourceOnToast: "Turned on “{0}”", resumedToast: "Turned on “{0}”",
     online: "Online", todayAt: "Today {0}", yesterdayAt: "Yesterday {0}",
     hcAdded: "Added", hcSeen: "Last seen", hcToday: "Today", hcModels: "Models", hcOffline: "Offline", hcKind: "Kind",
     hcBackground: "Programs only", hcApp: "A program on this computer",
@@ -209,7 +209,7 @@ const T = {
     appsBody: "For scripts and programs: background calls only, with API keys and models on {here}.",
     appsHelp: "How to connect", apAddr: "Address", apKey: "Key", apKeyV: "The app’s token", apFmt: "Format", apFmtV: "OpenAI-compatible; Anthropic works too",
     apWho: "Reachable from", apWhoV: "Programs on {here} only",
-    appsOff: "The local API for apps is off, so apps can’t connect yet. Running the install command again turns it on.",
+    appsOff: "The local API for apps isn’t on, so apps can’t connect. Unless you turned it off on purpose, another program is probably using its port (8765): close it, then run omnillm install in Terminal.",
     appTokenUse: "Set it up in the program (most tools read these two variables; or enter the same address and key in its settings):",
     appTokenTry: "Try it (it should list the models it can use):",
     usageBody: "Days follow {here}’s clock. Spend is estimated from published prices (on the high side where none is published); subscriptions and models on {here} cost nothing.",
@@ -222,7 +222,7 @@ const T = {
     capLine: "Daily total for {here}: {0}", capLabel: "Daily total for {here}", capNone: "Daily total for {here}: no limit", capEdit: "Change", noApps: "No apps yet.",
     modelsBody: "Chat-only models serve people only; scripts and apps can’t call them. Always on for subscriptions, so the account isn’t flagged as automated.",
     codexName: "ChatGPT (Codex · latest)", codexVer: "ChatGPT (Codex · {0})", latest: " (latest)",
-    remove: "Remove", removeConfirm: "Remove “{0}”? It stops working at once.",
+    remove: "Remove", removeConfirm: "Remove “{0}”? It stops working at once.", removeConfirmSource: "Remove “{0}”? Its models disappear from every device and app at once, and a saved API key is deleted; to use it again you connect it again. To stop it for now, turn its switch off instead.",
     removeConfirmDevice: "Remove “{0}”? It disconnects at once and its chats on that device are cleared; to use it again, add it again.",
     removed: "Removed", connected: "Connected: {0} models available", connectedOne: "Connected: 1 model available", saved: "Saved",
     local: "{Here} only", remote: "Cloud", localChip: "{Here}", sub: "subscription",
@@ -493,18 +493,21 @@ function renderStatus() {
   // The phones' web page differs from the signed release: said first.
   const wc = S.web_check, webBad = wc && !wc.ok && !wc.error;
   if (S.relay_configured && S.relay_up && !(S.region && S.region.paused) && !webBad) return;
-  let text = webBad ? t("webBad") : !S.relay_configured ? t("relayNone") : S.relay_up ? "" : t("relayOff");
-  if (S.region && S.region.paused) text += " · " + t("regionPaused");
+  const paused = S.region && S.region.paused;
+  const text = [webBad ? t("webBad") : !S.relay_configured ? t("relayNone") : S.relay_up ? "" : t("relayOff"), paused ? t("regionPaused") : ""].filter(Boolean).join(" · ");
+  // A warning (paused, the phones' page differs) is spelled out on a
+  // phone-width window too, not left to a tooltip a touch screen can't show.
+  s.classList.toggle("alert", !!(paused || webBad));
   // On a phone-width window only the dot shows; it carries the sentence
   // for screen readers and as a tooltip.
-  const dot = el("span", "", "dot" + (S.relay_up && !webBad ? " on" : ""));
+  const dot = el("span", "", "dot" + (S.relay_up && !webBad && !paused ? " on" : ""));
   dot.setAttribute("role", "img");
   dot.setAttribute("aria-label", text);
   s.title = text;
   const words = el("span", text, "status-text");
   words.setAttribute("aria-hidden", "true");
   s.append(dot, words);
-  if (S.region && S.region.paused) {
+  if (paused) {
     const b = el("button", t("regionConfirm"), "link");
     b.type = "button";
     b.addEventListener("click", async () => { try { await api("region/confirm", {}); await refresh(); } catch (e) { toast(e.message, true); } });
@@ -588,9 +591,12 @@ function subCard(x, k) {
   if (x.connected) head.append(el("span", t("subOn"), "tag ok-tag"));
   card.append(head);
   const fill = (key) => t(key, desktopName(x.desktop || k.app), k.program, t(k.plan));
-  if (x.connected) { delete subsWaiting[x.kind]; card.append(el("p", t("subOnBody"), "muted")); return card; }
+  // Connected but signed out (the Models tab says so): the card offers the sign-in.
+  const signedOut = S && (S.providers || []).some((p) => p.kind === x.kind && p.problem === "login");
+  if (x.connected && !signedOut) { delete subsWaiting[x.kind]; card.append(el("p", t("subOnBody"), "muted")); return card; }
   let text, btn = null, act = null;
-  if (x.logged_in && x.removed) { text = fill("subRemoved"); btn = t("subReconnect"); act = "connect"; }
+  if (signedOut) { text = fill("subSignedOut"); btn = t("subSignIn"); act = "login"; }
+  else if (x.logged_in && x.removed) { text = fill("subRemoved"); btn = t("subReconnect"); act = "connect"; }
   else if (x.logged_in && x.problem) { text = x.problem; btn = t("recheck"); act = "connect"; }
   else if (x.logged_in) { card.append(el("p", fill("subPending"), "muted")); return card; }
   else if (x.elsewhere) { text = t("subElsewhere"); btn = t("subSignIn"); act = "login"; }
@@ -642,6 +648,11 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden && !$
 async function showWizard() {
   show("wizard");
   $("wiz-back-line").hidden = !fromDash;
+  // From the dashboard: adding one more source, not the first-run steps.
+  document.querySelector("#wizard .steps").hidden = fromDash;
+  const h = $("w1").querySelector("h1");
+  h.dataset.t = fromDash ? "addProvider" : "w1Title"; // kept through a language switch
+  h.textContent = t(h.dataset.t);
   if (S.providers.length === 0 || fromDash) renderSubs();
   if (S.providers.length === 0) {
     stepTo(1);
@@ -738,7 +749,6 @@ $("try-form").addEventListener("submit", async (ev) => {
   try {
     const r = await api("test", { model: $("try-model").value, text: $("try-text").value });
     out.textContent = r.reply;
-    $("finish").hidden = false;
   } catch (e) { out.textContent = e.message; } finally { btn.disabled = false; }
 });
 
@@ -1134,7 +1144,7 @@ function cell(row, text, cls) { const td = el("td", text, cls); row.append(td); 
 
 // removeButton: Remove in a table row; it asks in a line of its own right
 // under the row (the question, then Cancel and Remove).
-function removeButton(label, path, id, redraw) {
+function removeButton(label, path, id, redraw, confirmKey = "removeConfirm") {
   const b = el("button", t("remove"), "danger");
   b.type = "button";
   b.addEventListener("click", () => {
@@ -1151,7 +1161,7 @@ function removeButton(label, path, id, redraw) {
       try { await api(path, { id }); toast(t("removed")); refresh(); } catch (e) { toast(e.message, true); no.disabled = yes.disabled = false; }
     });
     const btns = el("div", undefined, "btns"); btns.append(no, yes);
-    const line = el("div", undefined, "row-ask"); line.append(el("p", t("removeConfirm", label)), btns);
+    const line = el("div", undefined, "row-ask"); line.append(el("p", t(confirmKey, label)), btns);
     td.append(line); ask.append(td);
     tr.after(ask);
     no.focus();
@@ -1378,7 +1388,7 @@ function modelsCell(tr, nc, x, usable) {
 
 // pauseSwitch: on = in use; turning it off pauses that device or app at
 // once (its next request is refused), and on again resumes it.
-function pauseSwitch(tr, label, path, id, paused, field = "paused") {
+function pauseSwitch(tr, label, path, id, paused, field = "paused", toasts = ["pausedToast", "resumedToast"]) {
   const td = cell(tr, "", "sw");
   const sw = el("input"); sw.type = "checkbox"; sw.className = "switch"; sw.checked = !paused;
   sw.setAttribute("aria-label", t("enabled") + " " + label);
@@ -1389,11 +1399,11 @@ function pauseSwitch(tr, label, path, id, paused, field = "paused") {
     try {
       await api(path, { id, [field]: !sw.checked });
     } catch (e) { sw.checked = !sw.checked; sw.disabled = false; toast(e.message, true); return; }
-    if (sw.checked) toast(named("resumedToast", label));
+    if (sw.checked) toast(named(toasts[1], label));
     else {
       // Paused by a slip of the finger: Undo turns it on again.
-      toast(named("pausedToast", label), false, { label: t("undo"), run: async () => {
-        try { await api(path, { id, [field]: false }); toast(named("resumedToast", label)); await refresh(); } catch (e) { toast(e.message, true); }
+      toast(named(toasts[0], label), false, { label: t("undo"), run: async () => {
+        try { await api(path, { id, [field]: false }); toast(named(toasts[1], label)); await refresh(); } catch (e) { toast(e.message, true); }
       } });
     }
     try { await refresh(); } catch (_) { sw.disabled = false; }
@@ -1911,8 +1921,8 @@ function renderModels() {
     if (pt) nc.append(el("span", pt, "tag warn-tag"));
     cell(tr, how, "how");
     // Off keeps the login or key; Remove (quieter) deletes it.
-    pauseSwitch(tr, label, "providers/off", p.name, !!p.off, "off");
-    const rm = removeButton(label, "providers/remove", p.name, renderModels);
+    pauseSwitch(tr, label, "providers/off", p.name, !!p.off, "off", ["sourceOffToast", "sourceOnToast"]);
+    const rm = removeButton(label, "providers/remove", p.name, renderModels, "removeConfirmSource");
     rm.className = "danger-text";
     cell(tr, "", "actions").append(rm);
     pb.append(tr);

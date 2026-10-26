@@ -11,6 +11,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"html"
 	"io"
@@ -116,17 +117,14 @@ func attention(ps []SourceProblem, now time.Time) string {
 }
 
 func installCmd(args []string) {
-	noOpen, deviceOnly, hubOnly := false, false, false
-	for _, a := range args {
-		switch a {
-		case "--no-open":
-			noOpen = true
-		case "--device":
-			deviceOnly = true
-		case "--hub":
-			hubOnly = true
-		}
+	fs := flag.NewFlagSet("install", flag.ContinueOnError)
+	noOpenF := fs.Bool("no-open", false, "")
+	deviceF := fs.Bool("device", false, "")
+	hubF := fs.Bool("hub", false, "")
+	if err := parseFlags(fs, args); err != nil {
+		dieArgs(err)
 	}
+	noOpen, deviceOnly, hubOnly := *noOpenF, *deviceF, *hubF
 	if os.Geteuid() == 0 {
 		// Root would leave root-owned files in the person's home folder.
 		die(say(t("不要用 root 或 sudo 运行：OmniLLM 只为当前用户安装。去掉 sudo 再运行一次。", "Don’t run this as root or with sudo: OmniLLM installs for the current user only. Run it again without sudo.")))
@@ -1412,6 +1410,9 @@ func statusCmd(args []string) {
 		if a == "--json" {
 			b, _ := json.Marshal(st)
 			fmt.Println(string(b))
+			if !ok {
+				os.Exit(1) // as without --json
+			}
 			return
 		}
 	}
@@ -1430,11 +1431,18 @@ func statusCmd(args []string) {
 }
 
 func uninstallCmd(args []string) {
-	purge := false
-	for _, a := range args {
-		if a == "--purge" {
-			purge = true
-		}
+	fs := flag.NewFlagSet("uninstall", flag.ContinueOnError)
+	purgeF := fs.Bool("purge", false, "")
+	if err := parseFlags(fs, args); err != nil {
+		dieArgs(err)
+	}
+	purge := *purgeF
+	// A device-only machine has no service: forgetting the pairing is
+	// what removes it.
+	if role() == "device" {
+		fmt.Println(runnable(t("这台电脑只当设备用，没有后台服务。要删除配对，运行 omnillm connect forget。程序本身在 ~/.local/bin/omnillm，不需要了就 rm 掉。",
+			"This computer is set up as a device and has no background service. To delete its pairing, run omnillm connect forget. The program itself is at ~/.local/bin/omnillm; delete it with rm if you no longer need it.")))
+		return
 	}
 	home, _ := os.UserHomeDir()
 	switch runtime.GOOS {
@@ -1481,6 +1489,7 @@ func uninstallCmd(args []string) {
 	} else {
 		fmt.Println(t("数据和 API Key 保留着；要一并删除，运行 omnillm uninstall --purge。", "Data and API keys are kept; to delete them too, run omnillm uninstall --purge."))
 	}
+	fmt.Println(t("程序本身还在 ~/.local/bin/omnillm，不需要了就 rm 掉。", "The program itself is still at ~/.local/bin/omnillm; delete it with rm if you no longer need it."))
 }
 
 // purgeDirs is what --purge deletes: only the folders OmniLLM creates,

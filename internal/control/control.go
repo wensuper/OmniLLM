@@ -162,17 +162,20 @@ func Serve(ctx context.Context, ln net.Listener, h Handler) {
 	}
 }
 
+// ErrNotRunning: no hub of this user's answers on the socket.
+var ErrNotRunning = errors.New("the hub is not running")
+
 // Call connects and sends req; onReply sees every reply and may answer
 // confirm events by returning (answer, true).
 func Call(path string, req Request, onReply func(Reply) (answer bool, answered bool)) error {
 	// Only a socket this user's own hub made: another local user's fake
 	// one (in a folder they made) must not answer for it.
 	if fi, err := os.Lstat(path); err == nil && !fsown.Mine(fi) {
-		return fmt.Errorf("control: %s belongs to another user", path)
+		return fmt.Errorf("%w: %s belongs to another user", ErrNotRunning, path)
 	}
 	c, err := net.Dial("unix", path)
 	if err != nil {
-		return fmt.Errorf("the hub is not running (no control socket at %s)", path)
+		return fmt.Errorf("%w (no control socket at %s)", ErrNotRunning, path)
 	}
 	defer c.Close()
 	if err := json.NewEncoder(c).Encode(req); err != nil {

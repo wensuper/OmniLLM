@@ -143,19 +143,19 @@ func TestWaitsAreInTheReadersLanguage(t *testing.T) {
 
 func TestSubscriptionNamesAndLoginSteps(t *testing.T) {
 	login := &Error{Code: CodeCredentialProblem, Msg: MsgCLILogin, Args: []string{"claude-code"}}
-	if got := Describe("zh", login); got != "你的电脑上的 Claude Code 没有登录或登录已过期。在那台电脑的终端里运行 omnillm login claude，然后再试。" {
+	if got := Describe("zh", login); got != "你的 Mac 上 Claude 订阅的登录已失效。在 Mac 的终端里运行 omnillm login claude，或在控制台里点“登录”，然后再试。" {
 		t.Fatal(got)
 	}
-	if got := Describe("en", login); got != "Claude Code on your computer is signed out. In a terminal on that computer, run omnillm login claude, then try again." {
+	if got := Describe("en", login); got != "The sign-in for your Claude subscription has expired on your Mac. In a terminal on your Mac, run omnillm login claude, or choose “Sign in” in the console, then try again." {
 		t.Fatal(got)
 	}
 	codex := &Error{Code: CodeCredentialProblem, Msg: MsgCLILogin, Args: []string{"codex"}}
-	if got := Describe("en", codex); got != "Codex on your computer is signed out. In a terminal on that computer, run omnillm login chatgpt, then try again." {
+	if got := Describe("en", codex); got != "The sign-in for your ChatGPT subscription has expired on your Mac. In a terminal on your Mac, run omnillm login chatgpt, or choose “Sign in” in the console, then try again." {
 		t.Fatal(got)
 	}
 	// An older hub's display name and program still render well.
 	old := &Error{Code: CodeCredentialProblem, Msg: MsgCLILogin, Args: []string{"ChatGPT Codex (subscription)", "codex"}}
-	if got := Describe("zh", old); got != "你的电脑上的 Codex 没有登录或登录已过期。在那台电脑的终端里运行 omnillm login chatgpt，然后再试。" {
+	if got := Describe("zh", old); got != "你的 Mac 上 ChatGPT 订阅的登录已失效。在 Mac 的终端里运行 omnillm login chatgpt，或在控制台里点“登录”，然后再试。" {
 		t.Fatal(got)
 	}
 	nf := &Error{Code: CodeBadRequest, Msg: MsgCLINotFound, Args: []string{"claude-code"}}

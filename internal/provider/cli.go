@@ -27,6 +27,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	omnillm "github.com/wensuper/OmniLLM"
 	"github.com/wensuper/OmniLLM/internal/egress"
@@ -274,7 +275,12 @@ const chatOnly = "You are chatting with a person from their phone or computer. "
 // of the program's commands (the owner's own slash commands or skills): a
 // device's text is only ever a message to the model.
 func noCommand(s string) string {
-	if strings.HasPrefix(strings.TrimLeft(s, " \t\r\n"), "/") {
+	// Any leading space a program might trim first (Unicode spaces, BOM,
+	// zero-width characters) counts as space here too.
+	trimmed := strings.TrimLeftFunc(s, func(r rune) bool {
+		return unicode.IsSpace(r) || r == '\ufeff' || r == '\u200b' || r == '\u200c' || r == '\u200d' || r == '\u2060'
+	})
+	if strings.HasPrefix(trimmed, "/") {
 		return "User message:\n" + s
 	}
 	return s

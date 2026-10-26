@@ -208,6 +208,7 @@ td.mdl .some-models { color: var(--accent-text); font-weight: 600; }
    current step; the others show their number. */
 @media (max-width: 480px) {
   .top .brand-sub, .status .status-text { display: none; }
+  .status.alert .status-text { display: inline; white-space: normal; }
   .steps li:not(.now) > span { display: none; }
   .steps li:not(.now)::before { content: counter(s); }
   .steps li { flex: 0 0 15%; }

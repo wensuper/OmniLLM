@@ -299,6 +299,11 @@ func TestDeviceTextIsNeverACommand(t *testing.T) {
 	if got := noCommand("  /help me"); strings.HasPrefix(strings.TrimSpace(got), "/") {
 		t.Fatalf("%q", got)
 	}
+	for _, s := range []string{"\u00a0/skill", "\ufeff/help", "\u200b/init", "\u3000/x"} {
+		if got := noCommand(s); !strings.HasPrefix(got, "User message:") {
+			t.Fatalf("%q -> %q", s, got)
+		}
+	}
 	if got := noCommand("hello /there"); got != "hello /there" {
 		t.Fatalf("an ordinary message changed: %q", got)
 	}

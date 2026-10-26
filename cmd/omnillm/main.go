@@ -95,7 +95,11 @@ func ctl(sock string, req control.Request, onReply func(control.Reply) (bool, bo
 	if req.Lang == "" {
 		req.Lang = lang()
 	}
-	return control.Call(sock, req, onReply)
+	err := control.Call(sock, req, onReply)
+	if errors.Is(err, control.ErrNotRunning) {
+		return say(runnable(notRunning()))
+	}
+	return err
 }
 
 func die(err error) {
@@ -124,9 +128,10 @@ func dieArgs(err error) {
 			helpCmd([]string{"--all"})
 			os.Exit(0)
 		}
+		// The reason stays on screen; the full list is one command away.
 		fmt.Fprintln(os.Stderr, string(u))
-		fmt.Fprintln(os.Stderr)
-		subUsage()
+		fmt.Fprintln(os.Stderr, t("全部命令：omnillm help --all", "Every command: omnillm help --all"))
+		os.Exit(2)
 	}
 	// A value that isn't right: the sentence says which, no help needed.
 	fmt.Fprintln(os.Stderr, describe(err))
@@ -505,6 +510,7 @@ func main() {
 	case "version":
 		fmt.Println("omnillm " + version)
 	default:
+		fmt.Fprintf(os.Stderr, t("不认识命令 omnillm %s。\n\n", "Unknown command omnillm %s.\n\n"), os.Args[1])
 		usage()
 	}
 }
@@ -677,6 +683,9 @@ func hubCmd(args []string) {
 	case "run":
 		hubRun(dir, sock, args[1:])
 	case "provider":
+		if len(args) == 2 && (args[1] == "rm" || args[1] == "off" || args[1] == "on") {
+			dieArgs(usageErr(t("请写出模型来源的名字（omnillm hub providers 里能看到）。", "Name the model source (see omnillm hub providers).")))
+		}
 		if len(args) >= 3 && args[1] == "rm" {
 			call(sock, control.Request{Op: "provider.rm", Args: map[string]string{"name": strings.Join(args[2:], " ")}})
 			return
@@ -696,6 +705,18 @@ func hubCmd(args []string) {
 			dieArgs(err)
 		}
 		kind := args[2]
+		switch kind {
+		case "openai", "anthropic", "ollama", "openai-compatible":
+		case "claude", "claude-code", "chatgpt", "codex":
+			dieArgs(say(runnable(t("订阅用 omnillm login claude（或 chatgpt）接入。", "Subscriptions connect with omnillm login claude (or chatgpt)."))))
+		default:
+			dieArgs(usageErr(t("用法：omnillm hub provider add <openai|anthropic|ollama|openai-compatible> [--name N] [--base-url U]",
+				"Usage: omnillm hub provider add <openai|anthropic|ollama|openai-compatible> [--name N] [--base-url U]")))
+		}
+		// Not running: say so before anyone pastes a key.
+		if _, ok := queryStatus(); !ok {
+			die(say(runnable(notRunning())))
+		}
 		key := ""
 		if kind != "ollama" {
 			// A key reaches an assistant's command only through its chat:
@@ -775,6 +796,9 @@ func hubCmd(args []string) {
 		}
 		call(sock, control.Request{Op: "revoke", Args: map[string]string{"id": strings.Join(args[1:], " ")}})
 	case "device":
+		if len(args) >= 2 && (args[1] == "rm" || args[1] == "remove") {
+			dieArgs(usageErr(t("移除设备：omnillm hub revoke 名字", "To remove a device: omnillm hub revoke NAME")))
+		}
 		if len(args) < 2 || args[1] != "set" {
 			dieArgs(badCommand(append([]string{"hub"}, args[:min(len(args), 2)]...)...))
 		}
@@ -792,6 +816,11 @@ func hubCmd(args []string) {
 		}
 		switch args[1] {
 		case "add":
+			for _, w := range args[2:] {
+				if strings.HasPrefix(w, "-") {
+					dieArgs(usageErr(t("hub app add 只接名字；额度之后用 omnillm hub app set 名字 --budget-usd X 改。", "hub app add takes only a name; set its limit afterwards with omnillm hub app set NAME --budget-usd X.")))
+				}
+			}
 			call(sock, control.Request{Op: "app.add", Args: map[string]string{"name": strings.Join(args[2:], " ")}})
 		case "rm":
 			call(sock, control.Request{Op: "app.rm", Args: map[string]string{"id": strings.Join(args[2:], " ")}})
@@ -903,8 +932,7 @@ func printTable(sock string, req control.Request, render func([]byte) (string, e
 		return false, false
 	})
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		die(err)
 	}
 	if len(bytes.TrimSpace(data)) == 0 {
 		data = []byte("null")
@@ -919,8 +947,7 @@ func printTable(sock string, req control.Request, render func([]byte) (string, e
 // callOr is call, printing empty instead of an empty list.
 func callOr(sock string, req control.Request, empty string) {
 	if err := stream(sock, req, empty); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		die(err)
 	}
 }
 
@@ -1314,9 +1341,13 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 			if err != nil {
 				return hubSay(l, err)
 			}
-			return c.Send(control.Reply{Event: "ok", Text: fmt.Sprintf(tl(l,
+			text := fmt.Sprintf(tl(l,
 				"已为“%s”创建令牌（只显示这一次，请保存好）：\n%s\n这个应用只能做后台调用，每天额度 %s。",
-				"Token for “%s” (shown once, keep it safe):\n%s\nThis app makes background calls only; daily limit %s."), app.Name, tok, usd(app.Budget))})
+				"Token for “%s” (shown once, keep it safe):\n%s\nThis app makes background calls only; daily limit %s."), app.Name, tok, usd(app.Budget))
+			if con != nil && con.APIURL != "" {
+				text += "\n" + fmt.Sprintf(tl(l, "接口地址（兼容 OpenAI）：%s，令牌放在 Authorization: Bearer 里。", "Address (OpenAI-compatible): %s; send the token as Authorization: Bearer."), con.APIURL)
+			}
+			return c.Send(control.Reply{Event: "ok", Text: text})
 		case "app.rm":
 			as, err := h.Apps(ctx)
 			if err != nil {
@@ -1462,6 +1493,7 @@ func usableModels(ms []hub.ModelView, allowed []string, device, background bool)
 		case len(allowed) > 0 && !slices.Contains(allowed, m.ID):
 		case m.Hidden && device: // kept off devices
 		case m.HumanOnly && background:
+		case m.SourceOff:
 		default:
 			n++
 		}
@@ -1668,8 +1700,12 @@ func connectCmd(args []string) {
 		d := openDevice(ctx, sec, dir)
 		defer d.Close()
 		ms, err := d.Models(ctx)
+		deviceHubOS = d.HubOS()
 		if err != nil {
 			die(err)
+		}
+		if len(ms) == 0 {
+			die(say(omnillm.ForHub(lang(), deviceHubOS, t("你的 Mac 上还没有可用的模型。", "Your Mac has no models yet."))))
 		}
 		for _, m := range ms {
 			note := ""
@@ -1700,6 +1736,11 @@ func connectCmd(args []string) {
 		if err := parseFlagsRest(fs, args[1:]); err != nil {
 			dieArgs(err)
 		}
+		for _, w := range fs.Args() {
+			if f := strings.TrimLeft(strings.SplitN(w, "=", 2)[0], "-"); strings.HasPrefix(w, "-") && (f == "model" || f == "image") {
+				dieArgs(usageErr(t("--model 和 --image 要写在问题前面。", "Put --model and --image before the question.")))
+			}
+		}
 		if fs.NArg() == 0 && len(imagePaths) == 0 {
 			dieArgs(usageErr(t("请写出要问的问题。", "Write the question to ask.")))
 		}
@@ -1723,6 +1764,10 @@ func connectCmd(args []string) {
 		s, err := d.Complete(ctx, omnillm.Request{Model: *model, Caller: callerHere(),
 			Messages: []omnillm.Message{{Role: "user", Content: strings.Join(fs.Args(), " "), Images: images}}})
 		if err != nil {
+			if ctx.Err() != nil { // Ctrl-C
+				fmt.Println()
+				os.Exit(130)
+			}
 			die(err)
 		}
 		defer s.Close()
@@ -1734,6 +1779,9 @@ func connectCmd(args []string) {
 			}
 			if err != nil {
 				fmt.Println()
+				if ctx.Err() != nil { // Ctrl-C
+					os.Exit(130)
+				}
 				die(err)
 			}
 			fmt.Print(c.Text)

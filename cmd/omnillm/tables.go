@@ -81,6 +81,8 @@ func modelsText(models []string, usable *int) string {
 	switch {
 	case n == 0 && (usable != nil || len(models) > 0):
 		return t("没有能用的", "None usable")
+	case len(models) == 0 && usable != nil:
+		return fmt.Sprintf(t("全部 %d 个", "All %d"), n)
 	case len(models) == 0:
 		return t("全部", "All")
 	}
@@ -144,7 +146,11 @@ func modelsTable(data []byte) (string, error) {
 	}
 	out := [][]string{{t("名字", "Name"), t("来源", "Source"), t("只能手动对话", "Chat only"), t("在设备上显示", "Shown on devices"), "ID"}}
 	for _, m := range ms {
-		out = append(out, []string{modelName(m.ModelInfo), sourceLabelIn(lang(), provider.Kind(m.Kind), m.Provider), yes(m.HumanOnly), yes(!m.Hidden), m.ID})
+		shown := yes(!m.Hidden)
+		if m.SourceOff {
+			shown = t("否（来源已关闭）", "No (source off)")
+		}
+		out = append(out, []string{modelName(m.ModelInfo), sourceLabelIn(lang(), provider.Kind(m.Kind), m.Provider), yes(m.HumanOnly), shown, m.ID})
 	}
 	return table(out), nil
 }

@@ -20,7 +20,15 @@ All notable changes to OmniLLM are documented here. OmniLLM is in early pre-rele
 
 ### Fixed
 
-- Console: *Check again* showed a red error when Ollama had only a non-chat model (such as an embedding model), though nothing had failed. It is now a plain note: Ollama on this Mac has no chat model yet; to use it, run `ollama pull qwen3` in Terminal.
+- Phone page: a hub that gives this device no models now says so, instead of an error shown as "can't connect".
+- Phone page: "can't reach your Mac" reads the same everywhere; a signed-out subscription is named and fixed the same way in the note and the error; a usage limit that resets on another day shows the day; stopping before the first word no longer shows a red error; loading failures say one sentence.
+- Console: the wizard's last step can always be finished; removing a model source says its models disappear everywhere and a saved API key is deleted; a connected subscription that is signed out shows Sign in on its card; a paused region or a mismatched phone page is spelled out on a narrow window too.
+- Command line: `omnillm uninstall -h` and `install -h` show help instead of acting, and a mistyped option stops; hub commands say "OmniLLM isn't running" in your language when it isn't; a mistyped command shows its reason and where the full list is; `connect ask` warns when `--model` comes after the question; Ctrl-C before the first word just stops.
+- Command line: `hub provider add` checks the kind (subscriptions go through `omnillm login`) and that OmniLLM runs before asking for the key; `hub app add` shows the address with the token; `hub models` marks switched-off sources; `status --json` exits 1 when OmniLLM isn't running; uninstall on a device points to `connect forget`.
+
+### Security
+
+- A device's message that starts with "/" after any kind of leading space (Unicode spaces, zero-width characters) is still only a message.
 
 ## [0.2.0-alpha.56](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.56) - 2026-10-25
 

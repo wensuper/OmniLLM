@@ -78,8 +78,8 @@ func pickModel(ms []omnillm.ModelInfo, person bool) string {
 		}
 	}
 	if !person {
-		die(say(omnillm.ForHub(lang(), deviceHubOS, t("从脚本里只能用 API Key 或你的 Mac 上的模型；你的 Mac 上现在只有订阅模型，它们只能手动对话。",
-			"From a script, only models that use an API key or run on your Mac work; your Mac has only subscription models, which are chat-only."))))
+		die(say(omnillm.ForHub(lang(), deviceHubOS, t("输出接到管道或文件、或从脚本运行时，只能用 API Key 或你的 Mac 上的模型；你的 Mac 上现在只有订阅模型，它们只能在终端里手动对话。",
+			"With output going to a pipe or file, or from a script, only models that use an API key or run on your Mac work; your Mac has only subscription models, which are for chatting in a terminal."))))
 	}
 	if len(ms) == 0 {
 		die(say(omnillm.ForHub(lang(), deviceHubOS, t("你的 Mac 上还没有可用的模型。", "Your Mac has no models yet."))))
@@ -133,13 +133,17 @@ func chatLoop(ctx context.Context, d *device.Device, model string) {
 			continue
 		case strings.HasPrefix(line, "/image"):
 			path := strings.TrimSpace(strings.TrimPrefix(line, "/image"))
+			if path == "" {
+				fmt.Fprintln(os.Stderr, t("用法：/image 文件", "Usage: /image FILE"))
+				continue
+			}
 			im, err := readImage(path)
 			if err != nil {
-				fmt.Fprintln(os.Stderr, omnillm.Describe(lang(), err))
+				fmt.Fprintln(os.Stderr, describe(err))
 				continue
 			}
 			if len(pending) >= omnillm.MaxImagesPerMsg {
-				fmt.Fprintln(os.Stderr, omnillm.Describe(lang(), &omnillm.Error{Code: omnillm.CodeBadRequest, Msg: omnillm.MsgBadImage}))
+				fmt.Fprintln(os.Stderr, describe(&omnillm.Error{Code: omnillm.CodeBadRequest, Msg: omnillm.MsgBadImage}))
 				continue
 			}
 			pending = append(pending, im)
@@ -172,6 +176,11 @@ func chatLoop(ctx context.Context, d *device.Device, model string) {
 			fmt.Fprintf(os.Stderr, t("现在用 %s。\n", "Now using %s.\n"), name(model))
 			continue
 		}
+		// A lone /word that isn't a command is a typo, not a message.
+		if w := strings.Fields(line); len(w) == 1 && strings.HasPrefix(line, "/") && !strings.Contains(line[1:], "/") {
+			fmt.Fprintln(os.Stderr, t("没有这个命令。可以用 /model、/image 文件、/new、/exit。", "No such command. Use /model, /image FILE, /new or /exit."))
+			continue
+		}
 		msgs = append(msgs, omnillm.Message{Role: "user", Content: line, Images: pending})
 		pending = nil
 		reply, err := chatOnce(ctx, d, model, msgs)
@@ -181,7 +190,7 @@ func chatLoop(ctx context.Context, d *device.Device, model string) {
 			msgs = msgs[:len(msgs)-1]
 		}
 		if err != nil {
-			fmt.Fprintln(os.Stderr, omnillm.Describe(lang(), err))
+			fmt.Fprintln(os.Stderr, describe(err))
 		}
 		if ctx.Err() != nil {
 			return
@@ -205,6 +214,10 @@ func chatOnce(ctx context.Context, d *device.Device, model string, msgs []omnill
 	}()
 	s, err := d.Complete(rctx, omnillm.Request{Model: model, Caller: callerHere(), Messages: msgs})
 	if err != nil {
+		if rctx.Err() != nil && ctx.Err() == nil { // Ctrl-C before the first word
+			fmt.Fprintln(os.Stderr, t("（已停止）", "(stopped)"))
+			return "", nil
+		}
 		return "", err
 	}
 	defer s.Close()
@@ -234,14 +247,14 @@ func readImage(path string) (omnillm.Image, error) {
 	path = strings.Trim(path, "'\"")
 	st, err := os.Stat(path)
 	if err != nil {
-		return omnillm.Image{}, err
+		return omnillm.Image{}, sayf(t("读不了图片文件 %s。", "Can’t read the image file %s."), path)
 	}
 	if st.Size() > omnillm.MaxImageBytes {
 		return omnillm.Image{}, &omnillm.Error{Code: omnillm.CodeBadRequest, Msg: omnillm.MsgBadImage}
 	}
 	b, err := os.ReadFile(path)
 	if err != nil {
-		return omnillm.Image{}, err
+		return omnillm.Image{}, sayf(t("读不了图片文件 %s。", "Can’t read the image file %s."), path)
 	}
 	return omnillm.Image{MIME: http.DetectContentType(b), Data: b}, nil
 }

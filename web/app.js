@@ -31,12 +31,12 @@ const T = {
     pairReplace: "这会替换这台设备现在的配对（{0}），之前的 Mac 就不能再从这里用了。",
     pairCheck: "电脑上显示同样的数字，就在那边确认：控制台里点“一致，添加”，终端里输入 y。", pairWait: "等你在电脑上确认……", pairMismatch: "数字不一样？取消", pairDone: "已添加。",
     pairDropped: "连接断了。在电脑上换一个二维码再扫（控制台点“换一个二维码”，终端里重新运行 omnillm pair）。", connectedMac: "已连上你的 Mac",
-    notCode: "这不是 OmniLLM 的配对二维码或配对文字。请从电脑上“添加设备”里重新复制。", needTLS: "你的 Mac 用的远程连接不支持手机网页（需要 wss:// 地址）。请在 Mac 上设置一个公开的远程连接。",
+    notCode: "这不是 OmniLLM 的配对二维码或配对文字。请从电脑上“添加设备”里重新复制。", needTLS: "你的 Mac 的远程连接只能在它自己的网络里用，手机网页连不上。在 Mac 的控制台里设置远程连接后，换一个新的二维码再扫。",
     chats: "对话", newChat: "新对话", placeholder: "输入消息", stop: "停止", send: "发送", menu: "菜单", model: "模型",
     addImage: "添加图片", voice: "语音输入", voiceStop: "停止语音输入", listening: "正在听，说完再点一下……", voiceFirst: "语音由浏览器识别：Chrome 交给 Google，Safari 交给 Apple。识别出的文字只填进输入框，你确认后再发。", voiceDenied: "没有麦克风权限。在浏览器的网站设置里允许麦克风，再点一次。", voiceNoMic: "没找到麦克风。", voiceNoSpeech: "没听到声音，再说一次试试。", voiceNetwork: "语音识别要联网，现在连不上。", voiceFailed: "语音输入没能开始，再试一次。", removeImage: "移除图片", tooManyImages: "每条消息最多 4 张图片。", imageFailed: "这张图片打不开，换一张试试。", imageTooBig: "图片太大，换一张小一点的。", imageTitle: "图片",
-    offline: "连不上你的 Mac：它可能睡眠了或者没联网。醒来后会自动恢复。", retry: "重试",
+    offline: "你的 Mac 现在连不上，可能在睡眠、关机或断网。恢复后会自动连上。", retry: "重试",
     noNetwork: "这台设备没有联网，联网后会自动连上。", kept: "刚才输入的还在。", loadingModels: "正在连接你的 Mac……",
-    noModels: "这台设备现在没有能用的模型。在 Mac 的控制台里接入模型，或在“设备”里给它开放模型。", noModelsOpt: "没有可用的模型", probLogin: "要在 Mac 上登录", probLimit: "到上限，{0} 恢复", probLoginNote: "{0}在你的 Mac 上没有登录，现在发不出去。在 Mac 上运行 omnillm login {1}，或点控制台里 {2} 卡片上的按钮，登录后就能用。", probLimitNote: "{0}的用量到上限了，{1} 恢复。可以先换一个模型。", subClaude: "Claude 订阅", subChatGPT: "ChatGPT 订阅", subGemini: "Gemini 订阅",
+    noModels: "这台设备现在没有能用的模型。在 Mac 的控制台里接入模型，或在“设备”里给它开放模型。", noModelsOpt: "没有可用的模型", probLogin: "要在 Mac 上登录", probLimit: "到上限，{0} 恢复", probLoginNote: "{0}在你的 Mac 上没有登录，现在发不出去。在 Mac 上运行 omnillm login {1}，或点控制台里 {2} 卡片上的按钮，登录后就能用。", probLimitNote: "{0}的用量到上限了，{1} 恢复。可以先换一个模型。", probLimitNoTime: "到上限了", probLimitNoteNoTime: "{0}的用量到上限了。可以先换一个模型。", subClaude: "Claude 订阅", subChatGPT: "ChatGPT 订阅", subGemini: "Gemini 订阅",
     modelGone: "原来的模型已从你的 Mac 上移除，换成了 {0}",
     grpSub: "订阅（不另花钱）", grpKey: "API Key", grpLocal: "你的 Mac 上", latest: "（最新版）", codex: "ChatGPT（Codex · 最新版）", codexV: "ChatGPT（Codex · {0}）",
     forget: "移除这台设备", forgetQ: "这里的对话会删除。以后要用，在 Mac 上重新添加。", removing: "正在移除……",
@@ -76,12 +76,12 @@ const T = {
     pairReplace: "This replaces this device’s current pairing ({0}); the previous Mac can no longer be used from here.",
     pairCheck: "If your computer shows the same number, confirm there: “Matches, add” in the console, or type y in the terminal.", pairWait: "Waiting for you to confirm on your computer…", pairMismatch: "Numbers don’t match? Cancel", pairDone: "Added.",
     pairDropped: "The connection dropped. Get a new QR code on your computer (“New QR code” in the console, or run omnillm pair again) and scan it.", connectedMac: "Connected to your Mac",
-    notCode: "This is not an OmniLLM pairing QR code or pairing text. Copy it again from “Add device” on your computer.", needTLS: "Your Mac’s remote access can’t be used from a phone browser (it needs a wss:// address). Set up public remote access on your Mac.",
+    notCode: "This is not an OmniLLM pairing QR code or pairing text. Copy it again from “Add device” on your computer.", needTLS: "Your Mac’s remote access only works on its own network, so a phone browser can’t use it. Set up remote access in the console on your Mac, then scan a new QR code.",
     chats: "Chats", newChat: "New chat", placeholder: "Message", stop: "Stop", send: "Send", menu: "Menu", model: "Model",
     addImage: "Add image", voice: "Voice input", voiceStop: "Stop voice input", listening: "Listening… tap again when you’re done", voiceFirst: "Your browser turns speech into text: Chrome uses Google, Safari uses Apple. The words only fill the box; you send them.", voiceDenied: "No microphone permission. Allow the microphone in the browser’s site settings, then try again.", voiceNoMic: "No microphone found.", voiceNoSpeech: "Didn’t hear anything. Try again.", voiceNetwork: "Voice input needs the internet, which isn’t reachable right now.", voiceFailed: "Voice input couldn’t start. Try again.", removeImage: "Remove image", tooManyImages: "Up to 4 images per message.", imageFailed: "This image can’t be opened; try another one.", imageTooBig: "Image too large; try a smaller one.", imageTitle: "Image",
-    offline: "Can’t reach your Mac: it may be asleep or offline. It reconnects when your Mac wakes.", retry: "Retry",
+    offline: "Your Mac can’t be reached right now. It may be asleep, off or offline, and will reconnect when it’s back.", retry: "Retry",
     noNetwork: "This device is offline; it reconnects when the network is back.", kept: "What you typed is kept.", loadingModels: "Connecting to your Mac…",
-    noModels: "No models are available to this device. On your Mac, connect a model or allow this device more models under Devices.", noModelsOpt: "No models", probLogin: "Sign in on your Mac", probLimit: "At its limit until {0}", probLoginNote: "{0} is signed out on your Mac, so messages to it won’t go through. On your Mac, run omnillm login {1}, or use the button on the {2} card in the console; it works once you’re signed in.", probLimitNote: "{0} has reached its usage limit until {1}. Pick another model for now.", subClaude: "Claude subscription", subChatGPT: "ChatGPT subscription", subGemini: "Google AI subscription",
+    noModels: "No models are available to this device. On your Mac, connect a model or allow this device more models under Devices.", noModelsOpt: "No models", probLogin: "Sign in on your Mac", probLimit: "At its limit until {0}", probLoginNote: "{0} is signed out on your Mac, so messages to it won’t go through. On your Mac, run omnillm login {1}, or use the button on the {2} card in the console; it works once you’re signed in.", probLimitNote: "{0} has reached its usage limit until {1}. Pick another model for now.", probLimitNoTime: "At its limit", probLimitNoteNoTime: "{0} has reached its usage limit. Pick another model for now.", subClaude: "Claude subscription", subChatGPT: "ChatGPT subscription", subGemini: "Google AI subscription",
     modelGone: "The previous model was removed from your Mac; switched to {0}",
     grpSub: "Subscriptions (no extra cost)", grpKey: "API key", grpLocal: "On your Mac", latest: " (latest)", codex: "ChatGPT (Codex · latest)", codexV: "ChatGPT (Codex · {0})",
     forget: "Remove this device", forgetQ: "Chats here will be deleted. To use this device later, add it on your Mac again.", removing: "Removing…",
@@ -92,7 +92,7 @@ const T = {
     today: "Today", copy: "Copy", copied: "Copied", again: "Answer again", againWith: "Answer again with {0}", thinking: "Thinking",
     earlier: "Earlier answer ({0})", earlierOpen: "Earlier answer ({0})",
     yourMac: "Your Mac", macOn: "Online", macOff: "Can’t reach it · back when it wakes", macWait: "Connecting…", macPaused: "Paused this device", macNoNet: "This device is offline",
-    language: "Language", langMac: "Follow your Mac", shortcuts: "Keyboard shortcuts", hideSide: "Hide sidebar", showSide: "Show sidebar", dropHere: "Drop to add the pictures",
+    language: "Language", langMac: "Follow your Mac", shortcuts: "Keyboard shortcuts", hideSide: "Hide sidebar", showSide: "Show sidebar", dropHere: "Drop to add images",
     grpToday: "Today", grpYesterday: "Yesterday", grpWeek: "Previous 7 days", grpOlder: "Earlier", copyCode: "Copy", modelMenu: "Choose a model",
     kNew: "New chat", kSearch: "Search chats", kSide: "Hide or show the sidebar", kStop: "Stop the answer", kCopyLast: "Copy the last answer", kFocus: "Go to the message box", kSend: "Send", kLine: "New line",
     dropped: "(Connection lost; the reply is incomplete. Tap Retry once reconnected.)",
@@ -222,7 +222,8 @@ function bootWatch() {
   clearTimeout(B.timer);
   B.timer = setTimeout(() => {
     if (B.done) return;
-    bootFailed(t("bootSlow", t(B.stage)) + (B.err ? " (" + B.err + ")" : ""));
+    if (B.err) console.warn(B.err);
+    bootFailed(t("bootSlow", t(B.stage)));
   }, 20000);
 }
 // Errors while loading are shown, not swallowed.
@@ -373,7 +374,7 @@ $("boot-retry").addEventListener("click", cleanReload);
   watchUpdates();
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
   bootWatch();
-  try { await startWasm(); } catch (e) { bootFailed(t("bootError") + String(e && e.message || e)); return; }
+  try { await startWasm(); } catch (e) { console.warn(e); bootFailed(t("bootCrashed")); return; }
   S.ready = true;
   boot("bootStorage"); bootWatch();
   if (S.pendingLink) { link = S.pendingLink; S.pendingLink = ""; }
@@ -387,7 +388,7 @@ $("boot-retry").addEventListener("click", cleanReload);
     S.device = await unseal("device");
     S.chats = (await unseal("chats")) || [];
     for (const c of S.chats) for (const m of c.messages) delete m.live; // a reply cut by a reload is no longer on its way
-  } catch (e) { bootFailed(t("bootError") + String(e && e.message || e)); return; }
+  } catch (e) { console.warn(e); bootFailed(t("bootCrashed")); return; }
   B.done = true; clearTimeout(B.timer);
   if (S.device && !link) return openChat();
   if (link) return pair(link, true);
@@ -738,7 +739,9 @@ function problemOf(m) {
   if (m.problem === "limit") {
     const at = m.resetsAt ? new Date(m.resetsAt * 1000) : null;
     if (at && at <= new Date()) return null;
-    const when = at ? at.toLocaleTimeString(document.documentElement.lang, { hour: "2-digit", minute: "2-digit" }) : "…";
+    if (!at) return { short: t("probLimitNoTime"), long: t("probLimitNoteNoTime", src) };
+    const today = at.toDateString() === new Date().toDateString();
+    const when = at.toLocaleString(document.documentElement.lang, today ? { hour: "2-digit", minute: "2-digit" } : { weekday: "short", hour: "2-digit", minute: "2-digit" });
     return { short: t("probLimit", when), long: t("probLimitNote", src, when) };
   }
   return null;
@@ -778,8 +781,14 @@ async function loadModels() {
   fillPicker(ms);
   macLang();
   const os = omnillm.hubOS ? omnillm.hubOS() : "";
-  if (os && os !== hubOS) { hubOS = os; localStorageSet("hubos", os); }
-  if (!ms.length) { const o = el("option", t("noModelsOpt")); o.value = ""; o.disabled = true; sel.append(o); sel.value = ""; paintPick(); return; }
+  if (os && os !== hubOS) {
+    hubOS = os; localStorageSet("hubos", os);
+    // Labels drawn while the hub's system wasn't known yet say it right now.
+    document.querySelectorAll("#chat [data-t]").forEach((e) => { quoted(e, t(e.dataset.t)); });
+    document.querySelectorAll("#chat [data-ta]").forEach((e) => { e.setAttribute("aria-label", t(e.dataset.ta)); e.title = t(e.dataset.ta); });
+    if (S.cur && !S.cur.messages.length) renderLog(true);
+  }
+  if (!ms.length) { const sel = $("model"), o = el("option", t("noModelsOpt")); o.value = ""; o.disabled = true; sel.append(o); sel.value = ""; paintPick(); return; }
   if (pickModel()) renderLog(true);
   if (S.cur) renderList(); // the drawer names models by name now
 }
@@ -1577,7 +1586,7 @@ async function run(chat, model, fresh, old) {
     if (S.device) {
       const near = nearBottom();
       renderLog(true);
-      if (reply.note && !reply.content && !quiet) { $("log").append(quoted(el("p", undefined, "note err"), reply.note)); if (near) toBottom(); }
+      if (reply.note && !reply.content && !quiet && reply.note !== t("stopped")) { $("log").append(quoted(el("p", undefined, "note err"), reply.note)); if (near) toBottom(); }
       await saveChats();
     }
   }
@@ -1781,7 +1790,13 @@ document.addEventListener("keydown", (e) => {
   if ($("chat").hidden || S.quiet || e.isComposing || e.keyCode === 229) return;
   const mod = MAC ? e.metaKey : e.ctrlKey;
   if (e.key === "Escape") {
-    if (document.querySelector(".row-menu")) { e.preventDefault(); closeRowMenu(); return; }
+    if (document.querySelector(".row-menu")) {
+      e.preventDefault();
+      const opener = document.querySelector('[aria-expanded="true"]');
+      closeRowMenu();
+      if (opener) opener.focus();
+      return;
+    }
     if (V.rec) { e.preventDefault(); stopVoice(); return; }
     if (!$("mmenu").hidden) { e.preventDefault(); pickMenu(false); $("mpick").focus(); return; }
     if (!$("mac-menu").hidden) { e.preventDefault(); macMenu(false); $("mac").focus(); return; }
