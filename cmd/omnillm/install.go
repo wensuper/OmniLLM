@@ -771,7 +771,28 @@ func ensureMasterKey(kf string) error {
 	return nil
 }
 
+// ownHome: home is this account's own home folder. launchd and systemd
+// --user act on the account's real services whatever HOME says, so with a
+// HOME set elsewhere (a test, a sandbox) they are left alone: the hub
+// starts on its own instead, and uninstall stops nothing.
+func ownHome(home string) bool {
+	u, err := user.Current()
+	if err != nil || u.HomeDir == "" {
+		return false
+	}
+	real := func(p string) string {
+		if r, err := filepath.EvalSymlinks(p); err == nil {
+			return r
+		}
+		return filepath.Clean(p)
+	}
+	return real(u.HomeDir) == real(home)
+}
+
 func installService(home, bin, dir string, env map[string]string) (string, error) {
+	if !ownHome(home) {
+		return "none", startDetached(bin, dir, env)
+	}
 	switch runtime.GOOS {
 	case "darwin":
 		if err := installLaunchd(home, bin, dir, env); err != nil {
@@ -1470,7 +1491,11 @@ func uninstallCmd(args []string) {
 		return
 	}
 	home, _ := os.UserHomeDir()
-	switch runtime.GOOS {
+	goos := runtime.GOOS
+	if !ownHome(home) {
+		goos = "" // HOME is elsewhere: the account's real services stay
+	}
+	switch goos {
 	case "darwin":
 		for _, l := range []string{trayLabel, launchdLabel} {
 			_ = exec.Command("launchctl", "bootout", "gui/"+strconv.Itoa(os.Getuid())+"/"+l).Run()

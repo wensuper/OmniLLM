@@ -426,3 +426,13 @@ func TestHubRefusalIsShownAsItIs(t *testing.T) {
 		t.Fatalf("%q", got)
 	}
 }
+
+// A HOME that isn't this account's own leaves its real services alone.
+func TestOwnHome(t *testing.T) {
+	if h, err := os.UserHomeDir(); err == nil && !ownHome(h) {
+		t.Fatal("the real home is the account's own")
+	}
+	if ownHome(t.TempDir()) {
+		t.Fatal("a temp folder is not")
+	}
+}

@@ -440,6 +440,14 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 		}
 		ps, _ = s.hub.Providers(ctx)
 	}
+	// A signed-out subscription on screen: look again soon, so signing in
+	// clears it within seconds.
+	for _, p := range ps {
+		if p.Problem == "login" {
+			s.hub.FreshLogins()
+			break
+		}
+	}
 	ms, _ := s.hub.OwnerModels(ctx)
 	devs, _ := s.hub.Devices(ctx)
 	apps, _ := s.hub.Apps(ctx)
@@ -746,6 +754,9 @@ func (s *Server) subs(w http.ResponseWriter, r *http.Request) {
 				signedOut[string(p.Kind)] = true
 			}
 		}
+	}
+	if len(signedOut) > 0 {
+		s.hub.FreshLogins() // the card asks every 3 s while someone signs in
 	}
 	for _, st := range s.hub.SubscriptionStates(r.Context()) {
 		m := map[string]any{"kind": st.Kind, "installed": st.Installed, "logged_in": st.LoggedIn, "connected": st.Connected,

@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"unicode"
 
 	omnillm "github.com/wensuper/OmniLLM"
 	"github.com/wensuper/OmniLLM/device"
@@ -289,7 +290,8 @@ func stripControls(s string) string {
 		if r == '\n' || r == '\t' {
 			return r
 		}
-		if r < 0x20 || r == 0x7f || (r >= 0x80 && r < 0xa0) {
+		// Bidi controls too: they would reorder what the terminal shows.
+		if r < 0x20 || r == 0x7f || (r >= 0x80 && r < 0xa0) || unicode.Is(unicode.Bidi_Control, r) {
 			return -1
 		}
 		return r

@@ -98,7 +98,7 @@ func ctl(sock string, req control.Request, onReply func(control.Reply) (bool, bo
 	err := control.Call(sock, req, onReply)
 	var re *control.ReplyError
 	if errors.As(err, &re) {
-		return say(re.Text)
+		return say(stripControls(re.Text))
 	}
 	var fs *control.ForeignSocketError
 	if errors.As(err, &fs) {
@@ -992,7 +992,7 @@ func stream(sock string, req control.Request, empty string) error {
 		switch r.Event {
 		case "info", "ok", "done":
 			if r.Text != "" {
-				fmt.Println(r.Text)
+				fmt.Println(stripControls(r.Text))
 			}
 			if d := string(bytes.TrimSpace(r.Data)); empty != "" && (d == "null" || d == "[]") {
 				fmt.Println(empty)

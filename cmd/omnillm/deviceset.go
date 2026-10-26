@@ -286,7 +286,7 @@ func withDot(a, b string) string {
 // language ("Claude 订阅", "Claude subscription").
 func findProvider(l string, ps []hub.ProviderInfo, q string) (hub.ProviderInfo, error) {
 	return findNamed(l, ps, q, func(p hub.ProviderInfo) (string, []string) {
-		names := []string{sourceNameIn("zh", p), sourceNameIn("en", p)}
+		names := []string{sourceNameIn("zh", p), sourceNameIn("en", p), string(p.Kind)} // "Ollama" for "Ollama (this Mac)"
 		switch p.Kind {
 		case provider.ClaudeCode:
 			names = append(names, "claude") // as in omnillm login claude

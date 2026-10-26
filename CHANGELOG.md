@@ -33,6 +33,9 @@ All notable changes to OmniLLM are documented here. OmniLLM is in early pre-rele
 - Command line: when the hub refuses a command (a wrong name, a key that doesn't work, an expired pairing), its own sentence is shown, not "something went wrong". `hub audit` stays JSON for scripts. A device that isn't paired says so from `status` (exit 1), hub commands and `connect forget`.
 - Console: a signed-out subscription has a Sign in button right in the Models tab; messages from the console and the local API name "your Mac" only on a Mac.
 
+- Console: after you sign in again, a signed-out subscription recovers within seconds instead of up to 5 minutes; the Sign in button works on hubs that aren't a Mac too.
+- `omnillm install` and `uninstall` leave launchd/systemd alone when HOME isn't your own home folder (a test or sandbox), instead of acting on your real service.
+
 ### Security
 
 - Model replies shown in a terminal have control characters removed, so a reply can't use escape sequences (to write the clipboard or fake a prompt).

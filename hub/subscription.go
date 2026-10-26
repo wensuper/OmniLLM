@@ -558,6 +558,11 @@ func (h *Hub) watchLogins(ctx context.Context) {
 }
 
 // freshLogins starts a sign-in check when the last one is old.
+// FreshLogins asks again soon (at most every loginsStale) whether the
+// subscription programs are signed in: a page waiting for a sign-in sees
+// it within seconds, not at the next 5-minute check.
+func (h *Hub) FreshLogins() { h.freshLogins() }
+
 func (h *Hub) freshLogins() {
 	if time.Since(time.Unix(0, h.loginsAt.Load())) >= loginsStale {
 		go h.checkLogins(h.ctx) // runs one at a time by itself

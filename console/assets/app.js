@@ -1922,9 +1922,15 @@ function renderModels() {
     const pt = problemText(p);
     if (pt) nc.append(el("span", pt, "tag warn-tag"));
     // Signed out: the sign-in right here (the phone and the error point to it).
-    if (p.problem === "login" && p.subscription && onMac()) {
+    if (p.problem === "login" && p.subscription) {
       const b = el("button", t("subSignIn"), "link"); b.type = "button";
-      b.addEventListener("click", async () => { try { await api("subs/login", { kind: p.kind }); toast(t("subHow")); } catch (e) { toast(e.message, true); } });
+      b.addEventListener("click", async () => {
+        // Not a Mac: no window to open here; the card shows the command.
+        if (!onMac()) { fromDash = true; return showWizard(); }
+        b.disabled = true; // one Terminal window per click
+        try { await api("subs/login", { kind: p.kind }); toast(t("subHow")); } catch (e) { toast(e.message, true); }
+        setTimeout(() => { b.disabled = false; }, 5000);
+      });
       nc.append(" ", b);
     }
     cell(tr, how, "how");
