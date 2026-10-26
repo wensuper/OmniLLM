@@ -518,7 +518,7 @@ func installingAssistant() provider.Kind {
 
 // otherAssistants are coding assistants without a subscription OmniLLM
 // connects, known by their program names.
-var otherAssistants = []string{"cursor-agent", "gemini", "opencode", "aider", "goose", "amp", "crush", "qwen"}
+var otherAssistants = []string{"cursor-agent", "gemini", "agy", "antigravity", "opencode", "aider", "goose", "amp", "crush", "qwen"}
 
 // otherAssistant: one of otherAssistants is among this command's
 // ancestors, or says so in its environment.
