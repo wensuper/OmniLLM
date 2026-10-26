@@ -24,6 +24,8 @@ All notable changes to OmniLLM are documented here. OmniLLM is in early pre-rele
 - CLI: "(Auto · model)" is said again when another model takes over; `omnillm hub region` gives its usage; `connect models` from a script marks Auto chat-only when everything it could pick is.
 - Phone page: a browser that can't keep the pairing is warned once, before pairing, not again after; a dropped pairing on a computer says to choose "New link" and paste it, not to scan a QR code.
 - CLI: `-h`/`--help` after any hub subcommand shows the help; `hub audit` refuses extra words; `status` with remote access off says it's OMNILLM_RELAY=off and how to add devices; `help --all` mentions "in Auto" for `hub model set`. The sqlite3 used to clean Gemini's records is checked like the subscription programs.
+- Install and update: the pre-release lookup uses the version the hub found, then GitHub's API, then the release feed when the API limits this address, so unattended updates no longer fail there.
+- Phone page: each gate before pairing is passed on its own, so a private tab on iPhone still hears it can't keep the pairing before pairing, and a page in another app isn't told twice; a paired device opening a broken pairing link stays in its chats.
 - CLI: Auto is no longer the default for a script or pipe when every model it could pick is chat-only, and the local API doesn't offer programs Auto alone; `connect chat` and `connect ask` say which model Auto picked; `omnillm connect -h` and `omnillm hub -h` show the help; `hub models` has an In Auto column and `hub model set` takes `--auto true|false`; with remote access off, `hub pair` says so before handing an AI assistant a command; `hub region confirm` says when there is nothing to confirm.
 
 ### Security

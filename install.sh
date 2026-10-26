@@ -83,11 +83,21 @@ if [ "$code" = "404" ]; then
   # No stable release: use the newest pre-release, if any. Only the tag
   # name is taken from the API answer, and it must look like a version;
   # downloads still come from this repository's release files.
-  api=$(curl -fsSL --proto '=https' --proto-redir '=https' --tlsv1.2 -H 'Accept: application/vnd.github+json' \
-    "https://api.github.com/repos/$REPO/releases?per_page=30" 2>/dev/null) || fail "$(t "连不上 GitHub，请检查网络后再运行一次。" "Couldn’t reach GitHub. Check the network and run this again.")"
-  # The API lists releases in no version order (alpha.10 comes after
-  # alpha.5), so pick the highest version: numbers compare as numbers.
-  tag=$(printf '%s' "$api" | grep -o '"tag_name": *"[^"]*"' | sed 's/.*"\([^"]*\)"$/\1/' | newest)
+  # An update started by the hub names the version it found; otherwise
+  # the API, and when GitHub limits this address (60 API calls an hour),
+  # the release feed, which isn't limited that way.
+  tag=""
+  if [ -n "${OMNILLM_UPDATE_TO:-}" ]; then
+    tag="v${OMNILLM_UPDATE_TO#v}"
+  elif api=$(curl -fsSL --proto '=https' --proto-redir '=https' --tlsv1.2 -H 'Accept: application/vnd.github+json' \
+    "https://api.github.com/repos/$REPO/releases?per_page=30" 2>/dev/null); then
+    # The API lists releases in no version order (alpha.10 comes after
+    # alpha.5), so pick the highest version: numbers compare as numbers.
+    tag=$(printf '%s' "$api" | grep -o '"tag_name": *"[^"]*"' | sed 's/.*"\([^"]*\)"$/\1/' | newest)
+  else
+    feed=$(curl -fsSL --proto '=https' --proto-redir '=https' --tlsv1.2 "https://github.com/$REPO/releases.atom" 2>/dev/null) || fail "$(t "连不上 GitHub，请检查网络后再运行一次。" "Couldn’t reach GitHub. Check the network and run this again.")"
+    tag=$(printf '%s' "$feed" | grep -o '/releases/tag/v[^"]*"' | sed 's|.*/tag/||; s|"$||' | newest)
+  fi
   if [ -n "$tag" ]; then
     printf '%s' "$tag" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$' || fail "$(t "GitHub 给出的版本名不对，没有安装。" "GitHub returned an unexpected version name, so nothing was installed.")"
     BASE="https://github.com/$REPO/releases/download/$tag"
