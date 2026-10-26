@@ -109,8 +109,8 @@ func ctl(sock string, req control.Request, onReply func(control.Reply) (bool, bo
 		case role() == "device" && !device.Paired(context.Background(), secrets(dataDir("device"), "omnillm-device")):
 			return say(runnable(deviceNext()))
 		case role() == "device":
-			return say(runnable(omnillm.ForHub(lang(), "", t("这台电脑只当设备用，主机命令要在你的 Mac 上运行。这里能用：omnillm connect chat、ask、models。",
-				"This computer is set up as a device; hub commands run on your Mac. Here: omnillm connect chat, ask or models."))))
+			return say(runnable(t("这台电脑只当设备用，主机命令要在它配对的那台电脑上运行。这里能用：omnillm connect chat、ask、models。",
+				"This computer is set up as a device; hub commands run on the computer it is paired with. Here: omnillm connect chat, ask or models.")))
 		case role() == "" && !exists(dataDir("hub")):
 			return say(t("这台电脑上还没有安装 OmniLLM。安装方法见 https://github.com/wensuper/OmniLLM/blob/main/README.zh-CN.md#安装",
 				"OmniLLM isn’t installed on this computer yet. See https://github.com/wensuper/OmniLLM#installation"))
@@ -1355,7 +1355,11 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 			if err != nil {
 				return hubSay(l, err)
 			}
-			return c.Send(control.Reply{Event: "ok", Text: fmt.Sprintf(tl(l, "已更新“%s”。", "Updated “%s”."), d.Name)})
+			text := fmt.Sprintf(tl(l, "已更新“%s”。", "Updated “%s”."), d.Name)
+			if ms, err := h.OwnerModels(ctx); err == nil && usableModels(ms, d.Models, true, d.BackgroundOnly) == 0 {
+				text += tl(l, "它现在一个模型都用不了（给它的模型在设备上隐藏了，或来源已关闭）。", " It can't use any model now (the ones it may use are hidden from devices or switched off).")
+			}
+			return c.Send(control.Reply{Event: "ok", Text: text})
 		case "revoke":
 			// By name or ID, as device set finds it.
 			ds, err := h.Devices(ctx)
@@ -1748,7 +1752,7 @@ func connectCmd(args []string) {
 			die(err)
 		}
 		if len(ms) == 0 {
-			die(say(omnillm.ForHub(lang(), deviceHubOS, t("你的 Mac 上还没有可用的模型。", "Your Mac has no models yet."))))
+			die(say(noModelsHere()))
 		}
 		for _, m := range ms {
 			note := ""

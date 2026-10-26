@@ -33,8 +33,11 @@ All notable changes to OmniLLM are documented here. OmniLLM is in early pre-rele
 - Command line: when the hub refuses a command (a wrong name, a key that doesn't work, an expired pairing), its own sentence is shown, not "something went wrong". `hub audit` stays JSON for scripts. A device that isn't paired says so from `status` (exit 1), hub commands and `connect forget`.
 - Console: a signed-out subscription has a Sign in button right in the Models tab; messages from the console and the local API name "your Mac" only on a Mac.
 
-- Console: after you sign in again, a signed-out subscription recovers within seconds instead of up to 5 minutes; the Sign in button works on hubs that aren't a Mac too.
+- Console: after you sign in again, a signed-out subscription recovers within about half a minute instead of up to 5 minutes; the Sign in button works on hubs that aren't a Mac too.
 - `omnillm install` and `uninstall` leave launchd/systemd alone when HOME isn't your own home folder (a test or sandbox), instead of acting on your real service.
+
+- Phone page: a load that fails says why (the browser blocks site data, or there's no network) instead of "the program stopped".
+- Command line: a device with no usable models says so and how to check its model list, rather than claiming the Mac has none; `hub device set` warns when the device is left with no usable model.
 
 ### Security
 

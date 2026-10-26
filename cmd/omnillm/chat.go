@@ -81,14 +81,14 @@ func pickModel(ms []omnillm.ModelInfo, person bool) string {
 		}
 	}
 	if len(ms) == 0 {
-		die(say(omnillm.ForHub(lang(), deviceHubOS, t("你的 Mac 上还没有可用的模型。", "Your Mac has no models yet."))))
+		die(say(noModelsHere()))
 	}
 	if !person {
-		die(say(omnillm.ForHub(lang(), deviceHubOS, t("输出接到管道或文件、或从脚本运行时，只能用 API Key 或你的 Mac 上的模型；你的 Mac 上现在只有订阅模型，它们只能在终端里手动对话。",
-			"With output going to a pipe or file, or from a script, only models that use an API key or run on your Mac work; your Mac has only subscription models, which are for chatting in a terminal."))))
+		die(say(omnillm.ForHub(lang(), deviceHubOS, t("输出接到管道或文件、或从脚本运行时，不能用只能手动对话的模型；这台设备能用的模型现在都只能在终端里手动对话。",
+			"With output going to a pipe or file, or from a script, chat-only models can't be used, and every model this device can use is chat-only (for chatting in a terminal)."))))
 	}
 	if len(ms) == 0 {
-		die(say(omnillm.ForHub(lang(), deviceHubOS, t("你的 Mac 上还没有可用的模型。", "Your Mac has no models yet."))))
+		die(say(noModelsHere()))
 	}
 	return ms[0].ID
 }
@@ -102,7 +102,7 @@ func chatLoop(ctx context.Context, d *device.Device, model string) {
 		die(err)
 	}
 	if len(ms) == 0 {
-		die(say(omnillm.ForHub(lang(), deviceHubOS, t("你的 Mac 上还没有可用的模型。", "Your Mac has no models yet."))))
+		die(say(noModelsHere()))
 	}
 	if model == "" {
 		model = pickModel(ms, atTerminal())
@@ -296,4 +296,11 @@ func stripControls(s string) string {
 		}
 		return r
 	}, s)
+}
+
+// noModelsHere: this device can use no model now (none connected on the
+// other computer, or none of the ones it may use is on).
+func noModelsHere() string {
+	return omnillm.ForHub(lang(), deviceHubOS, t("这台设备现在没有能用的模型。在你的 Mac 上接入一个模型，或用 omnillm hub devices 看它能用哪些模型（omnillm hub device set 名字 --all-models 放开）。",
+		"No models are available to this device right now. On your Mac, connect a model, or check which models it may use with omnillm hub devices (omnillm hub device set NAME --all-models allows all)."))
 }
