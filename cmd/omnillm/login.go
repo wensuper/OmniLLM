@@ -164,7 +164,7 @@ func loginWord(k provider.Kind) string {
 	return "chatgpt"
 }
 
-// loginCmd is "omnillm login claude|chatgpt": the guided login in this
+// loginCmd is "omnillm login claude|chatgpt|gemini": the guided login in this
 // terminal, then the hub connects it.
 func loginCmd(args []string) {
 	// --connect: only the last step, for the sign-in window's script.

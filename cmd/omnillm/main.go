@@ -283,7 +283,7 @@ func usageText(all bool) string {
   omnillm status                     查看主机状态
   omnillm update [--check] [--auto on|off]
                                      更新到最新版本（主机默认会在空闲时自己更新）；--auto 开关自动更新
-  omnillm login claude|chatgpt       用 Claude 或 ChatGPT 订阅：没装官方程序会先装上，再在浏览器里登录
+  omnillm login claude|chatgpt|gemini 用 Claude、ChatGPT 或 Google AI 订阅：没装官方程序会先装上，再在浏览器里登录
   omnillm uninstall [--purge]        停止并移除后台服务（--purge 连数据和 API Key 一起删）
   omnillm tray                       把菜单栏图标找回来
   omnillm version                    显示版本
@@ -327,7 +327,7 @@ func usageText(all bool) string {
   omnillm status                     show the hub’s status
   omnillm update [--check] [--auto on|off]
                                      update to the newest version (the hub also updates itself when idle); --auto turns that on or off
-  omnillm login claude|chatgpt       use your Claude or ChatGPT subscription: installs the official program if needed, signs in in your browser
+  omnillm login claude|chatgpt|gemini use your Claude, ChatGPT or Google AI subscription: installs the official program if needed, signs in in your browser
   omnillm uninstall [--purge]        stop and remove the background service (--purge also deletes data and API keys)
   omnillm tray                       bring back the menu bar icon
   omnillm version                    show the version
@@ -394,7 +394,7 @@ func usageText(all bool) string {
   omnillm status                     查看主机状态
   omnillm update [--check] [--auto on|off]
                                      更新到最新版本（主机默认会在空闲时自己更新）；--auto 开关自动更新
-  omnillm login claude|chatgpt       用 Claude 或 ChatGPT 订阅：没装官方程序会先装上，再在浏览器里登录
+  omnillm login claude|chatgpt|gemini 用 Claude、ChatGPT 或 Google AI 订阅：没装官方程序会先装上，再在浏览器里登录
   omnillm uninstall [--purge]        停止并移除后台服务（--purge 连数据和 API Key 一起删）
   omnillm tray                       把菜单栏图标找回来
   omnillm version                    显示版本
@@ -408,7 +408,7 @@ func usageText(all bool) string {
   omnillm status                     show the hub’s status
   omnillm update [--check] [--auto on|off]
                                      update to the newest version (the hub also updates itself when idle); --auto turns that on or off
-  omnillm login claude|chatgpt       use your Claude or ChatGPT subscription: installs the official program if needed, signs in in your browser
+  omnillm login claude|chatgpt|gemini use your Claude, ChatGPT or Google AI subscription: installs the official program if needed, signs in in your browser
   omnillm uninstall [--purge]        stop and remove the background service (--purge also deletes data and API keys)
   omnillm tray                       bring back the menu bar icon
   omnillm version                    show the version
