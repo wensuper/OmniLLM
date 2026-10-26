@@ -17,7 +17,7 @@
 | 需要 | 说明 |
 |---|---|
 | 一台做主机的电脑 | macOS 或 Linux（x86-64、ARM64）。设备只有在它开着、联网时才能用，所以最好是常开的那台。Windows 暂不支持做主机 |
-| 一个模型来源，三选一 | **订阅**：主机上装好并登录 Claude Code（Claude Pro / Max）或 Codex（ChatGPT Plus / Pro）。**API Key**：Anthropic、OpenAI 或兼容 OpenAI 接口的服务。**本地模型**：主机上装 [Ollama](https://ollama.com)，免费，数据不出这台电脑 |
+| 一个模型来源，三选一 | **订阅**：主机上装好并登录 Claude Code（Claude Pro / Max）或 Codex（ChatGPT Plus / Pro），或 Antigravity CLI（Gemini 订阅，要有屏幕）。**API Key**：Anthropic、OpenAI 或兼容 OpenAI 接口的服务。**本地模型**：主机上装 [Ollama](https://ollama.com)，免费，数据不出这台电脑 |
 | 手机或平板 | 一个现代浏览器：iPhone / iPad 用 Safari，安卓用 Chrome。不用装 App |
 
 **不需要**：服务器、域名、改路由器、注册任何新账号、sudo 权限。主机和设备都连项目提供的公共连接服务（`relay.ixxzh.com`），免费，它只转发加密数据。想用自己的，见[自己部署连接服务](self-host.md)。

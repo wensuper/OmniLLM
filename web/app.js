@@ -85,7 +85,7 @@ const T = {
     titleComputer: "Use your OmniLLM", titleComputer2: "in this browser", subComputer: "OmniLLM runs on one of your own computers, where your models and subscriptions are. Copy a link on it and paste it below, and this browser can use them, even on that same computer.",
     dStep1: "On the computer running OmniLLM, click the OmniLLM icon in the menu bar and choose “Add device…” (not a Mac: run omnillm open --add in a terminal)", dStep2: "Choose “Computer or server”", dStep3: "Choose “Copy link”, then paste it here",
     consoleName: "OmniLLM console", mockExpires: "Expires in 5 minutes · single use",
-    trustE2e: "End-to-end encrypted: no one in between can read it", trustOnce: "The link expires in 5 minutes · single use", trustVerify: "Checkable: omnillm verify web",
+    trustE2e: "End-to-end encrypted: no one in between can read it", trustOnce: "The link expires in 5 minutes · single use", trustVerify: "The web app is checkable: omnillm verify web",
     tapScan: "Tap to scan", pasteBtn: "Paste a link or pairing text", connect: "Connect",
     e2e: "End-to-end encrypted", noHub: "Don’t have OmniLLM yet?",
     addDevice: "Add device", kindPhone: "Phone or tablet", kindComputer: "Computer or server", copyLink: "Copy link",

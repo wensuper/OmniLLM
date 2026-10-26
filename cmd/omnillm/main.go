@@ -1844,7 +1844,7 @@ func pairOp(ctx context.Context, h *hub.Hub, c *control.Conn, l string, a map[st
 	expires := fmt.Sprintf(tl(l, "%d 分钟后过期", "expires in %d minutes"), mins)
 	if a["phone"] == "true" {
 		// Right after an install or sign-in on a server: only the phone.
-		if err := c.Send(control.Reply{Event: "info", Text: fmt.Sprintf(tl(l, "（二维码%s · 只能用一次。）", "(The QR code %s · single use.)"), expires)}); err != nil {
+		if err := c.Send(control.Reply{Event: "info", Text: fmt.Sprintf(tl(l, "（二维码 %s · 只能用一次。）", "(The QR code %s · single use.)"), expires)}); err != nil {
 			return err
 		}
 	} else if err := c.Send(control.Reply{Event: "info", Text: fmt.Sprintf(tl(l,

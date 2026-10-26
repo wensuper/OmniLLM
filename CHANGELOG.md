@@ -4,6 +4,15 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.76](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.76) - 2026-10-27
+
+### Changed
+
+- Same words on every surface, last polish:
+  - The QR line spacing in Chinese is fixed.
+  - The computer welcome's “The web app is checkable” line now names the web app.
+  - INSTALL, README and the quickstart's requirements list Gemini and “the web app” like the rest.
+
 ## [0.2.0-alpha.75](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.75) - 2026-10-27
 
 ### Changed

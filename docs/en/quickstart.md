@@ -17,7 +17,7 @@ Goal: within 5 minutes, use the Claude or ChatGPT on your Mac from your phone, w
 | You need | Details |
 |---|---|
 | A computer to act as the hub | macOS or Linux (x86-64, ARM64). Your devices work only while the hub is on and online, so pick the one that stays on. Windows can’t be the hub yet |
-| One model source, any of three | **Subscription**: Claude Code (Claude Pro / Max) or Codex (ChatGPT Plus / Pro) installed and signed in on the hub. **API key**: Anthropic, OpenAI, or a service with an OpenAI-compatible API. **Local model**: [Ollama](https://ollama.com) installed on the hub; free, and your data never leaves that computer |
+| One model source, any of three | **Subscription**: Claude Code (Claude Pro / Max) or Codex (ChatGPT Plus / Pro) installed and signed in on the hub, or Antigravity CLI (Gemini subscription, needs a screen). **API key**: Anthropic, OpenAI, or a service with an OpenAI-compatible API. **Local model**: [Ollama](https://ollama.com) installed on the hub; free, and your data never leaves that computer |
 | A phone or tablet | A modern browser: Safari on iPhone / iPad, Chrome on Android. No app to install |
 
 **You don’t need** a server, a domain, router changes, a new account anywhere, or sudo. The hub and your devices all use the project’s public connection service (`relay.ixxzh.com`). It’s free and only forwards encrypted data. To run your own, see [Self-host the connection service](self-host.md).
