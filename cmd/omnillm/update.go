@@ -307,6 +307,10 @@ func updateCmd(args []string) {
 	cctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	latest, err := latestRelease(cctx, updateClient())
 	cancel()
+	if errors.Is(err, errRateLimited) {
+		// Not the network: GitHub counts requests per address.
+		die(say(t("GitHub 暂时不让这台电脑再查了（同一个网络地址每小时最多 60 次）。过一会儿再试。", "GitHub isn’t answering this computer for now (it allows 60 checks an hour per network address). Try again in a while.")))
+	}
 	if err != nil {
 		die(say(t("连不上 GitHub，查不到新版本。请检查网络后再试。", "Can’t reach GitHub to look for a new version. Check the network and try again.")))
 	}

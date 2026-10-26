@@ -131,12 +131,8 @@ func verifyWeb(ctx context.Context, c *http.Client, base string) webCheck {
 // has this build, and checks its manifest against that release's
 // checksums.txt (which the release workflow signs). nil: none has it.
 func findManifest(ctx context.Context, c *http.Client, build string) (*webManifest, string, error) {
-	b, err := get(ctx, c, releasesURL, 4<<20)
+	rels, err := listReleases(ctx, c)
 	if err != nil {
-		return nil, "", err
-	}
-	var rels []release
-	if err := json.Unmarshal(b, &rels); err != nil {
 		return nil, "", err
 	}
 	tried := 0

@@ -189,14 +189,59 @@ func get(ctx context.Context, c *http.Client, url string, max int64) ([]byte, er
 	return io.ReadAll(io.LimitReader(resp.Body, max))
 }
 
-// latestRelease asks GitHub for the newest release's tag ("v0.2.0-alpha.9").
-func latestRelease(ctx context.Context, c *http.Client) (string, error) {
+// releasesAtomURL is the release feed on github.com itself, which GitHub's
+// API limit (60 an hour per address without a login) doesn't count.
+var releasesAtomURL = "https://github.com/wensuper/OmniLLM/releases.atom"
+
+// atomTag finds each release's tag in the feed.
+var atomTag = regexp.MustCompile(`/releases/tag/(v[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.]+)?)"`)
+
+// errRateLimited: GitHub refused for now, the network is fine.
+var errRateLimited = errors.New("github: too many requests from this address for now")
+
+// listReleases is the project's releases, newest first: GitHub's API, or,
+// when GitHub limits this address (several computers behind one address,
+// or many checks in an hour), its release feed. The feed has no drafts and
+// says nothing of pre-releases: a tag with a pre-release part is one.
+func listReleases(ctx context.Context, c *http.Client) ([]release, error) {
 	b, err := get(ctx, c, releasesURL, 4<<20)
-	if err != nil {
-		return "", err
+	if err == nil {
+		var rels []release
+		if err := json.Unmarshal(b, &rels); err != nil {
+			return nil, err
+		}
+		return rels, nil
+	}
+	if !strings.Contains(err.Error(), "HTTP 403") && !strings.Contains(err.Error(), "HTTP 429") {
+		return nil, err
+	}
+	feed, ferr := get(ctx, c, releasesAtomURL, 4<<20)
+	if ferr != nil {
+		if strings.Contains(ferr.Error(), "HTTP 4") {
+			return nil, errRateLimited
+		}
+		return nil, ferr
 	}
 	var rels []release
-	if err := json.Unmarshal(b, &rels); err != nil {
+	seen := map[string]bool{}
+	for _, m := range atomTag.FindAllSubmatch(feed, -1) {
+		tag := string(m[1])
+		if seen[tag] {
+			continue
+		}
+		seen[tag] = true
+		rels = append(rels, release{Tag: tag, Prerelease: strings.Contains(tag, "-")})
+	}
+	if len(rels) == 0 {
+		return nil, errRateLimited
+	}
+	return rels, nil
+}
+
+// latestRelease asks GitHub for the newest release's tag ("v0.2.0-alpha.9").
+func latestRelease(ctx context.Context, c *http.Client) (string, error) {
+	rels, err := listReleases(ctx, c)
+	if err != nil {
 		return "", err
 	}
 	tag := newestRelease(rels)

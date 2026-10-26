@@ -507,6 +507,7 @@ NEXA（`pgclient`，Go）直接引入 OmniLLM 库。用户只装 NEXA：在 NEXA
 | 一个版本装不上（网络、校验）或装上后自称的版本仍比发布旧 | 记成失败，`omnillm status` 说出来；自动更新等一天再试这一版，更新的版本出来马上试，不会每 6 小时反复装 |
 | 只当设备用的 Linux 服务器没有后台服务 | `omnillm connect chat/ask` 在终端里（不是脚本）时，读上次检查的结果，有新版本提一句；结果超过一天就顺手再查一次 |
 | 在服务器上照着 README 再跑一次安装命令，会把设备装成主机 | `install --device` 在设备文件夹里留一个标记（以前装的：设备文件夹加 `~/.local/bin/omnillm`）；`omnillm install` 看到它就按设备更新；要改成主机用 `--hub`。只在别处运行过程序留下的文件夹不算 |
+| GitHub 限流（同一网络地址不登录每小时 60 次 API；同一个网络里几台电脑、或一小时里查很多次就会碰到） | 查发布列表先用 API，回 403 / 429 就改读 github.com 上的发布订阅 `releases.atom`（不计入 API 次数；没有草稿，带“-”的标签算预发布）；`omnillm update`、自动更新和网页核对都走这条（`listReleases`）。两条都被拒才说“GitHub 暂时不让这台电脑再查了”，不再说成网络问题（zc 10-26 发版时碰到）|
 | 人想知道有没有新版本、要不要做什么 | `omnillm update`（已是最新就直说）、`omnillm update --check`；`omnillm status` 多一行：有新版本、会在空闲时自动装，或上次自动更新失败要手动再试；`status --json` 带 `update` 字段 |
 | 不想自动更新的人 | `omnillm update --auto off`（`--auto on` 打开），状态存在 `update.json`；之后只提示。`omnillm update` 后面多写了别的词就拒绝并说用法，不会意外更新 |
 | README 太长，Quick Start 在“为什么”和两张表后面 | README 只留三句话、Quick Start 三步、更新、常用命令和文档表；“和别的做法比”移进 security.md，“能用哪些模型”移进 quickstart.md。中英文档分开：`README.md` / `README.zh-CN.md`，使用文档在 `docs/en/`、`docs/zh-CN/`，更新记录各一份；所有安装说明把“交给 AI 助手安装”放第一 |

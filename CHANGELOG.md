@@ -4,6 +4,12 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.64](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.64) - 2026-10-26
+
+### Fixed
+
+- Updates and the web page check no longer stop when GitHub limits this computer's network address (60 API checks an hour without a login, quickly reached by several computers on one network): they read GitHub's release feed instead. If GitHub refuses that too, `omnillm update` says it is GitHub's limit and to try again in a while, not that the network is down.
+
 ## [0.2.0-alpha.63](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.63) - 2026-10-26
 
 ### Fixed
