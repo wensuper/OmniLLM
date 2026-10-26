@@ -333,7 +333,9 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, r, http.StatusUnauthorized, &omnillm.Error{Code: omnillm.CodeInvalidToken, Msg: msgLoginExpired})
 		return
 	}
-	http.SetCookie(w, &http.Cookie{Name: cookieName, Value: sid, Path: "/console", HttpOnly: true, SameSite: http.SameSiteStrictMode})
+	// A name of its own per session: a console tab opened later (the menu
+	// bar opens a new one each time) doesn't replace this tab's cookie.
+	http.SetCookie(w, &http.Cookie{Name: cookieName + "_" + sid[:8], Value: sid, Path: "/console", HttpOnly: true, SameSite: http.SameSiteStrictMode})
 	writeJSON(w, map[string]string{"session": sec})
 }
 
@@ -352,7 +354,7 @@ func (s *Server) authed(f func(http.ResponseWriter, *http.Request)) http.Handler
 		// Any cookie with our name (another local server may have set one
 		// of its own) is tried; one must match together with the secret.
 		for _, c := range r.Cookies() {
-			if c.Name != cookieName || len(c.Value) != 64 || len(sec) != 64 {
+			if !sessionCookie(c.Name) || len(c.Value) != 64 || len(sec) != 64 {
 				continue
 			}
 			s.mu.Lock()
@@ -376,13 +378,30 @@ func (s *Server) authed(f func(http.ResponseWriter, *http.Request)) http.Handler
 }
 
 func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
-	if c, err := r.Cookie(cookieName); err == nil {
+	// This tab's session only: the cookie whose session the secret matches.
+	sec := r.Header.Get(secretHeader)
+	for _, c := range r.Cookies() {
+		if !sessionCookie(c.Name) {
+			continue
+		}
 		s.mu.Lock()
-		delete(s.sessions, c.Value)
+		ss, ok := s.sessions[c.Value]
+		mine := ok && len(sec) == 64 && subtle.ConstantTimeCompare([]byte(ss.secret), []byte(sec)) == 1
+		if mine {
+			delete(s.sessions, c.Value)
+		}
 		s.mu.Unlock()
+		if mine || c.Name == cookieName {
+			http.SetCookie(w, &http.Cookie{Name: c.Name, Value: "", Path: "/console", MaxAge: -1, HttpOnly: true, SameSite: http.SameSiteStrictMode})
+		}
 	}
-	http.SetCookie(w, &http.Cookie{Name: cookieName, Value: "", Path: "/console", MaxAge: -1, HttpOnly: true, SameSite: http.SameSiteStrictMode})
 	writeJSON(w, map[string]bool{"ok": true})
+}
+
+// sessionCookie: one of the console's session cookies (one per session;
+// the plain name is the older form).
+func sessionCookie(name string) bool {
+	return name == cookieName || strings.HasPrefix(name, cookieName+"_")
 }
 
 // ---------- helpers ----------

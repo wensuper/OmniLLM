@@ -198,6 +198,11 @@ func installCmd(args []string) {
 		wait = 45 * time.Second // an update: a cold start must not look like a broken one
 	}
 	st, ok := waitRunning(wait)
+	// An older hub that is still the one answering (it couldn't be
+	// stopped): the update didn't take; say so instead of "updated".
+	if ok && prev != "" && st.Version != "" && plain(st.Version) != plain(version) {
+		die(sayf(t("OmniLLM %s 还在运行，新版本没能换上。先停掉它，再运行 omnillm install。", "OmniLLM %s is still running, so the new version couldn’t take its place. Stop it, then run omnillm install."), st.Version))
+	}
 	if !ok && prev != "" {
 		// An update that does not start: go back to the version that
 		// ran, and never install this one again on its own.
@@ -1614,12 +1619,24 @@ func stopRunningHub(dir string) {
 		}
 		return err == nil
 	}
-	b, err := os.ReadFile(filepath.Join(dir, "hub.pid"))
-	if err != nil || !answers() {
+	if !answers() {
 		return
 	}
-	pid, err := strconv.Atoi(strings.TrimSpace(string(b)))
-	if err != nil || pid <= 1 || pid == os.Getpid() {
+	// Its pid file, or (a hub from before it wrote one) the process at the
+	// other end of its socket.
+	pid := 0
+	if b, err := os.ReadFile(filepath.Join(dir, "hub.pid")); err == nil {
+		pid, _ = strconv.Atoi(strings.TrimSpace(string(b)))
+	}
+	if pid <= 1 {
+		if c, err := net.DialTimeout("unix", sock, time.Second); err == nil {
+			if uc, ok := c.(*net.UnixConn); ok {
+				pid = socketPeer(uc)
+			}
+			c.Close()
+		}
+	}
+	if pid <= 1 || pid == os.Getpid() {
 		return
 	}
 	if p, err := os.FindProcess(pid); err == nil {

@@ -141,7 +141,7 @@ func (r *rig) login(t *testing.T) string {
 	_ = json.Unmarshal(w.Body.Bytes(), &out)
 	r.secret = out["session"]
 	for _, c := range w.Result().Cookies() {
-		if c.Name == cookieName {
+		if sessionCookie(c.Name) {
 			r.cookie = c.Value
 			return c.Value
 		}
@@ -240,7 +240,7 @@ func TestLoginIsOneTimeAndExpires(t *testing.T) {
 	}
 	var c *http.Cookie
 	for _, x := range w.Result().Cookies() {
-		if x.Name == cookieName {
+		if sessionCookie(x.Name) {
 			c = x
 		}
 	}
@@ -697,5 +697,42 @@ func TestSubscriptionCards(t *testing.T) {
 	w = r.do(req{method: "POST", path: "/console/api/subs/login", body: `{"kind":"../etc"}`, origin: origin, header: true, cookie: sid})
 	if w.Code != 400 {
 		t.Fatalf("unknown kind: %d", w.Code)
+	}
+}
+
+// A second console tab (the menu bar opens one each time) leaves the first
+// one signed in: each session has a cookie of its own.
+func TestTwoTabsStaySignedIn(t *testing.T) {
+	r := newRig(t, false)
+	login := func() (*http.Cookie, string) {
+		u := r.s.LoginURL()
+		tok := u[strings.Index(u, "#login=")+len("#login="):]
+		w := r.do(req{method: "POST", path: "/console/api/login", body: `{"token":"` + tok + `"}`, origin: origin, header: true})
+		var out map[string]string
+		_ = json.Unmarshal(w.Body.Bytes(), &out)
+		for _, c := range w.Result().Cookies() {
+			if sessionCookie(c.Name) {
+				return c, out["session"]
+			}
+		}
+		t.Fatal("no cookie")
+		return nil, ""
+	}
+	c1, s1 := login()
+	c2, _ := login()
+	if c1.Name == c2.Name {
+		t.Fatal("both tabs got the same cookie name")
+	}
+	// The browser now sends both; the first tab's secret still works.
+	hr := httptest.NewRequest("GET", "http://"+addr+"/console/api/status", nil)
+	hr.Host = addr
+	hr.Header.Set(headerName, "1")
+	hr.Header.Set("Sec-Fetch-Site", "same-origin")
+	hr.Header.Set("Cookie", c1.Name+"="+c1.Value+"; "+c2.Name+"="+c2.Value)
+	hr.Header.Set(secretHeader, s1)
+	w := httptest.NewRecorder()
+	r.handler.ServeHTTP(w, hr)
+	if w.Code != 200 {
+		t.Fatalf("first tab signed out: %d", w.Code)
 	}
 }

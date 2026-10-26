@@ -199,6 +199,22 @@ func chatLoop(ctx context.Context, d *device.Device, model string) {
 		} else {
 			msgs = msgs[:len(msgs)-1]
 		}
+		if err != nil && omnillm.AsError(err).Msg == omnillm.MsgUnknownModel {
+			// Its source was switched off or removed meanwhile: the list now.
+			if fresh, ferr := d.Models(ctx); ferr == nil {
+				ms = fresh
+				switch {
+				case len(ms) == 0:
+					fmt.Fprintln(os.Stderr, noModelsHere())
+				case !slices.ContainsFunc(ms, func(m omnillm.ModelInfo) bool { return m.ID == model }):
+					model = pickModel(ms, atTerminal())
+					fmt.Fprintf(os.Stderr, t("那个模型现在用不了了，改用 %s。再发一次就行。\n", "That model is no longer available; now using %s. Send it again.\n"), name(model))
+				default:
+					fmt.Fprintln(os.Stderr, describe(err))
+				}
+				err = nil
+			}
+		}
 		if err != nil {
 			fmt.Fprintln(os.Stderr, describe(err))
 		}

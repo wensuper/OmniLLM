@@ -15,7 +15,7 @@ const T = {
   zh: {
     loading: "正在载入……", bootDownload: "正在下载……", bootStart: "正在启动……", bootStorage: "正在打开……",
     bootSlow: "载入停了 20 秒没有进展，停在“{0}”。点下面的按钮清掉缓存重新载入；网络慢的话也可以换个网络再试。",
-    bootCrashed: "程序意外停止了。点下面的按钮清掉缓存重新载入。", bootStorageFailed: "这个浏览器不让网页保存数据（可能在设置里禁止了网站数据）。允许这个网站保存数据后再载入。", bootError: "载入失败：", bootRetry: "重新载入",
+    bootCrashed: "程序意外停止了。点下面的按钮清掉缓存重新载入。", bootStorageFailed: "这个浏览器不让网页保存数据（可能在设置里禁止了网站数据）。允许这个网站保存数据后再载入。", bootOffline: "没能下载：这台设备可能没有联网。联网后会自动重新载入，也可以点“重新载入”。", bootError: "载入失败：", bootRetry: "重新载入",
     welcomeTitle1: "你电脑上的 AI，", welcomeTitle2: "现在也在这台设备上",
     step1: "打开电脑上的 OmniLLM 控制台（Mac：菜单栏图标）", step2: "点“添加设备”", step3: "扫电脑屏幕上的二维码",
     e2eChip: "端到端加密", noHub: "还没有 OmniLLM？先装好",
@@ -60,7 +60,7 @@ const T = {
   en: {
     loading: "Loading…", bootDownload: "Downloading…", bootStart: "Starting…", bootStorage: "Opening…",
     bootSlow: "Loading has made no progress for 20 seconds, stuck at “{0}”. Tap below to clear the cache and load again; on a slow network, another network may help.",
-    bootCrashed: "The program stopped unexpectedly. Tap below to clear the cache and load again.", bootStorageFailed: "This browser isn’t letting the page save data (site data may be blocked in its settings). Allow site data for this site, then load again.", bootError: "Loading failed: ", bootRetry: "Load again",
+    bootCrashed: "The program stopped unexpectedly. Tap below to clear the cache and load again.", bootStorageFailed: "This browser isn’t letting the page save data (site data may be blocked in its settings). Allow site data for this site, then load again.", bootOffline: "Couldn’t download: this device may be offline. It loads again by itself once it’s online, or tap “Load again”.", bootError: "Loading failed: ", bootRetry: "Load again",
     welcomeTitle1: "The AI on your computer, ", welcomeTitle2: "now on this device",
     step1: "Open the OmniLLM console on your computer (on a Mac: the menu bar icon)", step2: "Choose “Add device”", step3: "Scan the QR code on your computer’s screen",
     e2eChip: "End-to-end encrypted", noHub: "No OmniLLM yet? Set it up first",
@@ -383,7 +383,13 @@ $("boot-retry").addEventListener("click", cleanReload);
   watchUpdates();
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
   bootWatch();
-  try { await startWasm(); } catch (e) { console.warn(e); bootFailed(t(!navigator.onLine || e instanceof TypeError ? "noNetwork" : "bootCrashed")); return; }
+  try { await startWasm(); } catch (e) {
+    console.warn(e);
+    const off = !navigator.onLine || e instanceof TypeError;
+    bootFailed(t(off ? "bootOffline" : "bootCrashed"));
+    if (off) addEventListener("online", () => location.reload(), { once: true }); // back online: load again
+    return;
+  }
   S.ready = true;
   boot("bootStorage"); bootWatch();
   if (S.pendingLink) { link = S.pendingLink; S.pendingLink = ""; }
@@ -401,7 +407,12 @@ $("boot-retry").addEventListener("click", cleanReload);
     for (const c of S.chats) {
       const last = c.messages[c.messages.length - 1];
       if (last && last.live && last.role === "assistant") {
-        if (!last.content) c.messages.pop();
+        if (!last.content) {
+          c.messages.pop();
+          // "Answer again" had folded the earlier answer away: it is the answer again.
+          const back = c.messages[c.messages.length - 1];
+          if (back && back.prev) delete back.prev;
+        }
         else { last.note = t("dropped"); last.failed = true; }
       }
       for (const m of c.messages) delete m.live;
@@ -1919,4 +1930,8 @@ async function unpaired(note) {
 
 // Hidden while a reply comes in (a phone switching apps may throw the page
 // away): keep what has arrived so far.
-document.addEventListener("visibilitychange", () => { if (document.hidden && S.busy) saveChats().catch(() => {}); });
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) return;
+  if (S.busy) saveChats().catch(() => {});
+  if (!S.quiet && S.device) saveForReload(); // what's typed, too
+});

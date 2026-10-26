@@ -47,6 +47,10 @@ All notable changes to OmniLLM are documented here. OmniLLM is in early pre-rele
 - `status` says when every model source is switched off; pairing a device that can't use any model doesn't say "just chat on it"; `hub provider add ollama` says when Ollama isn't running.
 - Phone page: a question you send is saved at once, so it isn't lost if the phone closes the page in the background; a browser that can't keep the pairing no longer reloads itself (which lost the pairing).
 
+- Console: opening another console tab (the menu bar opens one each time) no longer signs out the tab that's already open.
+- Phone page: what you're typing is kept if the phone closes the page in the background; a page that couldn't load offline loads again by itself once online.
+- Command line: an update replaces even a hub started by an older version without a service manager, and says so if it couldn't; `hub provider add ollama` accepts the address without `/v1`; a model switched off mid-chat is replaced by one that works; local openai-compatible servers are refused with the real reason before the key is asked.
+
 ### Security
 
 - Model replies shown in a terminal have control characters removed, so a reply can't use escape sequences (to write the clipboard or fake a prompt).

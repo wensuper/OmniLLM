@@ -21,6 +21,7 @@ import (
 	"math"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -745,6 +746,12 @@ func hubCmd(args []string) {
 			dieArgs(usageErr(t("用法：omnillm hub provider add <openai|anthropic|ollama|openai-compatible> [--name N] [--base-url U]",
 				"Usage: omnillm hub provider add <openai|anthropic|ollama|openai-compatible> [--name N] [--base-url U]")))
 		}
+		if kind == "openai-compatible" && *name != "" && *base != "" {
+			if err := (provider.Config{Kind: provider.OpenAICompatible, Name: *name, BaseURL: *base, NeedsKey: true}).Validate(); err != nil && strings.Contains(err.Error(), "not public") {
+				dieArgs(say(runnable(t("openai-compatible 的来源必须在互联网上（https、公开地址）；这台电脑或局域网里的模型服务不支持。本机模型可以用 Ollama：omnillm hub provider add ollama。",
+					"openai-compatible sources must be on the internet (https, a public address); a model server on this computer or your network isn't supported. Ollama is: omnillm hub provider add ollama."))))
+			}
+		}
 		if kind == "openai-compatible" && (*name == "" || *base == "") {
 			dieArgs(usageErr(t("用法：omnillm hub provider add openai-compatible --name 名字 --base-url https://…", "Usage: omnillm hub provider add openai-compatible --name NAME --base-url https://…")))
 		}
@@ -827,7 +834,8 @@ func hubCmd(args []string) {
 			dieArgs(err)
 		}
 		callOr(sock, control.Request{Op: "pair", Args: a}, "")
-		if st, ok := queryStatus(); ok && st.Providers > 0 && st.ProvidersOn != nil && *st.ProvidersOn == 0 {
+		if st, ok := queryStatus(); ok && (st.Providers == 0 || (st.ProvidersOn != nil && *st.ProvidersOn == 0)) {
+			st.Running = true
 			fmt.Println(runnable(nextStep(st)))
 		} else {
 			fmt.Println(runnable(pairedNote()))
@@ -1293,10 +1301,19 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 			}
 			if a["base_url"] != "" {
 				cfg.BaseURL = a["base_url"]
+				// Ollama's own docs give the address without /v1.
+				if cfg.Kind == provider.Ollama {
+					if u, err := url.Parse(cfg.BaseURL); err == nil && (u.Path == "" || u.Path == "/") {
+						cfg.BaseURL = strings.TrimSuffix(cfg.BaseURL, "/") + "/v1"
+					}
+				}
 			}
 			ms, err := h.AddProvider(ctx, cfg, req.Secret)
 			if err != nil {
 				// The key was just typed: check it, rather than "replace it".
+				if cfg.Kind == provider.Ollama && omnillm.AsError(err).Msg == omnillm.MsgUpstream && !nothingAnswers(err) {
+					return say(tl(l, "那个地址有东西应答，但不是 Ollama 的接口；地址要以 /v1 结尾（默认 http://127.0.0.1:11434/v1）。", "Something answers at "+cfg.BaseURL+", but not Ollama’s API; the address ends in /v1 (default http://127.0.0.1:11434/v1)."))
+				}
 				if cfg.Kind == provider.Ollama && omnillm.AsError(err).Msg == omnillm.MsgUpstream {
 					return say(onMachineIn(l, tl(l, "%s 上的 Ollama 没有在运行（"+cfg.BaseURL+" 没有应答）。先打开 Ollama，再运行一次这条命令。", "Ollama isn’t running on %s (nothing answers at "+cfg.BaseURL+"). Start Ollama, then run the command again.")))
 				}
@@ -1757,6 +1774,9 @@ func connectCmd(args []string) {
 		log.Printf(t("本机接口：http://%s/v1 ，令牌在 %s（只有你能读）。", "Local API: http://%s/v1 ; token in %s (readable only by you)."), *listen, tokPath)
 		localapi.HubOS = d.HubOS // the messages name the right kind of computer
 		if err := localapi.Serve(ctx, *listen, localapi.Handler(localapi.NewDeviceBackend(d, strings.TrimSpace(string(tok))))); err != nil {
+			if errors.Is(err, syscall.EADDRINUSE) {
+				die(sayf(t("%s 已经被占用（可能已经有一个 omnillm connect run）；停掉它，或用 --listen 换一个端口。", "%s is in use (another omnillm connect run?); stop it or pick another port with --listen."), *listen))
+			}
 			die(err)
 		}
 	case "forget":
@@ -2001,4 +2021,11 @@ func deviceHubHint() string {
 	}
 	return t("这台电脑只当设备用，主机命令要在它配对的那台电脑上运行。这里能用：omnillm connect chat、ask、models。",
 		"This computer is set up as a device; hub commands run on the computer it is paired with. Here: omnillm connect chat, ask or models.")
+}
+
+// nothingAnswers: the error is a failed connection (nothing listening),
+// not an answer the server gave.
+func nothingAnswers(err error) bool {
+	m := strings.ToLower(fmt.Sprint(err, " ", omnillm.AsError(err).Detail))
+	return strings.Contains(m, "refused") || strings.Contains(m, "no such host") || strings.Contains(m, "timeout") || strings.Contains(m, "unreachable")
 }

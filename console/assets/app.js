@@ -1486,7 +1486,8 @@ function renderCap() {
     };
     save.addEventListener("click", submit);
     no.addEventListener("click", renderCap);
-    f.addEventListener("keydown", (e) => { if (composing(e)) return; if (e.key === "Enter") submit(); if (e.key === "Escape") renderCap(); });
+    // Enter in the amount saves; on a button, the button does its own thing.
+    f.addEventListener("keydown", (e) => { if (composing(e)) return; if (e.key === "Enter" && e.target === amt) submit(); if (e.key === "Escape") renderCap(); });
     const fields = el("div", undefined, "cap-fields");
     fields.append(el("span", t("capLabel"), "cap-label"), wrap, lab);
     const btns = el("div", undefined, "btns");
