@@ -427,7 +427,7 @@ func (h *Hub) DetectNow(ctx context.Context) (connected []string, failed []Detec
 		if ids, err := h.DetectOllama(ctx); err == nil && len(ChatModels(ids)) > 0 {
 			cfg, _ := provider.Default(provider.Ollama)
 			cfgs = append(cfgs, cfg)
-		} else if err == nil && len(ids) > 0 {
+		} else if err == nil {
 			// Running, but with embedding or rerank models only: found,
 			// and the owner is told what to pull.
 			failed = append(failed, DetectFailure{Kind: string(provider.Ollama),

@@ -370,6 +370,7 @@ func usageText(all bool) string {
   omnillm connect ask "问题"         问一句
   omnillm connect models             能用哪些模型
   omnillm connect run                给本机程序开一个本机接口
+  omnillm connect pair               在这台电脑上输入配对文字
   omnillm connect forget             删除这里的配对
   omnillm update                     更新
   omnillm help --all                 全部命令
@@ -378,6 +379,7 @@ func usageText(all bool) string {
   omnillm connect ask "question"     one question
   omnillm connect models             which models it can use
   omnillm connect run                a local API for programs on this computer
+  omnillm connect pair               enter a pairing text on this computer
   omnillm connect forget             delete the pairing here
   omnillm update                     update
   omnillm help --all                 every command
@@ -781,6 +783,28 @@ func hubCmd(args []string) {
 		if kind == "openai-compatible" && (*name == "" || *base == "") {
 			dieArgs(usageErr(t("用法：omnillm hub provider add openai-compatible --name 名字 --base-url https://…", "Usage: omnillm hub provider add openai-compatible --name NAME --base-url https://…")))
 		}
+		// The name and address as the hub will check them, before the key.
+		if pre, err := provider.Default(provider.Kind(kind)); err == nil || kind == "openai-compatible" {
+			if kind == "openai-compatible" {
+				pre = provider.Config{Kind: provider.OpenAICompatible, NeedsKey: true}
+			}
+			if *name != "" {
+				pre.Name = *name
+			}
+			if *base != "" {
+				pre.BaseURL = *base
+			}
+			if err := pre.Validate(); err != nil {
+				switch m := err.Error(); {
+				case strings.Contains(m, "bad name"):
+					dieArgs(usageErr(t("名字只能用英文字母、数字和 -（不要空格）。", "Use letters, digits and - for the name (no spaces).")))
+				case strings.Contains(m, "https") || strings.Contains(m, "base URL") || strings.Contains(m, "scheme"):
+					if kind != "ollama" {
+						dieArgs(usageErr(t("地址要以 https:// 开头，例如 https://api.example.com/v1。", "The address starts with https://, e.g. https://api.example.com/v1.")))
+					}
+				}
+			}
+		}
 		// Not running: say so before anyone pastes a key.
 		if err := ctl(sock, control.Request{Op: "status"}, func(control.Reply) (bool, bool) { return false, false }); err != nil {
 			die(err)
@@ -850,6 +874,10 @@ func hubCmd(args []string) {
 		}
 		callOr(sock, control.Request{Op: args[0]}, empty)
 	case "pair":
+		// A hub that answers first: "your own step" would point at nothing.
+		if err := ctl(sock, control.Request{Op: "status"}, func(control.Reply) (bool, bool) { return false, false }); err != nil {
+			die(err)
+		}
 		if notAPerson() {
 			fmt.Println(runnable(t("添加设备是你自己的一步：在这台机器上你自己的终端里运行 omnillm pair，扫码、核对 6 位数都在那里做。",
 				"Adding a device is your own step: in your own terminal on this machine, run omnillm pair; the scan and the 6-digit check happen there.")))
@@ -1335,6 +1363,9 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 				}
 			}
 			ms, err := h.AddProvider(ctx, cfg, req.Secret)
+			if err != nil && cfg.Kind != provider.Ollama && omnillm.AsError(err).Msg == omnillm.MsgUpstream && nothingAnswers(err) {
+				return say(strings.Replace(tl(l, "没有服务在 URL 应答；检查地址后再运行一次。", "Nothing answers at URL; check the address and run the command again."), "URL", cfg.BaseURL, 1))
+			}
 			if err != nil {
 				// The key was just typed: check it, rather than "replace it".
 				if cfg.Kind == provider.Ollama && omnillm.AsError(err).Msg == omnillm.MsgBadSource {
@@ -1344,6 +1375,9 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 					return say(tl(l, "地址以 http:// 开头，例如 http://127.0.0.1:11434。", "The address starts with http://, e.g. http://127.0.0.1:11434."))
 				}
 				if cfg.Kind == provider.Ollama && omnillm.AsError(err).Msg == omnillm.MsgUpstream && !nothingAnswers(err) {
+					if strings.HasSuffix(strings.TrimSuffix(cfg.BaseURL, "/"), "/v1") {
+						return say(strings.Replace(tl(l, "URL 上应答的不是 Ollama；检查端口（Ollama 在 http://127.0.0.1:11434）。", "Something else answers at URL, not Ollama; check the port (Ollama listens on http://127.0.0.1:11434)."), "URL", cfg.BaseURL, 1))
+					}
 					return say(tl(l, "那个地址有东西应答，但不是 Ollama 的接口；地址要以 /v1 结尾（默认 http://127.0.0.1:11434/v1）。", "Something answers at "+cfg.BaseURL+", but not Ollama’s API; the address ends in /v1 (default http://127.0.0.1:11434/v1)."))
 				}
 				if cfg.Kind == provider.Ollama && omnillm.AsError(err).Msg == omnillm.MsgUpstream {
@@ -1598,6 +1632,9 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 			}
 			return c.Send(control.Reply{Event: "ok", Text: tl(l, "已确认，模型恢复使用。", "Confirmed; models are back on.")})
 		case "pair":
+			if relayURL == "" {
+				return say(tl(l, "这台主机的远程连接关着（OMNILLM_RELAY=off），加不了设备。不带这个设置启动它，才能加设备。", "Remote access is off on this hub (OMNILLM_RELAY=off), so devices can't be added. Start it without that setting to add one."))
+			}
 			return pairOp(ctx, h, c, l, a)
 		}
 		return say(tl(l, "OmniLLM 不认识这个命令。运行 omnillm install 更新到同一个版本。", "OmniLLM doesn’t know this command. Run omnillm install to update it to the same version."))
@@ -1813,12 +1850,17 @@ func connectCmd(args []string) {
 				die(err)
 			}
 		}
-		log.Printf(t("本机接口：http://%s/v1 ，令牌在 %s（只有你能读）。", "Local API: http://%s/v1 ; token in %s (readable only by you)."), *listen, tokPath)
-		localapi.HubOS = d.HubOS // the messages name the right kind of computer
-		if err := localapi.Serve(ctx, *listen, localapi.Handler(localapi.NewDeviceBackend(d, strings.TrimSpace(string(tok))))); err != nil {
+		// Bound first: the address is said only once it is ours.
+		ln, err := localapi.Listen(*listen)
+		if err != nil {
 			if errors.Is(err, syscall.EADDRINUSE) {
 				die(sayf(t("%s 已经被占用（可能已经有一个 omnillm connect run）；停掉它，或用 --listen 换一个端口。", "%s is in use (another omnillm connect run?); stop it or pick another port with --listen."), *listen))
 			}
+			die(err)
+		}
+		log.Printf(t("本机接口：http://%s/v1 ，令牌在 %s（只有你能读）。", "Local API: http://%s/v1 ; token in %s (readable only by you)."), *listen, tokPath)
+		localapi.HubOS = d.HubOS // the messages name the right kind of computer
+		if err := localapi.ServeListener(ctx, ln, localapi.Handler(localapi.NewDeviceBackend(d, strings.TrimSpace(string(tok))))); err != nil {
 			die(err)
 		}
 	case "forget":

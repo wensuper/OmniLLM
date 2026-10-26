@@ -28,6 +28,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/wensuper/OmniLLM/device"
 	"github.com/wensuper/OmniLLM/hub"
 	"golang.org/x/term"
 )
@@ -122,6 +123,10 @@ func role() string {
 		return "device"
 	}
 	if home, err := os.UserHomeDir(); err == nil && exists(d) && exists(filepath.Join(home, ".local", "bin", "omnillm")) {
+		return "device"
+	}
+	// Paired with omnillm connect pair alone (no install --device).
+	if exists(d) && device.Paired(context.Background(), secrets(d, "omnillm-device")) {
 		return "device"
 	}
 	return ""

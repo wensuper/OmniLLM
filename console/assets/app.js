@@ -386,7 +386,7 @@ function loggedOut() {
 let toastTimer;
 // toast says something for a moment (text, or the nodes of named());
 // act ({ label, run }) adds a button (Undo) and keeps it up for 5 s.
-function toast(msg, err, act) {
+function toast(msg, err, act, long) {
   if (signedOut) return; // the login panel already says what to do
   const n = $("toast");
   n.textContent = "";
@@ -400,7 +400,7 @@ function toast(msg, err, act) {
   }
   n.hidden = false;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { n.hidden = true; }, err ? 6000 : act ? 5000 : 2500);
+  toastTimer = setTimeout(() => { n.hidden = true; }, err || long ? 6000 : act ? 5000 : 2500);
 }
 
 const money = (micro) => "$" + (micro / 1e6).toFixed(2);
@@ -734,7 +734,7 @@ $("recheck").addEventListener("click", async (ev) => {
     else if (!failed.length && !notes.length) lines.push(S.providers.length ? t("recheckNoMore") : t("recheckNone"));
     for (const f of failed) lines.push(t("srcFailed", name(f.kind), f.message));
     for (const f of notes) lines.push(f.message);
-    toast(lines.join(lang === "zh" ? "" : " "), failed.length > 0);
+    toast(lines.join(lang === "zh" ? "" : " "), failed.length > 0, undefined, notes.length > 0); // a note with a command to read
     if (kinds.length) await refresh();
   } catch (e) { toast(e.message, true); } finally { b.disabled = false; }
 });

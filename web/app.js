@@ -301,7 +301,8 @@ function takeOver() {
 if (tabs) tabs.onmessage = (e) => {
   // The tab in use went away: a quiet tab takes over by itself (reload reads
   // what that tab saved, then claims).
-  if (e.data === "gone" && S.quiet) { takeOver(); return; }
+  // (one hidden takes over when it is shown: backHere / checkTab)
+  if (e.data === "gone" && S.quiet && !document.hidden) { takeOver(); return; }
   if (e.data === "who") { if (!S.quiet) tabs.postMessage("alive"); return; }
   if (e.data === "alive") { S.alive = true; return; }
   if (e.data !== "here" || S.quiet) return;
@@ -330,7 +331,8 @@ function checkTab() {
 document.addEventListener("visibilitychange", checkTab);
 setInterval(checkTab, 3000);
 claimTab();
-addEventListener("pagehide", () => { if (tabs && !S.quiet) tabs.postMessage("gone"); });
+// A reload of its own (an update, a language) comes straight back: not "gone".
+addEventListener("pagehide", () => { if (tabs && !S.quiet && !S.reloading) tabs.postMessage("gone"); });
 
 // ---------- start ----------
 // A page made of two versions (loaded while the server switched to a new
@@ -377,6 +379,7 @@ function reloadIfIdle() {
   if (S.pairing || (scr && (scr.id === "pairing" || scr.id === "scanner")) || $("paste-text").value.trim()) return;
   if (document.activeElement === $("input") && $("input").value.trim()) return;
   saveForReload();
+  S.reloading = true;
   location.reload();
 }
 
@@ -1336,6 +1339,7 @@ function matches(c, q) {
   return !q || (c.title || "").toLowerCase().includes(q) || c.messages.some((m) => (m.content || "").toLowerCase().includes(q));
 }
 function renderList() {
+  if ($("chat-list").querySelector(".rename-in")) return; // a name being typed; it redraws when done
   const ul = $("chat-list"); ul.textContent = "";
   const q = $("chat-search").value.trim().toLowerCase();
   const all = [S.cur, ...S.chats.filter((c) => c.id !== S.cur.id)].filter((c) => (c.messages.length || c === S.cur) && matches(c, q));
@@ -1512,6 +1516,7 @@ async function chosenModel() {
 $("composer").addEventListener("submit", async (e) => {
   if (V.rec) { const r = V.rec; V.rec = null; try { r.abort(); } catch {} voiceUI(false); }
   e.preventDefault();
+  if (S.quiet) { takeOver(); return; } // used here: this tab becomes the one in use
   if (S.busy) { omnillm.cancel(S.busy); return; }
   const text = input.value.trim();
   const images = S.pending.map(({ mime, data }) => ({ mime, data }));
@@ -1753,6 +1758,7 @@ document.querySelectorAll("#lang-list [data-lang]").forEach((b) => b.addEventLis
   if (S.volatile) return toastText(t("langVolatile"));
   localStorageSet("lang", b.dataset.lang);
   saveForReload();
+  S.reloading = true;
   location.reload();
 }));
 $("keys-btn").addEventListener("click", () => { macMenu(false); showKeys(); });
@@ -1946,7 +1952,7 @@ async function unpaired(note) {
 // away): keep what has arrived so far.
 document.addEventListener("visibilitychange", () => {
   // Back in view: the page wasn't thrown away, so the plain copy goes.
-  if (!document.hidden) { try { sessionStorage.removeItem("omnillm.draft"); sessionStorage.removeItem("omnillm.cur"); } catch {} return; }
+  if (!document.hidden) { if (!takingOver) { try { sessionStorage.removeItem("omnillm.draft"); sessionStorage.removeItem("omnillm.cur"); } catch {} } return; }
   if (S.busy) saveChats().catch(() => {});
   if (!S.quiet && S.device) saveForReload(); // what's typed, too
 });
