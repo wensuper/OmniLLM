@@ -479,3 +479,11 @@ func TestRound13AutoForScripts(t *testing.T) {
 		}
 	}
 }
+
+func TestRound20APIAddress(t *testing.T) {
+	for v, want := range map[string]bool{"127.0.0.1:8765": true, "off": true, "localhost:1": true, "127.0.0.1:87666": false, "127.0.0.1:0": false, "127.0.0.1:x": false, "8766": false, "0.0.0.0:8765": false} {
+		if validAPI(v) != want {
+			t.Errorf("validAPI(%q) = %v", v, !want)
+		}
+	}
+}

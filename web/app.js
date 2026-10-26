@@ -517,7 +517,7 @@ addEventListener("hashchange", () => {
   if (!S.ready) { S.pendingLink = code; return; }
   if (!IN_APP) history.replaceState(null, "", location.pathname + location.search);
   // Busy (a reply, a pairing): it waits for that to end.
-  if (S.busy || S.pairing) { S.pendingLink = code; return; }
+  if (S.busy || S.pairing) { if (!(S.pairing && code.includes(S.pairing))) S.pendingLink = code; return; }
   if (S.device) pair(code, true); else arrive(code);
 });
 // takePending opens a link that waited for a reply or a pairing to end.
@@ -736,8 +736,9 @@ async function pair(text, fromLink) {
   if (!m && S.device) { toastText(t("notCode")); return S.cur ? show("chat") : openChat(); } // still paired: stay in (or open) the chats
   if (!m) { welcome("start"); if (!COMPUTER) openPaste(); $("welcome-err").textContent = t("notCode"); return; }
   text = m[0];
+  if (S.pendingLink && S.pendingLink.includes(text)) S.pendingLink = ""; // the same link twice (a double tap): once
   $("paste-text").value = "";
-  S.pairing = true;
+  S.pairing = text;
   welcomeNote("");
   try {
     pairScreen("busy", t("pairConnecting"));
@@ -756,7 +757,7 @@ async function pair(text, fromLink) {
       if (!go) { leavePairing(); return; }
     }
     await connectPair(text);
-  } finally { S.pairing = false; setTimeout(takePending); setTimeout(reloadIfIdle, 1500); } // a link or an update that waited for this
+  } finally { S.pairing = false; setTimeout(takePending, 1500); setTimeout(reloadIfIdle, 1500); } // a link or an update that waited for this (after a pairing that worked has opened the chats)
 }
 // pairFailed says what went wrong in the page's words: a code that ran out
 // gets the way to a new one; then a new scan (phones) or paste (computers).

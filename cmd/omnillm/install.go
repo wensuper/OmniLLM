@@ -895,7 +895,7 @@ func validAPI(v string) bool {
 		return true
 	}
 	h, p, err := net.SplitHostPort(v)
-	if err != nil || p == "" {
+	if n, perr := strconv.Atoi(p); err != nil || perr != nil || n < 1 || n > 65535 {
 		return false
 	}
 	ip := net.ParseIP(h)

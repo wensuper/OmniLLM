@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -366,6 +367,15 @@ func verifyCmd(args []string) {
 	}
 	if !strings.HasPrefix(base, "https://") && !strings.HasPrefix(base, "http://") {
 		dieArgs(usageErr(t("网页地址要以 https:// 开头，例如 omnillm verify web https://omni.ixxzh.com", "The web address starts with https://, e.g. omnillm verify web https://omni.ixxzh.com")))
+	}
+	// As copied from a phone's address bar: the page's folder, without a
+	// pairing link (#pair=…), a query or index.html.
+	if u, err := url.Parse(base); err == nil {
+		u.RawQuery, u.Fragment, u.RawFragment = "", "", ""
+		if strings.HasSuffix(u.Path, ".html") {
+			u.Path = u.Path[:strings.LastIndex(u.Path, "/")+1]
+		}
+		base = u.String()
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
