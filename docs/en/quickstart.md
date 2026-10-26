@@ -63,7 +63,7 @@ Available model sources:
 | OpenAI-compatible service | Enter the address and key in the console | ✅ | ✅ |
 | Local model (Ollama) | Install Ollama; it connects automatically | ✅ | ✅ |
 
-If you only use your subscription on the web and don’t want to install Claude Code or Codex on the hub, you can’t use the subscription. OmniLLM doesn’t scrape web login sessions: that breaks the terms of service and is the quickest way to get an account banned.
+If you only use your subscription on the web and don’t want to install Claude Code or Codex on the hub, you can’t use the subscription. OmniLLM doesn’t scrape web sign-ins: that breaks the terms of service and is the quickest way to get an account banned.
 
 ### Use a subscription (Claude or ChatGPT)
 
@@ -107,7 +107,7 @@ Install [Ollama](https://ollama.com) and download a model (for example `ollama p
 ## Step 3: Add a phone or tablet
 
 1. In the console, click *Devices → Add device* (on a Mac, also the menu bar icon → *Add device…*; or run `omnillm open --add`). The switch at the top is on *Phone or tablet*: the QR code is on the left, the three steps on the right, and a line below says what the panel is waiting for.
-2. Scan the code with your phone’s **camera** and open the link. The web page asks “Add this phone?” and shows which connection service it goes through; tap *Add*. On an iPhone or iPad it is added right there too.
+2. Scan the code with your phone’s **camera** and open the link. The web app asks “Add this phone?” and shows which connection service it goes through; tap *Add*. On an iPhone or iPad it is added right there too.
 3. The QR code turns into a 6-digit number, and your phone shows one too. **Check that they match**, then click *Matches, add* on the computer (*Doesn’t match, don’t add* if they don’t).
 4. A chat screen appears on the phone. Send a message to try it.
 

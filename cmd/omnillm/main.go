@@ -287,7 +287,7 @@ func usageText(all bool) string {
   omnillm open                       打开本机控制台
   omnillm open --add                 打开控制台，直接到「添加设备」
   omnillm pair                       在终端里添加手机：显示二维码，手机扫码后核对 6 位数（同 omnillm hub pair）
-  omnillm verify web [网页地址]      核对手机用的网页和 GitHub 上签名发布的是否一致
+  omnillm verify web [网页地址]      核对网页版和 GitHub 上签名发布的是否一致
   omnillm status                     查看主机状态
   omnillm update [--check] [--auto on|off]
                                      更新到最新版本（主机默认会在空闲时自己更新）；--auto 开关自动更新
@@ -332,7 +332,7 @@ func usageText(all bool) string {
   omnillm open                       open the local console
   omnillm open --add                 open the console on Add device
   omnillm pair                       add a phone in the terminal: a QR code to scan, then check the 6 digits (same as omnillm hub pair)
-  omnillm verify web [address]       check the web page phones use against the signed GitHub release
+  omnillm verify web [address]       check the web app against the signed GitHub release
   omnillm status                     show the hub’s status
   omnillm update [--check] [--auto on|off]
                                      update to the newest version (the hub also updates itself when idle); --auto turns that on or off
@@ -400,7 +400,7 @@ func usageText(all bool) string {
   omnillm open                       打开本机控制台
   omnillm open --add                 打开控制台，直接到「添加设备」
   omnillm pair                       在终端里添加手机：显示二维码，手机扫码后核对 6 位数
-  omnillm verify web [网页地址]      核对手机用的网页和 GitHub 上签名发布的是否一致
+  omnillm verify web [网页地址]      核对网页版和 GitHub 上签名发布的是否一致
   omnillm status                     查看主机状态
   omnillm update [--check] [--auto on|off]
                                      更新到最新版本（主机默认会在空闲时自己更新）；--auto 开关自动更新
@@ -415,7 +415,7 @@ func usageText(all bool) string {
   omnillm open                       open the local console
   omnillm open --add                 open the console on Add device
   omnillm pair                       add a phone in the terminal: a QR code to scan, then check the 6 digits
-  omnillm verify web [address]       check the web page phones use against the signed GitHub release
+  omnillm verify web [address]       check the web app against the signed GitHub release
   omnillm status                     show the hub’s status
   omnillm update [--check] [--auto on|off]
                                      update to the newest version (the hub also updates itself when idle); --auto turns that on or off
@@ -1844,7 +1844,7 @@ func pairOp(ctx context.Context, h *hub.Hub, c *control.Conn, l string, a map[st
 	expires := fmt.Sprintf(tl(l, "%d 分钟后过期", "expires in %d minutes"), mins)
 	if a["phone"] == "true" {
 		// Right after an install or sign-in on a server: only the phone.
-		if err := c.Send(control.Reply{Event: "info", Text: fmt.Sprintf(tl(l, "（二维码%s，只能用一次。）", "(The QR code %s and works once.)"), expires)}); err != nil {
+		if err := c.Send(control.Reply{Event: "info", Text: fmt.Sprintf(tl(l, "（二维码%s · 只能用一次。）", "(The QR code %s · single use.)"), expires)}); err != nil {
 			return err
 		}
 	} else if err := c.Send(control.Reply{Event: "info", Text: fmt.Sprintf(tl(l,

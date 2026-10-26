@@ -398,12 +398,12 @@ func nextStep(st Status) string {
 			"· 有 Claude 订阅：在终端里亲自运行 omnillm login claude（没装 Claude Code 会先装上，再在浏览器里登录）\n"+
 			"· 有 ChatGPT 订阅：在终端里亲自运行 omnillm login chatgpt（没装 Codex 会先装上，再在浏览器里登录）\n"+
 			"· 有 Gemini 订阅：在终端里亲自运行 omnillm login gemini（没装 Antigravity CLI 会先装上，再在浏览器里登录）\n"+
-			"· 有 API Key 或想用 %s 上免费的模型：运行 omnillm open，点“我有 API Key”",
+			"· 有 API Key 或想用 %s 上免费的模型：运行 omnillm open，点“我有 API Key”，或按“想免费：安装 Ollama”做",
 			"Next: connect a model (pick one):\n"+
 				"· Claude subscription: in a terminal, run omnillm login claude yourself (installs Claude Code first if needed, then signs in in your browser)\n"+
 				"· ChatGPT subscription: in a terminal, run omnillm login chatgpt yourself (installs Codex first if needed, then signs in in your browser)\n"+
 				"· Gemini subscription: in a terminal, run omnillm login gemini yourself (installs Antigravity CLI first if needed, then signs in in your browser)\n"+
-				"· API key or a free model on %s: run omnillm open and choose “I have an API key”"))
+				"· API key or a free model on %s: run omnillm open and choose “I have an API key”, or follow “Want it free? Install Ollama”"))
 	case st.Providers > 0 && st.ProvidersOn != nil && *st.ProvidersOn == 0:
 		return t("模型来源都关掉了，设备现在用不了任何模型。打开一个：omnillm hub provider on 名字（omnillm hub providers 里能看到）。",
 			"Every model source is switched off, so devices can’t use any model. Turn one on: omnillm hub provider on NAME (see omnillm hub providers).")

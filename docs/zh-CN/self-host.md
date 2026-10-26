@@ -20,7 +20,7 @@ omnillm relay --listen :443 --autocert relay.example.com --open
 - `--autocert` 自动从 Let's Encrypt 申请和续期证书，需要域名已经解析到这台服务器，并且 80、443 端口能从外面访问。
 - `--open` 允许任何主机登记，适合自己用和小范围用。连接服务按 IP 限制主机数量和猜口令的次数。
 - 只给自己的主机用的话，把 `--open` 换成 `--hub-token-hash <哈希>`，见下面第 3 步。
-- 已经有 Nginx 或其他反向代理的话，用 `--listen 127.0.0.1:8470 --behind-tls-proxy`，由代理终结 TLS，并转发 WebSocket。参考配置：[deploy/zz-relay.ixxzh.com.conf](../../deploy/zz-relay.ixxzh.com.conf)。**不要**让代理的日志记录 `Sec-WebSocket-Protocol` 请求头：手机网页的信箱口令在这个头里。
+- 已经有 Nginx 或其他反向代理的话，用 `--listen 127.0.0.1:8470 --behind-tls-proxy`，由代理终结 TLS，并转发 WebSocket。参考配置：[deploy/zz-relay.ixxzh.com.conf](../../deploy/zz-relay.ixxzh.com.conf)。**不要**让代理的日志记录 `Sec-WebSocket-Protocol` 请求头：网页版的信箱口令在这个头里。
 - 长期运行用 systemd，参考 [deploy/omnillm-relay.service](../../deploy/omnillm-relay.service)：用无登录的独立账号运行，文件系统只读。
 
 检查：

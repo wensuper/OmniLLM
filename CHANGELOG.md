@@ -4,6 +4,17 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.74](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.74) - 2026-10-27
+
+### Changed
+
+- Same words on every surface, third pass:
+  - In the console, a signed-out source's chip says “Sign in again” (the state). It used to repeat the button label.
+  - The add-device steps and the `verify web` help say “the web app”.
+  - The security docs quote the question the web app really asks (“Add this phone?”).
+  - The chat-history notes name Gemini too.
+  - The command line points free models at the console's “Install Ollama” line.
+
 ## [0.2.0-alpha.73](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.73) - 2026-10-27
 
 ### Changed

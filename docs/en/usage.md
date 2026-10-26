@@ -14,7 +14,7 @@ If you haven’t installed OmniLLM yet, start with the [Quickstart](quickstart.m
 
 ## In the browser: phone, tablet, or computer
 
-The web page works the same on a phone and on a computer; only the layout differs. On a phone the chat list is a drawer behind the menu button at the top left. In a wide window it is a sidebar with *Search chats* and your chats grouped by *Today*, *Yesterday*, *Previous 7 days*, and *Earlier*; `⌘\` hides or shows it.
+The web app works the same on a phone and on a computer; only the layout differs. On a phone the chat list is a drawer behind the menu button at the top left. In a wide window it is a sidebar with *Search chats* and your chats grouped by *Today*, *Yesterday*, *Previous 7 days*, and *Earlier*; `⌘\` hides or shows it.
 
 A chat is named after its first message. Its name is shown at the top left of the chat (in the bar on a phone). Click it for *Rename* and *Delete*; double-click it to rename right away, then press Enter (Esc keeps the old name). In the chat list, the *…* button next to a chat has *Rename* and *Delete*, and on a computer a double-click on a chat renames it too.
 
@@ -24,7 +24,7 @@ A chat is named after its first message. Its name is shown at the top left of th
 - **Send images**: tap the image button to take a photo or pick one, or paste one; on a computer you can also drag pictures into the window. Up to 4 images per message. Photos are scaled down first (1600 pixels on the long side), and the original never leaves the device. Both Claude and Codex can read images; a model that can’t says so.
 - **Voice input**: tap the microphone in the message box and speak; the button turns into a moving sound wave and your words appear in the box as you talk, after anything you already typed. Tap it again, press Esc, start typing, or pause to stop. The words only fill the box and are never sent by themselves. Your browser does the recognition: Chrome and Edge send the audio to Google, Safari to Apple. Browsers without speech recognition, such as Firefox, show no microphone. The first time, the browser asks for microphone access.
 - **Stop**: tap *Stop* (or press Esc) while an answer is coming in. It stops only that answer; the next message works as usual.
-- **Chat history**: kept in this browser, encrypted. With subscription models (Claude, ChatGPT), your Mac also keeps a copy so it can continue the chat, and deletes it after a day without use. In a long chat, only the two most recent messages with images resend their images, so requests don’t keep growing.
+- **Chat history**: kept in this browser, encrypted. With subscription models (Claude, ChatGPT, Gemini), your Mac also keeps a copy so it can continue the chat, and deletes it after a day without use. In a long chat, only the two most recent messages with images resend their images, so requests don’t keep growing.
 - **The *Your Mac* menu**: *Your Mac* at the bottom of the chat list says whether your Mac is online. Its menu shows this device’s name, *Language* (*Follow your Mac*, 中文, or English), *Keyboard shortcuts*, where chats are kept, and *Remove this device*. The page speaks your Mac’s language (the one chosen in the console or the menu bar) unless you pick one here.
 - **Several tabs**: only one tab saves your chats at a time. The tab you come back to takes over by itself, with what the other tab saved.
 - **No network**: when the device goes offline, you’re told right away and what you just typed stays in the message box. It reconnects automatically once you’re back online.
@@ -133,7 +133,7 @@ The log contains no chat content and no keys. When you open an issue, you can at
 **Updates take care of themselves**:
 
 - **Hub**: checks for a new version a few minutes after startup and every 6 hours after that. When there is one, it installs it once nobody has used it for 10 minutes. The restart takes only a few seconds, and your phone and other devices reconnect by themselves. If the new version fails to start, the hub rolls back to the previous version and won’t install that version automatically again.
-- **The web page** (phones, tablets, computers): switches to the new version when you open it; unsent text is kept.
+- **The web app** (phones, tablets, computers): switches to the new version when you open it; unsent text is kept.
 - **Linux servers (used only as devices)**: have no background service and don’t update themselves; when there’s a new version, `omnillm connect` mentions it.
 
 **0.2.0-alpha.22 and earlier** don’t have automatic updates or `omnillm update` yet: run the install command once more (your settings are kept), and you won’t need to do anything after that.

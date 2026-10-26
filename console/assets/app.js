@@ -136,7 +136,7 @@ const T = {
     ovOnline: "在线设备", ovModels: "能用的模型", ovSrc: "{0} 个来源", ovSrcOne: "1 个来源", ovBad: "{0} 个要处理", ovBadOne: "1 个要处理", ovCalls: "今天调用", ovCallsSub: "Token：发出 {0} · 收到 {1}",
     ovAllDevices: "全部设备", ovToday: "今天的用量", ovNoDevicesOnline: "现在没有设备在线", fix: "去处理", w1Sub: "已经登录的订阅会自动接上；没有的话，选一个最方便的。",
     macOn: "{Here} · 在线", macOnLine: "手机和其他设备可以连上", macOff: "远程连接断开", macOffLine: "设备暂时连不上，网络恢复后会自动连上", macNone: "只在{here}上用", macNoneLine: "还没有设置远程连接",
-    srcModels: "{0} 个模型", srcModelsOne: "1 个模型", srcNoModels: "还没有模型", apHow: "接入方式", limitChip: "到上限了",
+    srcModels: "{0} 个模型", srcModelsOne: "1 个模型", srcNoModels: "还没有模型", apHow: "接入方式", limitChip: "到上限了", chipSignedOut: "要重新登录",
     never: "还没用过", copy: "复制", copied: "已复制", undo: "撤销", oops: "出了点问题，请再试一次。",
   },
   en: {
@@ -207,7 +207,7 @@ const T = {
     devNoModelsBg: "This device is for programs and scripts only, but every model it may use is set to “Chat only”. Choose another model below, or turn off “Chat only” for that model under “Models”.",
     removeDevice: "Remove device", removeApp: "Remove app",
     discardQ: "Discard unsaved changes?", discard: "Discard", keepEditing: "Keep editing",
-    providers: "Model sources", keyLast4: "Connected with", subLogin: "Subscription login (stays on {here})",
+    providers: "Model sources", keyLast4: "Connected with", subLogin: "Subscription sign-in (stays on {here})",
     problemLogin: "Sign in again: in Terminal, run omnillm login claude", problemLoginOther: "Sign in again: in a terminal, run omnillm login claude",
     problemLoginCodex: "Sign in again: in Terminal, run omnillm login chatgpt", problemLoginAgy: "Sign in again: in Terminal, run omnillm login gemini", problemLoginAgyOther: "Sign in again: in a terminal, run omnillm login gemini", problemLoginCodexOther: "Sign in again: in a terminal, run omnillm login chatgpt",
     problemLimit: "Usage limit reached; back in about {0}", problemLimitNow: "Usage limit reached; back soon", hours: "{0} hours", hour: "1 hour", minutes: "{0} minutes", minute: "1 minute",
@@ -236,9 +236,9 @@ const T = {
     todayOf: "{0} / {1}", todayNoLimit: "{0} · no limit",
     pairTabPhone: "Phone or tablet", pairTabComputer: "Computer or server",
     pairP1: "Scan this code with your phone’s camera", pairP1d: "On iPhone use the Camera; on Android the camera or a browser. No app to install.",
-    pairP2: "Tap “Add” on the phone", pairP2d: "The OmniLLM web page opens and asks to add the phone to {here}.",
+    pairP2: "Tap “Add” on the phone", pairP2d: "The OmniLLM web app opens and asks to add the phone to {here}.",
     pairL1: "Open the link in that computer’s browser", pairL1d: "Copy the link and take it to that computer yourself. It works like a key: don’t send it to anyone.",
-    pairL2: "Choose “Add” on that computer", pairL2d: "The OmniLLM web page opens and asks to add it to {here}.",
+    pairL2: "Choose “Add” on that computer", pairL2d: "The OmniLLM web app opens and asks to add it to {here}.",
     pairK1: "Run the command below in that computer’s terminal", pairK1d: "Run it even if OmniLLM is already installed. No sudo.",
     pairK2: "When it asks for the pairing text, paste the text below", pairK2d: "The pairing text works like a key: don’t send it to anyone.",
     pairS3: "Check the 6 digits", pairS3d: "Both sides show the same 6 digits. If they match, choose “Matches, add” here.",
@@ -266,7 +266,7 @@ const T = {
     ovOnline: "Devices online", ovModels: "Models ready", ovSrc: "{0} sources", ovSrcOne: "1 source", ovBad: "{0} need you", ovBadOne: "1 needs you", ovCalls: "Calls today", ovCallsSub: "Tokens: {0} sent · {1} received",
     ovAllDevices: "All devices", ovToday: "Today’s use", ovNoDevicesOnline: "No device is online now", fix: "Fix it", w1Sub: "Subscriptions you’re signed in to connect by themselves; otherwise pick the easiest one.",
     macOn: "{Here} · Online", macOnLine: "Phones and other devices can reach it", macOff: "Remote access is down", macOffLine: "Devices can’t connect for now; it reconnects by itself", macNone: "Only on {here}", macNoneLine: "Remote access isn’t set up",
-    srcModels: "{0} models", srcModelsOne: "1 model", srcNoModels: "No models yet", apHow: "How to connect", limitChip: "At its limit",
+    srcModels: "{0} models", srcModelsOne: "1 model", srcNoModels: "No models yet", apHow: "How to connect", limitChip: "At its limit", chipSignedOut: "Sign in again",
     never: "Not yet", copy: "Copy", copied: "Copied", undo: "Undo", oops: "Something went wrong. Try again.",
   },
 };
@@ -1250,7 +1250,7 @@ function srcTile(p, cls) {
 // what needs the owner.
 function srcChip(p) {
   if (p.off) return el("span", t("sourceOffTag"), "chip off");
-  if (p.problem) return el("span", "! " + (p.problem === "login" ? t("subSignIn") : t("limitChip")), "chip warn");
+  if (p.problem) return el("span", "! " + (p.problem === "login" ? t("chipSignedOut") : t("limitChip")), "chip warn");
   return el("span", "✓ " + t("subOn"), "chip ok");
 }
 
