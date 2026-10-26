@@ -29,8 +29,8 @@ func agyLoginScript(cli string, headless, window bool) string {
 	w("# OmniLLM: sign in to Antigravity CLI, Google's official program, for OmniLLM.")
 	w("printf '\\033]0;OmniLLM\\007'")
 	w("say() { printf '%%s\\n' \"$*\"; }")
-	w("say %s", shq(t("OmniLLM：用 Google 官方程序 Antigravity CLI 登录你的 Google AI 订阅（Gemini）。这次登录只给 OmniLLM 用，放在 OmniLLM 自己的文件夹里；登录只留在 Antigravity 里，OmniLLM 看不到。你自己平时用的 agy 不受影响。",
-		"OmniLLM: sign in to your Google AI subscription (Gemini) with Antigravity CLI, Google's official program. This sign-in is for OmniLLM only and is kept in OmniLLM's own folder; it stays inside Antigravity, and OmniLLM never sees it. The agy you use yourself isn't affected.")))
+	w("say %s", shq(t("OmniLLM：用 Google 官方程序 Antigravity CLI 登录你的 Gemini 订阅。这次登录只给 OmniLLM 用，放在 OmniLLM 自己的文件夹里；登录只留在 Antigravity 里，OmniLLM 看不到。你自己平时用的 agy 不受影响。",
+		"OmniLLM: sign in to your Gemini subscription with Antigravity CLI, Google's official program. This sign-in is for OmniLLM only and is kept in OmniLLM's own folder; it stays inside Antigravity, and OmniLLM never sees it. The agy you use yourself isn't affected.")))
 	w("say ''")
 	w("CLI=%s", shq(cli))
 	w(`if [ -z "$CLI" ] || [ ! -x "$CLI" ]; then`)

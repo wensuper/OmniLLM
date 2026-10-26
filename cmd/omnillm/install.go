@@ -381,7 +381,7 @@ func nextStep(st Status) string {
 	case st.Providers == 0 && st.Opened:
 		// The console just opened on its first step: one place to do it.
 		return t("下一步：在刚打开的浏览器页面里接入一个模型：选 Claude、ChatGPT 或 Gemini 订阅，或者点“我有 API Key”。",
-			"Next: in the browser page that just opened, connect a model: pick your Claude, ChatGPT or Google AI subscription, or choose “I have an API key”.")
+			"Next: in the browser page that just opened, connect a model: pick your Claude, ChatGPT or Gemini subscription, or choose “I have an API key”.")
 	case st.Providers == 0:
 		// One command a line: the person picks the one that fits. A
 		// desktop app on this Mac says which subscription they have.
@@ -402,7 +402,7 @@ func nextStep(st Status) string {
 			"Next: connect a model (pick one):\n"+
 				"· Claude subscription: in a terminal, run omnillm login claude yourself (installs Claude Code first if needed, then signs in in your browser)\n"+
 				"· ChatGPT subscription: in a terminal, run omnillm login chatgpt yourself (installs Codex first if needed, then signs in in your browser)\n"+
-				"· Google AI subscription: in a terminal, run omnillm login gemini yourself (installs Antigravity CLI first if needed, then signs in in your browser)\n"+
+				"· Gemini subscription: in a terminal, run omnillm login gemini yourself (installs Antigravity CLI first if needed, then signs in in your browser)\n"+
 				"· API key or a free model on %s: run omnillm open and choose “I have an API key”"))
 	case st.Providers > 0 && st.ProvidersOn != nil && *st.ProvidersOn == 0:
 		return t("模型来源都关掉了，设备现在用不了任何模型。打开一个：omnillm hub provider on 名字（omnillm hub providers 里能看到）。",

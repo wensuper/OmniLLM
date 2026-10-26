@@ -4,6 +4,24 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.72](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.72) - 2026-10-27
+
+### Changed
+
+- The Mac (menu bar, console, command line), the phone page and the computer page now use the same words for the same things:
+  - The web page is “the web app” everywhere, since computers use it too, not only phones. This covers the console's check warning, the menu bar line and `omnillm verify web`.
+  - The Gemini subscription is called that in English too, not “Google AI subscription”. The console's first step offers “I have a Gemini subscription”, next to Claude and ChatGPT.
+  - A signed-out subscription reads “Sign in again” on every surface.
+  - The phone's welcome line gives the same path as the computer's step 1: the menu bar icon, then *Add device…*. The computer's step 1 adds what to run when the hub isn't a Mac (`omnillm open`).
+  - The console picture on the computer's welcome screen says “Expires in 5 minutes · single use”, as the console does.
+  - The number check says to confirm in the console *or* type y in the terminal.
+  - Browsers that can't keep the pairing recommend Safari, Chrome or Edge everywhere.
+  - Texts from a hub that isn't a Mac no longer say “this Mac” or “Terminal”, and an error no longer calls the hub “your server”.
+
+### Fixed
+
+- *Add device…* in the menu bar did nothing before any model was connected; it now says to connect a model first.
+
 ## [0.2.0-alpha.71](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.71) - 2026-10-26
 
 ### Changed

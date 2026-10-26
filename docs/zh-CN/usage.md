@@ -81,7 +81,7 @@ omnillm hub devices                 # 设备列表
 omnillm hub revoke <名字或 ID>      # 移除一台设备
 omnillm hub device set <名字或 ID> --paused true   # 暂停一台设备
 omnillm hub provider off <来源>     # 关闭一个模型来源（on 打开）
-omnillm verify web                 # 核对手机用的网页和签名发布是否逐个文件一致
+omnillm verify web                 # 核对网页版和签名发布是否逐个文件一致
 omnillm hub models                  # 已接入的模型
 omnillm hub usage                   # 用量
 ```

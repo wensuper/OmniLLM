@@ -337,7 +337,7 @@ func usageText(all bool) string {
   omnillm update [--check] [--auto on|off]
                                      update to the newest version (the hub also updates itself when idle); --auto turns that on or off
   omnillm login claude|chatgpt|gemini
-                                     use your Claude, ChatGPT or Google AI subscription: installs the official program if needed, signs in in your browser
+                                     use your Claude, ChatGPT or Gemini subscription: installs the official program if needed, signs in in your browser
   omnillm uninstall [--purge]        stop and remove the background service (--purge also deletes data and API keys)
   omnillm tray                       bring back the menu bar icon
   omnillm version                    show the version
@@ -420,7 +420,7 @@ func usageText(all bool) string {
   omnillm update [--check] [--auto on|off]
                                      update to the newest version (the hub also updates itself when idle); --auto turns that on or off
   omnillm login claude|chatgpt|gemini
-                                     use your Claude, ChatGPT or Google AI subscription: installs the official program if needed, signs in in your browser
+                                     use your Claude, ChatGPT or Gemini subscription: installs the official program if needed, signs in in your browser
   omnillm uninstall [--purge]        stop and remove the background service (--purge also deletes data and API keys)
   omnillm tray                       bring back the menu bar icon
   omnillm version                    show the version
@@ -1353,7 +1353,7 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 			case provider.Codex:
 				name = tl(l, "ChatGPT 订阅", "ChatGPT subscription")
 			case provider.Antigravity:
-				name = tl(l, "Gemini 订阅（Antigravity）", "Google AI subscription (Antigravity)")
+				name = tl(l, "Gemini 订阅（Antigravity）", "Gemini subscription (Antigravity)")
 			}
 			return c.Send(control.Reply{Event: "ok", Text: fmt.Sprintf(tl(l, "已接入 %s：手机和其他设备现在就能用。", "Connected your %s: your phone and other devices can use it now."), name)})
 		case "console.login":

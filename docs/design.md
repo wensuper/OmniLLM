@@ -589,7 +589,7 @@ NEXA（`pgclient`，Go）直接引入 OmniLLM 库。用户只装 NEXA：在 NEXA
 - **第八轮**：没有 `hub.pid` 的旧主机（alpha.56 及以前起的）由控制套接字另一端的进程号找到再停（Linux `SO_PEERCRED`，macOS `LOCAL_PEERPID`）；更新后应答的仍是旧版本时直说“没能换上”，不再说“已更新”。没有任何模型来源时配对完也不说“直接对话就行”。`hub provider add ollama` 的地址没写 `/v1` 自动补上；只有确实连不上时才说“Ollama 没运行”，有应答但不是 Ollama 的接口另说。设备在对话中途遇到模型被关掉，重新拉模型列表、换一个能用的。`openai-compatible` 指向本机或局域网时，在要 Key 之前说清不支持、建议用 Ollama；`connect run` 端口被占时直说。控制台每个标签页有自己的会话 cookie（`omnillm_console_<前缀>`），菜单栏再打开一个控制台不会把已经打开的那个踢下线，退出只结束这一页的会话；“每天总额”里在“取消”上按回车不再保存。手机网页：页面进后台时也存下正在打的字；“换个模型再答”后被重载打断，原来的回答恢复回来；离线时载入失败，联网后自动重新载入。
 - **第九轮**：停旧主机时先认套接字另一端的进程，`hub.pid` 只在系统说不出时用，两者不一致就不发信号（旧文件不会误伤别的进程）；更新后等新版本应答再下结论；没有服务管理时卸载也停掉主机。控制台 cookie 跟会话一起过期，登录时清掉已失效会话的 cookie。手机网页：同名的保存按顺序进行；页面回到前台、解除配对时清掉明文草稿；有新版本时不在配对过程中重载，配对结束后再换；等待超时按“连不上你的 Mac”说。命令行：拨号逐个尝试解析出的地址（macOS 上 localhost 先是 ::1，而 Ollama 只听 127.0.0.1）；本机 http 的 openai-compatible 也在要 Key 前拒绝；Ollama 地址不对时说清只支持本机、以 http:// 开头；`hub device set` 的警告按原因说；设备上的 `omnillm help` 列设备命令；`connect run --listen` 不在本机直接拒绝；终端里显示的模型名去掉控制字符。
 - **第十轮**：控制台“重新检查”在 Ollama 一个模型都没有时也给出“先 pull 一个”的提示，这类提示显示 6 秒；手机网页在两个标签页加一次重载后不会把正在用的那页变成“安静”页（页面自己的重载不发“离开”，后台的安静页只在被切到前台时接手，安静页里发送会先接手），切回安静页时保留草稿，列表里正在改名时不被刷新打断。命令行：名字和地址在要 Key 之前按主机的规则检查；地址没人应答时说“检查地址”，不说“稍后再试”；Ollama 地址已经以 /v1 结尾却不是 Ollama 时提示检查端口；远程连接关着时配对直说；`connect run` 先占住端口再说地址；只用 `connect pair` 配对过的电脑也认作设备；设备的帮助里有 `connect pair`；`omnillm pair` 先确认主机在运行。
-- **第十一轮**：手机网页“对话只存在这台设备上”的说明写上 Gemini（英文写 Google AI）；不保存对话的浏览器只在第一次打开对话时提醒一次。控制台：订阅接入了但来源被关掉时卡片写“来源已关闭”，不再写“已接入”。命令行：`connect pair --no-limit`（不设每日额度）；已经配对的设备运行 `connect pair` 不管谁调用都先说“已经配对过”；`hub provider add gemini`（google、antigravity、agy）指向 `omnillm login gemini`，`hub provider off gemini` 认这个名字；`uninstall --purge` 也删掉 Gemini 的登录目录；设备上只有安装脚本启动的主机（`OMNILLM_DETACHED=1`）才能 `hub run`，不再按终端判断；设备被主机移除后 `status` 退出码 1 并说先 `connect forget`；`connect chat --model` 写错时给出能运行的命令。安全（低）：Gemini 的设置文件只保留 agy 的 `trustedWorkspaces`、`showTips`，其余我们的项每次重写（交互登录时打开的批准模式、钩子路径不会留下来）；设置和钩子文件写临时文件再改名，agy 同时启动也只读到完整的文件，内容没变就不写；删除一次对话也删掉它的标题、锁和 `conversation_summaries.db` 里的那一行（id 是检查过的 UUID），没有对话时删掉 agy 的其他缓存和输入历史；以前版本留下的（对话文件已经没有、一小时以前的）顺带清掉。
+- **第十一轮**：手机网页“对话只存在这台设备上”的说明写上 Gemini（英文原先写 Google AI，13.7 起统一为 Gemini）；不保存对话的浏览器只在第一次打开对话时提醒一次。控制台：订阅接入了但来源被关掉时卡片写“来源已关闭”，不再写“已接入”。命令行：`connect pair --no-limit`（不设每日额度）；已经配对的设备运行 `connect pair` 不管谁调用都先说“已经配对过”；`hub provider add gemini`（google、antigravity、agy）指向 `omnillm login gemini`，`hub provider off gemini` 认这个名字；`uninstall --purge` 也删掉 Gemini 的登录目录；设备上只有安装脚本启动的主机（`OMNILLM_DETACHED=1`）才能 `hub run`，不再按终端判断；设备被主机移除后 `status` 退出码 1 并说先 `connect forget`；`connect chat --model` 写错时给出能运行的命令。安全（低）：Gemini 的设置文件只保留 agy 的 `trustedWorkspaces`、`showTips`，其余我们的项每次重写（交互登录时打开的批准模式、钩子路径不会留下来）；设置和钩子文件写临时文件再改名，agy 同时启动也只读到完整的文件，内容没变就不写；删除一次对话也删掉它的标题、锁和 `conversation_summaries.db` 里的那一行（id 是检查过的 UUID），没有对话时删掉 agy 的其他缓存和输入历史；以前版本留下的（对话文件已经没有、一小时以前的）顺带清掉。
 - **第十二轮**（安全复查没有发现）：手机网页在不能保存配对的浏览器里（如无痕窗口）再开一个标签页，原来那页回来时直接接着用（内存里还有配对和对话），不再永远停在“安静”、点发送没反应。控制台：来源被关掉的订阅卡片不再在“来源已关闭”下面写“可以用了”，标签和“模型”表格里一样是灰色。命令行：`status`、`omnillm` 菜单和打开了控制台时的下一步都列出 Gemini 订阅（`omnillm login gemini`；没有屏幕的机器不列，它的登录要在这台电脑的浏览器里做）；只当设备用的电脑上 `omnillm connect` 和 `-h` 显示设备的命令，不再是主机的全部命令；`hub region confirm` 先确认主机在运行；`hub pair` 的 `--budget-usd` 和 `--no-limit` 只能用一个，AI 助手调用时给出的命令保留写上的选项；`hub app add` 在本机接口没打开时说令牌暂时用不了；`hub provider off|on` 也认 `google`、`agy`；终端里的模型名和 ID 都去掉控制字符；帮助里 `login` 一行不再挤在一起，中文写“Gemini 订阅”。
 - **第十三轮**（安全复查没有发现；Auto 的手机网页问题交给做 Auto 的会话）：命令行里 Auto 只在它有能答脚本的模型时才是脚本、管道的默认，本机接口也不再只给程序一个 Auto（以前所有模型都只能手动对话时，脚本拿到 Auto、每次都报“Auto 现在没有能用的模型”，原因说错了）；`connect chat`、`connect ask` 用 Auto 时每个回答先在 stderr 写一行“(Auto · 模型)”；`omnillm connect -h`、`omnillm hub -h`（`--help`、`help`）显示帮助，设备上是设备的命令；`hub models` 多一列“Auto 可选”，`hub model set --auto true|false` 和控制台的开关一样；远程连接关着时，`hub pair` 在交给 AI 助手一条命令之前就说加不了设备；地区没有变时 `hub region confirm` 说不用确认。
 - **第十四轮**（安全复查没有发现；Auto 在主机上的两处交给做 Auto 的会话）：手机网页回答一边出字一边保留顶上的模型名（以前出字时消失、答完又出现，整段跳一下）；用 Auto 时，主机一说选了哪个模型，名字或“换成了”那一行马上出现，不再等答完。命令行：Auto 换了模型（第一个没出字就失败）时再写一行“(Auto · 模型)”，不再一直写第一个；`omnillm hub region` 给出用法；从脚本运行 `connect models` 时，Auto 能选的都只能手动对话就标“只能手动对话”。
@@ -866,7 +866,7 @@ zc 10-22：网页对话在 2000 px 宽的电脑浏览器里像一张被拉宽的
 - **如实说明**：会话文件是官方程序自己的格式，明文，权限和主人自己的 Claude / Codex 历史一样，只在中心节点上，不经过 relay、不到设备。原则 4 “对话内容默认不保存”为此加了这一条例外（zc 10-21 定：用省下的 token 和更快的回答，换中心节点上最多一天的对话留存）。Codex 删除会话后，它的 SQLite 数据库空闲页里可能残留文字，直到被覆盖。
 - **测试**：`internal/provider/chats_test.go`（续接、改了更早的话重来、别的设备不续接、失败即删、文件没了重来、限额和过期、同一位置的旧会话被删、进行中被移除的设备不留、哈希覆盖每一项且图片换成说明后仍接得上、Codex 续接和删除、刚开始就被取消的 Codex 一轮也删掉、两种程序的后台调用都不留）、`hub/chats_test.go`（设备对话续接，移除设备、移除订阅来源后文件都没了）；`OMNILLM_REAL_CLI=1 go test -run TestRealChatContinues ./internal/provider` 用真的 Claude Code 和 Codex 验证第二句记得第一句、用的是同一个会话、删除后不留文件。hub 的测试把 `HOME`、`OMNILLM_HOME` 指向临时目录，不碰真实的会话。
 
-### 13.4b Google AI 订阅：Antigravity CLI（2026-10-26）
+### 13.4b Gemini 订阅：Antigravity CLI（2026-10-26）
 
 zc 10-26 要接 Gemini 订阅。Google 的 Gemini CLI 用个人账号登录后已经不能用（“This client is no longer supported for Gemini Code Assist for individuals”，6 月 18 日起换成 Antigravity CLI），所以接的是 Antigravity CLI（命令 `agy`，Homebrew cask `antigravity-cli`）。新提供方 `antigravity`，名字“Gemini 订阅（Antigravity）”，和 Claude Code、Codex 同一套：只给人手动对话、一次一个、限速、每个新版本先过一遍“运行命令、读文件”的检查（clicheck.go）。
 
@@ -895,6 +895,19 @@ zc 10-26：网页加一个 Auto，新对话默认用它。关键是怎么路由�
 - **一个模型只报一次名字**：中心节点每换一个模型只发一个名字（选定时那个），模型自己报的名字不再转出去，所以第二个名字一定表示换了模型，主人起的名字也不会在回答中途被改掉（第 14 轮评审）。
 - **主人的开关**：控制台“模型”表多一列“Auto 可选”（编辑对话框里也有），存在 `modelpref` 的 `no_auto`。全部排除时设备的列表里不再有 Auto（它只会失败）；程序（后台调用）要 Auto、而能用的只有给人用的模型时，回答“这个模型只能手动对话”（`MsgHumanOnly`），不说成“没登录或到上限”。
 - **测试**：`hub/auto_test.go`（难度判断、按档选、同组轮着用、对话粘住且升档才换、失败的模型被跳过、主人排除、设备只在允许的模型里选、只有一个模型时不显示 Auto、暂停照样拒绝、Antigravity 的 Claude 排在原厂后面）；`omnillm-testkit/autoshots.mjs`（新对话默认 Auto、列表第一项没有分组标题、回复署名和“换成了”一行，中英、深浅、电脑和手机）。
+
+### 13.7 三端说法统一（2026-10-27）
+
+Mac（菜单栏、控制台、命令行）、手机网页、电脑网页说同一件事用同一个词；一端让人去点的按钮，在另一端必须叫这个名字。逐条对照后定下：
+
+- **网页**统称“网页版”（the web app）：控制台的核对警告、菜单栏状态行、`omnillm verify web` 的结果都不再说“手机用的网页”，因为电脑浏览器也在用它。
+- **Gemini 订阅**：中英文都叫 Gemini 订阅（Gemini subscription）。“我有 Gemini 订阅”和另外两个订阅并列；来源列表和命令行保留“（Antigravity）”，和“ChatGPT 订阅（Codex）”同一个写法；手机上的错误提示和模型列表一样不带括号。Google AI Pro / Ultra 只在说明套餐时出现。
+- **登录失效**一律说“要重新登录”（Sign in again）：控制台问题行、菜单栏、命令行表格、手机模型列表的标记都是这个说法。英文统一用 sign in，不用 log in。
+- **找“添加设备”的路径**手机和电脑两边写得一样：点菜单栏的 OmniLLM 图标，选“添加设备…”。电脑欢迎页第 1 步补一句不是 Mac 时运行 `omnillm open`。菜单栏的“添加设备…”在还没接入模型时提示“先接入一个模型，再添加设备。”，不再没有反应。
+- 控制台示意图的有效期写法和真控制台一致（“5 分钟后过期 · 只能用一次”）；核对数字那一句写成“在控制台里点…，或在终端里输入 y”。
+- 只能在自己网络里保存配对的浏览器，推荐的都是 Safari、Chrome 或 Edge。
+- 主机不一定是 Mac：Go 侧给人看的文字（`messages.go`）里写死的“这台 Mac”“Terminal”改成“这台电脑”“a terminal”，或交给网页的 Mac→电脑替换；控制台英文里提到 Terminal 的都有 `Other`（a terminal）版本；错误提示里不把主机叫“服务器”。
+- 测试：`console_test.go` 的中英对照检查覆盖新加的键；`messages_test.go`、`hubcli_test.go`、`round6_test.go` 跟着新说法改。
 
 ### 13.5 还没做（按里程碑排期）
 

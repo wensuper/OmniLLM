@@ -177,7 +177,7 @@ func loginCmd(args []string) {
 	if len(args) != 1 || loginKind(args[0]) == "" {
 		// The one line that says it all; the whole command list would bury it.
 		fmt.Fprintln(os.Stderr, runnable(t("用法：omnillm login claude（Claude 订阅）、omnillm login chatgpt（ChatGPT 订阅）或 omnillm login gemini（Gemini 订阅，用 Antigravity）。",
-			"Usage: omnillm login claude (Claude subscription), omnillm login chatgpt (ChatGPT subscription) or omnillm login gemini (Google AI subscription, through Antigravity).")))
+			"Usage: omnillm login claude (Claude subscription), omnillm login chatgpt (ChatGPT subscription) or omnillm login gemini (Gemini subscription, through Antigravity).")))
 		os.Exit(2)
 	}
 	k := loginKind(args[0])
