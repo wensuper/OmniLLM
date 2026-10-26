@@ -1258,7 +1258,11 @@ func hubRun(dir, sock string, args []string) {
 	// the console shows the address only once it is really there.
 	if *api != "" && *api != "off" {
 		if ln, err := localapi.Listen(*api); err != nil {
-			log.Printf(t("给应用用的本机接口没能启动（%v）；应用暂时连不上。", "The local API for apps did not start (%v); apps can’t connect for now."), err)
+			if !validAPI(*api) {
+				log.Printf(t("给应用用的本机接口只能开在这台电脑上（127.0.0.1:端口），%s 不行；应用暂时连不上。", "The local API for apps only opens on this computer (127.0.0.1:PORT), not %s; apps can’t connect for now."), *api)
+			} else {
+				log.Printf(t("给应用用的本机接口没能启动（%s 多半被占了）；应用暂时连不上。", "The local API for apps did not start (%s is probably in use); apps can’t connect for now."), *api)
+			}
 		} else {
 			if con != nil {
 				con.APIURL = "http://" + ln.Addr().String() + "/v1"
@@ -1556,7 +1560,9 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 				text += "\n" + fmt.Sprintf(tl(l, "接口地址（兼容 OpenAI）：%s，令牌放在 Authorization: Bearer 里。", "Address (OpenAI-compatible): %s; send the token as Authorization: Bearer."), con.APIURL)
 			} else {
 				if apiSetting == "off" {
-					text += "\n" + tl(l, "给应用用的本机接口被设置关掉了（OMNILLM_API=off），这个令牌暂时用不了；不带这个设置重新启动 OmniLLM 就会打开。", "The local API for apps is turned off (OMNILLM_API=off), so this token can’t be used yet; start OmniLLM without that setting to turn it on.")
+					text += "\n" + tl(l, "给应用用的本机接口被设置关掉了（OMNILLM_API=off），这个令牌暂时用不了。要打开：运行 OMNILLM_API="+defaultAPI+" omnillm install（在前台运行的，不带 OMNILLM_API=off 重新启动）。", "The local API for apps is turned off (OMNILLM_API=off), so this token can’t be used yet. To turn it on, run OMNILLM_API="+defaultAPI+" omnillm install (a hub run in the foreground: start it again without OMNILLM_API=off).")
+				} else if !validAPI(apiSetting) {
+					text += "\n" + fmt.Sprintf(tl(l, "给应用用的本机接口只能开在这台电脑上（127.0.0.1:端口），%s 不行，这个令牌暂时用不了。", "The local API for apps only opens on this computer (127.0.0.1:PORT), not %s, so this token can’t be used yet."), apiSetting)
 				} else {
 					text += "\n" + fmt.Sprintf(tl(l, "给应用用的本机接口现在没打开（多半是 %s 被占了），这个令牌暂时用不了。", "The local API for apps isn’t running (%s is probably in use), so this token can’t be used yet."), apiSetting)
 				}

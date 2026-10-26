@@ -87,9 +87,9 @@ func verifyWeb(ctx context.Context, c *http.Client, base string) webCheck {
 		return w
 	}
 	w.Build = string(m[1])
-	man, tag, err := findManifest(ctx, c, w.Build)
+	man, tag, sums, err := findManifest(ctx, c, w.Build)
 	if errors.Is(err, errNotListed) {
-		w.Release, w.Bad = tag, []string{"manifest.json"} // the release's own checksums disown it
+		w.Release, w.Bad = tag, []string{"release"} // the release's own checksums disown its file list
 		return w
 	}
 	if err != nil {
@@ -101,7 +101,7 @@ func verifyWeb(ctx context.Context, c *http.Client, base string) webCheck {
 		return w
 	}
 	w.Release = tag
-	signed, err := signedRelease(ctx, c, tag)
+	signed, err := signedRelease(ctx, c, tag, sums)
 	if errors.Is(err, errBadSignature) {
 		w.Bad = []string{"signature"}
 		return w
@@ -137,11 +137,12 @@ func verifyWeb(ctx context.Context, c *http.Client, base string) webCheck {
 
 // findManifest looks through recent releases for the one whose web client
 // has this build, and checks its manifest against that release's
-// checksums.txt (which the release workflow signs). nil: none has it.
-func findManifest(ctx context.Context, c *http.Client, build string) (*webManifest, string, error) {
+// checksums.txt (which the release workflow signs), returned too so that
+// the signature is checked on these very bytes. nil: none has it.
+func findManifest(ctx context.Context, c *http.Client, build string) (*webManifest, string, []byte, error) {
 	rels, err := listReleases(ctx, c)
 	if err != nil {
-		return nil, "", err
+		return nil, "", nil, err
 	}
 	tried := 0
 	for _, r := range rels {
@@ -167,25 +168,25 @@ func findManifest(ctx context.Context, c *http.Client, build string) (*webManife
 				if strings.Contains(err.Error(), "HTTP 404") {
 					continue
 				}
-				return nil, "", err
+				return nil, "", nil, err
 			}
 			if man, err = manifestOf(mb); err != nil || man.Build != build {
 				continue
 			}
 		default:
-			return nil, "", err
+			return nil, "", nil, err
 		}
 		sums, err := get(ctx, c, releaseFile(r.Tag, "checksums.txt"), 1<<20)
 		if err != nil {
-			return nil, "", err
+			return nil, "", nil, err
 		}
 		sum := sha256.Sum256(mb)
 		if !listed(sums, hex.EncodeToString(sum[:]), name) {
-			return nil, r.Tag, fmt.Errorf("%s: %s: %w", r.Tag, name, errNotListed)
+			return nil, r.Tag, nil, fmt.Errorf("%s: %s: %w", r.Tag, name, errNotListed)
 		}
-		return man, r.Tag, nil
+		return man, r.Tag, sums, nil
 	}
-	return nil, "", nil
+	return nil, "", nil, nil
 }
 
 // manifestOf reads a web tarball (omnillm-web.tar.gz) into a manifest.
@@ -240,42 +241,66 @@ var lookCosign = func() (string, error) { return exec.LookPath("cosign") }
 
 // signedRelease checks a release's checksums.txt against its signature
 // with cosign, pinned to this repository's release workflow (as install.sh
-// does). false, nil: cosign isn't installed, so only TLS and the checksums
-// vouch for it; an error: the signature is wrong.
-func signedRelease(ctx context.Context, c *http.Client, tag string) (bool, error) {
+// does): the sigstore bundle, or the older certificate and signature.
+// false, nil: cosign isn't installed, so only TLS and the checksums vouch
+// for it; errBadSignature: wrong, or missing (every release publishes one,
+// so a missing one is not "unsigned"); other errors: couldn't check.
+func signedRelease(ctx context.Context, c *http.Client, tag string, sums []byte) (bool, error) {
 	cosign, err := lookCosign()
 	if err != nil {
 		return false, nil
-	}
-	sums, err := get(ctx, c, releaseFile(tag, "checksums.txt"), 1<<20)
-	if err != nil {
-		return false, err
-	}
-	bundle, err := get(ctx, c, releaseFile(tag, "checksums.txt.sigstore.json"), 1<<20)
-	if err != nil {
-		if strings.Contains(err.Error(), "HTTP 404") {
-			return false, nil // no bundle published: say "not signed", not "bad signature"
-		}
-		return false, err
 	}
 	dir, err := os.MkdirTemp("", "omnillm-verify-")
 	if err != nil {
 		return false, err
 	}
 	defer os.RemoveAll(dir)
-	sp, bp := filepath.Join(dir, "checksums.txt"), filepath.Join(dir, "checksums.txt.sigstore.json")
-	if os.WriteFile(sp, sums, 0o600) != nil || os.WriteFile(bp, bundle, 0o600) != nil {
+	fetch := func(name string) (string, error) {
+		b, err := get(ctx, c, releaseFile(tag, name), 1<<20)
+		if err != nil {
+			if strings.Contains(err.Error(), "HTTP 404") {
+				return "", errBadSignature
+			}
+			return "", err
+		}
+		p := filepath.Join(dir, name)
+		if os.WriteFile(p, b, 0o600) != nil {
+			return "", errors.New("verify: can't write a temporary file")
+		}
+		return p, nil
+	}
+	var sig []string
+	if bp, err := fetch("checksums.txt.sigstore.json"); err == nil {
+		sig = []string{"--bundle", bp}
+	} else if !errors.Is(err, errBadSignature) {
+		return false, err
+	} else {
+		pem, err := fetch("checksums.txt.pem")
+		if err != nil {
+			return false, err
+		}
+		sg, err := fetch("checksums.txt.sig")
+		if err != nil {
+			return false, err
+		}
+		sig = []string{"--certificate", pem, "--signature", sg}
+	}
+	sp := filepath.Join(dir, "checksums.txt")
+	if os.WriteFile(sp, sums, 0o600) != nil {
 		return false, errors.New("verify: can't write a temporary file")
 	}
-	cmd := exec.CommandContext(ctx, cosign, "verify-blob", "--bundle", bp,
+	args := append(append([]string{"verify-blob"}, sig...),
 		"--certificate-identity-regexp", `^https://github\.com/wensuper/OmniLLM/\.github/workflows/release\.yml@refs/tags/v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$`,
 		"--certificate-oidc-issuer", "https://token.actions.githubusercontent.com", sp)
+	cmd := exec.CommandContext(ctx, cosign, args...)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
 		var ee *exec.ExitError
-		if errors.As(err, &ee) {
+		if errors.As(err, &ee) && !cosignOffline(stderr.String()) {
 			return false, errBadSignature // cosign ran and said no
 		}
-		return false, err
+		return false, err // it couldn't get Sigstore's keys: not a verdict
 	}
 	return true, nil
 }
@@ -300,6 +325,9 @@ func webCheckText(w webCheck) string {
 	case len(w.Bad) == 1 && w.Bad[0] == "signature":
 		return fmt.Sprintf(t("警告：GitHub 上 %s 的签名核对没有通过。在弄清楚之前，不要在手机上用这个网页（%s）。",
 			"Warning: the signature of the GitHub release %s didn’t check out. Don’t use the web page (%s) on your phones until this is cleared up."), w.Release, w.URL)
+	case len(w.Bad) == 1 && w.Bad[0] == "release":
+		return fmt.Sprintf(t("警告：GitHub 上 %s 的文件清单和它自己的校验和对不上。在弄清楚之前，不要在手机上用这个网页（%s）。",
+			"Warning: the GitHub release %s’s list of files doesn’t match its own checksums. Don’t use the web page (%s) on your phones until this is cleared up."), w.Release, w.URL)
 	case len(w.Bad) == 1 && w.Bad[0] == "app.js" && w.Release == "":
 		return fmt.Sprintf(t("警告：手机用的网页（%s）不是 OmniLLM 发布构建的（找不到构建号）。在弄清楚之前，不要在手机上用它。",
 			"Warning: the web page your phones use (%s) isn’t an OmniLLM release build (it has no build number). Don’t use it on your phones until this is cleared up."), w.URL)
@@ -418,4 +446,17 @@ func githubError(err error) string {
 		return "github_limited"
 	}
 	return "github"
+}
+
+// cosignOffline: cosign stopped before verifying because it couldn't reach
+// Sigstore (its trust root or transparency log), not because the signature
+// is wrong. It exits 1 either way; only its message tells them apart.
+func cosignOffline(stderr string) bool {
+	s := strings.ToLower(stderr)
+	for _, w := range []string{"setting up clients", "tuf", "dial tcp", "connection refused", "i/o timeout", "no such host", "tls handshake", "context deadline exceeded", "network is unreachable"} {
+		if strings.Contains(s, w) {
+			return true
+		}
+	}
+	return false
 }

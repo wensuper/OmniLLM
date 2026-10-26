@@ -85,8 +85,16 @@ func TestVerifyWebComparesEveryFileWithTheSignedRelease(t *testing.T) {
 	served["app.js"] = files["app.js"]
 	manJSON = append(manJSON, ' ')
 	// (A warning, not "GitHub didn't answer": the release disowns it.)
-	if w = verifyWeb(ctx, srv.Client(), srv.URL+"/web/"); w.OK || !w.Mismatch() || w.Bad[0] != "manifest.json" {
+	if w = verifyWeb(ctx, srv.Client(), srv.URL+"/web/"); w.OK || !w.Mismatch() || w.Bad[0] != "release" {
 		t.Fatalf("an unsigned manifest was trusted: %+v", w)
+	}
+	// With cosign here, a release whose signature files are gone is a bad
+	// signature, not "unsigned" (every release publishes one).
+	manJSON = manJSON[:len(manJSON)-1]
+	defer func(f func() (string, error)) { lookCosign = f }(lookCosign)
+	lookCosign = func() (string, error) { return "/usr/bin/true", nil }
+	if w = verifyWeb(ctx, srv.Client(), srv.URL+"/web/"); w.OK || !w.Mismatch() || w.Bad[0] != "signature" {
+		t.Fatalf("signature files removed: %+v", w)
 	}
 }
 
@@ -125,5 +133,16 @@ func TestVerifyWebReadsOlderReleasesTarball(t *testing.T) {
 	releaseFile = func(tag, name string) string { return srv.URL + "/dl/" + tag + "/" + name }
 	if w := verifyWeb(context.Background(), srv.Client(), srv.URL+"/web/"); !w.OK || w.Release != "v0.2.0-alpha.42" || w.Files != 2 {
 		t.Fatalf("%+v", w)
+	}
+}
+
+// cosign exits 1 both when it can't reach Sigstore and when the signature
+// is wrong; only the first is "couldn't check".
+func TestCosignOffline(t *testing.T) {
+	if !cosignOffline("Error: setting up clients and keys: getting rekor public keys: tuf: failed to download 13.root.json: dial tcp 127.0.0.1:9: connect: connection refused") {
+		t.Fatal("offline taken for a verdict")
+	}
+	if cosignOffline("Error: none of the expected identities matched what was in the certificate") {
+		t.Fatal("a rejection taken for offline")
 	}
 }
