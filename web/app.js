@@ -16,27 +16,45 @@ const T = {
     loading: "正在载入……", bootDownload: "正在下载……", bootStart: "正在启动……", bootStorage: "正在打开……",
     bootSlow: "载入停了 20 秒没有进展，停在“{0}”。点下面的按钮清掉缓存重新载入；网络慢的话也可以换个网络再试。",
     bootCrashed: "程序意外停止了。点下面的按钮清掉缓存重新载入。", bootStorageFailed: "这个浏览器不让网页保存数据（可能在设置里禁止了网站数据）。允许这个网站保存数据后再载入。", bootOffline: "没能下载：这台设备可能没有联网。联网后会自动重新载入，也可以点“重新载入”。", bootError: "载入失败：", bootRetry: "重新载入",
-    welcomeTitle1: "你电脑上的 AI，", welcomeTitle2: "现在也在这台设备上",
-    step1: "打开电脑上的 OmniLLM 控制台（Mac：菜单栏图标）", step2: "点“添加设备”", step3: "扫电脑屏幕上的二维码",
-    e2eChip: "端到端加密", noHub: "还没有 OmniLLM？先装好",
-    getHubTitle: "先在你的电脑上装好 OmniLLM", getHubBody: "打开终端（Mac：按 ⌘+空格，输入“终端”后回车），粘贴下面这一行再按回车。大约一分钟装好，然后回到这里扫码。", getHubLongPress: "请长按上面这一行复制。", getHubBodyPaste: "打开终端（Mac：按 ⌘+空格，输入“终端”后回车），粘贴下面这一行再按回车。大约一分钟装好，然后回到这里。",
-    step3Paste: "在电脑的“添加设备”里选“电脑或服务器”，点“复制链接”在这里打开；或者点“用命令行”复制配对文字，粘贴到下面",
-    getHubShare: "发到我的电脑", getHubCopy: "复制命令", getHubGuide: "查看完整的安装说明", getHubCopied: "已复制。把它发到电脑上，在终端里粘贴运行。",
-    getHubHang: "如果卡住不动，多半是连不上 GitHub，换个网络再试。", pasteOpen: "粘贴配对文字",
+    titlePhone: "连上你的电脑", subPhone: "在电脑上打开 OmniLLM 的“添加设备”，扫它显示的二维码。",
+    titleComputer: "连上你的 OmniLLM", subComputer: "在装了 OmniLLM 的电脑上打开“添加设备”，复制链接，粘贴到这里。",
+    tapScan: "轻点开始扫描", pasteBtn: "粘贴链接或配对文字", connect: "连接",
+    e2e: "端到端加密", noHub: "还没装 OmniLLM？",
+    addDevice: "添加设备", kindPhone: "手机或平板", kindComputer: "电脑或服务器", copyLink: "复制链接",
+    linkKey: "复制链接，自己带到那台电脑上打开。链接相当于钥匙，别发给别人。",
+    consoleSas: "两边会出现同样的 6 位数，一样就在这里点“一致，添加”。", matchAdd: "一致，添加",
+    getHubTitle: "先装好 OmniLLM", getHubBody: "在电脑上打开终端（Mac：按 ⌘+空格，输入“终端”后回车），粘贴这一行，按回车。装好后回到这里扫码。", getHubLongPress: "请长按上面这一行复制。", getHubBodyHere: "在要运行 OmniLLM 的电脑上打开终端（Mac：按 ⌘+空格，输入“终端”后回车），粘贴这一行，按回车。大约一分钟。",
+    getHubShare: "发到我的电脑", getHubCopy: "复制", getHubGuide: "完整安装说明", getHubCopied: "已复制。把它发到电脑上，在终端里粘贴运行。",
     getHubSend: "在电脑上安装 OmniLLM：在终端里运行这一行",
-    scan: "扫描二维码", pasteInstead: "扫不了码？粘贴配对文字", pastePh: "粘贴配对文字（以 omnillm3- 开头）", add: "添加", cancel: "取消", back: "返回", delete: "删除", remove: "移除", gotIt: "知道了",
-    scanHint: "把电脑屏幕上的二维码放进框里", camDenied: "没有拿到摄像头权限。在浏览器设置里允许这个网站用摄像头后再试，或者用“粘贴配对文字”。",
-    pairTitle: "添加这台设备", pairConnecting: "正在连接你的电脑……",
-    pairAsk: "要把这台设备添加到你的电脑吗？只有你刚扫的二维码正显示在你自己的电脑上，才继续。", pairVia: "经由 {0}",
+    homeTitle: "先放到主屏幕", homeSub: "主屏幕上的 OmniLLM 和 {0} 不共用配对。先放过去，在那里扫码，只配一次。",
+    homeS1Safari: "点 Safari 的 ⋯ 或“分享”", homeS1Chrome: "点地址栏右边的“分享”", homeS1Edge: "点底部的 ⋯，再点“分享”", homeS1Firefox: "点菜单 ≡，再点“分享”",
+    homeS2: "选“添加到主屏幕”", homeS3: "从主屏幕打开 OmniLLM，扫同一个二维码", homeHere: "就在 {0} 里用", cantFind: "找不到“添加到主屏幕”？",
+    inappTitle: "在浏览器里打开", inappSub: "在{0}里打开的页面存不下配对，也放不到主屏幕。", inappThisApp: "这个 App ",
+    inappS1: "点右上角的 ⋯", inappS2ios: "选“在 Safari 中打开”", inappS2android: "选“在浏览器打开”",
+    inappS3ios: "在 Safari 里放到主屏幕，再从主屏幕扫码", inappS3android: "浏览器会接着添加这台手机", inappHere: "仍在{0}里用", inappHereAny: "仍在这里用",
+    appWechat: "微信", appQQ: "QQ", appWeibo: "微博", appLark: "飞书", appDingtalk: "钉钉", appAlipay: "支付宝", appDouyin: "抖音", appXhs: "小红书", appFacebook: "Facebook", appInstagram: "Instagram", appLine: "LINE", appLinkedin: "LinkedIn",
+    volTitle: "这个浏览器存不下配对", volSub: "在这里添加，关掉页面就失效，下次还要再加。无痕窗口也是这样。用 Safari、Chrome 或 Edge 的普通窗口打开 omni.ixxzh.com 可以一直用。",
+    copyUrl: "复制网址", urlCopied: "已复制网址", onceHere: "仍在这里用一次",
+    pastePh: "粘贴链接或配对文字", add: "添加", cancel: "取消", back: "返回", delete: "删除", remove: "移除", gotIt: "知道了",
+    scanHint: "对准电脑屏幕上的二维码", camDenied: "没有拿到摄像头权限。在浏览器设置里允许这个网站用摄像头后再试，或者粘贴链接或配对文字。",
+    pairConnecting: "正在连接你的电脑……",
+    askPhone: "添加这台手机？", askTablet: "添加这台平板？", askComputer: "添加这台电脑？",
+    askScanned: "只有你刚扫的二维码正显示在你自己的电脑上，才继续。", askLink: "只有这个链接是你从自己电脑的“添加设备”里复制的，才继续。",
+    via: "连接经由", viaDefault: "OmniLLM 默认", viaOther: "这个链接经由 {0}，不是 OmniLLM 默认的。不是你自己设置的，就取消。",
     pairReplace: "这会替换这台设备现在的配对（{0}），之前的 Mac 就不能再从这里用了。",
-    pairCheck: "电脑上显示同样的数字，就在那边确认：控制台里点“一致，添加”，终端里输入 y。", pairWait: "等你在电脑上确认……", pairMismatch: "数字不一样？取消", pairDone: "已添加。",
+    sasTitle: "核对数字", pairCheck: "电脑上显示同样的 6 位数，就在那边确认：控制台里点“一致，添加”，终端里输入 y。", pairWait: "等你在电脑上确认……", pairMismatch: "数字不一样？取消",
+    doneName: "这台设备在你的 Mac 上叫“{0}”。",
+    expScanTitle: "这个二维码过期或用过了", expScanSub: "在电脑上点“换一个二维码”，再扫一次。",
+    expLinkTitle: "这个链接过期或用过了", expLinkSub: "在电脑的“添加设备”里点“换一个链接”，复制新链接再粘贴。",
+    failTitle: "没能添加这台设备", scanNew: "扫描新的二维码", pasteNew: "粘贴新的链接",
+    thisPhone: "这台手机", thisTablet: "这台平板", thisComputer: "这台电脑", yourComputer: "你的电脑",
     pairDropped: "连接断了。在电脑上换一个二维码再扫（控制台点“换一个二维码”，终端里重新运行 omnillm pair）。", connectedMac: "已连上你的 Mac",
     notCode: "这不是 OmniLLM 的配对二维码或配对文字。请从电脑上“添加设备”里重新复制。", needTLS: "你的 Mac 的远程连接只能在它自己的网络里用，手机网页连不上。在 Mac 的终端里用 wss:// 地址重新安装（OMNILLM_RELAY=wss://… omnillm install；不设就用默认的），再换一个新的二维码扫。",
     chats: "对话", newChat: "新对话", placeholder: "输入消息", stop: "停止", send: "发送", menu: "菜单", model: "模型",
     addImage: "添加图片", voice: "语音输入", voiceStop: "停止语音输入", listening: "正在听，说完再点一下……", voiceFirst: "语音由浏览器识别：Chrome 交给 Google，Safari 交给 Apple。识别出的文字只填进输入框，你确认后再发。", voiceDenied: "没有麦克风权限。在浏览器的网站设置里允许麦克风，再点一次。", voiceNoMic: "没找到麦克风。", voiceNoSpeech: "没听到声音，再说一次试试。", voiceNetwork: "语音识别要联网，现在连不上。", voiceFailed: "语音输入没能开始，再试一次。", removeImage: "移除图片", tooManyImages: "每条消息最多 4 张图片。", imageFailed: "这张图片打不开，换一张试试。", imageTooBig: "图片太大，换一张小一点的。", imageTitle: "图片",
     offline: "你的 Mac 现在连不上，可能在睡眠、关机或断网。恢复后会自动连上。", retry: "重试",
     noNetwork: "这台设备没有联网，联网后会自动连上。", kept: "刚才输入的还在。", loadingModels: "正在连接你的 Mac……",
-    noModels: "这台设备现在没有能用的模型。在 Mac 的控制台里接入模型，或在“设备”里给它开放模型。", noModelsOpt: "没有可用的模型", probLogin: "要在 Mac 上登录", probLimit: "到上限，{0} 恢复", probLoginNote: "你的 Mac 上 {0}的登录已失效，现在发不出去。在 Mac 的终端里运行 omnillm login {1}，或在控制台里点“登录”，然后再试。", langPending: "先发出或移除已添加的图片，再切换语言。", langVolatile: "这个浏览器保存不了配对，换语言要重新载入，就得重新添加这台设备。换用 Safari 或 Chrome 再切换。", scanFailed: "扫码工具没能载入。用下面的“粘贴配对文字”，或刷新后再试。", addHomeTipAndroid: "点浏览器右上角的 ⋮，选“添加到主屏幕”或“安装应用”。", probLimitNote: "{0}的用量到上限了，{1} 恢复。可以先换一个模型。", probLimitNoTime: "到上限了", probLimitNoteNoTime: "{0}的用量到上限了。可以先换一个模型。", autoName: "Auto（自动选模型）", subClaude: "Claude 订阅", subChatGPT: "ChatGPT 订阅", subGemini: "Gemini 订阅",
+    noModels: "这台设备现在没有能用的模型。在 Mac 的控制台里接入模型，或在“设备”里给它开放模型。", noModelsOpt: "没有可用的模型", probLogin: "要在 Mac 上登录", probLimit: "到上限，{0} 恢复", probLoginNote: "你的 Mac 上 {0}的登录已失效，现在发不出去。在 Mac 的终端里运行 omnillm login {1}，或在控制台里点“登录”，然后再试。", langPending: "先发出或移除已添加的图片，再切换语言。", langVolatile: "这个浏览器保存不了配对，换语言要重新载入，就得重新添加这台设备。换用 Safari 或 Chrome 再切换。", scanFailed: "扫码工具没能载入。粘贴链接或配对文字，或刷新后再试。", addHomeTipAndroid: "点浏览器右上角的 ⋮，选“添加到主屏幕”或“安装应用”。", probLimitNote: "{0}的用量到上限了，{1} 恢复。可以先换一个模型。", probLimitNoTime: "到上限了", probLimitNoteNoTime: "{0}的用量到上限了。可以先换一个模型。", autoName: "Auto（自动选模型）", subClaude: "Claude 订阅", subChatGPT: "ChatGPT 订阅", subGemini: "Gemini 订阅",
     modelGone: "原来的模型已从你的 Mac 上移除，换成了 {0}",
     grpSub: "订阅（不另花钱）", grpKey: "API Key", grpLocal: "你的 Mac 上", latest: "（最新版）", codex: "ChatGPT（Codex · 最新版）", codexV: "ChatGPT（Codex · {0}）",
     forget: "移除这台设备", forgetQ: "这里的对话会删除。以后要用，在 Mac 上重新添加。", removing: "正在移除……",
@@ -61,27 +79,45 @@ const T = {
     loading: "Loading…", bootDownload: "Downloading…", bootStart: "Starting…", bootStorage: "Opening…",
     bootSlow: "Loading has made no progress for 20 seconds, stuck at “{0}”. Tap below to clear the cache and load again; on a slow network, another network may help.",
     bootCrashed: "The program stopped unexpectedly. Tap below to clear the cache and load again.", bootStorageFailed: "This browser isn’t letting the page save data (site data may be blocked in its settings). Allow site data for this site, then load again.", bootOffline: "Couldn’t download: this device may be offline. It loads again by itself once it’s online, or tap “Load again”.", bootError: "Loading failed: ", bootRetry: "Load again",
-    welcomeTitle1: "The AI on your computer, ", welcomeTitle2: "now on this device",
-    step1: "Open the OmniLLM console on your computer (on a Mac: the menu bar icon)", step2: "Choose “Add device”", step3: "Scan the QR code on your computer’s screen",
-    e2eChip: "End-to-end encrypted", noHub: "No OmniLLM yet? Set it up first",
-    getHubTitle: "First, set up OmniLLM on your computer", getHubBody: "Open a terminal (Mac: press ⌘-Space, type “Terminal”, press Return), paste this line and press Return. It takes about a minute; then come back here and scan.", getHubLongPress: "Touch and hold the line above to copy it.", getHubBodyPaste: "Open a terminal (Mac: press ⌘-Space, type “Terminal”, press Return), paste this line and press Return. It takes about a minute; then come back here.",
-    step3Paste: "In “Add device” on your computer, pick “Computer or server” and click “Copy link” to open it here, or click “Use the command line” and paste the pairing text below",
-    getHubShare: "Send this to my computer", getHubCopy: "Copy command", getHubGuide: "Full setup guide", getHubCopied: "Copied. Get it to your computer and paste it into a terminal there.",
-    getHubHang: "If it hangs, GitHub is probably unreachable; try another network.", pasteOpen: "Paste the pairing text",
+    titlePhone: "Connect to your computer", subPhone: "Open “Add device” in OmniLLM on your computer and scan the QR code it shows.",
+    titleComputer: "Connect to your OmniLLM", subComputer: "On the computer running OmniLLM, open “Add device”, copy the link and paste it here.",
+    tapScan: "Tap to scan", pasteBtn: "Paste a link or pairing text", connect: "Connect",
+    e2e: "End-to-end encrypted", noHub: "Don’t have OmniLLM yet?",
+    addDevice: "Add device", kindPhone: "Phone or tablet", kindComputer: "Computer or server", copyLink: "Copy link",
+    linkKey: "Copy the link and open it on that computer yourself. The link works like a key; don’t send it to anyone else.",
+    consoleSas: "Both sides show the same 6 digits. If they match, choose “Matches, add” here.", matchAdd: "Matches, add",
+    getHubTitle: "Set up OmniLLM first", getHubBody: "On your computer, open a terminal (Mac: press ⌘-Space, type “Terminal”, press Return), paste this line and press Return. Then come back here and scan.", getHubLongPress: "Touch and hold the line above to copy it.", getHubBodyHere: "On the computer that will run OmniLLM, open a terminal (Mac: press ⌘-Space, type “Terminal”, press Return), paste this line and press Return. It takes about a minute.",
+    getHubShare: "Send to my computer", getHubCopy: "Copy", getHubGuide: "Full setup guide", getHubCopied: "Copied. Get it to your computer and paste it into a terminal there.",
     getHubSend: "Install OmniLLM on your computer: run this line in a terminal",
-    scan: "Scan QR code", pasteInstead: "Can’t scan? Paste the pairing text", pastePh: "Paste the pairing text (starts with omnillm3-)", add: "Add", cancel: "Cancel", back: "Back", delete: "Delete", remove: "Remove", gotIt: "Got it",
-    scanHint: "Point at the QR code on your computer’s screen", camDenied: "No camera access. Allow the camera for this site in your browser settings and try again, or use “Paste the pairing text”.",
-    pairTitle: "Add this device", pairConnecting: "Connecting to your computer…",
-    pairAsk: "Add this device to your computer? Continue only if the QR code you just scanned is showing on your own computer.", pairVia: "Via {0}",
+    homeTitle: "Add to Home Screen first", homeSub: "The Home Screen app doesn’t share its pairing with {0}. Add it first and scan from there, so you pair only once.",
+    homeS1Safari: "Tap ⋯ or Share in Safari", homeS1Chrome: "Tap Share at the right of the address bar", homeS1Edge: "Tap ⋯ at the bottom, then Share", homeS1Firefox: "Tap the ≡ menu, then Share",
+    homeS2: "Choose “Add to Home Screen”", homeS3: "Open OmniLLM from the Home Screen and scan the same QR code", homeHere: "Use it in {0} instead", cantFind: "Can’t find “Add to Home Screen”?",
+    inappTitle: "Open in your browser", inappSub: "Pages opened in {0} can’t keep the pairing or go on the Home Screen.", inappThisApp: "this app",
+    inappS1: "Tap ⋯ in the top-right corner", inappS2ios: "Choose “Open in Safari”", inappS2android: "Choose “Open in Browser”",
+    inappS3ios: "In Safari, add it to the Home Screen and scan from there", inappS3android: "Your browser picks up right here", inappHere: "Use it in {0} anyway", inappHereAny: "Use it here anyway",
+    appWechat: "WeChat", appQQ: "QQ", appWeibo: "Weibo", appLark: "Lark", appDingtalk: "DingTalk", appAlipay: "Alipay", appDouyin: "Douyin", appXhs: "Xiaohongshu", appFacebook: "Facebook", appInstagram: "Instagram", appLine: "LINE", appLinkedin: "LinkedIn",
+    volTitle: "This browser can’t keep the pairing", volSub: "Added here, it stops working when you close the page; private windows do the same. Open omni.ixxzh.com in a normal Safari, Chrome or Edge window to keep it.",
+    copyUrl: "Copy the address", urlCopied: "Address copied", onceHere: "Use it here just this once",
+    pastePh: "Paste the link or pairing text", add: "Add", cancel: "Cancel", back: "Back", delete: "Delete", remove: "Remove", gotIt: "Got it",
+    scanHint: "Point at the QR code on your computer’s screen", camDenied: "No camera access. Allow the camera for this site in your browser settings and try again, or paste a link or pairing text.",
+    pairConnecting: "Connecting to your computer…",
+    askPhone: "Add this phone?", askTablet: "Add this tablet?", askComputer: "Add this computer?",
+    askScanned: "Continue only if the QR code you just scanned is on your own computer’s screen.", askLink: "Continue only if you copied this link from “Add device” on your own computer.",
+    via: "Connects through", viaDefault: "OmniLLM default", viaOther: "This link connects through {0}, not OmniLLM’s default. If you didn’t set that up yourself, cancel.",
     pairReplace: "This replaces this device’s current pairing ({0}); the previous Mac can no longer be used from here.",
-    pairCheck: "If your computer shows the same number, confirm there: “Matches, add” in the console, or type y in the terminal.", pairWait: "Waiting for you to confirm on your computer…", pairMismatch: "Numbers don’t match? Cancel", pairDone: "Added.",
+    sasTitle: "Check the numbers", pairCheck: "If your computer shows the same 6 digits, confirm there: “Matches, add” in the console, or type y in the terminal.", pairWait: "Waiting for you to confirm on your computer…", pairMismatch: "Numbers don’t match? Cancel",
+    doneName: "This device is called “{0}” on your Mac.",
+    expScanTitle: "This QR code expired or was already used", expScanSub: "On your computer, choose “New QR code” and scan again.",
+    expLinkTitle: "This link expired or was already used", expLinkSub: "In “Add device” on your computer, choose “New link”, then copy it and paste it here.",
+    failTitle: "Couldn’t add this device", scanNew: "Scan the new QR code", pasteNew: "Paste a new link",
+    thisPhone: "This phone", thisTablet: "This tablet", thisComputer: "This computer", yourComputer: "Your computer",
     pairDropped: "The connection dropped. Get a new QR code on your computer (“New QR code” in the console, or run omnillm pair again) and scan it.", connectedMac: "Connected to your Mac",
     notCode: "This is not an OmniLLM pairing QR code or pairing text. Copy it again from “Add device” on your computer.", needTLS: "Your Mac’s remote access only works on its own network, so a phone browser can’t use it. On your Mac, install again with a wss:// address (OMNILLM_RELAY=wss://… omnillm install, or leave it unset for the default), then scan a new QR code.",
     chats: "Chats", newChat: "New chat", placeholder: "Message", stop: "Stop", send: "Send", menu: "Menu", model: "Model",
     addImage: "Add image", voice: "Voice input", voiceStop: "Stop voice input", listening: "Listening… tap again when you’re done", voiceFirst: "Your browser turns speech into text: Chrome uses Google, Safari uses Apple. The words only fill the box; you send them.", voiceDenied: "No microphone permission. Allow the microphone in the browser’s site settings, then try again.", voiceNoMic: "No microphone found.", voiceNoSpeech: "Didn’t hear anything. Try again.", voiceNetwork: "Voice input needs the internet, which isn’t reachable right now.", voiceFailed: "Voice input couldn’t start. Try again.", removeImage: "Remove image", tooManyImages: "Up to 4 images per message.", imageFailed: "This image can’t be opened; try another one.", imageTooBig: "Image too large; try a smaller one.", imageTitle: "Image",
     offline: "Your Mac can’t be reached right now. It may be asleep, off or offline, and will reconnect when it’s back.", retry: "Retry",
     noNetwork: "This device is offline; it reconnects when the network is back.", kept: "What you typed is kept.", loadingModels: "Connecting to your Mac…",
-    noModels: "No models are available to this device. On your Mac, connect a model or allow this device more models under Devices.", noModelsOpt: "No models", probLogin: "Sign in on your Mac", probLimit: "At its limit until {0}", probLoginNote: "{0}’s sign-in has expired on your Mac, so messages to it won’t go through. In a terminal on your Mac, run omnillm login {1}, or choose “Sign in” in the console, then try again.", langPending: "Send or remove the added images first, then switch language.", langVolatile: "This browser can’t keep the pairing, and switching language reloads the page, so the device would have to be added again. Switch in Safari or Chrome instead.", scanFailed: "The scanner couldn’t load. Use “Paste the pairing text” below, or reload and try again.", addHomeTipAndroid: "Tap the browser’s ⋮ menu and choose “Add to Home screen” or “Install app”.", probLimitNote: "{0} has reached its usage limit until {1}. Pick another model for now.", probLimitNoTime: "At its limit", probLimitNoteNoTime: "{0} has reached its usage limit. Pick another model for now.", autoName: "Auto (picks the model)", subClaude: "Your Claude subscription", subChatGPT: "Your ChatGPT subscription", subGemini: "Your Google AI subscription",
+    noModels: "No models are available to this device. On your Mac, connect a model or allow this device more models under Devices.", noModelsOpt: "No models", probLogin: "Sign in on your Mac", probLimit: "At its limit until {0}", probLoginNote: "{0}’s sign-in has expired on your Mac, so messages to it won’t go through. In a terminal on your Mac, run omnillm login {1}, or choose “Sign in” in the console, then try again.", langPending: "Send or remove the added images first, then switch language.", langVolatile: "This browser can’t keep the pairing, and switching language reloads the page, so the device would have to be added again. Switch in Safari or Chrome instead.", scanFailed: "The scanner couldn’t load. Paste a link or pairing text, or reload and try again.", addHomeTipAndroid: "Tap the browser’s ⋮ menu and choose “Add to Home screen” or “Install app”.", probLimitNote: "{0} has reached its usage limit until {1}. Pick another model for now.", probLimitNoTime: "At its limit", probLimitNoteNoTime: "{0} has reached its usage limit. Pick another model for now.", autoName: "Auto (picks the model)", subClaude: "Your Claude subscription", subChatGPT: "Your ChatGPT subscription", subGemini: "Your Google AI subscription",
     modelGone: "The previous model was removed from your Mac; switched to {0}",
     grpSub: "Subscriptions (no extra cost)", grpKey: "API key", grpLocal: "On your Mac", latest: " (latest)", codex: "ChatGPT (Codex · latest)", codexV: "ChatGPT (Codex · {0})",
     forget: "Remove this device", forgetQ: "Chats here will be deleted. To use this device later, add it on your Mac again.", removing: "Removing…",
@@ -114,7 +150,7 @@ document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
 // hub that isn't a Mac is "your computer" in the words people see. The
 // set-up steps for a computer without OmniLLM yet keep their Mac hints.
 let hubOS = localStorageGet("hubos") || "";
-const MAC_HINTS = new Set(["step1", "getHubBody", "getHubBodyPaste"]);
+const MAC_HINTS = new Set(["getHubBody", "getHubBodyHere"]);
 function computerWords(k, s) {
   if (hubOS === "darwin" || MAC_HINTS.has(k)) return s; // not known yet: "computer" too
   return lang === "zh" ? s.replace(/ ?Mac ?/g, "电脑") : s.replace(/\bMac\b/g, "computer");
@@ -272,6 +308,32 @@ async function startWasm() {
 // ---------- state ----------
 const S = { device: null, models: [], chats: [], cur: null, busy: null, online: true, gen: 0 };
 const isStandalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+
+// ---------- where this page is open ----------
+// One action per place (docs/design.md §13.3, the welcome page). The pairing
+// lives in this browser's storage, so a place that can't keep it, or keeps
+// it apart from where the person will use the page, is sorted out first.
+const UA = navigator.userAgent;
+const IOS = /iPhone|iPad|iPod/.test(UA) || (/Macintosh/.test(UA) && navigator.maxTouchPoints > 1);
+const ANDROID = /Android/.test(UA);
+const TABLET = /iPad/.test(UA) || (/Macintosh/.test(UA) && navigator.maxTouchPoints > 1) || (ANDROID && !/Mobile/.test(UA));
+// A computer pastes, a phone or tablet scans: by the kind of device, not by
+// whether it has a touch screen.
+const COMPUTER = !IOS && !ANDROID;
+// A mouse and no touch screen: the keyboard is the way in (focus, shortcuts).
+const MOUSE_ONLY = matchMedia("(pointer: fine)").matches && !matchMedia("(any-pointer: coarse)").matches;
+document.documentElement.classList.toggle("computer", COMPUTER);
+// A page opened inside another app can't go on the Home Screen, and the app
+// may clear what it keeps. The ones known by name are named.
+const IN_APP = ([[/MicroMessenger/, "appWechat"], [/ QQ\//, "appQQ"], [/Weibo/, "appWeibo"], [/Lark|Feishu/, "appLark"], [/DingTalk/, "appDingtalk"],
+  [/AlipayClient/, "appAlipay"], [/aweme|BytedanceWebview/, "appDouyin"], [/xhsdiscover/, "appXhs"], [/FBAN|FBAV/, "appFacebook"], [/Instagram/, "appInstagram"],
+  [/\bLine\//, "appLine"], [/LinkedInApp/, "appLinkedin"]].find(([re]) => !COMPUTER && re.test(UA)) || [])[1] || "";
+// On an iPhone or iPad every browser keeps its pairing apart from the Home
+// Screen app; which one this is says where its Share button is. Other
+// browsers add to the Home Screen from iOS 16.4; before that only Safari
+// does, and the page pairs in place there.
+const IOS_BROWSER = !IOS ? "" : /CriOS/.test(UA) ? "Chrome" : /EdgiOS/.test(UA) ? "Edge" : /FxiOS/.test(UA) ? "Firefox" : "Safari";
+const IOS_HOME = IOS && (IOS_BROWSER === "Safari" || (() => { const m = UA.match(/OS (\d+)_(\d+)/); return !m || +m[1] > 16 || (+m[1] === 16 && +m[2] >= 4); })());
 function deviceName() {
   const ua = navigator.userAgent;
   if (/iPad/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) return "iPad";
@@ -388,11 +450,12 @@ $("boot-retry").addEventListener("click", cleanReload);
 (async function main() {
   $("boot-text").textContent = t("loading");
   // A pairing link carries the code in the fragment; take it and wipe it
-  // from the address bar and history at once.
+  // from the address bar and history at once (inside another app it stays,
+  // so "Open in Browser" takes it along).
   let link = "";
   if (location.hash.startsWith("#pair=")) {
     link = location.hash.slice(6);
-    history.replaceState(null, "", location.pathname + location.search);
+    if (!IN_APP) history.replaceState(null, "", location.pathname + location.search);
   }
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
   watchUpdates();
@@ -412,7 +475,7 @@ $("boot-retry").addEventListener("click", cleanReload);
   // a hashchange event (seen once in 10 rounds): read the address itself.
   if (!link && location.hash.startsWith("#pair=")) {
     link = location.hash.slice(6);
-    history.replaceState(null, "", location.pathname + location.search);
+    if (!IN_APP) history.replaceState(null, "", location.pathname + location.search);
   }
   try {
     S.device = await unseal("device");
@@ -433,10 +496,12 @@ $("boot-retry").addEventListener("click", cleanReload);
       for (const m of c.messages) delete m.live;
     }
   } catch (e) { console.warn(e); bootFailed(t("bootStorageFailed")); return; } // saved pairing and chats can't be opened
+  // Can this browser keep a pairing? Known before pairing, not after.
+  if (!S.device) { try { await wrapKey(); } catch (e) { console.warn(e); bootFailed(t("bootStorageFailed")); return; } }
   B.done = true; clearTimeout(B.timer);
   if (S.device && !link) return openChat();
-  if (link) return pair(link, true);
-  show("welcome");
+  if (link) return S.device ? pair(link, true) : arrive(link);
+  welcome(gateView() || "start");
 })();
 
 // A pairing link opened in a tab where the page is already loaded only
@@ -444,64 +509,94 @@ $("boot-retry").addEventListener("click", cleanReload);
 addEventListener("hashchange", () => {
   if (!location.hash.startsWith("#pair=")) return;
   const code = location.hash.slice(6);
-  history.replaceState(null, "", location.pathname + location.search);
+  if (!IN_APP) history.replaceState(null, "", location.pathname + location.search);
   // Still loading: main() picks it up once the device code is ready.
   if (!S.ready) { S.pendingLink = code; return; }
-  if (!S.busy && !S.pairing) pair(code, true);
+  if (!S.busy && !S.pairing) { if (S.device) pair(code, true); else arrive(code); }
 });
 
-// ---------- welcome ----------
-// With the paste box open, its Add button is the one to press. It waits
-// until the box holds pairing text (it starts with omnillm3-).
-$("paste-text").placeholder = t("pastePh");
-$("paste").addEventListener("toggle", () => {
-  const open = $("paste").open;
-  $("paste-go").className = open ? "primary" : "secondary";
-  $("scan").classList.toggle("primary", !open);
-  $("scan").classList.toggle("secondary", open);
-});
-// A computer (mouse, no camera pointed at a screen) pastes the pairing
-// text; scanning stays for phones and tablets.
-const MOUSE_ONLY = matchMedia("(pointer: fine)").matches && !matchMedia("(any-pointer: coarse)").matches;
-if (MOUSE_ONLY) {
-  $("paste").open = true;
-  $("scan").hidden = true;
-  quoted(document.querySelector("#paste summary"), t("pasteOpen"));
-  quoted(document.querySelector('[data-t="getHubBody"]'), t("getHubBodyPaste"));
+// ---------- before pairing: the place first ----------
+// gateView is the screen that comes before pairing here, or "" to pair in
+// place. Not knowing is not a reason to stop anyone.
+function gateView() {
+  if (isStandalone || S.device || S.gatePassed) return "";
+  if (IN_APP) return "inapp";
+  if (IOS_HOME) return "home";
+  if (S.volatile) return "vol";
+  return "";
 }
-// Step 3 says what to do with the box that is open.
-const step3 = () => quoted(document.querySelector('[data-t="step3"]'), t($("paste").open ? "step3Paste" : "step3"));
-step3();
-// Only a box the person opened takes the focus: opened for them (no
-// camera), the keyboard would cover the message saying why.
-let pasteByHand = false;
-document.querySelector("#paste summary").addEventListener("click", () => { pasteByHand = true; });
-$("paste").addEventListener("toggle", () => {
-  step3();
-  const byHand = pasteByHand;
-  pasteByHand = false;
-  // Opened by a tap: bring the box into view and type into it.
-  if ($("paste").open && byHand && !MOUSE_ONLY) {
-    $("paste-text").scrollIntoView({ block: "center" });
-    $("paste-text").focus({ preventScroll: true });
-  }
+// arrive takes a pairing link opened here (a scan, a click). Before a gate
+// the link waits in memory: an iPhone scans the same code again from the
+// Home Screen, so it is never used (or used up) here.
+function arrive(link) {
+  const v = gateView();
+  if (!v) return pair(link, true);
+  S.heldLink = link;
+  welcome(v);
+}
+// "Use it here": the person chose this place after all.
+function passGate() {
+  S.gatePassed = true;
+  if (IN_APP) history.replaceState(null, "", location.pathname + location.search); // pairing here now: the link leaves the address
+  const l = S.heldLink;
+  S.heldLink = "";
+  if (l) pair(l, true); else welcome("start");
+}
+
+// ---------- welcome ----------
+function welcome(view) {
+  show("welcome");
+  $("welcome").dataset.view = view;
+  for (const v of ["start", "get", "home", "inapp", "vol"]) $("wv-" + v).hidden = v !== view;
+  if (view === "start" && COMPUTER) $("paste-text").focus({ preventScroll: true });
+}
+// The language switch: chosen here, kept on this device (the chat's menu
+// shows it too). The page reloads in it; a link still waiting comes back.
+document.querySelectorAll("[data-setlang]").forEach((b) => {
+  b.setAttribute("aria-pressed", String(b.dataset.setlang === lang));
+  b.addEventListener("click", () => {
+    if (b.dataset.setlang === lang) return;
+    localStorageSet("lang", b.dataset.setlang);
+    if (S.heldLink) history.replaceState(null, "", location.pathname + location.search + "#pair=" + S.heldLink);
+    S.reloading = true;
+    location.reload();
+  });
 });
-// No hub yet: how to set one up, without leaving the page. The phone
-// can't run the command, so the first choice sends it to the computer.
+quoted($("start-title"), t(COMPUTER ? "titleComputer" : "titlePhone"));
+quoted($("start-sub"), t(COMPUTER ? "subComputer" : "subPhone"));
+$("scan").hidden = $("paste-open").hidden = COMPUTER;
+$("paste").hidden = !COMPUTER;
+$("paste-kbd").hidden = !COMPUTER;
+$("paste-kbd").textContent = keyName("⌘V");
+$("paste-text").placeholder = t("pastePh");
+function openPaste() {
+  $("paste").hidden = false; $("paste-open").hidden = true;
+  $("paste-text").focus();
+}
+$("paste-open").addEventListener("click", openPaste);
+// Pasted here by the person: a link or the bare text goes straight to the
+// 6 digits, as a scan does (only replacing a pairing still asks). A whole
+// code pasted in starts at once; Connect is for typing.
+$("paste").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const v = $("paste-text").value.trim();
+  if (!v) return $("paste-text").focus();
+  pair(v, false);
+});
+$("paste-text").addEventListener("input", (e) => {
+  $("welcome-err").textContent = "";
+  if (e.inputType === "insertFromPaste" && /omnillm[123]-[A-Za-z0-9_-]{40,}/.test($("paste-text").value)) pair($("paste-text").value.trim(), false);
+});
+// No OmniLLM yet: how to set one up. A phone can't run the command, so
+// there sending it to the computer comes first.
 const INSTALL_CMD = "curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh";
 // The install section of the README in the page's language.
 const GUIDE_URL = lang === "zh" ? "https://github.com/wensuper/OmniLLM/blob/main/README.zh-CN.md#安装" : "https://github.com/wensuper/OmniLLM#installation";
 document.querySelector(".wl-guide").href = GUIDE_URL;
-$("no-hub").addEventListener("click", () => {
-  const open = $("get-hub").hidden;
-  $("get-hub").hidden = !open;
-  $("no-hub").setAttribute("aria-expanded", String(open));
-  // Instant: a smooth scroll is skipped by some browsers, and then the tap looks dead.
-  if (open) $("get-hub").scrollIntoView({ block: "nearest" });
-});
-// Where the phone can share, sending it to the computer is the way.
-$("get-share").hidden = !navigator.share;
-if (navigator.share) $("get-share").className = "primary";
+quoted($("get-body"), t(COMPUTER ? "getHubBodyHere" : "getHubBody"));
+$("no-hub").addEventListener("click", () => welcome("get"));
+$("get-back").addEventListener("click", () => welcome(gateView() || "start"));
+$("get-share").hidden = COMPUTER || !navigator.share;
 $("get-share").addEventListener("click", () => {
   navigator.share({ title: "OmniLLM", text: t("getHubSend") + "\n" + INSTALL_CMD, url: GUIDE_URL }).catch(() => {});
 });
@@ -510,41 +605,64 @@ $("get-copy").addEventListener("click", () => {
   if (!navigator.clipboard) return fail();
   navigator.clipboard.writeText(INSTALL_CMD).then(() => toastText(t("getHubCopied")), fail);
 });
-// welcomeNote: a calm notice at the top of the welcome screen (removed,
-// or remove it on the Mac too); the paste box folded so it reads first.
-// While it shows, the welcome body (how to add a device) steps aside.
-// The three steps stay (they are how to add it again); the notice sits
-// right under the top bar, and "No OmniLLM yet?" makes no sense then.
+// iPhone or iPad, not on the Home Screen yet: put it there first.
+quoted($("home-sub"), t("homeSub", IOS_BROWSER || "Safari"));
+quoted($("home-s1"), t("homeS1" + (IOS_BROWSER || "Safari")));
+quoted($("home-here"), t("homeHere", IOS_BROWSER || "Safari"));
+$("home-here").addEventListener("click", passGate);
+// No "Add to Home Screen" in the menu: most likely a page opened inside an
+// app (it looks like Safari), so the same way out as one.
+$("home-cant").addEventListener("click", () => { inappWords(""); welcome("inapp"); });
+// Inside another app: open it in the browser. On Android the link is still
+// in the address, so the browser carries on with it.
+function inappWords(app) {
+  const os = ANDROID ? "android" : "ios";
+  quoted($("inapp-sub"), t("inappSub", app ? t(app) : t("inappThisApp")));
+  quoted($("inapp-s2"), t("inappS2" + os));
+  quoted($("inapp-s3"), t("inappS3" + os));
+  $("inapp-s3-ic").className = "ic s20 " + (ANDROID ? "i-arrow" : "i-addsq");
+  quoted($("inapp-here"), app ? t("inappHere", t(app)) : t("inappHereAny"));
+}
+inappWords(IN_APP);
+$("inapp-here").addEventListener("click", passGate);
+// A browser that can't keep the pairing: say so before pairing, not after.
+$("vol-copy").addEventListener("click", () => copyText(location.origin + location.pathname, () => toastText(t("urlCopied"))));
+$("vol-here").addEventListener("click", passGate);
+// welcomeNote: a calm notice at the top of the welcome screen (this device
+// was removed, or remove it on the Mac too).
 function welcomeNote(key) {
   $("welcome-note").hidden = !key;
   quoted($("welcome-note"), key ? t(key) : "");
-  $("no-hub").hidden = !!key;
-  if (key) { $("get-hub").hidden = true; $("no-hub").setAttribute("aria-expanded", "false"); }
-  if (key && !MOUSE_ONLY) $("paste").open = false;
   if (key) { $("welcome").scrollTop = 0; window.scrollTo(0, 0); $("welcome-note").tabIndex = -1; $("welcome-note").focus({ preventScroll: true }); }
 }
 
 // ---------- pairing ----------
-// Add waits for something to add.
-const pasteReady = () => { $("paste-go").disabled = !$("paste-text").value.trim(); $("welcome-err").textContent = ""; }; // pair() explains anything that isn’t pairing text
-$("paste-text").addEventListener("input", pasteReady);
-pasteReady();
-$("paste-go").addEventListener("click", () => {
-  const v = $("paste-text").value.trim();
-  if (!v) return;
-  // Pasted here by the person: a link or the bare text goes straight to
-  // the 6 digits, as a scan does. Only replacing a pairing still asks.
-  pair(v, false);
-});
+// One screen for every step. Its state draws the line between this device
+// and the computer: ask, busy (connecting), sas (the digits), ok, bad.
+$("lv-me").firstElementChild.classList.add(COMPUTER ? "i-laptop" : TABLET ? "i-tablet" : "i-phone");
+$("lv-me-t").textContent = t(COMPUTER ? "thisComputer" : TABLET ? "thisTablet" : "thisPhone");
+function pairScreen(state, title, sub) {
+  show("pairing");
+  $("pairing").dataset.state = state;
+  quoted($("pair-title"), title);
+  quoted($("pair-status"), sub || "");
+  $("pair-status").hidden = !sub;
+  $("pair-ask").hidden = $("pair-again").hidden = $("pair-retry").hidden = $("pair-stop").hidden = true;
+  sasShown(false);
+  $("lv-hub-t").textContent = t(state === "ok" ? "yourMac" : "yourComputer");
+}
 // Back from pairing: the chat (opened now when this start went straight
 // to a pairing link), else the welcome.
 function leavePairing() {
   setTimeout(reloadIfIdle, 1500); // an update that waited for pairing
-  if (!S.device) return show("welcome");
+  if (!S.device) return welcome(gateView() || "start");
   if (S.cur) return show("chat");
   openChat();
 }
 $("pair-retry").addEventListener("click", leavePairing);
+// After a code that ran out: a phone scans the new one, a computer pastes it.
+$("pair-rescan").addEventListener("click", () => { welcome("start"); startScan(); });
+$("pair-repaste").addEventListener("click", () => { welcome("start"); openPaste(); $("paste-text").select(); });
 // Different numbers (someone else's pairing), or Cancel while connecting:
 // stop it and go back. A phone that already left its old pairing has none
 // to go back to.
@@ -552,11 +670,32 @@ function stopPairing() {
   S.pairStopped = true;
   try { omnillm.pairCancel(); } catch {}
   sasShown(false); $("pair-stop").hidden = true;
-  if (S.leftOld) show("welcome"); else leavePairing();
+  if (S.leftOld) welcome("start"); else leavePairing();
 }
 $("pair-mismatch").addEventListener("click", stopPairing);
 $("pair-stop").addEventListener("click", stopPairing);
 function sasShown(on) { S.sasUp = on; $("sas").hidden = $("pair-wait").hidden = $("pair-mismatch").hidden = !on; }
+function showSas(code) {
+  const box = $("sas");
+  box.textContent = "";
+  [...code].forEach((d, i) => { if (i === 3) box.append(el("i")); box.append(el("b", d)); });
+  box.setAttribute("aria-label", code.slice(0, 3) + " " + code.slice(3));
+  $("mock-sas").textContent = code.slice(0, 3) + " " + code.slice(3);
+}
+// The remote access a link leads through. OmniLLM's own is one grey line;
+// any other is said plainly, because a link can come from anyone.
+const DEFAULT_RELAY = "relay.ixxzh.com";
+function hostRow(text) {
+  const h = relayHost(text), own = h === DEFAULT_RELAY;
+  const row = $("pair-host"), tx = row.querySelector(".host-t");
+  row.classList.toggle("warn", !own);
+  row.querySelector(".host-ic .ic").className = "ic s20 " + (own ? "i-shield" : "i-warn");
+  row.querySelector(".host-tag").textContent = own ? t("viaDefault") : "";
+  tx.textContent = "";
+  if (own) { tx.append(el("small", t("via")), el("b", h)); return; }
+  const [a, b] = t("viaOther", "\u0000").split("\u0000");
+  tx.append(a, el("b", h), b);
+}
 
 // pair connects this device. A link opened in the browser (fromLink) could
 // have been sent by anyone, so the person first sees which remote access
@@ -565,28 +704,44 @@ function sasShown(on) { S.sasUp = on; $("sas").hidden = $("pair-wait").hidden = 
 async function pair(text, fromLink) {
   if (S.pairing) return;
   const m = text.match(/omnillm[123]-[A-Za-z0-9_-]+/);
-  if (!m) { $("welcome-err").textContent = t("notCode"); show("welcome"); return; }
+  if (!m) { welcome("start"); if (!COMPUTER) openPaste(); $("welcome-err").textContent = t("notCode"); return; }
   text = m[0];
+  if (IN_APP && location.hash) history.replaceState(null, "", location.pathname + location.search);
+  $("paste-text").value = "";
   S.pairing = true;
   welcomeNote("");
   try {
-    show("pairing");
-    $("pair-err").textContent = ""; $("pair-retry").hidden = true; sasShown(false); $("pair-status").textContent = "";
-    try { await omnillm.check(text); } catch (e) { quoted($("pair-err"), errText(e, text)); $("pair-retry").hidden = false; return; }
+    pairScreen("busy", t("pairConnecting"));
+    try { await omnillm.check(text); } catch (e) { pairFailed(e, text); return; }
     if (fromLink || S.device) {
-      $("pair-host").textContent = t("pairVia", relayHost(text));
+      pairScreen("ask", t(COMPUTER ? "askComputer" : TABLET ? "askTablet" : "askPhone"), t(COMPUTER || !fromLink ? "askLink" : "askScanned"));
+      hostRow(text);
       $("pair-replace").hidden = !S.device;
       if (S.device) $("pair-replace").textContent = t("pairReplace", S.device.name);
       $("pair-ask").hidden = false;
+      $("pair-go").focus({ preventScroll: true });
       const go = await new Promise((res) => {
         $("pair-go").onclick = () => res(true);
         $("pair-cancel").onclick = () => res(false);
       });
-      $("pair-ask").hidden = true;
       if (!go) { leavePairing(); return; }
     }
     await connectPair(text);
   } finally { S.pairing = false; setTimeout(reloadIfIdle, 1500); } // an update that waited for this
+}
+// pairFailed says what went wrong in the page's words: a code that ran out
+// gets the way to a new one; then a new scan (phones) or paste (computers).
+function pairFailed(e, text) {
+  const used = e && (e.code === "pairing_expired" || e.code === "pairing_failed");
+  const dropped = e && e.code === "hub_offline" && !relayIsPlain(text);
+  if (used) pairScreen("bad", t(COMPUTER ? "expLinkTitle" : "expScanTitle"), t(COMPUTER ? "expLinkSub" : "expScanSub"));
+  else pairScreen("bad", t("failTitle"), dropped ? t("pairDropped") : errText(e, text));
+  // Still paired with another computer: back to it.
+  if (S.device) { $("pair-retry").hidden = false; return; }
+  $("pair-again").hidden = false;
+  $("pair-rescan").hidden = COMPUTER;
+  quoted($("pair-repaste"), t(COMPUTER ? "pasteNew" : "pasteBtn"));
+  $("pair-repaste").className = COMPUTER ? "primary" : "secondary";
 }
 
 // relayURL reads the relay address out of a pairing text (both formats:
@@ -615,7 +770,7 @@ function relayHost(code) {
 // old pairing gone if the new one fails; otherwise (the old Mac away) it
 // stays in use.
 async function connectPair(text) {
-  $("pair-status").textContent = t("pairConnecting");
+  pairScreen("busy", t("pairConnecting"));
   $("pair-stop").hidden = false;
   S.pairStopped = false; S.leftOld = false;
   const old = S.device;
@@ -631,32 +786,27 @@ async function connectPair(text) {
     if (S.pairStopped) throw new Error("cancelled");
     const name = deviceName();
     const r = await omnillm.pair(text, name, (code) => {
-      $("pair-stop").hidden = true;
-      quoted($("pair-status"), t("pairCheck"));
-      $("sas").textContent = code.slice(0, 3) + " " + code.slice(3);
+      pairScreen("sas", t("sasTitle"), t("pairCheck"));
+      showSas(code);
       sasShown(true);
     });
     // The Mac names the device (another iPhone there: "iPhone (2)").
     S.device = { state: r.state, name: r.name || name, added: Date.now() };
     await seal("device", S.device);
-    $("pair-status").textContent = t("pairDone");
-    sasShown(false); $("pair-stop").hidden = true;
+    pairScreen("ok", t("connectedMac"), t("doneName", S.device.name));
     // A fresh, empty chat says once that the Mac is there.
     S.cur = newChat(); S.hello = S.cur.id;
-    setTimeout(openChat, 600);
+    setTimeout(openChat, 1200);
   } catch (e) {
-    const dropped = e && e.code === "hub_offline" && !relayIsPlain(text);
     sasShown(false); $("pair-stop").hidden = true;
-    $("pair-status").textContent = "";
     if (S.leftOld && S.device === old) {
       S.device = null; await idb.del("device").catch(() => {});
-      if (S.pairStopped) show("welcome"); // Cancel came while it was leaving
+      if (S.pairStopped) welcome("start"); // Cancel came while it was leaving
     }
     // The old pairing is still good: open it again (it was closed to leave).
     else if (old && closed && S.device === old) connect();
     if (S.pairStopped) return; // cancelled here; already back where it started
-    quoted($("pair-err"), dropped ? t("pairDropped") : errText(e, text));
-    $("pair-retry").hidden = false;
+    pairFailed(e, text);
   }
 }
 
@@ -676,17 +826,23 @@ function relayIsPlain(code) {
 let camStream = null, camTimer = null;
 $("scan").addEventListener("click", startScan);
 $("scan-stop").addEventListener("click", stopScan);
+$("scan-paste").addEventListener("click", () => { stopScan(); openPaste(); });
 let jsqrLoaded = null;
 function loadJsQR() {
   jsqrLoaded ??= new Promise((res, rej) => { const s = document.createElement("script"); s.src = "vendor/jsqr.js"; s.onload = res; s.onerror = rej; document.body.append(s); });
   return jsqrLoaded;
 }
 async function startScan() {
+  if (S.scanStarting || camStream) return;
+  S.scanStarting = true;
+  try { await openScan(); } finally { S.scanStarting = false; }
+}
+async function openScan() {
   $("welcome-err").textContent = "";
-  if (!(await loadJsQR().then(() => true, () => false))) { $("welcome-err").textContent = t("scanFailed"); $("paste").open = true; return; }
+  if (!(await loadJsQR().then(() => true, () => false))) { $("welcome-err").textContent = t("scanFailed"); openPaste(); return; }
   try {
     camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
-  } catch { $("welcome-err").textContent = t("camDenied"); $("paste").open = true; return; }
+  } catch { $("welcome-err").textContent = t("camDenied"); openPaste(); return; }
   show("scanner");
   const v = $("cam"); v.srcObject = camStream; await v.play().catch(() => {});
   const c = $("cam-canvas"), g = c.getContext("2d", { willReadFrequently: true });
@@ -706,9 +862,8 @@ function stopScan(keep) {
   clearInterval(camTimer); camTimer = null;
   if (camStream) camStream.getTracks().forEach((tr) => tr.stop());
   camStream = null;
-  if (keep !== true) show(S.device ? "chat" : "welcome");
+  if (keep !== true) { if (S.device) show("chat"); else welcome("start"); }
 }
-
 // ---------- chat ----------
 async function openChat() {
   if (S.volatile && !S.volatileSaid) { S.volatileSaid = true; setTimeout(() => { const n = el("p", t("volatile"), "note warn-note"); $("log").prepend(n); setTimeout(() => n.remove(), 15000); }, 500); }
@@ -1971,7 +2126,7 @@ async function unpaired(note) {
   if (askDone) askDone(false); // an open question is about a pairing that is gone
   S.device = null; S.chats = []; S.cur = null; S.models = []; S.listed = false; S.paused = null; S.hello = null;
   await idb.del("device"); await idb.del("chats"); await idb.del("models"); localStorageSet("hubos", "");
-  closeDrawer(); $("chat-search").value = ""; show("welcome");
+  closeDrawer(); $("chat-search").value = ""; welcome(gateView() || "start");
   $("welcome-err").textContent = "";
   welcomeNote(note);
 }

@@ -30,66 +30,100 @@
     <button id="boot-retry" type="button" class="primary" data-t="bootRetry" hidden></button>
   </section>
 
+  <!-- Before pairing. One action per device (docs/design.md §13.3, welcome page):
+       a computer pastes, a phone scans, an iPhone browser first goes to the
+       Home Screen, a page inside another app opens in the browser. -->
   <section id="welcome" class="screen welcome" hidden>
     <div class="wl">
       <div class="wl-top">
-        <!-- Brand: the name and the slogan (the brand's own words, never translated). -->
         <div class="wl-brand"><img src="icon.svg" alt="" width="28" height="28"><span>OmniLLM</span></div>
-        <span class="wl-chip"><span class="wl-chip-lock" aria-hidden="true"></span><span data-t="e2eChip"></span></span>
+        <div class="seg" role="group" data-ta="language"><button type="button" data-setlang="zh" lang="zh-CN">中文</button><button type="button" data-setlang="en" lang="en">EN</button></div>
       </div>
       <p id="welcome-note" class="warn welcome-note" role="status" hidden></p>
       <div class="wl-main">
         <div class="wl-copy">
-          <p class="wl-eyebrow">Your AI, Everywhere</p>
-          <h1 class="wl-title"><span data-t="welcomeTitle1"></span><span class="wl-grad" data-t="welcomeTitle2"></span></h1>
-          <ol id="welcome-body" class="wl-steps" role="list">
-            <li><span class="wl-n" aria-hidden="true">01</span><span data-t="step1"></span></li>
-            <li><span class="wl-n" aria-hidden="true">02</span><span data-t="step2"></span></li>
-            <li><span class="wl-n" aria-hidden="true">03</span><span data-t="step3"></span></li>
-          </ol>
-          <div class="wl-actions">
-            <button id="scan" class="primary wl-scan" data-t="scan"></button>
-            <details id="paste" class="paste">
-              <summary data-t="pasteInstead"></summary>
-              <textarea id="paste-text" rows="3" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>
-              <button id="paste-go" class="secondary" data-t="add"></button>
-            </details>
+
+          <div id="wv-start" class="wv">
+            <h1 id="start-title" class="wl-title"></h1>
+            <p id="start-sub" class="wl-sub"></p>
+            <button id="scan" type="button" class="vf">
+              <span class="vf-grid"></span>
+              <span class="vf-c vf-c1"></span><span class="vf-c vf-c2"></span><span class="vf-c vf-c3"></span><span class="vf-c vf-c4"></span>
+              <span class="vf-sweep"></span>
+              <span class="vf-mid"><span class="vf-cam"><span class="ic i-camera s28"></span></span><span data-t="tapScan"></span></span>
+            </button>
+            <button id="paste-open" type="button" class="secondary wl-wide"><span class="ic i-paste s18"></span><span data-t="pasteBtn"></span></button>
+            <form id="paste" class="pastebar" hidden>
+              <span class="ic i-link s20 pb-ic"></span>
+              <input id="paste-text" data-ta="pastePh" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="go">
+              <span id="paste-kbd" class="kbd" hidden></span>
+              <button id="paste-go" type="submit" class="primary" data-t="connect"></button>
+            </form>
             <p id="welcome-err" class="err" role="alert"></p>
-            <button id="no-hub" type="button" class="wl-link" data-t="noHub" aria-expanded="false" aria-controls="get-hub"></button>
-            <div id="get-hub" class="wl-get" hidden>
-              <p class="wl-get-title" data-t="getHubTitle"></p>
-              <p class="muted small" data-t="getHubBody"></p>
-              <code class="wl-cmd">curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh</code>
-              <p class="muted small" data-t="getHubHang"></p>
-              <div class="wl-get-actions">
-                <button id="get-share" type="button" class="secondary" data-t="getHubShare"></button>
-                <button id="get-copy" type="button" class="secondary" data-t="getHubCopy"></button>
-              </div>
-              <a class="wl-guide" href="https://github.com/wensuper/OmniLLM#installation" target="_blank" rel="noopener" data-t="getHubGuide"></a>
+          </div>
+
+          <div id="wv-get" class="wv" hidden>
+            <button id="get-back" type="button" class="link back"><span class="ic i-back s16"></span><span data-t="back"></span></button>
+            <h1 class="wl-title" data-t="getHubTitle"></h1>
+            <p id="get-body" class="wl-sub"></p>
+            <div class="cmd"><code class="wl-cmd">curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh</code><button id="get-copy" type="button" class="cmd-copy"><span class="ic i-copy s16"></span><span data-t="getHubCopy"></span></button></div>
+            <button id="get-share" type="button" class="primary wl-wide" hidden><span class="ic i-share s18"></span><span data-t="getHubShare"></span></button>
+            <a class="link wl-guide" href="https://github.com/wensuper/OmniLLM#installation" target="_blank" rel="noopener" data-t="getHubGuide"></a>
+          </div>
+
+          <div id="wv-home" class="wv" hidden>
+            <span class="appicon"><img src="icon.svg" alt="" width="48" height="48"><span class="appicon-plus"><span class="ic i-plus s14"></span></span></span>
+            <h1 class="wl-title" data-t="homeTitle"></h1>
+            <p id="home-sub" class="wl-sub"></p>
+            <ol class="steps">
+              <li><span class="step-ic"><span class="ic i-share s20"></span></span><span id="home-s1"></span></li>
+              <li><span class="step-ic"><span class="ic i-addsq s20"></span></span><span data-t="homeS2"></span></li>
+              <li><span class="step-ic"><span class="ic i-scan s20"></span></span><span data-t="homeS3"></span></li>
+            </ol>
+            <button id="home-cant" type="button" class="link" data-t="cantFind"></button>
+            <button id="home-here" type="button" class="link quiet wv-end"></button>
+          </div>
+
+          <div id="wv-inapp" class="wv" hidden>
+            <span class="tile"><span class="ic i-compass s30"></span></span>
+            <h1 class="wl-title" data-t="inappTitle"></h1>
+            <p id="inapp-sub" class="wl-sub"></p>
+            <ol class="steps">
+              <li><span class="step-ic"><span class="ic i-more s20"></span></span><span data-t="inappS1"></span></li>
+              <li><span class="step-ic"><span class="ic i-out s20"></span></span><span id="inapp-s2"></span></li>
+              <li><span class="step-ic"><span id="inapp-s3-ic" class="ic i-addsq s20"></span></span><span id="inapp-s3"></span></li>
+            </ol>
+            <button id="inapp-here" type="button" class="link quiet wv-end"></button>
+          </div>
+
+          <div id="wv-vol" class="wv" hidden>
+            <span class="tile warn-tile"><span class="ic i-warn s28"></span></span>
+            <h1 class="wl-title" data-t="volTitle"></h1>
+            <p class="wl-sub" data-t="volSub"></p>
+            <div class="wv-end wv-acts">
+              <button id="vol-copy" type="button" class="primary wl-wide"><span class="ic i-copy s18"></span><span data-t="copyUrl"></span></button>
+              <button id="vol-here" type="button" class="link quiet" data-t="onceHere"></button>
+            </div>
+          </div>
+
+        </div>
+        <!-- Computers: where "Add device → Copy link" is on the other computer (the console's own words). -->
+        <div class="wl-art" aria-hidden="true">
+          <div class="mock">
+            <div class="mock-bar"><i></i><i></i><i></i><span>OmniLLM</span></div>
+            <div class="mock-body">
+              <p class="mock-h" data-t="addDevice"></p>
+              <div class="mock-tog"><span data-t="kindPhone"></span><span class="on" data-t="kindComputer"></span></div>
+              <div class="mock-field">https://omni.ixxzh.com/#pair=omnillm3-9fQ2…</div>
+              <div class="mock-btn"><span data-t="copyLink"></span><span class="mock-cursor"></span></div>
+              <p class="mock-note" data-t="linkKey"></p>
             </div>
           </div>
         </div>
-        <!-- Picture only: the Mac in the middle, this device and others around it, an encrypted line between. -->
-        <svg class="wl-orbit" viewBox="0 0 320 320" aria-hidden="true">
-          <defs>
-            <linearGradient id="wl-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" class="wl-s1"/><stop offset="1" class="wl-s2"/></linearGradient>
-            <radialGradient id="wl-core"><stop offset="0" class="wl-c1"/><stop offset="1" class="wl-c2"/></radialGradient>
-          </defs>
-          <circle cx="160" cy="160" r="150" class="wl-ring wl-ring-3"/>
-          <circle cx="160" cy="160" r="118" class="wl-ring wl-ring-2"/>
-          <circle cx="160" cy="160" r="82" class="wl-ring wl-ring-1"/>
-          <circle cx="160" cy="160" r="72" fill="url(#wl-core)"/>
-          <g class="wl-spin">
-            <path d="M160 160L160 42" class="wl-beam"/>
-            <path d="M160 160L262 219" class="wl-beam wl-beam-2"/>
-            <path d="M160 160L58 219" class="wl-beam wl-beam-3"/>
-            <g class="wl-node wl-node-me" transform="translate(160 42)"><circle r="17"/><rect x="-5" y="-8" width="10" height="16" rx="2"/></g>
-            <g class="wl-node" transform="translate(262 219)"><circle r="14"/><rect x="-7" y="-5" width="14" height="10" rx="1.5"/></g>
-            <g class="wl-node" transform="translate(58 219)"><circle r="14"/><rect x="-6" y="-7" width="12" height="14" rx="1.5"/></g>
-          </g>
-          <image href="icon.svg" x="128" y="128" width="64" height="64"/>
-          <g class="wl-lock" transform="translate(206 128)"><rect x="-13" y="-13" width="26" height="26" rx="8"/><path d="M-4.5 -1v-3a4.5 4.5 0 0 1 9 0v3M-6 -1h12v8h-12z"/></g>
-        </svg>
+      </div>
+      <div class="wl-foot">
+        <button id="no-hub" type="button" class="link" data-t="noHub"></button>
+        <span class="e2e"><span class="ic i-lock s14"></span><span data-t="e2e"></span></span>
       </div>
     </div>
   </section>
@@ -97,28 +131,57 @@
   <section id="scanner" class="screen" hidden>
     <video id="cam" playsinline muted></video>
     <canvas id="cam-canvas" hidden></canvas>
+    <div class="cam-frame" aria-hidden="true"><span class="vf-c vf-c1"></span><span class="vf-c vf-c2"></span><span class="vf-c vf-c3"></span><span class="vf-c vf-c4"></span><span class="vf-sweep"></span></div>
     <p class="scan-hint" data-t="scanHint"></p>
-    <button id="scan-stop" class="secondary floating" data-t="cancel"></button>
+    <button id="scan-stop" type="button" class="cam-x glass" data-ta="cancel"><span class="ic i-x s20"></span></button>
+    <button id="scan-paste" type="button" class="secondary glass cam-paste"><span class="ic i-paste s18"></span><span data-t="pasteBtn"></span></button>
   </section>
 
-  <section id="pairing" class="screen center" hidden>
-    <h1 data-t="pairTitle"></h1>
-    <div id="pair-ask" hidden>
-      <p class="muted" data-t="pairAsk"></p>
-      <p id="pair-host" class="muted small via"></p>
-      <p id="pair-replace" class="warn" hidden></p>
-      <button id="pair-go" class="primary" data-t="add"></button>
-      <button id="pair-cancel" class="secondary" data-t="cancel"></button>
+  <section id="pairing" class="screen welcome" hidden>
+    <div class="wl">
+      <div class="wl-top">
+        <div class="wl-brand"><img src="icon.svg" alt="" width="28" height="28"><span>OmniLLM</span></div>
+      </div>
+      <div class="wl-main pr-main">
+        <div class="wl-copy pr-copy">
+          <h1 id="pair-title" class="wl-title"></h1>
+          <p id="pair-status" class="wl-sub" role="status"></p>
+          <div id="pair-ask" hidden>
+            <div id="pair-host" class="host"><span class="host-ic"><span class="ic s20"></span></span><span class="host-t"></span><span class="host-tag"></span></div>
+            <p id="pair-replace" class="warn" hidden></p>
+            <div class="pr-btns"><button id="pair-go" type="button" class="primary" data-t="add"></button><button id="pair-cancel" type="button" class="secondary" data-t="cancel"></button></div>
+          </div>
+          <div id="sas" class="sas" hidden></div>
+          <div id="pair-wait" class="pair-wait" hidden><span class="spinner sm" aria-hidden="true"></span><span data-t="pairWait"></span></div>
+          <button id="pair-mismatch" type="button" class="link quiet" data-t="pairMismatch" hidden></button>
+          <button id="pair-stop" type="button" class="link quiet" data-t="cancel" hidden></button>
+          <div id="pair-again" class="pr-btns" hidden>
+            <button id="pair-rescan" type="button" class="primary"><span class="ic i-camera s18"></span><span data-t="scanNew"></span></button>
+            <button id="pair-repaste" type="button" class="secondary"></button>
+          </div>
+          <button id="pair-retry" type="button" class="link quiet" data-t="back" hidden></button>
+        </div>
+        <!-- This device and your computer, joined by a line that says how far it got. -->
+        <div class="wl-art pr-art" aria-hidden="true">
+          <div class="lv">
+            <span class="lv-node"><span id="lv-me" class="lv-dev me"><span class="ic s30"></span></span><span id="lv-me-t"></span></span>
+            <span id="lv-line" class="lv-line"><span class="lv-track"></span><span class="lv-mid"><span class="ic s16"></span></span></span>
+            <span class="lv-node"><span class="lv-dev"><span class="ic i-monitor s30"></span></span><span id="lv-hub-t"></span></span>
+          </div>
+          <!-- Computers, while the digits show: the same digits on the other computer, and where to confirm. -->
+          <div class="mock">
+            <div class="mock-bar"><i></i><i></i><i></i><span>OmniLLM</span></div>
+            <div class="mock-body">
+              <p class="mock-h" data-t="addDevice"></p>
+              <p class="mock-note mock-note-top" data-t="consoleSas"></p>
+              <div id="mock-sas" class="mock-sas"></div>
+              <div class="mock-btn"><span data-t="matchAdd"></span><span class="mock-cursor"></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-    <p id="pair-status" class="muted" role="status"></p>
-    <button id="pair-stop" type="button" class="link small" data-t="cancel" hidden></button>
-    <div id="sas" class="sas" hidden></div>
-    <div id="pair-wait" class="pair-wait muted small" hidden><span class="spinner sm" aria-hidden="true"></span><span data-t="pairWait"></span></div>
-    <button id="pair-mismatch" type="button" class="link small" data-t="pairMismatch" hidden></button>
-    <p id="pair-err" class="err" role="alert"></p>
-    <button id="pair-retry" class="secondary" data-t="back" hidden></button>
   </section>
-
   <section id="chat" class="screen chat" hidden>
     <!-- The chat list: a sidebar on wide screens, a drawer on phones. -->
     <aside id="drawer" class="drawer" hidden>
