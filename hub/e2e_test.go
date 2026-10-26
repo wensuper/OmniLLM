@@ -276,7 +276,8 @@ func TestEndToEndAndTheRelaySeesNothing(t *testing.T) {
 	d, devSecrets := e.pairOK()
 	ctx := context.Background()
 	ms, err := d.Models(ctx)
-	if err != nil || len(ms) != 2 {
+	// Two models, and Auto first to choose between them.
+	if err != nil || len(ms) != 3 || ms[0].ID != "auto" {
 		t.Fatalf("models %v %v", ms, err)
 	}
 	for _, m := range ms {

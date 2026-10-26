@@ -52,6 +52,9 @@ func (h *Hub) complete(ctx context.Context, p principal, req omnillm.Request) (o
 	if p.paused != "" {
 		return nil, &omnillm.Error{Code: omnillm.CodeDevicePaused, Msg: p.paused}
 	}
+	if req.Model == AutoModel {
+		return h.completeAuto(ctx, p, req)
+	}
 	if p.forceBackground {
 		req.Caller = omnillm.Background
 	}

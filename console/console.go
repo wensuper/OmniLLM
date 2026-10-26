@@ -691,6 +691,8 @@ func (s *Server) setModel(w http.ResponseWriter, r *http.Request) {
 		// source's); Shown: offered to devices.
 		Name  *string `json:"name"`
 		Shown *bool   `json:"shown"`
+		// Auto: Auto may choose it.
+		Auto *bool `json:"auto"`
 	}
 	if !decode(w, r, &in) {
 		return
@@ -703,6 +705,12 @@ func (s *Server) setModel(w http.ResponseWriter, r *http.Request) {
 	}
 	if in.Name != nil || in.Shown != nil {
 		if err := s.hub.SetModelPref(r.Context(), in.ID, in.Name, in.Shown); err != nil {
+			writeErr(w, r, 0, err)
+			return
+		}
+	}
+	if in.Auto != nil {
+		if err := s.hub.SetModelAuto(r.Context(), in.ID, *in.Auto); err != nil {
 			writeErr(w, r, 0, err)
 			return
 		}

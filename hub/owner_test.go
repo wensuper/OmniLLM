@@ -274,7 +274,7 @@ func TestRestrictDeviceAndAppModels(t *testing.T) {
 	if _, err := e.hub.UpdateDevice(ctx, id, nil, nil, nil, ptr([]string{})); err != nil {
 		t.Fatal(err)
 	}
-	if ms, _ := d.Models(ctx); len(ms) != 2 {
+	if ms, _ := d.Models(ctx); len(ms) != 3 { // and Auto
 		t.Fatalf("an empty list is all models: %v", ms)
 	}
 	a, _, err := e.hub.AddApp(ctx, "script", nil, 0)

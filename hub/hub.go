@@ -105,6 +105,7 @@ type Hub struct {
 	subLast    []SubscriptionState
 	subStale   atomic.Bool // a source was added or removed since subLast
 	codexOwnAt time.Time   // when CodexLoggedInOwn last ran (subMu)
+	auto       autoState   // Auto's memory (auto.go)
 	codexOwn   bool
 	region     regionState
 

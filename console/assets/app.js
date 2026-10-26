@@ -60,7 +60,7 @@ const T = {
     coApp: "应用", coDevice: "只给程序用的设备", coOnly: "它只有这一个能用的模型，会完全停下来",
     coYes: "仍然打开", coHow: "以后要让它们再用上，把这个开关关掉就行。",
     name: "名字", lastSeen: "最近在线", budget: "每天额度", todayBudget: "今天 / 每天额度", where: "对话发往", humanOnly: "只能手动对话",
-    showOnDevices: "在设备上显示", subAlways: "订阅模型始终只能手动对话", editModel: "编辑模型 · {0}",
+    showOnDevices: "在设备上显示", inAuto: "Auto 可选", inAutoTip: "Auto 按问题自动选模型时，可以选它", subAlways: "订阅模型始终只能手动对话", editModel: "编辑模型 · {0}",
     enabled: "开启", pausedChip: "已暂停", pausedToast: "已暂停“{0}”", sourceOffToast: "已关闭“{0}”", sourceOnToast: "已打开“{0}”", resumedToast: "已开启“{0}”",
     online: "在线", todayAt: "今天 {0}", yesterdayAt: "昨天 {0}",
     hcAdded: "添加于", hcSeen: "最近在线", hcToday: "今天用量", hcModels: "能用的模型", hcOffline: "离线", hcKind: "类型",
@@ -184,7 +184,7 @@ const T = {
     coApp: "App", coDevice: "Programs-only device", coOnly: "its only usable model: it stops working entirely",
     coYes: "Turn on anyway", coHow: "To let them use it again later, turn this switch off.",
     name: "Name", lastSeen: "Last seen", budget: "Daily limit", todayBudget: "Today / daily limit", where: "Messages go to", humanOnly: "Chat only",
-    showOnDevices: "Show on devices", subAlways: "Subscription models are always chat-only", editModel: "Edit model · {0}",
+    showOnDevices: "Show on devices", inAuto: "In Auto", inAutoTip: "Auto may choose it when it picks a model for each message", subAlways: "Subscription models are always chat-only", editModel: "Edit model · {0}",
     enabled: "On", pausedChip: "Paused", pausedToast: "Paused “{0}”", sourceOffToast: "Turned off “{0}”", sourceOnToast: "Turned on “{0}”", resumedToast: "Turned on “{0}”",
     online: "Online", todayAt: "Today {0}", yesterdayAt: "Yesterday {0}",
     hcAdded: "Added", hcSeen: "Last seen", hcToday: "Today", hcModels: "Models", hcOffline: "Offline", hcKind: "Kind",
@@ -1752,14 +1752,17 @@ function modelDialog(m) {
   const [sl, shown] = sw(!m.hidden, t("showOnDevices"));
   const [hl, human] = sw(!!m.human_only || isSub(m), t("humanOnly"));
   human.disabled = isSub(m);
+  const [al, inAuto] = sw(!m.no_auto, t("inAuto"));
+  al.title = t("inAutoTip");
   const opts = section(d.body);
-  opts.append(sl, hl);
+  opts.append(sl, al, hl);
   if (isSub(m)) opts.append(el("p", t("subAlways"), "muted small"));
   // Only what changed is sent; an unchanged name is not a rename.
   const diff = () => {
     const b = {};
     if (name.value.trim() !== cur) b.name = name.value.trim();
     if (shown.checked === !!m.hidden) b.shown = shown.checked;
+    if (inAuto.checked === !!m.no_auto) b.auto = inAuto.checked;
     if (!isSub(m) && human.checked !== !!m.human_only) b.human_only = human.checked;
     return b;
   };
@@ -1903,6 +1906,10 @@ function renderModels() {
     switchCell(tr, !m.hidden, t("showOnDevices") + " " + name, async (box) => {
       try { await api("models/set", { id: m.id, shown: box.checked }); toast(t("saved")); m.hidden = !box.checked; } catch (e) { box.checked = !box.checked; toast(e.message, true); }
     });
+    switchCell(tr, !m.no_auto, t("inAuto") + " " + name, async (box) => {
+      try { await api("models/set", { id: m.id, auto: box.checked }); toast(t("saved")); m.no_auto = !box.checked; } catch (e) { box.checked = !box.checked; toast(e.message, true); }
+    });
+    tr.lastChild.title = t("inAutoTip");
     // Edit, at every width: the name and both switches in a dialog (a
     // phone-width window keeps only the name and this).
     const ed = el("button", t("edit"), "secondary small-btn"); ed.type = "button";

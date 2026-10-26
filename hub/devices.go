@@ -719,7 +719,12 @@ func (h *Hub) modelsFor(ctx context.Context, d Device) ([]omnillm.ModelInfo, err
 		return nil, err
 	}
 	h.freshLogins()
-	return h.forDevices(ctx, ms), nil
+	ms = h.forDevices(ctx, ms)
+	if len(ms) >= 2 {
+		// Something to choose between: Auto first.
+		ms = append([]omnillm.ModelInfo{autoInfo()}, ms...)
+	}
+	return ms, nil
 }
 
 // ---------- the owner's choices per model ----------
@@ -731,6 +736,7 @@ func (h *Hub) modelsFor(ctx context.Context, d Device) ([]omnillm.ModelInfo, err
 type modelPref struct {
 	Name   string `json:"name,omitempty"`
 	Hidden bool   `json:"hidden,omitempty"`
+	NoAuto bool   `json:"no_auto,omitempty"` // Auto never chooses it
 }
 
 func (h *Hub) modelPrefs(ctx context.Context) map[string]modelPref {
@@ -777,6 +783,8 @@ func (h *Hub) SetModelPref(ctx context.Context, id string, name *string, shown *
 type ModelView struct {
 	omnillm.ModelInfo
 	Hidden bool `json:"hidden,omitempty"`
+	// NoAuto: kept out of Auto's choices.
+	NoAuto bool `json:"no_auto,omitempty"`
 	// SourceOff: its model source is switched off, so no one gets it now.
 	SourceOff bool `json:"source_off,omitempty"`
 }
@@ -795,7 +803,7 @@ func (h *Hub) OwnerModels(ctx context.Context) ([]ModelView, error) {
 		if mp.Name != "" {
 			m.DisplayName, m.Renamed = mp.Name, true
 		}
-		out = append(out, ModelView{ModelInfo: m, Hidden: mp.Hidden, SourceOff: off[m.Provider]})
+		out = append(out, ModelView{ModelInfo: m, Hidden: mp.Hidden, NoAuto: mp.NoAuto, SourceOff: off[m.Provider]})
 	}
 	return out, nil
 }

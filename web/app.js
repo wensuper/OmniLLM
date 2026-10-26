@@ -36,7 +36,7 @@ const T = {
     addImage: "添加图片", voice: "语音输入", voiceStop: "停止语音输入", listening: "正在听，说完再点一下……", voiceFirst: "语音由浏览器识别：Chrome 交给 Google，Safari 交给 Apple。识别出的文字只填进输入框，你确认后再发。", voiceDenied: "没有麦克风权限。在浏览器的网站设置里允许麦克风，再点一次。", voiceNoMic: "没找到麦克风。", voiceNoSpeech: "没听到声音，再说一次试试。", voiceNetwork: "语音识别要联网，现在连不上。", voiceFailed: "语音输入没能开始，再试一次。", removeImage: "移除图片", tooManyImages: "每条消息最多 4 张图片。", imageFailed: "这张图片打不开，换一张试试。", imageTooBig: "图片太大，换一张小一点的。", imageTitle: "图片",
     offline: "你的 Mac 现在连不上，可能在睡眠、关机或断网。恢复后会自动连上。", retry: "重试",
     noNetwork: "这台设备没有联网，联网后会自动连上。", kept: "刚才输入的还在。", loadingModels: "正在连接你的 Mac……",
-    noModels: "这台设备现在没有能用的模型。在 Mac 的控制台里接入模型，或在“设备”里给它开放模型。", noModelsOpt: "没有可用的模型", probLogin: "要在 Mac 上登录", probLimit: "到上限，{0} 恢复", probLoginNote: "你的 Mac 上 {0}的登录已失效，现在发不出去。在 Mac 的终端里运行 omnillm login {1}，或在控制台里点“登录”，然后再试。", langPending: "先发出或移除已添加的图片，再切换语言。", langVolatile: "这个浏览器保存不了配对，换语言要重新载入，就得重新添加这台设备。换用 Safari 或 Chrome 再切换。", scanFailed: "扫码工具没能载入。用下面的“粘贴配对文字”，或刷新后再试。", addHomeTipAndroid: "点浏览器右上角的 ⋮，选“添加到主屏幕”或“安装应用”。", probLimitNote: "{0}的用量到上限了，{1} 恢复。可以先换一个模型。", probLimitNoTime: "到上限了", probLimitNoteNoTime: "{0}的用量到上限了。可以先换一个模型。", subClaude: "Claude 订阅", subChatGPT: "ChatGPT 订阅", subGemini: "Gemini 订阅",
+    noModels: "这台设备现在没有能用的模型。在 Mac 的控制台里接入模型，或在“设备”里给它开放模型。", noModelsOpt: "没有可用的模型", probLogin: "要在 Mac 上登录", probLimit: "到上限，{0} 恢复", probLoginNote: "你的 Mac 上 {0}的登录已失效，现在发不出去。在 Mac 的终端里运行 omnillm login {1}，或在控制台里点“登录”，然后再试。", langPending: "先发出或移除已添加的图片，再切换语言。", langVolatile: "这个浏览器保存不了配对，换语言要重新载入，就得重新添加这台设备。换用 Safari 或 Chrome 再切换。", scanFailed: "扫码工具没能载入。用下面的“粘贴配对文字”，或刷新后再试。", addHomeTipAndroid: "点浏览器右上角的 ⋮，选“添加到主屏幕”或“安装应用”。", probLimitNote: "{0}的用量到上限了，{1} 恢复。可以先换一个模型。", probLimitNoTime: "到上限了", probLimitNoteNoTime: "{0}的用量到上限了。可以先换一个模型。", autoName: "Auto（自动选模型）", subClaude: "Claude 订阅", subChatGPT: "ChatGPT 订阅", subGemini: "Gemini 订阅",
     modelGone: "原来的模型已从你的 Mac 上移除，换成了 {0}",
     grpSub: "订阅（不另花钱）", grpKey: "API Key", grpLocal: "你的 Mac 上", latest: "（最新版）", codex: "ChatGPT（Codex · 最新版）", codexV: "ChatGPT（Codex · {0}）",
     forget: "移除这台设备", forgetQ: "这里的对话会删除。以后要用，在 Mac 上重新添加。", removing: "正在移除……",
@@ -81,7 +81,7 @@ const T = {
     addImage: "Add image", voice: "Voice input", voiceStop: "Stop voice input", listening: "Listening… tap again when you’re done", voiceFirst: "Your browser turns speech into text: Chrome uses Google, Safari uses Apple. The words only fill the box; you send them.", voiceDenied: "No microphone permission. Allow the microphone in the browser’s site settings, then try again.", voiceNoMic: "No microphone found.", voiceNoSpeech: "Didn’t hear anything. Try again.", voiceNetwork: "Voice input needs the internet, which isn’t reachable right now.", voiceFailed: "Voice input couldn’t start. Try again.", removeImage: "Remove image", tooManyImages: "Up to 4 images per message.", imageFailed: "This image can’t be opened; try another one.", imageTooBig: "Image too large; try a smaller one.", imageTitle: "Image",
     offline: "Your Mac can’t be reached right now. It may be asleep, off or offline, and will reconnect when it’s back.", retry: "Retry",
     noNetwork: "This device is offline; it reconnects when the network is back.", kept: "What you typed is kept.", loadingModels: "Connecting to your Mac…",
-    noModels: "No models are available to this device. On your Mac, connect a model or allow this device more models under Devices.", noModelsOpt: "No models", probLogin: "Sign in on your Mac", probLimit: "At its limit until {0}", probLoginNote: "{0}’s sign-in has expired on your Mac, so messages to it won’t go through. In a terminal on your Mac, run omnillm login {1}, or choose “Sign in” in the console, then try again.", langPending: "Send or remove the added images first, then switch language.", langVolatile: "This browser can’t keep the pairing, and switching language reloads the page, so the device would have to be added again. Switch in Safari or Chrome instead.", scanFailed: "The scanner couldn’t load. Use “Paste the pairing text” below, or reload and try again.", addHomeTipAndroid: "Tap the browser’s ⋮ menu and choose “Add to Home screen” or “Install app”.", probLimitNote: "{0} has reached its usage limit until {1}. Pick another model for now.", probLimitNoTime: "At its limit", probLimitNoteNoTime: "{0} has reached its usage limit. Pick another model for now.", subClaude: "Your Claude subscription", subChatGPT: "Your ChatGPT subscription", subGemini: "Your Google AI subscription",
+    noModels: "No models are available to this device. On your Mac, connect a model or allow this device more models under Devices.", noModelsOpt: "No models", probLogin: "Sign in on your Mac", probLimit: "At its limit until {0}", probLoginNote: "{0}’s sign-in has expired on your Mac, so messages to it won’t go through. In a terminal on your Mac, run omnillm login {1}, or choose “Sign in” in the console, then try again.", langPending: "Send or remove the added images first, then switch language.", langVolatile: "This browser can’t keep the pairing, and switching language reloads the page, so the device would have to be added again. Switch in Safari or Chrome instead.", scanFailed: "The scanner couldn’t load. Use “Paste the pairing text” below, or reload and try again.", addHomeTipAndroid: "Tap the browser’s ⋮ menu and choose “Add to Home screen” or “Install app”.", probLimitNote: "{0} has reached its usage limit until {1}. Pick another model for now.", probLimitNoTime: "At its limit", probLimitNoteNoTime: "{0} has reached its usage limit. Pick another model for now.", autoName: "Auto (picks the model)", subClaude: "Your Claude subscription", subChatGPT: "Your ChatGPT subscription", subGemini: "Your Google AI subscription",
     modelGone: "The previous model was removed from your Mac; switched to {0}",
     grpSub: "Subscriptions (no extra cost)", grpKey: "API key", grpLocal: "On your Mac", latest: " (latest)", codex: "ChatGPT (Codex · latest)", codexV: "ChatGPT (Codex · {0})",
     forget: "Remove this device", forgetQ: "Chats here will be deleted. To use this device later, add it on your Mac again.", removing: "Removing…",
@@ -782,7 +782,8 @@ function isSub(m) { const k = m.kind || m.provider; return k === "claude-code" |
 // remote (the data leaves the phone), so this goes by the provider: local
 // models come through Ollama.
 function isLocal(m) { return !!m.onHost; } // runs on the Mac itself (the hub says so)
-function group(m) { return isSub(m) ? 0 : isLocal(m) ? 2 : 1; }
+// Auto (the Mac picks the model for each message) comes first, on its own.
+function group(m) { return m.kind === "auto" ? -1 : isSub(m) ? 0 : isLocal(m) ? 2 : 1; }
 function modelName(id) { const m = S.models.find((x) => x.id === id); return m ? m.name : id; }
 // What keeps a model from working right now, as the Mac last said: signed
 // out of its program, or at its subscription's limit (until when). Shown
@@ -808,6 +809,7 @@ const chosenProblem = () => problemOf(S.models.find((m) => m.id === $("model").v
 // known yet) and the kind (Codex). A name the owner chose stays as it is.
 function label(m) {
   if (m.renamed) return m.name;
+  if (m.kind === "auto") return t("autoName");
   if (m.kind === "codex") return m.version ? t("codexV", m.version) : t("codex");
   return m.latest ? m.name + t("latest") : m.name;
 }
@@ -851,9 +853,9 @@ async function loadModels() {
 // fillPicker lists the models, grouped (subscriptions, keys, the Mac's own).
 function fillPicker(ms) {
   const sel = $("model"); sel.textContent = "";
-  let og = null, g = -1;
+  let og = null, g = null;
   for (const m of ms) {
-    if (group(m) !== g) { g = group(m); og = el("optgroup"); og.label = t(["grpSub", "grpKey", "grpLocal"][g]); sel.append(og); }
+    if (group(m) !== g) { g = group(m); og = el("optgroup"); og.label = g < 0 ? "" : t(["grpSub", "grpKey", "grpLocal"][g]); sel.append(og); }
     const o = el("option", m.name); o.value = m.id; og.append(o);
   }
 }
@@ -866,7 +868,7 @@ async function keptModels() {
   if (!k || k.added !== S.device.added || !Array.isArray(k.ms) || !k.ms.length || S.models.length) return;
   S.models = k.ms;
   fillPicker(k.ms);
-  const want = [S.cur && S.cur.model, localStorageGet("model"), "claude-code/sonnet"].find((id) => id && k.ms.some((m) => m.id === id));
+  const want = [S.cur && S.cur.model, "auto", localStorageGet("model"), "claude-code/sonnet"].find((id) => id && k.ms.some((m) => m.id === id));
   $("model").value = want || k.ms[0].id;
   paintPick();
 }
@@ -891,14 +893,14 @@ function syncName() {
   seal("device", S.device).catch(() => {});
   $("device-line").textContent = t("deviceLine", n);
 }
-// pickModel selects the current chat's model, else the last one used, else
-// the Claude subscription's Sonnet, else the first. A chat whose model is
+// pickModel selects the current chat's model, else Auto, else the last one
+// used, else the Claude subscription's Sonnet, else the first. A chat whose model is
 // gone from the Mac moves to the selected one and says so (true).
 function pickModel() {
   const ms = S.models, sel = $("model");
   if (!ms.length) return false;
   const want = S.cur && S.cur.model;
-  sel.value = [want, localStorageGet("model"), "claude-code/sonnet"].find((id) => id && ms.some((m) => m.id === id)) || ms[0].id;
+  sel.value = [want, "auto", localStorageGet("model"), "claude-code/sonnet"].find((id) => id && ms.some((m) => m.id === id)) || ms[0].id;
   paintPick();
   if (!want || want === sel.value) return false;
   if (S.cur.messages.length) S.cur.gone = t("modelGone", modelName(sel.value));
@@ -971,7 +973,9 @@ setInterval(() => {
 }, 10000);
 
 function newChat() {
-  const c = { id: crypto.randomUUID(), title: "", model: $("model").value || localStorageGet("model") || "", messages: [], updated: Date.now() };
+  // A new chat starts on Auto when the Mac offers it.
+  const auto = S.models.some((m) => m.id === "auto") ? "auto" : "";
+  const c = { id: crypto.randomUUID(), title: "", model: auto || $("model").value || localStorageGet("model") || "", messages: [], updated: Date.now() };
   return c;
 }
 function startNew() {
@@ -1010,7 +1014,8 @@ function renderLog(keep) {
     if (m.prev) { log.append(earlier(m)); return; }
     let who = false;
     if (m.role === "assistant" && m.by) {
-      const key = m.model || m.by;
+      // Under Auto the model may change from one reply to the next: say so.
+      const key = m.model === "auto" ? m.by : m.model || m.by;
       if (last && key !== last) {
         const line = switchLine(t("switchedTo", m.by));
         if (userEl && !(msgs[i - 1] && msgs[i - 1].prev)) userEl.before(line); else log.append(line);
@@ -1600,7 +1605,8 @@ async function run(chat, model, fresh, old) {
   let quiet = false;
   try {
     const r = await omnillm.chat(id, model, JSON.stringify(msgs), (d, exact) => {
-      if (exact) { reply.by = exact; S.versionSeen = true; } // "Claude Opus 5.5", as the hub reports it
+      // "Claude Opus 5.5", as the hub reports it; under Auto, the one it chose.
+      if (exact) { reply.by = model === "auto" ? "Auto · " + exact : exact; S.versionSeen = true; }
       reply.content += d || ""; if (!raf) raf = requestAnimationFrame(flush);
     });
     if (r.finish === "length") reply.note = t("cut");
@@ -1790,7 +1796,7 @@ function pickMenu(open) {
   let n = 0;
   for (const g of sel.querySelectorAll("optgroup")) {
     if (n) m.append(el("hr"));
-    m.append(el("div", g.label, "mh"));
+    if (g.label) m.append(el("div", g.label, "mh"));
     for (const o of g.querySelectorAll("option")) {
       const it = el("div", undefined, "mi"); it.id = "mi-" + n++; it.dataset.v = o.value;
       it.setAttribute("role", "option"); it.setAttribute("aria-selected", String(o.value === sel.value));

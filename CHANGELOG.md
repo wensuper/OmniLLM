@@ -4,6 +4,12 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.61](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.61) - 2026-10-26
+
+### Added
+
+- *Auto (picks the model)*, at the top of the model list, and new chats start on it. Your Mac picks the model for each message by rules, with no extra call and no extra wait: a fast model for short small talk, the Sonnet / GPT-6-Sol tier for most questions, the strongest for code, error logs and harder requests, and only image-reading models for a message with an image. Subscriptions come before API keys, and when several can answer, the one used least lately goes first. A chat stays with its model (so the subscription's session goes on) and moves up only when it gets harder; each reply says which model wrote it ("Auto · Claude Sonnet 5.5"), and a move is shown as a line. Signed-out, at-limit or switched-off models are never chosen, and a model that fails before it starts answering is passed over for the next one. *In Auto* under Models in the console keeps a model out of it. Picking a model yourself works as before.
+
 ## [0.2.0-alpha.60](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.60) - 2026-10-26
 
 ### Fixed
