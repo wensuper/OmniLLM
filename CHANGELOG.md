@@ -4,6 +4,16 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.64](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.64) - 2026-10-26
+
+### Changed
+
+- Phone page: a new welcome and pairing page, with a language switch, dark mode and one action per device (a computer pastes the link, which starts pairing; a phone taps to scan). iPhone and iPad go to the Home Screen first, and the Home Screen app pairs with the same code once; pages inside WeChat and other apps open in the browser first; a browser that can't keep the pairing says so before pairing, not after; one line shows the pairing (connecting, the six digits, connected, failed); a relay other than relay.ixxzh.com is shown as a warning.
+
+### Fixed
+
+- Phone page: each gate before pairing is passed on its own and stays passed across a language switch, so a private tab on iPhone still hears it can't keep the pairing, and a page in another app isn't told twice. A pairing link arriving while the saved pairing loads waits for it; a paired device opening a broken link stays in its chats; a dropped pairing on a computer says to choose "New link" and paste it. In a browser that can't keep the pairing, a second tab no longer leaves the first one stuck. (Found by the client review, rounds 12–18.)
+
 ## [0.2.0-alpha.63](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.63) - 2026-10-26
 
 ### Fixed
