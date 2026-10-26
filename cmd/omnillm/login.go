@@ -86,7 +86,7 @@ func loginScript(k provider.Kind, cli string, headless, window bool) string {
 	w("# OmniLLM: sign in with %s, the official program.", name)
 	w("printf '\\033]0;OmniLLM\\007'")
 	w("say() { printf '%%s\\n' \"$*\"; }")
-	w("say %s", shq(fmt.Sprintf(t("OmniLLM：用官方程序 %s 登录你的 %s。登录只留在 %[1]s 里，OmniLLM 看不到。", "OmniLLM: sign in to your %[2]s with %[1]s, the official program. The login stays in %[1]s; OmniLLM never sees it."), name, sub)))
+	w("say %s", shq(fmt.Sprintf(t("OmniLLM：用官方程序 %s 登录你的 %s。登录只留在 %[1]s 里，OmniLLM 看不到。", "OmniLLM: sign in to your %[2]s with %[1]s, the official program. The sign-in stays in %[1]s; OmniLLM never sees it."), name, sub)))
 	w("say ''")
 	w("CLI=%s", shq(cli))
 	w(`if [ -z "$CLI" ] || [ ! -x "$CLI" ]; then`)

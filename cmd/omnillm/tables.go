@@ -195,7 +195,7 @@ func providersTable(data []byte, now time.Time) (string, error) {
 		how := "—"
 		switch {
 		case p.Subscription:
-			how = t("订阅登录", "Subscription login")
+			how = t("订阅登录", "Subscription sign-in")
 		case p.KeyLast4 != "":
 			how = t("API Key …", "API key …") + p.KeyLast4
 		case p.Local:

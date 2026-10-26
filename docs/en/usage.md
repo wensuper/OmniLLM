@@ -81,7 +81,7 @@ omnillm hub devices                 # list devices
 omnillm hub revoke <name or ID>     # remove a device
 omnillm hub device set <name or ID> --paused true   # pause a device
 omnillm hub provider off <source>   # switch a model source off (on: switch it on)
-omnillm verify web                  # check the phones’ web page file by file against the signed release
+omnillm verify web                  # check the web app file by file against the signed release
 omnillm hub models                  # connected models
 omnillm hub usage                   # usage
 ```
@@ -102,8 +102,8 @@ Devices work only while the hub is on and online.
 |---|---|---|
 | Can’t reach your Mac: it may be asleep or offline | The hub is asleep, off, or offline | Wake the hub; it recovers automatically |
 | This device is offline | The phone itself has no network | It recovers once you’re online; what you typed is kept |
-| Claude Code / Codex on your Mac is signed out | The subscription sign-in expired | In a terminal on the hub, run `claude` (or `codex login`) to sign in again |
-| To use …, install Claude Code / Codex on your Mac and log in first | It isn’t installed on the hub, or was uninstalled | On the hub, run `omnillm login claude` (or `chatgpt`), or use the card in the console |
+| Your Claude subscription (or ChatGPT, Gemini subscription) on your Mac needs you to sign in again | The subscription sign-in expired | On the hub, run `omnillm login claude` (or `chatgpt`, `gemini`), or choose “Sign in” in the console |
+| To use …, install Claude Code / Codex on your Mac and sign in first | It isn’t installed on the hub, or was uninstalled | On the hub, run `omnillm login claude` (or `chatgpt`), or use the card in the console |
 | Subscriptions are used at one person’s chatting pace, so requests are spaced out | Too many requests within a minute | Wait the time shown; if your turn comes within 20 seconds, it waits automatically instead of failing |
 | This device is using the subscription models faster than a person chats | Over 60 requests an hour or 300 a day | Try again later, or switch to a model that uses an API key |
 | … has reached its usage limit | Claude’s or ChatGPT’s own usage limit | Wait for it to reset (the message says roughly when) |
@@ -178,13 +178,13 @@ No, and that’s by design. A hub serves only one owner and their own devices: s
 The project’s author runs it at `relay.ixxzh.com`. It only forwards encrypted data and can’t see chat content; it can see metadata such as IP addresses, connection times, and traffic volume. If that concerns you, you can [host your own](self-host.md): one program and one command.
 
 **Why is there no app to install on the phone?**
-The web client runs the same encryption code as the command-line client (as WebAssembly), so end-to-end encryption happens right in the browser. The trade-off is that the first time you open the page, you have to trust whoever hosts it; see [Security](security.md#the-web-client-on-your-phone).
+The web app runs the same encryption code as the command-line client (as WebAssembly), so end-to-end encryption happens right in the browser. The trade-off is that the first time you open the page, you have to trust whoever hosts it; see [Security](security.md#the-web-app).
 
 **Can the hub be a Linux server?**
 Yes. Install it the same way, then in the server’s terminal run one command to connect a model: `omnillm login claude` (or `omnillm login chatgpt`) for a subscription, which gives an address and a code to open on your phone, or `omnillm hub provider add anthropic` (or `openai`) to paste an API key. Once it’s connected, the same terminal shows a QR code: scan it with your phone, and if the 6 digits match, type y. To add another phone later: `omnillm pair`. If you forget how it works, type just `omnillm`: it says where things stand, the one thing to do next, and the few commands people use most.
 
 **What about Windows?**
-Windows can’t be the hub yet. A Windows computer can open the web client in a browser and be used as a device.
+Windows can’t be the hub yet. A Windows computer can open the web app in a browser and be used as a device.
 
 **Can I use it in my own programs?**
 Yes. Run `omnillm connect run` on a device to get an OpenAI-compatible local interface (API keys and local models only). Go programs can also embed OmniLLM as a library; see the [design document](../design.md#24-库优先一套代码两种用法) (in Chinese).

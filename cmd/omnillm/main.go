@@ -1841,15 +1841,15 @@ func pairOp(ctx context.Context, h *hub.Hub, c *control.Conn, l string, a map[st
 	}
 	// How long, not a clock time: a server's clock is often in UTC.
 	mins := int(math.Ceil(time.Until(p.Expires).Minutes()))
-	expires := fmt.Sprintf(tl(l, "%d 分钟内", "for %d minutes"), mins)
+	expires := fmt.Sprintf(tl(l, "%d 分钟后过期", "expires in %d minutes"), mins)
 	if a["phone"] == "true" {
 		// Right after an install or sign-in on a server: only the phone.
-		if err := c.Send(control.Reply{Event: "info", Text: fmt.Sprintf(tl(l, "（二维码%s有效。）", "(The QR code works %s.)"), expires)}); err != nil {
+		if err := c.Send(control.Reply{Event: "info", Text: fmt.Sprintf(tl(l, "（二维码%s，只能用一次。）", "(The QR code %s and works once.)"), expires)}); err != nil {
 			return err
 		}
 	} else if err := c.Send(control.Reply{Event: "info", Text: fmt.Sprintf(tl(l,
-		"手机或平板：用相机扫上面的二维码。电脑或服务器：在那台机器上运行 curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh -s -- --device（已经装了 OmniLLM 就运行 omnillm connect pair），在提示时粘贴下面这段配对文字（%s有效，只能用一次；不要发给别人，也不要贴到聊天里）：\n\n%s\n",
-		"Phone or tablet: scan the QR code above with the camera. Computer or server: on it, run curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh -s -- --device (or omnillm connect pair if OmniLLM is already there) and paste this pairing text when asked (valid %s, single use; don’t send it to anyone or paste it into a chat):\n\n%s\n"),
+		"手机或平板：用相机扫上面的二维码。电脑或服务器：在那台机器上运行 curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh -s -- --device（已经装了 OmniLLM 就运行 omnillm connect pair），在提示时粘贴下面这段配对文字（%s，只能用一次；不要发给别人，也不要贴到聊天里）：\n\n%s\n",
+		"Phone or tablet: scan the QR code above with the camera. Computer or server: on it, run curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | sh -s -- --device (or omnillm connect pair if OmniLLM is already there) and paste this pairing text when asked (it %s and works once; don’t send it to anyone or paste it into a chat):\n\n%s\n"),
 		expires, p.Code)}); err != nil {
 		return err
 	}
@@ -1894,13 +1894,13 @@ func connectCmd(args []string) {
 			fmt.Println(runnable(unpairedNext()))
 			return
 		}
-		code := readSecret(t("粘贴配对文字（你 Mac 上“添加设备”或服务器上 omnillm pair 给的；不会显示，粘贴一次后回车）：", "Paste the pairing text (from “Add device” on your Mac, or omnillm pair on your server; not shown, paste once and press Return): "))
+		code := readSecret(t("粘贴配对文字（在 OmniLLM 控制台“添加设备”里复制，或在装着 OmniLLM 的电脑上运行 omnillm pair；不会显示，粘贴一次后回车）：", "Paste the pairing text (copy it from “Add device” in the OmniLLM console, or run omnillm pair on the computer running OmniLLM; not shown, paste once and press Return): "))
 		host, _ := os.Hostname()
 		info, err := device.Pair(ctx, device.Options{Secrets: sec}, code, host, func(sas string) {
 			if len(sas) == 6 {
 				sas = sas[:3] + " " + sas[3:]
 			}
-			fmt.Printf(t("\n请核对：另一边（你的 Mac 或服务器）显示的数字应该是 %s，一致就在那边确认（Mac 上点“一致，添加”，服务器上输入 y）。\n", "\nCheck: the other side (your Mac or server) should show %s. If it does, confirm there (choose “Matches, add” on a Mac, type y on a server).\n"), sas)
+			fmt.Printf(t("\n请核对：另一边（你的 Mac 或服务器）显示的数字应该是 %s，一致就在那边确认（在控制台里点“一致，添加”，或在终端里输入 y）。\n", "\nCheck: the other side (your Mac or server) should show %s. If it does, confirm there (“Matches, add” in the console, or type y in the terminal).\n"), sas)
 		})
 		if err != nil {
 			die(err)

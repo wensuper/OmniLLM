@@ -1221,7 +1221,7 @@ func ownServers() string {
 	}
 	if w := os.Getenv("OMNILLM_WEB_APP"); w != "" {
 		if u, err := url.Parse(w); err == nil {
-			parts = append(parts, t("手机网页 ", "phone page at ")+u.Host)
+			parts = append(parts, t("网页版 ", "web app at ")+u.Host)
 		}
 	}
 	if len(parts) == 0 {

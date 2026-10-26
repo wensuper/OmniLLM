@@ -16,15 +16,14 @@ const T = {
     loading: "正在载入……", bootDownload: "正在下载……", bootStart: "正在启动……", bootStorage: "正在打开……",
     bootSlow: "载入停了 20 秒没有进展，停在“{0}”。点下面的按钮清掉缓存重新载入；网络慢的话也可以换个网络再试。",
     bootCrashed: "程序意外停止了。点下面的按钮清掉缓存重新载入。", bootStorageFailed: "这个浏览器不让网页保存数据（可能在设置里禁止了网站数据）。允许这个网站保存数据后再载入。", bootOffline: "没能下载：这台设备可能没有联网。联网后会自动重新载入，也可以点“重新载入”。", bootError: "载入失败：", bootRetry: "重新载入",
-    titlePhone: "连上你的电脑", subPhone: "在电脑上点菜单栏的 OmniLLM 图标，选“添加设备…”，扫它显示的二维码。",
+    titlePhone: "连上你的电脑", subPhone: "在电脑上点菜单栏的 OmniLLM 图标，选“添加设备…”，扫它显示的二维码（不是 Mac 的话，在终端运行 omnillm open --add）。",
     titleComputer: "在这个浏览器里", titleComputer2: "用你的 OmniLLM", subComputer: "OmniLLM 装在你自己的某台电脑上，你的模型和订阅都在那里。在那台电脑上复制一个链接，粘贴到下面，这个浏览器就能用上它们；就是同一台电脑也可以。",
-    dStep1: "在装着 OmniLLM 的电脑上，点菜单栏的 OmniLLM 图标，选“添加设备…”（不是 Mac 的话，在终端运行 omnillm open）", dStep2: "选“电脑或服务器”", dStep3: "点“复制链接”，回到这里粘贴",
+    dStep1: "在装着 OmniLLM 的电脑上，点菜单栏的 OmniLLM 图标，选“添加设备…”（不是 Mac 的话，在终端运行 omnillm open --add）", dStep2: "选“电脑或服务器”", dStep3: "点“复制链接”，回到这里粘贴",
     consoleName: "OmniLLM 控制台", mockExpires: "5 分钟后过期 · 只能用一次",
     trustE2e: "端到端加密，中间谁都看不到内容", trustOnce: "链接只能用一次，5 分钟后过期", trustVerify: "网页可核对：omnillm verify web",
     tapScan: "轻点开始扫描", pasteBtn: "粘贴链接或配对文字", connect: "连接",
     e2e: "端到端加密", noHub: "还没装 OmniLLM？",
     addDevice: "添加设备", kindPhone: "手机或平板", kindComputer: "电脑或服务器", copyLink: "复制链接",
-    linkKey: "复制链接，自己带到那台电脑上打开。链接相当于钥匙，别发给别人。",
     consoleSas: "两边会出现同样的 6 位数，一样就在这里点“一致，添加”。", matchAdd: "一致，添加",
     getHubTitle: "先装好 OmniLLM", getHubBody: "在电脑上打开终端（Mac：按 ⌘+空格，输入“终端”后回车），粘贴这一行，按回车。装好后回到这里扫码。", getHubLongPress: "请长按上面这一行复制。", getHubBodyHere: "在要运行 OmniLLM 的电脑上打开终端（Mac：按 ⌘+空格，输入“终端”后回车），粘贴这一行，按回车。大约一分钟。",
     getHubShare: "发到我的电脑", getHubCopy: "复制", getHubGuide: "完整安装说明", getHubCopied: "已复制。把它发到电脑上，在终端里粘贴运行。",
@@ -57,7 +56,7 @@ const T = {
     addImage: "添加图片", voice: "语音输入", voiceStop: "停止语音输入", listening: "正在听，说完再点一下……", voiceFirst: "语音由浏览器识别：Chrome 交给 Google，Safari 交给 Apple。识别出的文字只填进输入框，你确认后再发。", voiceDenied: "没有麦克风权限。在浏览器的网站设置里允许麦克风，再点一次。", voiceNoMic: "没找到麦克风。", voiceNoSpeech: "没听到声音，再说一次试试。", voiceNetwork: "语音识别要联网，现在连不上。", voiceFailed: "语音输入没能开始，再试一次。", removeImage: "移除图片", tooManyImages: "每条消息最多 4 张图片。", imageFailed: "这张图片打不开，换一张试试。", imageTooBig: "图片太大，换一张小一点的。", imageTitle: "图片",
     offline: "你的 Mac 现在连不上，可能在睡眠、关机或断网。恢复后会自动连上。", retry: "重试",
     noNetwork: "这台设备没有联网，联网后会自动连上。", kept: "刚才输入的还在。", loadingModels: "正在连接你的 Mac……",
-    noModels: "这台设备现在没有能用的模型。在 Mac 的控制台里接入模型，或在“设备”里给这台设备选上模型。", noModelsOpt: "没有可用的模型", probLogin: "要在 Mac 上重新登录", probLimit: "到上限，{0} 恢复", probLoginNote: "你的 Mac 上 {0}的登录已失效，现在发不出去。在 Mac 的终端里运行 omnillm login {1}，或在控制台里点“登录”，然后再试。", langPending: "先发出或移除已添加的图片，再切换语言。", langVolatile: "这个浏览器保存不了配对，换语言要重新载入，就得重新添加这台设备。换用 Safari、Chrome 或 Edge 再切换。", scanFailed: "扫码工具没能载入。粘贴链接或配对文字，或刷新后再试。", addHomeTipAndroid: "点浏览器右上角的 ⋮，选“添加到主屏幕”或“安装应用”。", probLimitNote: "{0}的用量到上限了，{1} 恢复。可以先换一个模型。", probLimitNoTime: "到上限了", probLimitNoteNoTime: "{0}的用量到上限了。可以先换一个模型。", autoName: "Auto（自动选模型）", subClaude: "Claude 订阅", subChatGPT: "ChatGPT 订阅", subGemini: "Gemini 订阅",
+    noModels: "这台设备现在没有能用的模型。在 Mac 的控制台里接入模型，或在“设备”里给这台设备选上模型。", noModelsOpt: "没有可用的模型", probLogin: "要在 Mac 上重新登录", probLimit: "到上限，{0} 恢复", probLoginNote: "你的 Mac 上的 {0}要重新登录，现在发不出去。在 Mac 的终端里运行 omnillm login {1}，或在控制台里点“登录”，然后再试。", langPending: "先发出或移除已添加的图片，再切换语言。", langVolatile: "这个浏览器保存不了配对，换语言要重新载入，就得重新添加这台设备。换用 Safari、Chrome 或 Edge 再切换。", scanFailed: "扫码工具没能载入。粘贴链接或配对文字，或刷新后再试。", addHomeTipAndroid: "点浏览器右上角的 ⋮，选“添加到主屏幕”或“安装应用”。", probLimitNote: "{0}的用量到上限了，{1} 恢复。可以先换一个模型。", probLimitNoTime: "到上限了", probLimitNoteNoTime: "{0}的用量到上限了。可以先换一个模型。", autoName: "Auto（自动选模型）", subClaude: "Claude 订阅", subChatGPT: "ChatGPT 订阅", subGemini: "Gemini 订阅",
     modelGone: "原来的模型已从你的 Mac 上移除，换成了 {0}",
     grpSub: "订阅（不另花钱）", grpKey: "API Key", grpLocal: "你的 Mac 上", latest: "（最新版）", codex: "ChatGPT（Codex · 最新版）", codexV: "ChatGPT（Codex · {0}）",
     forget: "移除这台设备", forgetQ: "这里的对话会删除。以后要用，在 Mac 上重新添加。", removing: "正在移除……",
@@ -82,15 +81,14 @@ const T = {
     loading: "Loading…", bootDownload: "Downloading…", bootStart: "Starting…", bootStorage: "Opening…",
     bootSlow: "Loading has made no progress for 20 seconds, stuck at “{0}”. Tap below to clear the cache and load again; on a slow network, another network may help.",
     bootCrashed: "The program stopped unexpectedly. Tap below to clear the cache and load again.", bootStorageFailed: "This browser isn’t letting the page save data (site data may be blocked in its settings). Allow site data for this site, then load again.", bootOffline: "Couldn’t download: this device may be offline. It loads again by itself once it’s online, or tap “Load again”.", bootError: "Loading failed: ", bootRetry: "Load again",
-    titlePhone: "Connect to your computer", subPhone: "On your computer, click the OmniLLM icon in the menu bar, choose “Add device…” and scan the QR code it shows.",
+    titlePhone: "Connect to your computer", subPhone: "On your computer, click the OmniLLM icon in the menu bar, choose “Add device…” and scan the QR code it shows (not a Mac: run omnillm open --add in a terminal).",
     titleComputer: "Use your OmniLLM", titleComputer2: "in this browser", subComputer: "OmniLLM runs on one of your own computers, where your models and subscriptions are. Copy a link on it and paste it below, and this browser can use them, even on that same computer.",
-    dStep1: "On the computer running OmniLLM, click the OmniLLM icon in the menu bar and choose “Add device…” (not a Mac: run omnillm open in a terminal)", dStep2: "Choose “Computer or server”", dStep3: "Choose “Copy link”, then paste it here",
+    dStep1: "On the computer running OmniLLM, click the OmniLLM icon in the menu bar and choose “Add device…” (not a Mac: run omnillm open --add in a terminal)", dStep2: "Choose “Computer or server”", dStep3: "Choose “Copy link”, then paste it here",
     consoleName: "OmniLLM console", mockExpires: "Expires in 5 minutes · single use",
     trustE2e: "End-to-end encrypted: no one in between can read it", trustOnce: "A link works once and expires in 5 minutes", trustVerify: "Checkable: omnillm verify web",
     tapScan: "Tap to scan", pasteBtn: "Paste a link or pairing text", connect: "Connect",
     e2e: "End-to-end encrypted", noHub: "Don’t have OmniLLM yet?",
     addDevice: "Add device", kindPhone: "Phone or tablet", kindComputer: "Computer or server", copyLink: "Copy link",
-    linkKey: "Copy the link and open it on that computer yourself. The link works like a key; don’t send it to anyone else.",
     consoleSas: "Both sides show the same 6 digits. If they match, choose “Matches, add” here.", matchAdd: "Matches, add",
     getHubTitle: "Set up OmniLLM first", getHubBody: "On your computer, open a terminal (Mac: press ⌘-Space, type “Terminal”, press Return), paste this line and press Return. Then come back here and scan.", getHubLongPress: "Touch and hold the line above to copy it.", getHubBodyHere: "On the computer that will run OmniLLM, open a terminal (Mac: press ⌘-Space, type “Terminal”, press Return), paste this line and press Return. It takes about a minute.",
     getHubShare: "Send to my computer", getHubCopy: "Copy", getHubGuide: "Full setup guide", getHubCopied: "Copied. Get it to your computer and paste it into a terminal there.",
@@ -123,7 +121,7 @@ const T = {
     addImage: "Add image", voice: "Voice input", voiceStop: "Stop voice input", listening: "Listening… tap again when you’re done", voiceFirst: "Your browser turns speech into text: Chrome uses Google, Safari uses Apple. The words only fill the box; you send them.", voiceDenied: "No microphone permission. Allow the microphone in the browser’s site settings, then try again.", voiceNoMic: "No microphone found.", voiceNoSpeech: "Didn’t hear anything. Try again.", voiceNetwork: "Voice input needs the internet, which isn’t reachable right now.", voiceFailed: "Voice input couldn’t start. Try again.", removeImage: "Remove image", tooManyImages: "Up to 4 images per message.", imageFailed: "This image can’t be opened; try another one.", imageTooBig: "Image too large; try a smaller one.", imageTitle: "Image",
     offline: "Your Mac can’t be reached right now. It may be asleep, off or offline, and will reconnect when it’s back.", retry: "Retry",
     noNetwork: "This device is offline; it reconnects when the network is back.", kept: "What you typed is kept.", loadingModels: "Connecting to your Mac…",
-    noModels: "No models are available to this device. On your Mac, connect a model or allow this device more models under Devices.", noModelsOpt: "No models", probLogin: "Sign in again on your Mac", probLimit: "At its limit until {0}", probLoginNote: "{0}’s sign-in has expired on your Mac, so messages to it won’t go through. In a terminal on your Mac, run omnillm login {1}, or choose “Sign in” in the console, then try again.", langPending: "Send or remove the added images first, then switch language.", langVolatile: "This browser can’t keep the pairing, and switching language reloads the page, so the device would have to be added again. Switch in Safari, Chrome or Edge instead.", scanFailed: "The scanner couldn’t load. Paste a link or pairing text, or reload and try again.", addHomeTipAndroid: "Tap the browser’s ⋮ menu and choose “Add to Home screen” or “Install app”.", probLimitNote: "{0} has reached its usage limit until {1}. Pick another model for now.", probLimitNoTime: "At its limit", probLimitNoteNoTime: "{0} has reached its usage limit. Pick another model for now.", autoName: "Auto (picks the model)", subClaude: "Your Claude subscription", subChatGPT: "Your ChatGPT subscription", subGemini: "Your Gemini subscription",
+    noModels: "No models are available to this device. On your Mac, connect a model or choose models for this device under Devices.", noModelsOpt: "No models", probLogin: "Sign in again on your Mac", probLimit: "At its limit until {0}", probLoginNote: "{0} on your Mac needs you to sign in again, so messages to it won’t go through. In a terminal on your Mac, run omnillm login {1}, or choose “Sign in” in the console, then try again.", langPending: "Send or remove the added images first, then switch language.", langVolatile: "This browser can’t keep the pairing, and switching language reloads the page, so the device would have to be added again. Switch in Safari, Chrome or Edge instead.", scanFailed: "The scanner couldn’t load. Paste a link or pairing text, or reload and try again.", addHomeTipAndroid: "Tap the browser’s ⋮ menu and choose “Add to Home screen” or “Install app”.", probLimitNote: "{0} has reached its usage limit until {1}. Pick another model for now.", probLimitNoTime: "At its limit", probLimitNoteNoTime: "{0} has reached its usage limit. Pick another model for now.", autoName: "Auto (picks the model)", subClaude: "Your Claude subscription", subChatGPT: "Your ChatGPT subscription", subGemini: "Your Gemini subscription",
     modelGone: "The previous model was removed from your Mac; switched to {0}",
     grpSub: "Subscriptions (no extra cost)", grpKey: "API key", grpLocal: "On your Mac", latest: " (latest)", codex: "ChatGPT (Codex · latest)", codexV: "ChatGPT (Codex · {0})",
     forget: "Remove this device", forgetQ: "Chats here will be deleted. To use this device later, add it on your Mac again.", removing: "Removing…",
@@ -156,7 +154,7 @@ document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
 // hub that isn't a Mac is "your computer" in the words people see. The
 // set-up steps for a computer without OmniLLM yet keep their Mac hints.
 let hubOS = localStorageGet("hubos") || "";
-const MAC_HINTS = new Set(["getHubBody", "getHubBodyHere", "dStep1"]);
+const MAC_HINTS = new Set(["getHubBody", "getHubBodyHere", "dStep1", "subPhone"]);
 function computerWords(k, s) {
   if (hubOS === "darwin" || MAC_HINTS.has(k)) return s; // not known yet: "computer" too
   return lang === "zh" ? s.replace(/ ?Mac ?/g, "电脑") : s.replace(/\bMac\b/g, "computer");

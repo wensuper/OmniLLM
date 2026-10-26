@@ -75,12 +75,12 @@ Subscriptions work through the official command-line programs: [Claude Code](htt
   ```bash
   omnillm login claude     # Claude Pro / Max
   omnillm login chatgpt    # ChatGPT Plus / Pro
-  omnillm login gemini     # Google AI subscription (through Antigravity CLI)
+  omnillm login gemini     # Gemini subscription (through Antigravity CLI)
   ```
 
 If you’re already signed in, the hub finds it and connects. Claude’s Sonnet, Opus, and Haiku, and Codex’s default model, appear in the model list with nothing to fill in.
 
-A Google AI subscription (Gemini) works through Antigravity CLI (`agy`), Google's official program. You sign in to it once more, for OmniLLM only; that sign-in is kept in OmniLLM's own folder, and the agy you use yourself isn't affected. Note: Google has banned accounts that used third-party tools with an Antigravity sign-in. OmniLLM runs the official program itself, but Google hasn't said whether that is allowed; if you'd rather not take the risk, use a Gemini API key.
+A Gemini subscription works through Antigravity CLI (`agy`), Google's official program. You sign in to it once more, for OmniLLM only; that sign-in is kept in OmniLLM's own folder, and the agy you use yourself isn't affected. Note: Google has banned accounts that used third-party tools with an Antigravity sign-in. OmniLLM runs the official program itself, but Google hasn't said whether that is allowed; if you'd rather not take the risk, use a Gemini API key.
 
 Codex sometimes stores its sign-in in the system keychain, which OmniLLM can’t use. The console then asks you to sign in once more, and this sign-in is saved to a file OmniLLM can use (`~/.codex/auth.json`).
 
@@ -117,7 +117,7 @@ Adding the phone is your step: when an AI assistant installed OmniLLM, it never 
 
 A few notes:
 
-- The QR code is valid for 5 minutes (the ring around the countdown shows how long is left) and works once. If it expires, or the device wasn’t added, click *New QR code* right on top of it.
+- The QR code expires in 5 minutes (the ring around the countdown shows how long is left) and works once. If it expires, or the device wasn’t added, click *New QR code* right on top of it.
 - If the phone can’t scan, choose *Paste a link or pairing text* on the page and paste a pairing link or pairing text from the console (*Computer or server*); it goes straight to the 6 digits. On another computer, the page opens with that paste box.
 - To open it like an app: on Android, tap *Add to Home Screen* in Chrome’s menu (it keeps the pairing). On iPhone and iPad, *Put it on the Home Screen, like an app?* under the welcome screen shows the steps; the Home Screen OmniLLM is added on its own, once. Opened inside WeChat or another app, you can *Use it in WeChat*, or copy the address and open it in your browser (which keeps the pairing).
 - By default each device can use every connected model, with a daily limit of $5 (an estimate; subscription models aren’t counted in money but limited by number of requests). You can change this under *Devices* in the console.

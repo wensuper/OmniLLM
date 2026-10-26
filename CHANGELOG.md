@@ -4,6 +4,17 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.73](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.73) - 2026-10-27
+
+### Changed
+
+- Same words on every surface, second pass:
+  - The command line, the errors the web app shows and the docs now say “the web app”, “Gemini subscription” and “sign in again” too.
+  - Pairing texts and QR codes say they expire in 5 minutes and work once.
+  - On a computer that joins with a pairing text, the number check reads “Matches, add” in the console or y in the terminal, as on the web.
+  - The phone's welcome line also says what to run when the hub isn't a Mac (`omnillm open --add`).
+  - English says “sign-in”, not “login”.
+
 ## [0.2.0-alpha.72](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.72) - 2026-10-27
 
 ### Changed

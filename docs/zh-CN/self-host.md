@@ -39,7 +39,7 @@ OMNILLM_RELAY=wss://relay.example.com ~/.local/bin/omnillm install
 
 **已经配对的设备要重新配对一次**：设备记住的是它配对时的连接服务。在控制台点「添加设备」，扫新的二维码，再把旧的设备记录移除。
 
-手机网页客户端仍然用 `omni.ixxzh.com`，它会连二维码里写的连接服务，也就是你的。网页里的加密和存储都在手机上完成。
+网页版仍然用 `omni.ixxzh.com`，它会连二维码里写的连接服务，也就是你的。网页里的加密和存储都在手机上完成。
 
 ## 3.（可选）只允许自己的主机登记
 
@@ -51,9 +51,9 @@ grep -i "token hash\|令牌的哈希" ~/Library/Application\ Support/OmniLLM/hub
 
 把连接服务的 `--open` 换成 `--hub-token-hash <这个哈希>`（可以写多个），重启连接服务。哈希可以公开，令牌本身不要外传。
 
-## 4.（可选）自己部署网页客户端
+## 4.（可选）自己部署网页版
 
-想连网页也不依赖别人托管（见[安全说明](security.md#手机上的网页客户端)的“第一次加载”问题）：
+想连网页也不依赖别人托管（见[安全说明](security.md#网页版)的“第一次加载”问题）：
 
 1. 从同一个发布里下载 `omnillm-web.tar.gz`，核对它在 `checksums.txt` 里的 SHA-256（`checksums.txt` 由 cosign 签名，可以用 `cosign verify-blob` 核对），解压到一个只给它用的 HTTPS 域名下，比如 `https://omni.example.com`。**不要**和别的网站共用域名：同源的网页能读它的存储。
 2. 网页服务器要设置这些响应头，参考 [deploy/zz-omni.ixxzh.com.conf](../../deploy/zz-omni.ixxzh.com.conf)：`.wasm` 的类型是 `application/wasm`；严格的 `Content-Security-Policy`（含 `frame-ancestors 'none'`）；`X-Content-Type-Options: nosniff`；`Referrer-Policy: no-referrer`。最好再开 gzip，wasm 压缩后小很多，首次打开快一倍以上。

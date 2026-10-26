@@ -117,7 +117,7 @@ var texts = map[string][2]string{ // zh, en
 	MsgNoChatModel:        {"这台电脑上的 Ollama 还没有能聊天的模型。想用的话，在终端运行 ollama pull qwen3。", "Ollama on this computer has no chat model yet. To use it, run ollama pull qwen3 in a terminal."},
 	MsgLocalToken:         {"本机接口的令牌缺失或不对。令牌在这台设备 OmniLLM 数据文件夹里的 device/local.token 文件中（只有本用户能读）。", "The local token is missing or wrong. It is in device/local.token inside OmniLLM’s data folder on this device (readable only by you)."},
 	MsgRelayUnavailable:   {"远程连接暂时不可用。检查你的 Mac 的网络后再试一次。", "Remote access is unavailable right now. Check your Mac’s network, then try again."},
-	MsgCLILogin:           {"你的 Mac 上 %s 的登录已失效。在 Mac 的终端里%s，或在控制台里点“登录”，然后再试。", "The sign-in for %s has expired on your Mac. In a terminal on your Mac, %s, or choose “Sign in” in the console, then try again."},
+	MsgCLILogin:           {"你的 Mac 上的 %s 要重新登录。在 Mac 的终端里%s，或在控制台里点“登录”，然后再试。", "Sign in to %s again: in a terminal on your Mac, %s, or choose “Sign in” in the console, then try again."},
 	MsgCLINotFound:        {"要用 %s，你的 Mac 上需要先安装 %s 并登录。", "To use %s, install %s on your Mac and sign in first."},
 	MsgCLIUnsafe:          {"你的 Mac 上这个版本的 %s 关不掉工具（能运行命令或读文件），为了安全暂时不用它。请更新 OmniLLM。", "This version of %s on your Mac couldn’t be kept from using tools (running commands or reading files), so OmniLLM won’t use it for now. Update OmniLLM."},
 	MsgBadImage:           {"图片不能用：只支持 PNG、JPEG、GIF、WebP，每张不超过 2 MB，每条消息最多 4 张。", "That image can’t be used: PNG, JPEG, GIF or WebP only, up to 2 MB each and 4 per message."},

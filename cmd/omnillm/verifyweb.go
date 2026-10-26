@@ -337,11 +337,11 @@ func webCheckText(w webCheck) string {
 			"The web app (%s) is exactly what the GitHub release %s built (build %s, %d files checked one by one; with cosign installed, the signature is checked too)."),
 			w.URL, w.Release, w.Build, w.Files)
 	case len(w.Bad) == 1 && w.Bad[0] == "signature":
-		return fmt.Sprintf(t("警告：GitHub 上 %s 的签名核对没有通过。在弄清楚之前，不要在手机上用这个网页（%s）。",
-			"Warning: the signature of the GitHub release %s didn’t check out. Don’t use the web page (%s) on your phones until this is cleared up."), w.Release, w.URL)
+		return fmt.Sprintf(t("警告：GitHub 上 %s 的签名核对没有通过。在弄清楚之前，先别用网页版（%s）。",
+			"Warning: the signature of the GitHub release %s didn’t check out. Don’t use the web app (%s) until this is cleared up."), w.Release, w.URL)
 	case len(w.Bad) == 1 && w.Bad[0] == "release":
-		return fmt.Sprintf(t("警告：GitHub 上 %s 的文件清单和它自己的校验和对不上。在弄清楚之前，不要在手机上用这个网页（%s）。",
-			"Warning: the GitHub release %s’s list of files doesn’t match its own checksums. Don’t use the web page (%s) on your phones until this is cleared up."), w.Release, w.URL)
+		return fmt.Sprintf(t("警告：GitHub 上 %s 的文件清单和它自己的校验和对不上。在弄清楚之前，先别用网页版（%s）。",
+			"Warning: the GitHub release %s’s list of files doesn’t match its own checksums. Don’t use the web app (%s) until this is cleared up."), w.Release, w.URL)
 	case len(w.Bad) == 1 && w.Bad[0] == "app.js" && w.Release == "":
 		return fmt.Sprintf(t("警告：网页版（%s）不是 OmniLLM 发布构建的（找不到构建号）。在弄清楚之前，先别用它。",
 			"Warning: the web app (%s) isn’t an OmniLLM release build (it has no build number). Don’t use it until this is cleared up."), w.URL)
@@ -354,8 +354,8 @@ func webCheckText(w webCheck) string {
 	case w.Error != "":
 		return fmt.Sprintf(t("没能核对网页版（%s）：GitHub 没有应答。检查网络后再试。", "Couldn’t check the web app (%s): GitHub didn’t answer. Check the network and try again."), w.URL)
 	case len(w.Bad) == 1 && w.Bad[0] == "build":
-		return fmt.Sprintf(t("警告：手机用的网页（%s，构建 %s）不是 GitHub 上最近任何一个发布构建的。在弄清楚之前，先别用它。",
-			"Warning: the web page your phones use (%s, build %s) wasn’t built by any recent GitHub release. Don’t use it until this is cleared up."), w.URL, w.Build)
+		return fmt.Sprintf(t("警告：网页版（%s，构建 %s）不是 GitHub 上最近任何一个发布构建的。在弄清楚之前，先别用它。",
+			"Warning: the web app (%s, build %s) wasn’t built by any recent GitHub release. Don’t use it until this is cleared up."), w.URL, w.Build)
 	default:
 		return fmt.Sprintf(t("警告：网页版（%s）和 GitHub 上发布的 %s 不一致：%s。在弄清楚之前，先别用它。",
 			"Warning: the web app (%s) differs from the GitHub release %s: %s. Don’t use it until this is cleared up."),
