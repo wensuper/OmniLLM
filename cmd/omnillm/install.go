@@ -26,6 +26,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"golang.org/x/term"
@@ -49,9 +50,12 @@ const (
 
 // Status is what "omnillm status --json" prints for people and agents.
 type Status struct {
-	Running         bool   `json:"running"`
-	Version         string `json:"version,omitempty"`
-	Providers       int    `json:"providers"`
+	Running   bool   `json:"running"`
+	Version   string `json:"version,omitempty"`
+	Providers int    `json:"providers"`
+	// ProvidersOn: the sources not switched off (nil from an older hub
+	// that doesn't say).
+	ProvidersOn     *int   `json:"providers_on,omitempty"`
 	Devices         int    `json:"devices"`
 	Online          int    `json:"online"` // devices connected now
 	RelayConfigured bool   `json:"relay_configured"`
@@ -382,6 +386,9 @@ func nextStep(st Status) string {
 				"· Claude subscription: in a terminal, run omnillm login claude yourself (installs Claude Code first if needed, then signs in in your browser)\n"+
 				"· ChatGPT subscription: in a terminal, run omnillm login chatgpt yourself (installs Codex first if needed, then signs in in your browser)\n"+
 				"· API key or a free model on %s: run omnillm open and choose “I have an API key”"))
+	case st.Providers > 0 && st.ProvidersOn != nil && *st.ProvidersOn == 0:
+		return t("模型来源都关掉了，设备现在用不了任何模型。打开一个：omnillm hub provider on 名字（omnillm hub providers 里能看到）。",
+			"Every model source is switched off, so devices can’t use any model. Turn one on: omnillm hub provider on NAME (see omnillm hub providers).")
 	case !st.RelayConfigured:
 		return onMachine(t("已经可以在 %s 上用。要让其他设备连进来，需要先设置远程连接。",
 			"Ready on %s. To let other devices connect, set up remote access first."))
@@ -1321,6 +1328,7 @@ func parentsOK(dir string) bool {
 
 // startDetached runs the hub without a service manager (no autostart).
 func startDetached(bin, dir string, env map[string]string) error {
+	stopRunningHub(dir)
 	logf, err := os.OpenFile(filepath.Join(dir, "hub.log"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
 	if err != nil {
 		return err
@@ -1593,4 +1601,31 @@ func installDevice() {
 		os.Exit(1)
 	}
 	fmt.Println(runnable(t("可以用了：在终端里运行 omnillm connect chat 对话，或 omnillm connect ask \"问题\" 问一句。", "Ready: run omnillm connect chat to chat, or omnillm connect ask \"question\" for one answer.")))
+}
+
+// stopRunningHub stops the hub that answers in dir (it wrote hub.pid), so a
+// new one can take its place; a service manager does this itself.
+func stopRunningHub(dir string) {
+	sock := filepath.Join(dir, "control.sock")
+	answers := func() bool {
+		c, err := net.DialTimeout("unix", sock, time.Second)
+		if err == nil {
+			c.Close()
+		}
+		return err == nil
+	}
+	b, err := os.ReadFile(filepath.Join(dir, "hub.pid"))
+	if err != nil || !answers() {
+		return
+	}
+	pid, err := strconv.Atoi(strings.TrimSpace(string(b)))
+	if err != nil || pid <= 1 || pid == os.Getpid() {
+		return
+	}
+	if p, err := os.FindProcess(pid); err == nil {
+		_ = p.Signal(syscall.SIGTERM)
+	}
+	for i := 0; i < 50 && answers(); i++ {
+		time.Sleep(200 * time.Millisecond)
+	}
 }

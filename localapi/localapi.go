@@ -145,6 +145,13 @@ func errBody(r *http.Request, e *omnillm.Error) apiError {
 	b.Error.Code = e.Code
 	b.Error.Type = string(e.Code)
 	b.Error.Message = omnillm.ForHub(lang(r), HubOS(), omnillm.Describe(lang(r), e))
+	if e.Msg == omnillm.MsgDeviceRevoked { // only a device hears it: its pairing here goes first
+		if strings.HasPrefix(lang(r), "zh") {
+			b.Error.Message += "在这台电脑上先运行 omnillm connect forget，再运行 omnillm connect pair。"
+		} else {
+			b.Error.Message += " On this computer, run omnillm connect forget, then omnillm connect pair."
+		}
+	}
 	return b
 }
 

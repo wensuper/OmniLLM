@@ -705,7 +705,8 @@ func hubCmd(args []string) {
 	}
 	// A device-only machine has no hub: say so before anything else (an
 	// assistant would otherwise relay "run omnillm pair here").
-	if role() == "device" && args[0] != "run" {
+	// (hub run from a terminal too; only a service starts it otherwise.)
+	if role() == "device" && (args[0] != "run" || term.IsTerminal(int(os.Stdout.Fd()))) {
 		die(say(runnable(deviceHubHint())))
 	}
 	dir := dataDir("hub")
@@ -826,7 +827,11 @@ func hubCmd(args []string) {
 			dieArgs(err)
 		}
 		callOr(sock, control.Request{Op: "pair", Args: a}, "")
-		fmt.Println(runnable(pairedNote()))
+		if st, ok := queryStatus(); ok && st.Providers > 0 && st.ProvidersOn != nil && *st.ProvidersOn == 0 {
+			fmt.Println(runnable(nextStep(st)))
+		} else {
+			fmt.Println(runnable(pairedNote()))
+		}
 	case "revoke":
 		// The name may be typed unquoted: "hub revoke iPhone 2".
 		if len(args) < 2 {
@@ -1041,7 +1046,14 @@ func hubRun(dir, sock string, args []string) {
 	// would fight the service for the relay and take its socket.
 	if c, err := net.DialTimeout("unix", sock, time.Second); err == nil {
 		c.Close()
-		die(sayf(t("OmniLLM 已经在运行（后台服务）。它的日志在 %s；要在前台运行，先停掉后台服务。", "OmniLLM is already running (the background service). Its log is at %s; to run it in the foreground, stop the service first."), filepath.Join(dir, "hub.log")))
+		if serviceInstalled() {
+			stop := "launchctl bootout gui/" + strconv.Itoa(os.Getuid()) + "/" + launchdLabel
+			if runtime.GOOS != "darwin" {
+				stop = "systemctl --user stop " + systemdUnit
+			}
+			die(sayf(t("OmniLLM 已经在运行（后台服务）。它的日志在 %s；要在前台运行，先停掉后台服务：%s", "OmniLLM is already running (the background service). Its log is at %s; to run it in the foreground, stop the service first: %s"), filepath.Join(dir, "hub.log"), stop))
+		}
+		die(sayf(t("另一个 omnillm hub run 已经在用这个数据文件夹（%s），先停掉它。", "Another omnillm hub run is already using this data folder (%s); stop it first."), dir))
 	}
 	switch *relayURL {
 	case "":
@@ -1099,6 +1111,11 @@ func hubRun(dir, sock string, args []string) {
 	if err != nil {
 		die(err)
 	}
+	// Who answers here: an install without a service manager stops this
+	// process before it starts the new one (startDetached).
+	pidFile := filepath.Join(dir, "hub.pid")
+	_ = os.WriteFile(pidFile, []byte(strconv.Itoa(os.Getpid())), 0o600)
+	defer os.Remove(pidFile)
 	var con *console.Server
 	if *consoleAddr != "" {
 		// Bind first: the console exists (and login links are issued) only
@@ -1252,7 +1269,13 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 				}
 			}
 			_, _, paused := h.RegionStatus()
-			st := map[string]any{"running": true, "version": version, "providers": len(ps), "devices": len(ds), "online": online,
+			on := 0
+			for _, p := range ps {
+				if !p.Off {
+					on++
+				}
+			}
+			st := map[string]any{"running": true, "version": version, "providers": len(ps), "providers_on": on, "devices": len(ds), "online": online,
 				"relay_configured": relayURL != "", "relay_up": h.RelayUp(), "console": con != nil, "os": runtime.GOOS,
 				"region_paused": paused, "problems": problems, "lang": h.UILang(ctx), "web_check": lastWebCheck(dataDir("hub"))}
 			return c.Send(control.Reply{Event: "ok", Data: jsonData(st)})
@@ -1274,6 +1297,9 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 			ms, err := h.AddProvider(ctx, cfg, req.Secret)
 			if err != nil {
 				// The key was just typed: check it, rather than "replace it".
+				if cfg.Kind == provider.Ollama && omnillm.AsError(err).Msg == omnillm.MsgUpstream {
+					return say(onMachineIn(l, tl(l, "%s 上的 Ollama 没有在运行（"+cfg.BaseURL+" 没有应答）。先打开 Ollama，再运行一次这条命令。", "Ollama isn’t running on %s (nothing answers at "+cfg.BaseURL+"). Start Ollama, then run the command again.")))
+				}
 				if omnillm.AsError(err).Msg == omnillm.MsgCredentialBad {
 					return say(tl(l, "这个 Key 用不了（可能输错了、已作废或余额不足）。到服务商网站核对后再运行一次。",
 						"That key didn’t work (mistyped, revoked or out of credit). Check it on the provider’s site and run the command again."))
@@ -1818,6 +1844,8 @@ func connectCmd(args []string) {
 		defer d.Close()
 		if *model == "" {
 			*model = defaultModel(ctx, d)
+		} else if ms, err := d.Models(ctx); err == nil && !slices.ContainsFunc(ms, func(m omnillm.ModelInfo) bool { return m.ID == *model }) {
+			die(say(runnable(t("没有这个模型。运行 omnillm connect models 查看。", "No such model. Run omnillm connect models to see them."))))
 		}
 		// A person at a terminal is waiting; from a script or cron (no
 		// terminal) it is a background call, and subscription models,

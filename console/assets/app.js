@@ -1525,6 +1525,9 @@ function dialog(titleText) {
   const d = { dlg, body, save, left: null, asking: false, dirty: () => false };
   const onKey = (e) => {
     if (composing(e)) return;
+    // A question opened over this dialog answers its own keys.
+    const all = document.querySelectorAll(".dialog-scrim");
+    if (all[all.length - 1] !== scrim) return;
     if (e.key === "Escape") { e.preventDefault(); if (d.asking) d.showFoot(); else leave(); return; }
     if (e.key === "Enter" && e.target.tagName === "INPUT" && e.target.type !== "checkbox" && dlg.contains(e.target)) {
       e.preventDefault();
@@ -1894,7 +1897,7 @@ function renderModels() {
       // Turning it on cuts off apps and programs-only devices that use it:
       // say who first, and only go on when the owner says so.
       if (box.checked && !(await confirmChatOnly(m))) { box.checked = false; return; }
-      try { await api("models/set", { id: m.id, human_only: box.checked }); toast(t("saved")); } catch (e) { box.checked = !box.checked; toast(e.message, true); }
+      try { await api("models/set", { id: m.id, human_only: box.checked }); toast(t("saved")); m.human_only = box.checked; } catch (e) { box.checked = !box.checked; toast(e.message, true); }
     });
     switchCell(tr, !m.hidden, t("showOnDevices") + " " + name, async (box) => {
       try { await api("models/set", { id: m.id, shown: box.checked }); toast(t("saved")); m.hidden = !box.checked; } catch (e) { box.checked = !box.checked; toast(e.message, true); }

@@ -436,3 +436,18 @@ func TestOwnHome(t *testing.T) {
 		t.Fatal("a temp folder is not")
 	}
 }
+
+// Every source switched off is said; an older hub that doesn't count them
+// isn't taken for that.
+func TestNextStepWithEverySourceOff(t *testing.T) {
+	t.Setenv("OMNILLM_LANG", "en")
+	zero := 0
+	st := Status{Running: true, Providers: 1, ProvidersOn: &zero, Devices: 1, RelayConfigured: true, RelayUp: true}
+	if s := nextStep(st); !strings.Contains(s, "switched off") {
+		t.Fatal(s)
+	}
+	st.ProvidersOn = nil
+	if s := nextStep(st); strings.Contains(s, "switched off") {
+		t.Fatal(s)
+	}
+}

@@ -43,6 +43,10 @@ All notable changes to OmniLLM are documented here. OmniLLM is in early pre-rele
 - Phone page: a paired phone that opens a new pairing link and goes back returns to a working chat.
 - Command line: a device removed on the hub is told to run `connect forget` then `connect pair`; `connect` commands on the hub itself say it is the hub.
 
+- Without a service manager (WSL, containers), installing or updating stops the running hub before starting the new one, so the update really takes effect.
+- `status` says when every model source is switched off; pairing a device that can't use any model doesn't say "just chat on it"; `hub provider add ollama` says when Ollama isn't running.
+- Phone page: a question you send is saved at once, so it isn't lost if the phone closes the page in the background; a browser that can't keep the pairing no longer reloads itself (which lost the pairing).
+
 ### Security
 
 - Model replies shown in a terminal have control characters removed, so a reply can't use escape sequences (to write the clipboard or fake a prompt).
