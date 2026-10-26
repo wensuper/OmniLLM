@@ -17,7 +17,10 @@ const T = {
     bootSlow: "载入停了 20 秒没有进展，停在“{0}”。点下面的按钮清掉缓存重新载入；网络慢的话也可以换个网络再试。",
     bootCrashed: "程序意外停止了。点下面的按钮清掉缓存重新载入。", bootStorageFailed: "这个浏览器不让网页保存数据（可能在设置里禁止了网站数据）。允许这个网站保存数据后再载入。", bootOffline: "没能下载：这台设备可能没有联网。联网后会自动重新载入，也可以点“重新载入”。", bootError: "载入失败：", bootRetry: "重新载入",
     titlePhone: "连上你的电脑", subPhone: "在电脑上打开 OmniLLM 的“添加设备”，扫它显示的二维码。",
-    titleComputer: "连上你的 OmniLLM", subComputer: "在装了 OmniLLM 的电脑上打开“添加设备”，复制链接，粘贴到这里。",
+    titleComputer: "把你的 OmniLLM", titleComputer2: "接到这台电脑上", subComputer: "在运行 OmniLLM 的那台电脑上复制一个链接，粘贴到下面，就能在这里用它的所有模型。",
+    dStep1: "在那台电脑上打开 OmniLLM 控制台（点菜单栏里的 OmniLLM 图标）", dStep2: "点“添加设备”，选“电脑或服务器”", dStep3: "点“复制链接”，粘贴到下面",
+    consoleName: "OmniLLM 控制台", mockExpires: "5 分钟内有效 · 只能用一次",
+    trustE2e: "端到端加密，中间谁都看不到内容", trustOnce: "链接只能用一次，5 分钟后失效", trustVerify: "网页可核对：omnillm verify web",
     tapScan: "轻点开始扫描", pasteBtn: "粘贴链接或配对文字", connect: "连接",
     e2e: "端到端加密", noHub: "还没装 OmniLLM？",
     addDevice: "添加设备", kindPhone: "手机或平板", kindComputer: "电脑或服务器", copyLink: "复制链接",
@@ -80,7 +83,10 @@ const T = {
     bootSlow: "Loading has made no progress for 20 seconds, stuck at “{0}”. Tap below to clear the cache and load again; on a slow network, another network may help.",
     bootCrashed: "The program stopped unexpectedly. Tap below to clear the cache and load again.", bootStorageFailed: "This browser isn’t letting the page save data (site data may be blocked in its settings). Allow site data for this site, then load again.", bootOffline: "Couldn’t download: this device may be offline. It loads again by itself once it’s online, or tap “Load again”.", bootError: "Loading failed: ", bootRetry: "Load again",
     titlePhone: "Connect to your computer", subPhone: "Open “Add device” in OmniLLM on your computer and scan the QR code it shows.",
-    titleComputer: "Connect to your OmniLLM", subComputer: "On the computer running OmniLLM, open “Add device”, copy the link and paste it here.",
+    titleComputer: "Bring your OmniLLM", titleComputer2: "to this computer", subComputer: "Copy a link on the computer running OmniLLM and paste it below, and every model it has works here.",
+    dStep1: "On that computer, open the OmniLLM console (the OmniLLM icon in the menu bar)", dStep2: "Choose “Add device”, then “Computer or server”", dStep3: "Choose “Copy link” and paste it below",
+    consoleName: "OmniLLM console", mockExpires: "Works for 5 minutes · single use",
+    trustE2e: "End-to-end encrypted: no one in between can read it", trustOnce: "A link works once, for 5 minutes", trustVerify: "Checkable: omnillm verify web",
     tapScan: "Tap to scan", pasteBtn: "Paste a link or pairing text", connect: "Connect",
     e2e: "End-to-end encrypted", noHub: "Don’t have OmniLLM yet?",
     addDevice: "Add device", kindPhone: "Phone or tablet", kindComputer: "Computer or server", copyLink: "Copy link",
@@ -598,7 +604,14 @@ document.querySelectorAll("[data-setlang]").forEach((b) => {
     location.reload();
   });
 });
-quoted($("start-title"), t(COMPUTER ? "titleComputer" : "titlePhone"));
+if (COMPUTER) {
+  // Two lines, the second in the accent colour.
+  $("start-title").textContent = "";
+  $("start-title").append(t("titleComputer"), el("br"), el("span", t("titleComputer2"), "accent-line"));
+} else quoted($("start-title"), t("titlePhone"));
+$("dsteps").hidden = !COMPUTER;
+$("no-hub-near").hidden = !COMPUTER;
+document.querySelector(".wl-foot .trust").hidden = !COMPUTER;
 quoted($("start-sub"), t(COMPUTER ? "subComputer" : "subPhone"));
 $("scan").hidden = $("paste-open").hidden = COMPUTER;
 $("paste").hidden = !COMPUTER;
@@ -631,6 +644,7 @@ const GUIDE_URL = lang === "zh" ? "https://github.com/wensuper/OmniLLM/blob/main
 document.querySelector(".wl-guide").href = GUIDE_URL;
 quoted($("get-body"), t(COMPUTER ? "getHubBodyHere" : "getHubBody"));
 $("no-hub").addEventListener("click", () => welcome("get"));
+$("no-hub-near").addEventListener("click", () => welcome("get"));
 $("get-back").addEventListener("click", () => welcome(gateView() || "start"));
 $("get-share").hidden = COMPUTER || !navigator.share;
 $("get-share").addEventListener("click", () => {

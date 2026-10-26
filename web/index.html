@@ -55,6 +55,12 @@
             <button id="paste-open" type="button" class="secondary wl-wide"><span class="ic i-paste s18"></span><span data-t="pasteBtn"></span></button>
             <!-- iPhone and iPad: the Home Screen is a choice, never a step. -->
             <button id="home-open" type="button" class="link quiet home-open" data-t="homeOpen" hidden></button>
+            <!-- Computers: the three steps, numbered as on the console picture. -->
+            <ol class="dsteps" id="dsteps" hidden>
+              <li><b>1</b><span data-t="dStep1"></span></li>
+              <li><b>2</b><span data-t="dStep2"></span></li>
+              <li><b>3</b><span data-t="dStep3"></span></li>
+            </ol>
             <form id="paste" class="pastebar" hidden>
               <span class="ic i-link s20 pb-ic"></span>
               <input id="paste-text" data-ta="pastePh" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="go">
@@ -62,6 +68,7 @@
               <button id="paste-go" type="submit" class="primary" data-t="connect"></button>
             </form>
             <p id="welcome-err" class="err" role="alert"></p>
+            <button id="no-hub-near" type="button" class="link no-hub-near" hidden><span data-t="noHub"></span><span class="ic i-arrow s14"></span></button>
           </div>
 
           <div id="wv-get" class="wv" hidden>
@@ -111,13 +118,13 @@
         <!-- Computers: where "Add device → Copy link" is on the other computer (the console's own words). -->
         <div class="wl-art" aria-hidden="true">
           <div class="mock">
-            <div class="mock-bar"><i></i><i></i><i></i><span>OmniLLM</span></div>
+            <div class="mock-bar"><i></i><i></i><i></i><span data-t="consoleName"></span><em class="badge b1">1</em></div>
             <div class="mock-body">
               <p class="mock-h" data-t="addDevice"></p>
-              <div class="mock-tog"><span data-t="kindPhone"></span><span class="on" data-t="kindComputer"></span></div>
+              <div class="mock-tog"><span data-t="kindPhone"></span><span class="on" data-t="kindComputer"></span><em class="badge b2">2</em></div>
               <div class="mock-field">https://omni.ixxzh.com/#pair=omnillm3-9fQ2…</div>
-              <div class="mock-btn"><span data-t="copyLink"></span><span class="mock-cursor"></span></div>
-              <p class="mock-note" data-t="linkKey"></p>
+              <div class="mock-btn"><span data-t="copyLink"></span><em class="badge b3">3</em><span class="mock-cursor"></span></div>
+              <p class="mock-note" data-t="mockExpires"></p>
             </div>
           </div>
         </div>
@@ -125,6 +132,12 @@
       <div class="wl-foot">
         <button id="no-hub" type="button" class="link" data-t="noHub"></button>
         <span class="e2e"><span class="ic i-lock s14"></span><span data-t="e2e"></span></span>
+        <!-- Computers: why it is safe to paste here, in three short lines. -->
+        <ul class="trust" hidden>
+          <li><span class="ic i-lock s16"></span><span data-t="trustE2e"></span></li>
+          <li><span class="ic i-link s16"></span><span data-t="trustOnce"></span></li>
+          <li><span class="ic i-shield s16"></span><span data-t="trustVerify"></span></li>
+        </ul>
       </div>
     </div>
   </section>

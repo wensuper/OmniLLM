@@ -4,6 +4,12 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.70](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.70) - 2026-10-26
+
+### Changed
+
+- Web page on a computer: a redesigned welcome screen. A two-line title (“Bring your OmniLLM / to this computer”); the three steps written out above the paste box and numbered the same way on the console picture beside it (open the console, *Add device* → *Computer or server*, *Copy link*); “Works for 5 minutes · single use” as the console says it; *Don’t have OmniLLM yet?* right under the box; and three lines at the bottom on why it is safe (end-to-end encrypted, a link works once for 5 minutes, the page can be checked with `omnillm verify web`). Phones are unchanged.
+
 ## [0.2.0-alpha.69](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.69) - 2026-10-26
 
 ### Fixed
