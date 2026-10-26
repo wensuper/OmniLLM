@@ -451,3 +451,12 @@ func TestUsableModels(t *testing.T) {
 		}
 	}
 }
+
+func TestRound12PairArgs(t *testing.T) {
+	if _, err := pairArgs([]string{"--no-limit", "--budget-usd", "3"}); err == nil {
+		t.Fatal("both budget forms accepted")
+	}
+	if got := strings.Join(shellWords([]string{"--name", "Kim's phone", "--no-limit"}), " "); got != `--name 'Kim'\''s phone' --no-limit` {
+		t.Fatalf("shellWords: %s", got)
+	}
+}

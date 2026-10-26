@@ -9,6 +9,9 @@
 - 手机网页：“对话只存在这台设备上”的说明写上 Gemini；不保存对话的浏览器只在第一次打开对话时提醒一次。
 - 控制台：订阅接入了但来源被关掉时写“来源已关闭”，不再写“已接入”。
 - 命令行：`connect pair --no-limit`；已经配对的设备运行 `connect pair` 先说已配对；`hub provider add gemini`（google、antigravity、agy）指向 `omnillm login gemini`，`hub provider off gemini` 能用；`uninstall --purge` 也删掉 Gemini 的登录；设备上只有安装启动的主机能 `hub run`；被移除的设备 `status` 退出码 1 并说先 `connect forget`；`connect chat --model` 写错时给出能运行的命令。
+- 手机网页：不能保存配对的浏览器（无痕窗口）里再开一个标签页，原来那页回来时接着用，不再卡住。
+- 控制台：来源被关掉的订阅不再在“来源已关闭”下面写“可以用了”。
+- 命令行：`status` 和 `omnillm` 菜单列出 Gemini 订阅（`omnillm login gemini`）；只当设备用的电脑上 `omnillm connect` 和 `-h` 显示设备的命令；`hub region confirm` 先确认主机在运行；`hub pair` 不接受 `--budget-usd` 和 `--no-limit` 同时写，给 AI 助手的命令保留选项；`hub app add` 在本机接口没打开时直说；`hub provider off|on` 认 `google`、`agy`；终端里的模型名和 ID 去掉控制字符；帮助里 `login` 一行不再挤在一起。
 - 安全：Gemini 订阅的 agy 设置只保留 `trustedWorkspaces`、`showTips`；设置和钩子写临时文件再改名，内容没变不写；删除对话时也删掉它的标题、锁和摘要记录，以前版本留下的顺带清掉。
 
 ## v0.2.0-alpha.64（2026-10-26）

@@ -377,8 +377,8 @@ func nextStep(st Status) string {
 				"· API key: in this computer’s terminal, run omnillm hub provider add anthropic (openai for an OpenAI key) yourself and paste the key when asked; don’t send it in a chat")
 	case st.Providers == 0 && st.Opened:
 		// The console just opened on its first step: one place to do it.
-		return t("下一步：在刚打开的浏览器页面里接入一个模型：选 Claude 或 ChatGPT 订阅，或者点“我有 API Key”。",
-			"Next: in the browser page that just opened, connect a model: pick your Claude or ChatGPT subscription, or choose “I have an API key”.")
+		return t("下一步：在刚打开的浏览器页面里接入一个模型：选 Claude、ChatGPT 或 Gemini 订阅，或者点“我有 API Key”。",
+			"Next: in the browser page that just opened, connect a model: pick your Claude, ChatGPT or Google AI subscription, or choose “I have an API key”.")
 	case st.Providers == 0:
 		// One command a line: the person picks the one that fits. A
 		// desktop app on this Mac says which subscription they have.
@@ -394,10 +394,12 @@ func nextStep(st Status) string {
 		return lead + onMachine(t("下一步：接入一个模型（选一种）：\n"+
 			"· 有 Claude 订阅：在终端里亲自运行 omnillm login claude（没装 Claude Code 会先装上，再在浏览器里登录）\n"+
 			"· 有 ChatGPT 订阅：在终端里亲自运行 omnillm login chatgpt（没装 Codex 会先装上，再在浏览器里登录）\n"+
+			"· 有 Gemini 订阅：在终端里亲自运行 omnillm login gemini（没装 Antigravity CLI 会先装上，再在浏览器里登录）\n"+
 			"· 有 API Key 或想用 %s 上免费的模型：运行 omnillm open，点“我有 API Key”",
 			"Next: connect a model (pick one):\n"+
 				"· Claude subscription: in a terminal, run omnillm login claude yourself (installs Claude Code first if needed, then signs in in your browser)\n"+
 				"· ChatGPT subscription: in a terminal, run omnillm login chatgpt yourself (installs Codex first if needed, then signs in in your browser)\n"+
+				"· Google AI subscription: in a terminal, run omnillm login gemini yourself (installs Antigravity CLI first if needed, then signs in in your browser)\n"+
 				"· API key or a free model on %s: run omnillm open and choose “I have an API key”"))
 	case st.Providers > 0 && st.ProvidersOn != nil && *st.ProvidersOn == 0:
 		return t("模型来源都关掉了，设备现在用不了任何模型。打开一个：omnillm hub provider on 名字（omnillm hub providers 里能看到）。",

@@ -258,7 +258,7 @@ func limitTextIn(l string, micro int64) string {
 // it runs when the hub names one and "latest" when not (as the phone and
 // console say it), and a model whose version is not known yet marked as
 // the latest.
-func modelName(m omnillm.ModelInfo) string { return modelNameIn(lang(), m) }
+func modelName(m omnillm.ModelInfo) string { return stripControls(modelNameIn(lang(), m)) } // for the terminal
 
 // modelNameIn is modelName in language l.
 func modelNameIn(l string, m omnillm.ModelInfo) string {

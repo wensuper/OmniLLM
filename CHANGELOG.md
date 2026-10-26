@@ -13,6 +13,9 @@ All notable changes to OmniLLM are documented here. OmniLLM is in early pre-rele
 - Phone page: the "chats stay on this device" note names Google AI too; a browser that can't keep chats warns once, on the first chat only.
 - Console: a connected subscription whose source is switched off reads "Source off", not "Connected".
 - CLI: `connect pair --no-limit`; an already-paired device says so first, whoever runs `connect pair`; `hub provider add gemini` (google, antigravity, agy) points to `omnillm login gemini`, and `hub provider off gemini` works; `uninstall --purge` removes the Google sign-in too; on a device only an install-started hub may `hub run`; `status` on a removed device exits 1 and says to run `connect forget`; a wrong `connect chat --model` gives a runnable command.
+- Phone page: in a browser that can't keep the pairing (a private window), a second tab no longer leaves the first one stuck; coming back to it just carries on.
+- Console: a switched-off subscription no longer says "Ready to use" under "Source off".
+- CLI: status and the `omnillm` menu offer the Google AI subscription (`omnillm login gemini`); on a device-only computer `omnillm connect` and `-h` show the device's commands; `hub region confirm` checks the hub is running first; `hub pair` refuses `--budget-usd` with `--no-limit`, and the command it hands an AI assistant keeps the options; `hub app add` says when the local API for apps isn't running; `hub provider off|on` takes `google` and `agy`; model names and IDs are cleaned of control characters in the terminal; the `login` help line no longer runs into its description.
 
 ### Security
 

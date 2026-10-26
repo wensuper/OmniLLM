@@ -117,7 +117,7 @@ func chatLoop(ctx context.Context, d *device.Device, model string) {
 				return modelName(m)
 			}
 		}
-		return id
+		return stripControls(id)
 	}
 	fmt.Fprintf(os.Stderr, t("和 %s 对话。/model 换模型，/image 文件 附一张图片，/new 重新开始，Ctrl-C 停止回答，Ctrl-D 退出。\n",
 		"Chatting with %s. /model to switch, /image FILE to attach a picture, /new to start over, Ctrl-C stops a reply, Ctrl-D quits.\n"), name(model))

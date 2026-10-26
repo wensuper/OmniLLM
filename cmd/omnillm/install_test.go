@@ -225,7 +225,11 @@ func TestNextStepWithoutModelsIsOneCommandALine(t *testing.T) {
 		for _, st := range []Status{{Running: true}, {Running: true, Headless: true}} {
 			s := nextStep(st)
 			lines := strings.Split(s, "\n")
-			if len(lines) != 4 || strings.Contains(s, "%!") {
+			want := 5 // Claude, ChatGPT, Gemini, API key (headless: no Gemini, its sign-in needs this screen)
+			if st.Headless {
+				want = 4
+			}
+			if len(lines) != want || strings.Contains(s, "%!") {
 				t.Fatalf("%s %+v: %q", lang, st, s)
 			}
 			for _, l := range lines[1:] {
@@ -250,7 +254,7 @@ func TestNextStepNamesTheDesktopApp(t *testing.T) {
 		t.Setenv("OMNILLM_LANG", l)
 		s := nextStep(Status{Running: true})
 		lines := strings.Split(s, "\n")
-		if len(lines) != 5 || !strings.Contains(lines[0], "Claude") || strings.Contains(lines[0], "ChatGPT") || !strings.Contains(s, "omnillm login claude") {
+		if len(lines) != 6 || !strings.Contains(lines[0], "Claude") || strings.Contains(lines[0], "ChatGPT") || !strings.Contains(s, "omnillm login claude") {
 			t.Fatalf("%s: %q", l, s)
 		}
 	}

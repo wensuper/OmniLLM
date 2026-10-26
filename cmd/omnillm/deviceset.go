@@ -293,7 +293,7 @@ func findProvider(l string, ps []hub.ProviderInfo, q string) (hub.ProviderInfo, 
 		case provider.Codex:
 			names = append(names, "chatgpt")
 		case provider.Antigravity:
-			names = append(names, "gemini")
+			names = append(names, "gemini", "google", "agy") // as login and provider add take them
 		}
 		return p.Name, names
 	},

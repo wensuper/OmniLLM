@@ -145,7 +145,11 @@ func dieArgs(err error) {
 	var u usageErr
 	if errors.As(err, &u) {
 		if errors.Is(err, errHelp) {
-			helpCmd([]string{"--all"})
+			if role() == "device" {
+				helpCmd(nil) // the commands this computer has
+			} else {
+				helpCmd([]string{"--all"})
+			}
 			os.Exit(0)
 		}
 		// The reason stays on screen; the full list is one command away.
@@ -283,7 +287,8 @@ func usageText(all bool) string {
   omnillm status                     查看主机状态
   omnillm update [--check] [--auto on|off]
                                      更新到最新版本（主机默认会在空闲时自己更新）；--auto 开关自动更新
-  omnillm login claude|chatgpt|gemini 用 Claude、ChatGPT 或 Google AI 订阅：没装官方程序会先装上，再在浏览器里登录
+  omnillm login claude|chatgpt|gemini
+                                     用 Claude、ChatGPT 或 Gemini 订阅：没装官方程序会先装上，再在浏览器里登录
   omnillm uninstall [--purge]        停止并移除后台服务（--purge 连数据和 API Key 一起删）
   omnillm tray                       把菜单栏图标找回来
   omnillm version                    显示版本
@@ -327,7 +332,8 @@ func usageText(all bool) string {
   omnillm status                     show the hub’s status
   omnillm update [--check] [--auto on|off]
                                      update to the newest version (the hub also updates itself when idle); --auto turns that on or off
-  omnillm login claude|chatgpt|gemini use your Claude, ChatGPT or Google AI subscription: installs the official program if needed, signs in in your browser
+  omnillm login claude|chatgpt|gemini
+                                     use your Claude, ChatGPT or Google AI subscription: installs the official program if needed, signs in in your browser
   omnillm uninstall [--purge]        stop and remove the background service (--purge also deletes data and API keys)
   omnillm tray                       bring back the menu bar icon
   omnillm version                    show the version
@@ -394,7 +400,8 @@ func usageText(all bool) string {
   omnillm status                     查看主机状态
   omnillm update [--check] [--auto on|off]
                                      更新到最新版本（主机默认会在空闲时自己更新）；--auto 开关自动更新
-  omnillm login claude|chatgpt|gemini 用 Claude、ChatGPT 或 Google AI 订阅：没装官方程序会先装上，再在浏览器里登录
+  omnillm login claude|chatgpt|gemini
+                                     用 Claude、ChatGPT 或 Gemini 订阅：没装官方程序会先装上，再在浏览器里登录
   omnillm uninstall [--purge]        停止并移除后台服务（--purge 连数据和 API Key 一起删）
   omnillm tray                       把菜单栏图标找回来
   omnillm version                    显示版本
@@ -408,7 +415,8 @@ func usageText(all bool) string {
   omnillm status                     show the hub’s status
   omnillm update [--check] [--auto on|off]
                                      update to the newest version (the hub also updates itself when idle); --auto turns that on or off
-  omnillm login claude|chatgpt|gemini use your Claude, ChatGPT or Google AI subscription: installs the official program if needed, signs in in your browser
+  omnillm login claude|chatgpt|gemini
+                                     use your Claude, ChatGPT or Google AI subscription: installs the official program if needed, signs in in your browser
   omnillm uninstall [--purge]        stop and remove the background service (--purge also deletes data and API keys)
   omnillm tray                       bring back the menu bar icon
   omnillm version                    show the version
@@ -471,9 +479,9 @@ func guideCmd() {
 	}
 	// With no model yet, next already lists how to connect one.
 	if st.Providers > 0 {
-		connect = t("  接上订阅             omnillm login claude（或 chatgpt）\n"+
+		connect = t("  接上订阅             omnillm login claude（或 chatgpt、gemini）\n"+
 			"  接上 API Key         omnillm hub provider add anthropic（OpenAI 的 Key 换成 openai）\n",
-			"  Connect a subscription   omnillm login claude (or chatgpt)\n"+
+			"  Connect a subscription   omnillm login claude (or chatgpt, gemini)\n"+
 				"  Connect an API key       omnillm hub provider add anthropic (openai for an OpenAI key)\n")
 	}
 	fmt.Println(runnable(t("想做什么：\n"+
@@ -591,8 +599,8 @@ func openCmd(args []string) {
 		// No screen here: what works on this machine instead of a link no
 		// browser can open.
 		if headless() {
-			fmt.Println(runnable(t("这台机器没有屏幕，控制台在这里打不开。在它的终端里亲自运行：\n· 加手机或电脑：omnillm pair\n· 接上模型：omnillm login claude（或 chatgpt），或 omnillm hub provider add anthropic\n· 看状态：omnillm status",
-				"This machine has no screen, so the console can’t open here. In its terminal, run yourself:\n· Add a phone or computer: omnillm pair\n· Connect a model: omnillm login claude (or chatgpt), or omnillm hub provider add anthropic\n· See how things are: omnillm status")))
+			fmt.Println(runnable(t("这台机器没有屏幕，控制台在这里打不开。在它的终端里亲自运行：\n· 加手机或电脑：omnillm pair\n· 接上模型：omnillm login claude（或 chatgpt、gemini），或 omnillm hub provider add anthropic\n· 看状态：omnillm status",
+				"This machine has no screen, so the console can’t open here. In its terminal, run yourself:\n· Add a phone or computer: omnillm pair\n· Connect a model: omnillm login claude (or chatgpt, gemini), or omnillm hub provider add anthropic\n· See how things are: omnillm status")))
 			return
 		}
 		// The link is a console session: only for a person at this
@@ -878,14 +886,15 @@ func hubCmd(args []string) {
 		if err := ctl(sock, control.Request{Op: "status"}, func(control.Reply) (bool, bool) { return false, false }); err != nil {
 			die(err)
 		}
-		if notAPerson() {
-			fmt.Println(runnable(t("添加设备是你自己的一步：在这台机器上你自己的终端里运行 omnillm pair，扫码、核对 6 位数都在那里做。",
-				"Adding a device is your own step: in your own terminal on this machine, run omnillm pair; the scan and the 6-digit check happen there.")))
-			return
-		}
 		a, err := pairArgs(args[1:])
 		if err != nil {
 			dieArgs(err)
+		}
+		if notAPerson() {
+			cmd := strings.Join(append([]string{"omnillm pair"}, shellWords(args[1:])...), " ")
+			fmt.Println(runnable(fmt.Sprintf(t("添加设备是你自己的一步：在这台机器上你自己的终端里运行 %s，扫码、核对 6 位数都在那里做。",
+				"Adding a device is your own step: in your own terminal on this machine, run %s; the scan and the 6-digit check happen there."), cmd)))
+			return
 		}
 		callOr(sock, control.Request{Op: "pair", Args: a}, "")
 		if st, ok := queryStatus(); ok && (st.Providers == 0 || (st.ProvidersOn != nil && *st.ProvidersOn == 0)) {
@@ -959,6 +968,9 @@ func hubCmd(args []string) {
 		if len(args) != 2 || args[1] != "confirm" {
 			dieArgs(badCommand(append([]string{"hub"}, args...)...))
 		}
+		if err := ctl(sock, control.Request{Op: "status"}, func(control.Reply) (bool, bool) { return false, false }); err != nil {
+			die(err)
+		}
 		if notAPerson() {
 			fmt.Println(runnable(t("确认换了地区是你自己的决定：在这台机器上你自己的终端里运行 omnillm hub region confirm。",
 				"Confirming the new region is your own decision: in your own terminal on this machine, run omnillm hub region confirm.")))
@@ -986,6 +998,9 @@ func pairArgs(args []string) (map[string]string, error) {
 		return nil, err
 	}
 	a := map[string]string{"name": *name, "models": *models, "budget_usd": "0", "background_only": fmt.Sprint(*bg)}
+	if *noLimit && *budget != "" {
+		return nil, usageErr(t("--budget-usd 和 --no-limit 只能用一个。", "Use either --budget-usd or --no-limit, not both."))
+	}
 	if *noLimit {
 		a["budget_usd"] = "nolimit"
 	} else if *budget != "" {
@@ -1515,6 +1530,8 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 				"Token for “%s” (shown once, keep it safe):\n%s\nThis app makes background calls only; daily limit %s."), app.Name, tok, usd(app.Budget))
 			if con != nil && con.APIURL != "" {
 				text += "\n" + fmt.Sprintf(tl(l, "接口地址（兼容 OpenAI）：%s，令牌放在 Authorization: Bearer 里。", "Address (OpenAI-compatible): %s; send the token as Authorization: Bearer."), con.APIURL)
+			} else {
+				text += "\n" + tl(l, "给应用用的本机接口现在没打开（多半是端口 8765 被占了），这个令牌暂时用不了。", "The local API for apps isn’t running (port 8765 is probably in use), so this token can’t be used yet.")
 			}
 			return c.Send(control.Reply{Event: "ok", Text: text})
 		case "app.rm":
@@ -1797,6 +1814,10 @@ func pairOp(ctx context.Context, h *hub.Hub, c *control.Conn, l string, a map[st
 
 func connectCmd(args []string) {
 	if len(args) == 0 {
+		if role() == "device" {
+			fmt.Fprint(os.Stderr, usageText(false)) // the device's commands
+			os.Exit(2)
+		}
 		subUsage()
 	}
 	dir := dataDir("device")
@@ -1906,7 +1927,7 @@ func connectCmd(args []string) {
 			if m.HumanOnly {
 				note = t("（只能手动对话）", " (chat only)")
 			}
-			fmt.Printf("%-28s %s%s\n", m.ID, modelName(m), note)
+			fmt.Printf("%-28s %s%s\n", stripControls(m.ID), modelName(m), note)
 		}
 	case "chat":
 		fs := flag.NewFlagSet("connect chat", flag.ContinueOnError)
@@ -2117,4 +2138,19 @@ func deviceHubHint() string {
 func nothingAnswers(err error) bool {
 	m := strings.ToLower(fmt.Sprint(err, " ", omnillm.AsError(err).Detail))
 	return strings.Contains(m, "refused") || strings.Contains(m, "no such host") || strings.Contains(m, "timeout") || strings.Contains(m, "unreachable")
+}
+
+// shellWords quotes args for a command line the person copies: a word with
+// anything but letters, digits and -_.,=/:@ goes in single quotes.
+func shellWords(args []string) []string {
+	out := make([]string, len(args))
+	for i, a := range args {
+		a = stripControls(a)
+		if a != "" && strings.Trim(a, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.,=/:@") == "" {
+			out[i] = a
+		} else {
+			out[i] = "'" + strings.ReplaceAll(a, "'", `'\''`) + "'"
+		}
+	}
+	return out
 }

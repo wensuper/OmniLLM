@@ -593,10 +593,10 @@ function subCard(x, k) {
   const signedOut = !!x.signed_out;
   // Switched off by the owner: said, not "Connected".
   const off = S && (S.providers || []).some((p) => p.kind === x.kind && p.off);
-  if (x.connected && !signedOut) head.append(off ? el("span", t("sourceOffTag"), "tag warn-tag") : el("span", t("subOn"), "tag ok-tag"));
+  if (x.connected && !signedOut) head.append(off ? el("span", t("sourceOffTag"), "tag paused-tag") : el("span", t("subOn"), "tag ok-tag"));
   card.append(head);
   const fill = (key) => t(key, desktopName(x.desktop || k.app), k.program, t(k.plan));
-  if (x.connected && !signedOut) { delete subsWaiting[x.kind]; card.append(el("p", t("subOnBody"), "muted")); return card; }
+  if (x.connected && !signedOut) { delete subsWaiting[x.kind]; if (!off) card.append(el("p", t("subOnBody"), "muted")); return card; }
   let text, btn = null, act = null;
   if (signedOut) { text = fill("subLoginLost"); btn = t("subSignIn"); act = "login"; }
   else if (x.logged_in && x.removed) { text = fill("subRemoved"); btn = t("subReconnect"); act = "connect"; }
