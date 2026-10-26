@@ -161,7 +161,7 @@ func installCmd(args []string) {
 	relayFromEnv()
 	webAppFromEnv()
 	if api := strings.TrimSpace(os.Getenv("OMNILLM_API")); api != "" && !validAPI(api) {
-		dieArgs(usageErr(t("OMNILLM_API 要写成 127.0.0.1:端口（例如 127.0.0.1:8766），或 off。", "OMNILLM_API is 127.0.0.1:PORT (e.g. 127.0.0.1:8766) or off.")))
+		dieArgs(usageErr(t("OMNILLM_API 要写成 127.0.0.1:端口（端口 1–65535，例如 127.0.0.1:8765），或 off。", "OMNILLM_API is 127.0.0.1:PORT (port 1–65535, e.g. 127.0.0.1:8765) or off.")))
 	}
 	dir := dataDir("hub")
 	if err := os.MkdirAll(dir, 0o700); err != nil {

@@ -1262,7 +1262,7 @@ func hubRun(dir, sock string, args []string) {
 	if *api != "" && *api != "off" {
 		if ln, err := localapi.Listen(*api); err != nil {
 			if !validAPI(*api) {
-				log.Printf(t("给应用用的本机接口只能开在这台电脑上（127.0.0.1:端口），%s 不行；应用暂时连不上。", "The local API for apps only opens on this computer (127.0.0.1:PORT), not %s; apps can’t connect for now."), *api)
+				log.Printf(t("给应用用的本机接口的地址要写成 127.0.0.1:端口（端口 1–65535），%s 不行；应用暂时连不上。", "The local API for apps needs an address like 127.0.0.1:PORT (port 1–65535), not %s; apps can’t connect for now."), *api)
 			} else {
 				log.Printf(t("给应用用的本机接口没能启动（%s 多半被占了）；应用暂时连不上。", "The local API for apps did not start (%s is probably in use); apps can’t connect for now."), *api)
 			}
@@ -1565,7 +1565,7 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 				if apiSetting == "off" {
 					text += "\n" + tl(l, "给应用用的本机接口被设置关掉了（OMNILLM_API=off），这个令牌暂时用不了。要打开：运行 OMNILLM_API="+defaultAPI+" omnillm install（在前台运行的，不带 OMNILLM_API=off 重新启动）。", "The local API for apps is turned off (OMNILLM_API=off), so this token can’t be used yet. To turn it on, run OMNILLM_API="+defaultAPI+" omnillm install (a hub run in the foreground: start it again without OMNILLM_API=off).")
 				} else if !validAPI(apiSetting) {
-					text += "\n" + fmt.Sprintf(tl(l, "给应用用的本机接口只能开在这台电脑上（127.0.0.1:端口），%s 不行，这个令牌暂时用不了。", "The local API for apps only opens on this computer (127.0.0.1:PORT), not %s, so this token can’t be used yet."), apiSetting)
+					text += "\n" + fmt.Sprintf(tl(l, "给应用用的本机接口的地址要写成 127.0.0.1:端口（端口 1–65535），%s 不行，这个令牌暂时用不了。", "The local API for apps needs an address like 127.0.0.1:PORT (port 1–65535), not %s, so this token can’t be used yet."), apiSetting)
 				} else {
 					text += "\n" + fmt.Sprintf(tl(l, "给应用用的本机接口现在没打开（多半是 %s 被占了），这个令牌暂时用不了。", "The local API for apps isn’t running (%s is probably in use), so this token can’t be used yet."), apiSetting)
 				}
@@ -1909,7 +1909,7 @@ func connectCmd(args []string) {
 			dieArgs(err)
 		}
 		if !validAPI(*listen) || *listen == "off" {
-			dieArgs(usageErr(t("--listen 必须在这台电脑上（127.0.0.1:端口）。", "--listen must be on this computer (127.0.0.1:PORT).")))
+			dieArgs(usageErr(t("--listen 要写成这台电脑上的 127.0.0.1:端口（端口 1–65535）。", "--listen is 127.0.0.1:PORT on this computer (port 1–65535).")))
 		}
 		d, err := device.Open(ctx, device.Options{Secrets: sec, Logf: func(f string, a ...any) { log.Printf(f, a...) }})
 		if err != nil {

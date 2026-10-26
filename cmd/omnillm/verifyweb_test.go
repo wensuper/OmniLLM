@@ -69,6 +69,10 @@ func TestVerifyWebComparesEveryFileWithTheSignedRelease(t *testing.T) {
 	if !w.OK || w.Release != "v0.2.0-alpha.99" || w.Files != 3 {
 		t.Fatalf("the release's own page: %+v", w)
 	}
+	// The address as a phone's address bar has it (or OMNILLM_WEB_APP ending in index.html).
+	if w := verifyWeb(ctx, srv.Client(), srv.URL+"/web/index.html?x=1#pair=omnillm2-abc"); !w.OK {
+		t.Fatalf("the same page by its full address: %+v", w)
+	}
 	served["omni.wasm"] = "changed"
 	if w = verifyWeb(ctx, srv.Client(), srv.URL+"/web/"); w.OK || !w.Mismatch() || len(w.Bad) != 1 || w.Bad[0] != "omni.wasm" {
 		t.Fatalf("a changed file passed: %+v", w)

@@ -826,7 +826,7 @@ async function connectPair(text) {
     pairScreen("ok", t("connectedMac"), t("doneName", S.device.name));
     // A fresh, empty chat says once that the Mac is there.
     S.cur = newChat(); S.hello = S.cur.id;
-    setTimeout(openChat, 1200);
+    setTimeout(() => { if (!S.pairing) openChat(); }, 1200); // not over another pairing started meanwhile
   } catch (e) {
     sasShown(false); $("pair-stop").hidden = true;
     if (S.leftOld && S.device === old) {
