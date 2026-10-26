@@ -14,8 +14,10 @@ self.addEventListener("install", (e) => {
     }
   }).then(() => self.skipWaiting()));
 });
+// Taking over open pages too (the first visit's included), so a page left
+// open hears of the next version and reloads itself when idle.
 self.addEventListener("activate", (e) => {
-  e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k.startsWith("omnillm-") && k !== "omnillm-" + VERSION).map((k) => caches.delete(k)))));
+  e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k.startsWith("omnillm-") && k !== "omnillm-" + VERSION).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
 });
 self.addEventListener("fetch", (e) => {
   const u = new URL(e.request.url);

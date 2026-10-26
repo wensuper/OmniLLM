@@ -424,10 +424,19 @@ addEventListener("pagehide", () => { if (tabs && !S.quiet && !S.reloading) tabs.
 const UP = { ready: false };
 function watchUpdates() {
   if (!navigator.serviceWorker) return;
-  navigator.serviceWorker.addEventListener("controllerchange", () => { UP.ready = true; reloadIfIdle(); });
+  // The first worker taking over a page it didn't load is no new version:
+  // only a change from one worker to the next is.
+  let had = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener("controllerchange", () => { if (!had) { had = true; return; } UP.ready = true; reloadIfIdle(); });
   const check = () => navigator.serviceWorker.getRegistration().then((r) => r && r.update()).catch(() => {});
+  // Back to the tab, or to the window (a computer's tab stays visible
+  // while another window is in front), and every few minutes: a page left
+  // open (a welcome screen on a computer) picks up a new version within
+  // minutes instead of half an hour. A check is one small conditional
+  // request for sw.js.
   document.addEventListener("visibilitychange", () => { if (!document.hidden) check(); });
-  setInterval(check, 30 * 60 * 1000);
+  addEventListener("focus", check);
+  setInterval(check, 5 * 60 * 1000);
 }
 // S.relang: the Mac now speaks another language; the page reloads in it the
 // same way.
