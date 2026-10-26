@@ -88,6 +88,10 @@ func verifyWeb(ctx context.Context, c *http.Client, base string) webCheck {
 	}
 	w.Build = string(m[1])
 	man, tag, err := findManifest(ctx, c, w.Build)
+	if errors.Is(err, errNotListed) {
+		w.Release, w.Bad = tag, []string{"manifest.json"} // the release's own checksums disown it
+		return w
+	}
 	if err != nil {
 		w.Error = githubError(err)
 		return w
@@ -98,8 +102,12 @@ func verifyWeb(ctx context.Context, c *http.Client, base string) webCheck {
 	}
 	w.Release = tag
 	signed, err := signedRelease(ctx, c, tag)
-	if err != nil {
+	if errors.Is(err, errBadSignature) {
 		w.Bad = []string{"signature"}
+		return w
+	}
+	if err != nil { // couldn't check (a download, cosign itself): not a verdict
+		w.Error = githubError(err)
 		return w
 	}
 	w.Signed = signed
@@ -173,7 +181,7 @@ func findManifest(ctx context.Context, c *http.Client, build string) (*webManife
 		}
 		sum := sha256.Sum256(mb)
 		if !listed(sums, hex.EncodeToString(sum[:]), name) {
-			return nil, "", fmt.Errorf("%s: %s is not the one in checksums.txt", r.Tag, name)
+			return nil, r.Tag, fmt.Errorf("%s: %s: %w", r.Tag, name, errNotListed)
 		}
 		return man, r.Tag, nil
 	}
@@ -263,10 +271,19 @@ func signedRelease(ctx context.Context, c *http.Client, tag string) (bool, error
 		"--certificate-identity-regexp", `^https://github\.com/wensuper/OmniLLM/\.github/workflows/release\.yml@refs/tags/v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$`,
 		"--certificate-oidc-issuer", "https://token.actions.githubusercontent.com", sp)
 	if err := cmd.Run(); err != nil {
+		var ee *exec.ExitError
+		if errors.As(err, &ee) {
+			return false, errBadSignature // cosign ran and said no
+		}
 		return false, err
 	}
 	return true, nil
 }
+
+var (
+	errBadSignature = errors.New("verify: the signature doesn't check out")
+	errNotListed    = errors.New("not the one in checksums.txt")
+)
 
 // webCheckText says a check's result for a person. "Signed" only when the
 // signature was checked; otherwise "published on GitHub".
@@ -283,6 +300,9 @@ func webCheckText(w webCheck) string {
 	case len(w.Bad) == 1 && w.Bad[0] == "signature":
 		return fmt.Sprintf(t("警告：GitHub 上 %s 的签名核对没有通过。在弄清楚之前，不要在手机上用这个网页（%s）。",
 			"Warning: the signature of the GitHub release %s didn’t check out. Don’t use the web page (%s) on your phones until this is cleared up."), w.Release, w.URL)
+	case len(w.Bad) == 1 && w.Bad[0] == "app.js" && w.Release == "":
+		return fmt.Sprintf(t("警告：手机用的网页（%s）不是 OmniLLM 发布构建的（找不到构建号）。在弄清楚之前，不要在手机上用它。",
+			"Warning: the web page your phones use (%s) isn’t an OmniLLM release build (it has no build number). Don’t use it on your phones until this is cleared up."), w.URL)
 	case w.Error == "github_limited":
 		return fmt.Sprintf(t("没能核对手机用的网页（%s）：GitHub 暂时不让这台电脑再查了（同一个网络地址每小时最多 60 次）。过一会儿再试。", "Couldn’t check the web page your phones use (%s): GitHub isn’t answering this computer for now (it allows 60 checks an hour per network address). Try again in a while."), w.URL)
 	case w.Error == "web":
@@ -310,6 +330,9 @@ func verifyCmd(args []string) {
 	}
 	if base == "" {
 		base = hub.DefaultWebAppURL
+	}
+	if !strings.HasPrefix(base, "https://") && !strings.HasPrefix(base, "http://") {
+		dieArgs(usageErr(t("网页地址要以 https:// 开头，例如 omnillm verify web https://omni.ixxzh.com", "The web address starts with https://, e.g. omnillm verify web https://omni.ixxzh.com")))
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()

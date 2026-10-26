@@ -904,7 +904,7 @@ func hubCmd(args []string) {
 			dieArgs(err)
 		}
 		if st, ok := queryStatus(); ok && !st.RelayConfigured {
-			die(say(runnable(t("这台主机的远程连接关着（OMNILLM_RELAY=off），加不了设备。", "Remote access is off on this hub (OMNILLM_RELAY=off), so devices can't be added.") + " " + relayOnText(lang()))))
+			die(say(runnable(t("这台主机的远程连接关着（OMNILLM_RELAY=off），加不了设备。", "Remote access is off on this hub (OMNILLM_RELAY=off), so devices can't be added.") + sentenceGap() + relayOnText(lang()))))
 		}
 		if notAPerson() {
 			cmd := strings.Join(append([]string{"omnillm pair"}, shellWords(args[1:])...), " ")
@@ -1140,6 +1140,7 @@ func hubRun(dir, sock string, args []string) {
 	consoleAddr := fs.String("console", "127.0.0.1:8770", "serve the local console on this loopback address (empty: off)")
 	webApp := fs.String("web-app", "", "web client the pairing QR code opens (default: the project’s)")
 	_ = fs.Parse(args)
+	apiSetting = *api
 	// The data folder is checked here too, not only at install: the hub
 	// keeps its secrets and state there.
 	if _, err := privateHome(); err != nil {
@@ -1554,7 +1555,11 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 			if con != nil && con.APIURL != "" {
 				text += "\n" + fmt.Sprintf(tl(l, "接口地址（兼容 OpenAI）：%s，令牌放在 Authorization: Bearer 里。", "Address (OpenAI-compatible): %s; send the token as Authorization: Bearer."), con.APIURL)
 			} else {
-				text += "\n" + tl(l, "给应用用的本机接口现在没打开（多半是端口 8765 被占了），这个令牌暂时用不了。", "The local API for apps isn’t running (port 8765 is probably in use), so this token can’t be used yet.")
+				if apiSetting == "off" {
+					text += "\n" + tl(l, "给应用用的本机接口被设置关掉了（OMNILLM_API=off），这个令牌暂时用不了；不带这个设置重新启动 OmniLLM 就会打开。", "The local API for apps is turned off (OMNILLM_API=off), so this token can’t be used yet; start OmniLLM without that setting to turn it on.")
+				} else {
+					text += "\n" + fmt.Sprintf(tl(l, "给应用用的本机接口现在没打开（多半是 %s 被占了），这个令牌暂时用不了。", "The local API for apps isn’t running (%s is probably in use), so this token can’t be used yet."), apiSetting)
+				}
 			}
 			return c.Send(control.Reply{Event: "ok", Text: text})
 		case "app.rm":
@@ -1684,7 +1689,7 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 			return c.Send(control.Reply{Event: "ok", Text: tl(l, "已确认，模型恢复使用。", "Confirmed; models are back on.")})
 		case "pair":
 			if relayURL == "" {
-				return say(tl(l, "这台主机的远程连接关着（OMNILLM_RELAY=off），加不了设备。", "Remote access is off on this hub (OMNILLM_RELAY=off), so devices can't be added.") + " " + relayOnText(l))
+				return say(tl(l, "这台主机的远程连接关着（OMNILLM_RELAY=off），加不了设备。", "Remote access is off on this hub (OMNILLM_RELAY=off), so devices can't be added.") + tl(l, "", " ") + relayOnText(l))
 			}
 			return pairOp(ctx, h, c, l, a)
 		}
@@ -2197,3 +2202,10 @@ func relayOnText(l string) string {
 	return tl(l, "要打开：运行 OMNILLM_RELAY="+hub.DefaultRelayURL+" omnillm install（在前台运行的，不带 OMNILLM_RELAY=off 重新启动）。",
 		"To turn it on, run OMNILLM_RELAY="+hub.DefaultRelayURL+" omnillm install (a hub run in the foreground: start it again without OMNILLM_RELAY=off).")
 }
+
+// apiSetting is the local API's address as the hub was started with it
+// ("off": turned off), for what the control commands say about it.
+var apiSetting string
+
+// sentenceGap goes between two sentences: none in Chinese.
+func sentenceGap() string { return t("", " ") }

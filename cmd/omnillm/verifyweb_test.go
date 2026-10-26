@@ -84,7 +84,8 @@ func TestVerifyWebComparesEveryFileWithTheSignedRelease(t *testing.T) {
 	// A manifest that isn't the one in the signed checksums is not trusted.
 	served["app.js"] = files["app.js"]
 	manJSON = append(manJSON, ' ')
-	if w = verifyWeb(ctx, srv.Client(), srv.URL+"/web/"); w.OK || w.Error == "" {
+	// (A warning, not "GitHub didn't answer": the release disowns it.)
+	if w = verifyWeb(ctx, srv.Client(), srv.URL+"/web/"); w.OK || !w.Mismatch() || w.Bad[0] != "manifest.json" {
 		t.Fatalf("an unsigned manifest was trusted: %+v", w)
 	}
 }
