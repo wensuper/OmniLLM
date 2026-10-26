@@ -96,8 +96,18 @@ func ctl(sock string, req control.Request, onReply func(control.Reply) (bool, bo
 		req.Lang = lang()
 	}
 	err := control.Call(sock, req, onReply)
+	var re *control.ReplyError
+	if errors.As(err, &re) {
+		return say(re.Text)
+	}
+	var fs *control.ForeignSocketError
+	if errors.As(err, &fs) {
+		return sayf(t("警告：%s 属于另一个用户，OmniLLM 不会连它。检查 OMNILLM_HOME 指向的是不是你自己的文件夹。", "Warning: %s belongs to another user, so OmniLLM won’t use it. Check that OMNILLM_HOME points at a folder of your own."), fs.Path)
+	}
 	if errors.Is(err, control.ErrNotRunning) {
 		switch {
+		case role() == "device" && !device.Paired(context.Background(), secrets(dataDir("device"), "omnillm-device")):
+			return say(runnable(deviceNext()))
 		case role() == "device":
 			return say(runnable(omnillm.ForHub(lang(), "", t("这台电脑只当设备用，主机命令要在你的 Mac 上运行。这里能用：omnillm connect chat、ask、models。",
 				"This computer is set up as a device; hub commands run on your Mac. Here: omnillm connect chat, ask or models."))))
@@ -544,7 +554,10 @@ func openCmd(args []string) {
 		url = r.Text
 		return false, false
 	})
-	if err != nil || !strings.HasPrefix(url, "http://127.0.0.1:") {
+	if err != nil {
+		die(err)
+	}
+	if !strings.HasPrefix(url, "http://127.0.0.1:") {
 		fmt.Fprintln(os.Stderr, notRunning())
 		os.Exit(1)
 	}
@@ -729,8 +742,8 @@ func hubCmd(args []string) {
 			dieArgs(usageErr(t("用法：omnillm hub provider add openai-compatible --name 名字 --base-url https://…", "Usage: omnillm hub provider add openai-compatible --name NAME --base-url https://…")))
 		}
 		// Not running: say so before anyone pastes a key.
-		if _, ok := queryStatus(); !ok {
-			die(say(runnable(notRunning())))
+		if err := ctl(sock, control.Request{Op: "status"}, func(control.Reply) (bool, bool) { return false, false }); err != nil {
+			die(err)
 		}
 		key := ""
 		if kind != "ollama" {
@@ -791,7 +804,11 @@ func hubCmd(args []string) {
 		}
 		printTable(sock, req, render)
 	case "audit":
-		callOr(sock, control.Request{Op: args[0]}, t("今天还没有调用。", "No calls yet today."))
+		empty := "" // a script gets the JSON as it is ([] or null)
+		if term.IsTerminal(int(os.Stdout.Fd())) {
+			empty = t("今天还没有调用。", "No calls yet today.")
+		}
+		callOr(sock, control.Request{Op: args[0]}, empty)
 	case "pair":
 		if notAPerson() {
 			fmt.Println(runnable(t("添加设备是你自己的一步：在这台机器上你自己的终端里运行 omnillm pair，扫码、核对 6 位数都在那里做。",
@@ -1696,10 +1713,15 @@ func connectCmd(args []string) {
 			}
 		}
 		log.Printf(t("本机接口：http://%s/v1 ，令牌在 %s（只有你能读）。", "Local API: http://%s/v1 ; token in %s (readable only by you)."), *listen, tokPath)
+		localapi.HubOS = d.HubOS // the messages name the right kind of computer
 		if err := localapi.Serve(ctx, *listen, localapi.Handler(localapi.NewDeviceBackend(d, strings.TrimSpace(string(tok))))); err != nil {
 			die(err)
 		}
 	case "forget":
+		if paired, err := device.CheckPaired(ctx, sec); err == nil && !paired {
+			fmt.Println(t("这台设备没有配对，没有要删的。", "This device isn’t paired; there is nothing to delete."))
+			return
+		}
 		// Leave on the Mac first, so it disappears from its device list;
 		// when the Mac can't be reached the pairing is still deleted here.
 		left := false
@@ -1807,7 +1829,7 @@ func connectCmd(args []string) {
 				}
 				die(err)
 			}
-			fmt.Print(c.Text)
+			fmt.Print(termSafe(c.Text))
 		}
 	default:
 		dieArgs(badCommand("connect", args[0]))

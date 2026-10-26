@@ -1392,6 +1392,9 @@ func statusCmd(args []string) {
 		if st.Update != "" {
 			fmt.Println(runnable(fmt.Sprintf(t("有新版本 %s。运行 omnillm update 更新。", "Version %s is out. Run omnillm update to install it."), st.Update)))
 		}
+		if !paired {
+			os.Exit(1) // as a hub that isn't running
+		}
 		return
 	}
 	if role() == "" && !exists(dataDir("hub")) {
@@ -1454,8 +1457,16 @@ func uninstallCmd(args []string) {
 	// A device-only machine has no service: forgetting the pairing is
 	// what removes it.
 	if role() == "device" {
-		fmt.Println(runnable(t("这台电脑只当设备用，没有后台服务。要删除配对，运行 omnillm connect forget。程序本身在 ~/.local/bin/omnillm，不需要了就 rm 掉。",
-			"This computer is set up as a device and has no background service. To delete its pairing, run omnillm connect forget. The program itself is at ~/.local/bin/omnillm; delete it with rm if you no longer need it.")))
+		if purge {
+			// The pairing (left on the other side when it answers) and the
+			// device's folder go.
+			connectCmd([]string{"forget"})
+			_ = os.RemoveAll(dataDir("device"))
+			fmt.Println(t("程序本身还在 ~/.local/bin/omnillm，不需要了就 rm 掉。", "The program itself is still at ~/.local/bin/omnillm; delete it with rm if you no longer need it."))
+			return
+		}
+		fmt.Println(runnable(t("这台电脑只当设备用，没有后台服务。要删除配对，运行 omnillm connect forget（或 omnillm uninstall --purge）。程序本身在 ~/.local/bin/omnillm，不需要了就 rm 掉。",
+			"This computer is set up as a device and has no background service. To delete its pairing, run omnillm connect forget (or omnillm uninstall --purge). The program itself is at ~/.local/bin/omnillm; delete it with rm if you no longer need it.")))
 		return
 	}
 	home, _ := os.UserHomeDir()

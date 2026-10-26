@@ -244,7 +244,7 @@ func chatOnce(ctx context.Context, d *device.Device, model string, msgs []omnill
 			return b.String(), err
 		}
 		b.WriteString(c.Text)
-		fmt.Print(c.Text)
+		fmt.Print(termSafe(c.Text))
 	}
 }
 
@@ -270,4 +270,28 @@ func readImage(path string) (omnillm.Image, error) {
 		return omnillm.Image{}, sayf(t("读不了图片文件 %s。", "Can’t read the image file %s."), path)
 	}
 	return omnillm.Image{MIME: http.DetectContentType(b), Data: b}, nil
+}
+
+// termSafe is model output as a terminal shows it: no control characters
+// but line breaks and tabs, so a reply can't move the cursor, fake a
+// prompt, set links or write the clipboard (escape sequences). Output to a
+// pipe or file is left as it is.
+func termSafe(s string) string {
+	if !term.IsTerminal(int(os.Stdout.Fd())) {
+		return s
+	}
+	return stripControls(s)
+}
+
+// stripControls drops control characters except line breaks and tabs.
+func stripControls(s string) string {
+	return strings.Map(func(r rune) rune {
+		if r == '\n' || r == '\t' {
+			return r
+		}
+		if r < 0x20 || r == 0x7f || (r >= 0x80 && r < 0xa0) {
+			return -1
+		}
+		return r
+	}, s)
 }

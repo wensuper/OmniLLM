@@ -30,8 +30,13 @@ All notable changes to OmniLLM are documented here. OmniLLM is in early pre-rele
 - Phone page: a reload (language, new version) returns to the chat you had open; it doesn't reload while you're typing or with images attached; pairing with an unreachable computer says to scan a new code; Android gets its own Add-to-Home-Screen steps.
 - Command line: subscriptions can be named `claude` and `chatgpt`, and `hub providers` shows IDs; removing a source with a key says the key is deleted; `openai-compatible` asks for its name and address before the key; hub commands on a device or without OmniLLM installed say so; `/image` understands `~/` and dragged-in paths; a wrong `--model` is caught at once; `status` checks its options and reports a device's pairing.
 
+- Command line: when the hub refuses a command (a wrong name, a key that doesn't work, an expired pairing), its own sentence is shown, not "something went wrong". `hub audit` stays JSON for scripts. A device that isn't paired says so from `status` (exit 1), hub commands and `connect forget`.
+- Console: a signed-out subscription has a Sign in button right in the Models tab; messages from the console and the local API name "your Mac" only on a Mac.
+
 ### Security
 
+- Model replies shown in a terminal have control characters removed, so a reply can't use escape sequences (to write the clipboard or fake a prompt).
+- `uninstall --purge` on a device deletes its pairing; a control socket that belongs to another user gets its own warning.
 - A device's message that starts with "/" after any kind of leading space (Unicode spaces, zero-width characters) is still only a message.
 
 ## [0.2.0-alpha.56](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.56) - 2026-10-25

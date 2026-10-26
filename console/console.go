@@ -406,7 +406,7 @@ func writeJSON(w http.ResponseWriter, v any) {
 
 func writeErr(w http.ResponseWriter, r *http.Request, status int, err error) {
 	e := omnillm.AsError(err)
-	msg := omnillm.Describe(lang(r), e)
+	msg := omnillm.ForHub(lang(r), runtime.GOOS, omnillm.Describe(lang(r), e))
 	if e.Msg == msgLoginExpired {
 		msg = map[string]string{"zh": "登录已失效。点菜单栏里的 OmniLLM 图标，选“打开控制台”，或者在终端运行 omnillm open。",
 			"en": "This login has expired. Click the OmniLLM icon in the menu bar and choose “Open the console”, or run omnillm open in Terminal."}[lang(r)]
@@ -601,7 +601,7 @@ func (s *Server) detectProviders(w http.ResponseWriter, r *http.Request) {
 	}
 	failed := []map[string]string{}
 	for _, f := range failures {
-		m := map[string]string{"kind": f.Kind, "message": omnillm.Describe(lang(r), f.Err)}
+		m := map[string]string{"kind": f.Kind, "message": omnillm.ForHub(lang(r), runtime.GOOS, omnillm.Describe(lang(r), f.Err))}
 		// An Ollama with no chat model is something to know, not an
 		// error: nothing the owner asked for failed.
 		if e := omnillm.AsError(f.Err); e != nil && e.Msg == omnillm.MsgNoChatModel {
@@ -751,7 +751,7 @@ func (s *Server) subs(w http.ResponseWriter, r *http.Request) {
 		m := map[string]any{"kind": st.Kind, "installed": st.Installed, "logged_in": st.LoggedIn, "connected": st.Connected,
 			"desktop": st.Desktop, "elsewhere": st.Elsewhere, "removed": st.Removed, "signed_out": st.Connected && signedOut[string(st.Kind)]}
 		if st.Problem != nil {
-			m["problem"] = omnillm.Describe(lang(r), st.Problem)
+			m["problem"] = omnillm.ForHub(lang(r), runtime.GOOS, omnillm.Describe(lang(r), st.Problem))
 		}
 		out = append(out, m)
 	}
@@ -1072,7 +1072,7 @@ func (s *Server) pairGet(w http.ResponseWriter, r *http.Request) {
 	ps.seen = time.Now()
 	out := map[string]any{"state": ps.state, "device_name": ps.name, "code": ps.sas, "device_id": ps.device}
 	if ps.errMsg != nil {
-		out["message"] = omnillm.Describe(lang(r), ps.errMsg)
+		out["message"] = omnillm.ForHub(lang(r), runtime.GOOS, omnillm.Describe(lang(r), ps.errMsg))
 		out["reason"] = pairReason(ps.errMsg)
 	}
 	writeJSON(w, out)

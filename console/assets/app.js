@@ -1921,6 +1921,12 @@ function renderModels() {
     nc.append(el("div", how, "nm-sub narrow-only"));
     const pt = problemText(p);
     if (pt) nc.append(el("span", pt, "tag warn-tag"));
+    // Signed out: the sign-in right here (the phone and the error point to it).
+    if (p.problem === "login" && p.subscription && onMac()) {
+      const b = el("button", t("subSignIn"), "link"); b.type = "button";
+      b.addEventListener("click", async () => { try { await api("subs/login", { kind: p.kind }); toast(t("subHow")); } catch (e) { toast(e.message, true); } });
+      nc.append(" ", b);
+    }
     cell(tr, how, "how");
     // Off keeps the login or key; Remove (quieter) deletes it.
     pauseSwitch(tr, label, "providers/off", p.name, !!p.off, "off", ["sourceOffToast", "sourceOnToast"]);
@@ -2169,6 +2175,7 @@ $("theme").addEventListener("click", () => {
 
 document.querySelectorAll("button[data-copy]").forEach((b) => copyBtn(b.dataset.copy, b));
 
+let bootTries = 0;
 async function boot() {
   applyLang();
   applyTheme(store("omnillm.theme"));
@@ -2190,7 +2197,10 @@ async function boot() {
   }
   try { await refresh(); } catch (e) {
     if (e.status === 401) show("login-needed");
-    else { toast(e.message, true); setTimeout(boot, 3000); } // restarting (an update): try again
+    // Restarting (an update): try again, less often, then stop; only
+    // when it didn't answer or failed on its side.
+    else if ((e.status === undefined || e.status >= 500) && bootTries < 8) { bootTries++; setTimeout(boot, Math.min(30000, 3000 * bootTries)); }
+    else toast(e.message, true);
     return;
   }
   if (wantAdd && !$("dash").hidden) {

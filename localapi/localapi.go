@@ -17,6 +17,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -143,9 +144,13 @@ func errBody(r *http.Request, e *omnillm.Error) apiError {
 	var b apiError
 	b.Error.Code = e.Code
 	b.Error.Type = string(e.Code)
-	b.Error.Message = omnillm.Describe(lang(r), e)
+	b.Error.Message = omnillm.ForHub(lang(r), HubOS(), omnillm.Describe(lang(r), e))
 	return b
 }
+
+// HubOS is the system of the computer whose models these are ("darwin":
+// the messages say "your Mac"); a device sets it from its hub.
+var HubOS = func() string { return runtime.GOOS }
 
 func writeErr(w http.ResponseWriter, r *http.Request, err error, status int) {
 	e := omnillm.AsError(err)

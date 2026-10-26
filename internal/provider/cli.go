@@ -278,7 +278,7 @@ func noCommand(s string) string {
 	// Any leading space a program might trim first (Unicode spaces, BOM,
 	// zero-width characters) counts as space here too.
 	trimmed := strings.TrimLeftFunc(s, func(r rune) bool {
-		return unicode.IsSpace(r) || r == '\ufeff' || r == '\u200b' || r == '\u200c' || r == '\u200d' || r == '\u2060'
+		return unicode.IsSpace(r) || unicode.In(r, unicode.Cf, unicode.Mn) || r == '\u180e'
 	})
 	if strings.HasPrefix(trimmed, "/") {
 		return "User message:\n" + s

@@ -1,11 +1,14 @@
 package main
 
 import (
+	"bufio"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/wensuper/OmniLLM/internal/control"
 	"github.com/wensuper/OmniLLM/internal/provider"
 )
 
@@ -384,5 +387,42 @@ func TestNullInputIsNotAPerson(t *testing.T) {
 	defer func() { os.Stdin = old }()
 	if !notAPerson() {
 		t.Fatal("input from /dev/null is not a person")
+	}
+}
+
+// Model output shown in a terminal carries no control sequences.
+func TestTermSafeKeepsTextOnly(t *testing.T) {
+	got := stripControls("ok\x1b]52;c;aGk=\x07 next\x1b[2J\r\nline\ttab")
+	if strings.ContainsAny(got, "\x1b\x07\r") || !strings.Contains(got, "line\ttab") {
+		t.Fatalf("%q", got)
+	}
+}
+
+// The hub's own refusal reaches the person as it is, not as "something
+// went wrong" with the sentence in brackets.
+func TestHubRefusalIsShownAsItIs(t *testing.T) {
+	dir, err := os.MkdirTemp("/tmp", "omc")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+	sock := filepath.Join(dir, "s")
+	ln, err := net.Listen("unix", sock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+	go func() {
+		c, err := ln.Accept()
+		if err != nil {
+			return
+		}
+		defer c.Close()
+		bufio.NewReader(c).ReadBytes('\n')
+		c.Write([]byte(`{"event":"error","text":"No device is called “Foo”."}` + "\n"))
+	}()
+	err = stream(sock, control.Request{Op: "revoke"}, "")
+	if got := describe(err); got != "No device is called “Foo”." {
+		t.Fatalf("%q", got)
 	}
 }
