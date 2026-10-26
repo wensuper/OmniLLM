@@ -59,13 +59,14 @@ curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | 
 |---|---|---|---|
 | Claude 订阅（Pro / Max） | 装好并登录 [Claude Code](https://claude.com/claude-code) | ✅ 文字 + 图片 | ❌ 订阅只给人用 |
 | ChatGPT 订阅（Plus / Pro） | 装好并登录 [Codex](https://github.com/openai/codex) | ✅ 文字 + 图片 | ❌ 订阅只给人用 |
+| Gemini 订阅（Google AI Pro / Ultra） | 给 OmniLLM 登录 Antigravity CLI（`omnillm login gemini`） | ✅ 文字 | ❌ 订阅只给人用 |
 | Anthropic / OpenAI API Key | 在控制台粘贴 Key | ✅ | ✅ |
 | 兼容 OpenAI 接口的服务 | 在控制台填地址和 Key | ✅ | ✅ |
 | 本地模型（Ollama） | 装好 Ollama，自动接上 | ✅ | ✅ |
 
 只有网页版订阅、又不想在主机上装 Claude Code 或 Codex 的话，订阅用不了：OmniLLM 不抓取网页的登录信息，那样违反服务条款，也最容易被封号。
 
-### 用订阅（Claude 或 ChatGPT）
+### 用订阅（Claude、ChatGPT 或 Gemini）
 
 订阅通过官方的命令行程序用：Claude 订阅（Pro / Max）用 [Claude Code](https://claude.com/claude-code)，ChatGPT 订阅（Plus / Pro 等付费订阅）用 [Codex](https://github.com/openai/codex)。只装了 Claude 或 ChatGPT 桌面版也没关系，同一个账号再登录一次命令行版就行，OmniLLM 会带着你做：
 
@@ -75,7 +76,7 @@ curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | 
   ```bash
   omnillm login claude     # Claude Pro / Max
   omnillm login chatgpt    # ChatGPT Plus / Pro
-  omnillm login gemini     # Gemini 订阅（用 Antigravity CLI）
+  omnillm login gemini     # Gemini 订阅（用 Antigravity CLI；要有屏幕）
   ```
 
 已经登录过的，主机会自己发现并接上。Claude 的 Sonnet、Opus、Haiku 和 Codex 的默认模型会出现在模型列表里，不用填任何东西。

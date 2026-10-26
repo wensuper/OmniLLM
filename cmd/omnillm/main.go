@@ -603,8 +603,8 @@ func openCmd(args []string) {
 		// No screen here: what works on this machine instead of a link no
 		// browser can open.
 		if headless() {
-			fmt.Println(runnable(t("这台机器没有屏幕，控制台在这里打不开。在它的终端里亲自运行：\n· 加手机或电脑：omnillm pair\n· 接上模型：omnillm login claude（或 chatgpt、gemini），或 omnillm hub provider add anthropic\n· 看状态：omnillm status",
-				"This machine has no screen, so the console can’t open here. In its terminal, run yourself:\n· Add a phone or computer: omnillm pair\n· Connect a model: omnillm login claude (or chatgpt, gemini), or omnillm hub provider add anthropic\n· See how things are: omnillm status")))
+			fmt.Println(runnable(t("这台机器没有屏幕，控制台在这里打不开。在它的终端里亲自运行：\n· 加手机或电脑：omnillm pair\n· 接上模型：omnillm login claude（或 chatgpt），或 omnillm hub provider add anthropic\n· 看状态：omnillm status",
+				"This machine has no screen, so the console can’t open here. In its terminal, run yourself:\n· Add a phone or computer: omnillm pair\n· Connect a model: omnillm login claude (or chatgpt), or omnillm hub provider add anthropic\n· See how things are: omnillm status")))
 			return
 		}
 		// The link is a console session: only for a person at this

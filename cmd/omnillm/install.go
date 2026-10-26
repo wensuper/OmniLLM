@@ -594,8 +594,8 @@ func notAPerson() bool {
 // unpairedNext is the next step on a device not paired yet: the person
 // gets a pairing text from their hub and pastes it in their own terminal.
 func unpairedNext() string {
-	return t("下一步：拿到配对文字（Mac 上：OmniLLM 控制台点“添加设备”，选“电脑或服务器”，再点“用命令行”复制；服务器上：在它的终端里运行 omnillm pair），然后在这台机器上你自己的终端里运行 omnillm connect pair，粘贴在那里；不要贴进聊天。",
-		"Next: get a pairing text (on a Mac: in the OmniLLM console choose “Add device”, pick “Computer or server”, then “Use the command line” and copy it; on a server: run omnillm pair in its terminal), then in your own terminal on this machine run omnillm connect pair and paste it there; don’t paste it into a chat.")
+	return t("下一步：拿到配对文字（Mac 上：OmniLLM 控制台点“添加设备”，选“电脑或服务器”，再点“那台电脑没有浏览器？用命令行”复制；服务器上：在它的终端里运行 omnillm pair），然后在这台机器上你自己的终端里运行 omnillm connect pair，粘贴在那里；不要贴进聊天。",
+		"Next: get a pairing text (on a Mac: in the OmniLLM console choose “Add device”, pick “Computer or server”, then “No browser on that computer? Use the command line” and copy it; on a server: run omnillm pair in its terminal), then in your own terminal on this machine run omnillm connect pair and paste it there; don’t paste it into a chat.")
 }
 
 // deviceNext is what a device-only machine says it is: ready to chat once
@@ -1186,7 +1186,7 @@ var lingering = func() bool {
 func startsWhen(service string) string {
 	switch {
 	case service == "launchd":
-		return t("（登录时自动启动）", "; it starts at login")
+		return t("（登录时自动启动）", "; it starts when you sign in to this computer")
 	case service == "systemd" && lingering():
 		return t("（开机后自动启动）", "; it starts when the computer starts")
 	}

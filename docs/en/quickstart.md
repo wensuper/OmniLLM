@@ -59,13 +59,14 @@ Available model sources:
 |---|---|---|---|
 | Claude subscription (Pro / Max) | [Claude Code](https://claude.com/claude-code) installed and signed in | ✅ Text + images | ❌ Subscriptions are for people only |
 | ChatGPT subscription (Plus / Pro) | [Codex](https://github.com/openai/codex) installed and signed in | ✅ Text + images | ❌ Subscriptions are for people only |
+| Gemini subscription (Google AI Pro / Ultra) | Antigravity CLI signed in for OmniLLM (`omnillm login gemini`) | ✅ Text | ❌ Subscriptions are for people only |
 | Anthropic / OpenAI API key | Paste the key in the console | ✅ | ✅ |
 | OpenAI-compatible service | Enter the address and key in the console | ✅ | ✅ |
 | Local model (Ollama) | Install Ollama; it connects automatically | ✅ | ✅ |
 
 If you only use your subscription on the web and don’t want to install Claude Code or Codex on the hub, you can’t use the subscription. OmniLLM doesn’t scrape web sign-ins: that breaks the terms of service and is the quickest way to get an account banned.
 
-### Use a subscription (Claude or ChatGPT)
+### Use a subscription (Claude, ChatGPT or Gemini)
 
 Subscriptions work through the official command-line programs: [Claude Code](https://claude.com/claude-code) for a Claude subscription (Pro / Max), and [Codex](https://github.com/openai/codex) for a ChatGPT subscription (Plus, Pro, or another paid plan). If you only have the Claude or ChatGPT desktop app, that’s fine: sign in to the command-line program with the same account, and OmniLLM walks you through it:
 
@@ -75,7 +76,7 @@ Subscriptions work through the official command-line programs: [Claude Code](htt
   ```bash
   omnillm login claude     # Claude Pro / Max
   omnillm login chatgpt    # ChatGPT Plus / Pro
-  omnillm login gemini     # Gemini subscription (through Antigravity CLI)
+  omnillm login gemini     # Gemini subscription (through Antigravity CLI; needs a screen)
   ```
 
 If you’re already signed in, the hub finds it and connects. Claude’s Sonnet, Opus, and Haiku, and Codex’s default model, appear in the model list with nothing to fill in.
