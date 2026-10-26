@@ -131,8 +131,11 @@ func modelUpdate(l string, a map[string]string) (name *string, shown *bool, u hu
 	if inOK || outOK {
 		pi, err1 := number(pin)
 		po, err2 := number(pout)
-		if !inOK || !outOK || err1 != nil || err2 != nil || pi < 0 || po < 0 || pi > 1e6 || po > 1e6 {
+		if !inOK || !outOK {
 			return nil, nil, u, say(tl(l, "请同时给出 --price-in 和 --price-out（美元/百万 token）。", "Give both --price-in and --price-out (USD per million tokens)."))
+		}
+		if err1 != nil || err2 != nil || pi < 0 || po < 0 || pi > 1e6 || po > 1e6 {
+			return nil, nil, u, say(tl(l, "价格要写成 0 到 1000000 之间的数（美元/百万 token），例如 --price-in 3 --price-out 15。", "Prices are numbers from 0 to 1,000,000 (USD per million tokens), e.g. --price-in 3 --price-out 15."))
 		}
 		u.PriceIn, u.PriceOut = &pi, &po
 	}

@@ -826,7 +826,9 @@ async function connectPair(text) {
     pairScreen("ok", t("connectedMac"), t("doneName", S.device.name));
     // A fresh, empty chat says once that the Mac is there.
     S.cur = newChat(); S.hello = S.cur.id;
-    setTimeout(() => { if (!S.pairing) openChat(); }, 1200); // not over another pairing started meanwhile
+    // Not over another pairing started meanwhile; if that one ends without
+    // pairing, it opens the chats itself (leavePairing, with no chat yet).
+    setTimeout(() => { if (!S.pairing) openChat(); else { S.cur = null; S.hello = null; } }, 1200);
   } catch (e) {
     sasShown(false); $("pair-stop").hidden = true;
     if (S.leftOld && S.device === old) {
@@ -1850,6 +1852,7 @@ async function run(chat, model, fresh, old) {
       if (old) delete old.prev;
       if (fresh && code !== "cancelled") {
         chat.messages.pop();
+        if (!chat.messages.length) chat.title = ""; // named after the question that went back to the box
         // Back into the box, before whatever was typed meanwhile.
         const now = input.value;
         input.value = now.trim() ? fresh.text + "\n" + now : fresh.text; grow();

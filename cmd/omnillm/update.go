@@ -424,6 +424,9 @@ func quietFor(ctx context.Context, h *hub.Hub, started time.Time) time.Duration 
 
 // autoUpdate runs inside "omnillm hub run" for as long as the hub runs.
 func autoUpdate(ctx context.Context, h *hub.Hub, dir string) {
+	if strings.HasSuffix(version, "-dev") {
+		return // a build from source: never replaced by a release behind its developer's back
+	}
 	started := time.Now()
 	wait := autoFirstCheck
 	for {

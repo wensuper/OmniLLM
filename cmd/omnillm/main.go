@@ -26,6 +26,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"runtime"
 	"slices"
@@ -889,7 +890,7 @@ func hubCmd(args []string) {
 		if len(args) > 1 {
 			dieArgs(usageErr(fmt.Sprintf(t("多了“%s”。", "Unexpected “%s”."), args[1])))
 		}
-		empty := "" // a script gets the JSON as it is ([] or null)
+		empty := "" // a script gets the JSON as it is ([] when empty)
 		if term.IsTerminal(int(os.Stdout.Fd())) {
 			empty = t("今天还没有调用。", "No calls yet today.")
 		}
@@ -1299,6 +1300,10 @@ func hubRun(dir, sock string, args []string) {
 }
 
 func jsonData(v any) json.RawMessage {
+	// An empty list is [] for scripts, never null.
+	if rv := reflect.ValueOf(v); rv.Kind() == reflect.Slice && rv.IsNil() {
+		return json.RawMessage("[]")
+	}
 	b, _ := json.MarshalIndent(v, "", "  ")
 	return b
 }
