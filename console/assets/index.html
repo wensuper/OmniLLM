@@ -13,18 +13,44 @@
 <script src="app.js" defer></script>
 </head>
 <body>
+<!-- Before the dashboard (loading, signing in, first run): the brand and the
+     language and theme, on a bar of their own. -->
 <header class="top">
-  <div class="brand"><img class="mark" src="icon.svg" alt="" width="32" height="32"><span class="brand-text"><span class="brand-name">OmniLLM</span><span class="brand-sub">Your AI, Everywhere</span></span></div>
-  <div class="status" id="status" aria-live="polite"></div>
+  <div class="brand"><img class="mark" src="icon.svg" alt="" width="28" height="28"><span class="brand-name">OmniLLM</span></div>
   <div class="tools">
-    <button type="button" class="ghost" id="lang" aria-label="Language" data-aria="ariaLang">中文</button>
-    <button type="button" class="ghost" id="theme" aria-label="Theme" data-aria="ariaTheme">◐</button>
+    <div class="seg lang-seg" role="group" data-aria="ariaLang"><button type="button" data-lang="zh" lang="zh-CN">中文</button><button type="button" data-lang="en" lang="en">EN</button></div>
+    <button type="button" class="ghost theme-btn" data-aria="ariaTheme"><span class="ic i-theme"></span></button>
   </div>
 </header>
+
+<div class="shell">
+  <!-- The dashboard's sidebar: where things are, how this computer is doing,
+       the language and the theme. -->
+  <aside class="side">
+    <div class="brand"><img class="mark" src="icon.svg" alt="" width="28" height="28"><span class="brand-name">OmniLLM</span></div>
+    <nav class="tabs" role="tablist" data-aria="ariaNav">
+      <button type="button" role="tab" data-tab="overview" aria-controls="tab-overview"><span class="ic i-overview"></span><span class="nav-t" data-t="navOverview"></span></button>
+      <button type="button" role="tab" data-tab="devices" aria-controls="tab-devices"><span class="ic i-devices"></span><span class="nav-t" data-t="devices"></span><span class="nav-n" id="nav-n-devices"></span></button>
+      <button type="button" role="tab" data-tab="models" aria-controls="tab-models"><span class="ic i-models"></span><span class="nav-t" data-t="models"></span><span class="nav-dot" id="nav-dot-models" role="img" hidden></span></button>
+      <button type="button" role="tab" data-tab="apps" aria-controls="tab-apps"><span class="ic i-apps"></span><span class="nav-t" data-t="apps"></span><span class="nav-n" id="nav-n-apps"></span></button>
+      <button type="button" role="tab" data-tab="usage" aria-controls="tab-usage"><span class="ic i-usage"></span><span class="nav-t" data-t="usage"></span></button>
+    </nav>
+    <div class="side-foot">
+      <!-- This computer: online and reachable, or what is wrong. -->
+      <div class="mac-card" id="status"></div>
+      <div class="side-tools">
+        <div class="seg lang-seg" role="group" data-aria="ariaLang"><button type="button" data-lang="zh" lang="zh-CN">中文</button><button type="button" data-lang="en" lang="en">EN</button></div>
+        <button type="button" class="ghost theme-btn" data-aria="ariaTheme"><span class="ic i-theme"></span></button>
+      </div>
+    </div>
+  </aside>
 
 <main id="app">
   <!-- The hub stopped while this page was open (its calls no longer answer). -->
   <div id="hub-down" class="banner" role="alert" data-t="hubDown" hidden></div>
+  <!-- What needs the owner, on every screen: remote access, a changed
+       region, the phones' page. -->
+  <div id="alerts" class="alerts"></div>
 
   <section id="loading" class="panel"><p data-t="loading"></p></section>
 
@@ -48,34 +74,37 @@
 
     <div id="w1">
       <h1 data-t="w1Title"></h1>
+      <p class="muted wiz-sub" data-t="w1Sub"></p>
       <div id="ollama-box" class="choice" hidden>
         <h2 data-t="ollamaFound"></h2>
         <p class="muted" id="ollama-models"></p>
         <button type="button" id="ollama-use" class="primary" data-t="ollamaUse"></button>
       </div>
-      <!-- Claude and ChatGPT: one card each, saying what is done and the one
-           step left (install, sign in, connect), with the button that does it
-           (subsCards in app.js). -->
-      <div id="subs"></div>
-      <details class="choice key-choice">
-        <summary data-t="w1Key"></summary>
-        <form id="key-form" autocomplete="off">
-          <label for="kind" data-t="source"></label>
-          <select id="kind">
-            <option value="anthropic">Anthropic (Claude)</option>
-            <option value="openai">OpenAI</option>
-            <option value="openai-compatible" data-t="otherCompatible"></option>
-          </select>
-          <div id="compat" hidden>
-            <label for="cname" data-t="cname"></label><input id="cname" maxlength="40" spellcheck="false">
-            <label for="curl" data-t="curl"></label><input id="curl" placeholder="https://" spellcheck="false">
-          </div>
-          <label for="key" data-t="key"></label>
-          <input id="key" type="password" autocomplete="off" spellcheck="false" required>
-          <p class="hint" data-t="keyHint"></p>
-          <button type="submit" class="primary" data-t="connect"></button>
-        </form>
-      </details>
+      <!-- Claude, ChatGPT and Gemini: one card each, saying what is done and
+           the one step left (install, sign in, connect), with the button
+           that does it (subsCards in app.js); the API key beside them. -->
+      <div class="choices">
+        <div id="subs"></div>
+        <details class="choice key-choice">
+          <summary data-t="w1Key"></summary>
+          <form id="key-form" autocomplete="off">
+            <label for="kind" data-t="source"></label>
+            <select id="kind">
+              <option value="anthropic">Anthropic (Claude)</option>
+              <option value="openai">OpenAI</option>
+              <option value="openai-compatible" data-t="otherCompatible"></option>
+            </select>
+            <div id="compat" hidden>
+              <label for="cname" data-t="cname"></label><input id="cname" maxlength="40" spellcheck="false">
+              <label for="curl" data-t="curl"></label><input id="curl" placeholder="https://" spellcheck="false">
+            </div>
+            <label for="key" data-t="key"></label>
+            <input id="key" type="password" autocomplete="off" spellcheck="false" required>
+            <p class="hint" data-t="keyHint"></p>
+            <button type="submit" class="primary" data-t="connect"></button>
+          </form>
+        </details>
+      </div>
       <p class="muted free-line" data-t="w1Free"></p>
       <button type="button" id="recheck" class="secondary" data-t="recheck"></button>
     </div>
@@ -103,69 +132,95 @@
 
   <!-- Dashboard -->
   <section id="dash" hidden>
-    <!-- Today's spend against the hub's daily total, which can be changed here. -->
-    <div class="card spend-card">
-      <div><div class="k" data-t="todaySpend"></div><div class="v" id="spend-today"></div><div class="s" data-t="estimate"></div></div>
-      <div class="cap" id="cap"></div>
+
+    <div class="tab" id="tab-overview" role="tabpanel">
+      <div class="page-head"><div><h1 data-t="navOverview"></h1><p class="muted" data-t="ovSub"></p></div>
+        <div class="acts"><button type="button" class="secondary" id="ov-add-model" data-t="addProvider"></button><button type="button" class="primary" id="ov-add-device" data-t="addDevice"></button></div></div>
+      <!-- Sources that need a sign-in or are at their limit, with the fix. -->
+      <div id="ov-alerts" class="alerts"></div>
+      <div class="stats">
+        <div class="card stat"><div class="k" data-t="ovOnline"></div><div class="v" id="ov-online"></div><div class="s" id="ov-online-sub"></div></div>
+        <div class="card stat"><div class="k" data-t="ovModels"></div><div class="v" id="ov-models"></div><div class="s" id="ov-models-sub"></div></div>
+        <!-- Today's spend against the hub's daily total. -->
+        <div class="card stat"><div class="k" data-t="todaySpend"></div><div class="v"><span id="spend-today"></span><small id="ov-cap"></small></div><div class="s" data-t="estimate"></div><div class="meter-bar"><i id="ov-spend-bar"></i></div></div>
+        <div class="card stat"><div class="k" data-t="ovCalls"></div><div class="v" id="ov-calls"></div><div class="s" id="ov-calls-sub"></div></div>
+      </div>
+      <div class="ov-grid">
+        <div class="card ov-card"><div class="card-h"><h2 data-t="devices"></h2><button type="button" class="link" id="ov-all-devices" data-t="ovAllDevices"></button></div><ul class="ov-list" id="ov-devices"></ul><p class="empty" id="ov-devices-empty" data-t="noDevices" hidden></p></div>
+        <div class="ov-side">
+          <div class="card ov-card"><div class="card-h"><h2 data-t="providers"></h2><button type="button" class="link" id="ov-all-models" data-t="models"></button></div><ul class="ov-list" id="ov-sources"></ul></div>
+          <div class="card ov-card"><div class="card-h"><h2 data-t="ovToday"></h2><button type="button" class="link" id="ov-all-usage" data-t="usage"></button></div><div class="bars" id="ov-usage"></div><p class="empty" id="ov-usage-empty" data-t="emptyToday" hidden></p></div>
+        </div>
+      </div>
     </div>
 
-    <nav class="tabs" role="tablist">
-      <button type="button" role="tab" data-tab="devices" data-t="devices"></button>
-      <button type="button" role="tab" data-tab="models" data-t="models"></button>
-      <button type="button" role="tab" data-tab="apps" data-t="apps"></button>
-      <button type="button" role="tab" data-tab="usage" data-t="usage"></button>
-    </nav>
-
-    <div class="tab" id="tab-devices">
-      <div class="row-head"><p class="muted" id="devices-count"></p><button type="button" class="primary" id="add-device" data-t="addDevice"></button></div>
+    <div class="tab" id="tab-devices" role="tabpanel" hidden>
+      <div class="page-head"><div><h1 data-t="devices"></h1><p class="muted"><span id="devices-count"></span><span data-t="devSub"></span></p></div><div class="acts"><button type="button" class="primary" id="add-device" data-t="addDevice"></button></div></div>
       <div id="pair-dash"></div>
       <!-- Fixed column widths: editing a row never moves the others. -->
+      <div class="card table-card">
       <table class="narrow-hide2 fixed devices-table"><colgroup><col><col class="c-seen"><col class="c-budget"><col class="c-mdl"><col class="c-sw"><col class="c-act"></colgroup>
         <thead><tr><th data-t="name"></th><th data-t="lastSeen"></th><th data-t="todayBudget"></th><th data-t="modelsCol"></th><th data-t="enabled" class="sw"></th><th></th></tr></thead><tbody id="devices"></tbody></table>
       <p class="empty" id="devices-empty" data-t="noDevices" hidden></p>
-    </div>
-
-    <div class="tab" id="tab-models" hidden>
-      <div class="row-head"><p class="muted" data-t="modelsBody"></p><button type="button" class="primary" id="add-provider" data-t="addProvider"></button></div>
-      <table class="models-table"><thead><tr><th data-t="model"></th><th data-t="where"></th><th data-t="humanOnly" class="sw"></th><th data-t="showOnDevices" class="sw"></th><th data-t="inAuto" class="sw"></th><th></th></tr></thead><tbody id="models"></tbody></table>
-      <h3 data-t="providers"></h3>
-      <table class="providers-table"><thead><tr><th data-t="source"></th><th data-t="keyLast4"></th><th data-t="enabled" class="sw"></th><th></th></tr></thead><tbody id="providers"></tbody></table>
-    </div>
-
-    <div class="tab" id="tab-apps" hidden>
-      <div class="row-head"><p class="muted"><span data-t="appsBody"></span><button type="button" class="help-btn" id="apps-help" data-aria="appsHelp" aria-haspopup="dialog" aria-expanded="false">?</button></p><button type="button" class="primary" id="add-app" data-t="addApp"></button></div>
-      <!-- "Add app": its name in place, then its token, shown once. -->
-      <form id="app-add" class="inline-add" autocomplete="off" hidden>
-        <label for="app-name" data-t="appName"></label>
-        <div class="inline-row"><input id="app-name" maxlength="64" spellcheck="false"><div class="btns"><button type="button" class="secondary" id="app-add-cancel" data-t="cancel"></button><button type="submit" class="primary" id="app-add-ok" data-t="add"></button></div></div>
-      </form>
-      <!-- Only when programs can't connect; how they connect is behind "?". -->
-      <p id="apps-where" class="apps-where small" hidden></p>
-      <div id="app-token" class="token-box" hidden></div>
-      <table class="fixed apps-table"><colgroup><col><col class="c-budget"><col class="c-mdl"><col class="c-sw"><col class="c-act"></colgroup>
-        <thead><tr><th data-t="name"></th><th data-t="todayBudget"></th><th data-t="modelsCol"></th><th data-t="enabled" class="sw"></th><th></th></tr></thead><tbody id="apps"></tbody></table>
-      <p class="empty" id="apps-empty" data-t="noApps" hidden></p>
-    </div>
-
-    <div class="tab" id="tab-usage" hidden>
-      <!-- Today, yesterday or the last 7 days. -->
-      <div class="seg" id="usage-range" role="group">
-        <button type="button" data-range="today" data-t="rangeToday"></button><button type="button" data-range="yesterday" data-t="rangeYesterday"></button><button type="button" data-range="week" data-t="rangeWeek"></button>
       </div>
-      <p class="muted" id="usage-body"></p>
+      <!-- The hub's daily total, which can be changed here. -->
+      <div class="cap" id="cap"></div>
+    </div>
+
+    <div class="tab" id="tab-models" role="tabpanel" hidden>
+      <div class="page-head"><div><h1 data-t="models"></h1><p class="muted" data-t="modelsBody"></p></div><div class="acts"><button type="button" class="primary" id="add-provider" data-t="addProvider"></button></div></div>
+      <!-- Sources first, as cards: what each is, whether it works, the fix. -->
+      <div class="src-grid" id="providers"></div>
+      <div class="card table-card">
+      <table class="models-table"><thead><tr><th data-t="model"></th><th data-t="where"></th><th data-t="humanOnly" class="sw"></th><th data-t="showOnDevices" class="sw"></th><th data-t="inAuto" class="sw"></th><th></th></tr></thead><tbody id="models"></tbody></table>
+      </div>
+    </div>
+
+    <div class="tab" id="tab-apps" role="tabpanel" hidden>
+      <div class="page-head"><div><h1 data-t="apps"></h1><p class="muted" data-t="appsBody"></p></div><div class="acts"><button type="button" class="primary" id="add-app" data-t="addApp"></button></div></div>
+      <div class="apps-grid">
+        <div>
+          <!-- "Add app": its name in place, then its token, shown once. -->
+          <form id="app-add" class="inline-add card" autocomplete="off" hidden>
+            <label for="app-name" data-t="appName"></label>
+            <div class="inline-row"><input id="app-name" maxlength="64" spellcheck="false"><div class="btns"><button type="button" class="secondary" id="app-add-cancel" data-t="cancel"></button><button type="submit" class="primary" id="app-add-ok" data-t="add"></button></div></div>
+          </form>
+          <!-- Only when programs can't connect. -->
+          <p id="apps-where" class="apps-where small" hidden></p>
+          <div id="app-token" class="token-box card" hidden></div>
+          <div class="card table-card">
+          <table class="fixed apps-table"><colgroup><col><col class="c-budget"><col class="c-mdl"><col class="c-sw"><col class="c-act"></colgroup>
+            <thead><tr><th data-t="name"></th><th data-t="todayBudget"></th><th data-t="modelsCol"></th><th data-t="enabled" class="sw"></th><th></th></tr></thead><tbody id="apps"></tbody></table>
+          <p class="empty" id="apps-empty" data-t="noApps" hidden></p>
+          </div>
+        </div>
+        <!-- How programs connect, always in view. -->
+        <div class="card how-card" id="apps-how"></div>
+      </div>
+    </div>
+
+    <div class="tab" id="tab-usage" role="tabpanel" hidden>
+      <!-- Today, yesterday or the last 7 days. -->
+      <div class="page-head"><div><h1 data-t="usage"></h1><p class="muted" id="usage-body"></p></div>
+        <div class="seg" id="usage-range" role="group">
+          <button type="button" data-range="today" data-t="rangeToday"></button><button type="button" data-range="yesterday" data-t="rangeYesterday"></button><button type="button" data-range="week" data-t="rangeWeek"></button>
+        </div></div>
+      <div class="card table-card">
       <!-- Both usage tables share their column widths, so they line up. -->
-      <table class="usage-table"><colgroup><col><col class="c-num"><col class="c-num"><col class="c-tok"></colgroup>
-        <thead><tr><th data-t="who"></th><th data-t="calls" class="num"></th><th data-t="spend" class="num"></th><th data-t="tokens" class="num narrow-hide"></th></tr></thead><tbody id="usage"></tbody><tfoot id="usage-total"></tfoot></table>
+      <table class="usage-table"><colgroup><col><col class="c-bar"><col class="c-num"><col class="c-num"><col class="c-tok"></colgroup>
+        <thead><tr><th data-t="who"></th><th class="bar-col"></th><th data-t="calls" class="num"></th><th data-t="spend" class="num"></th><th data-t="tokens" class="num narrow-hide"></th></tr></thead><tbody id="usage"></tbody><tfoot id="usage-total"></tfoot></table>
       <p class="empty" id="usage-empty" hidden></p>
-      <div id="usage-models-box" hidden>
+      </div>
+      <div id="usage-models-box" class="card table-card" hidden>
         <h3 data-t="byModel"></h3>
-        <table class="usage-table"><colgroup><col><col class="c-num"><col class="c-num"><col class="c-tok"></colgroup>
-          <thead><tr><th data-t="model"></th><th data-t="calls" class="num"></th><th data-t="spend" class="num"></th><th data-t="tokens" class="num narrow-hide"></th></tr></thead><tbody id="usage-models"></tbody><tfoot id="usage-models-total"></tfoot></table>
+        <table class="usage-table"><colgroup><col><col class="c-bar"><col class="c-num"><col class="c-num"><col class="c-tok"></colgroup>
+          <thead><tr><th data-t="model"></th><th class="bar-col"></th><th data-t="calls" class="num"></th><th data-t="spend" class="num"></th><th data-t="tokens" class="num narrow-hide"></th></tr></thead><tbody id="usage-models"></tbody><tfoot id="usage-models-total"></tfoot></table>
       </div>
     </div>
   </section>
 
   <div id="toast" class="toast" role="status" hidden></div>
 </main>
+</div>
 </body>
 </html>

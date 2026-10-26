@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/wensuper/OmniLLM/internal/provider"
 )
 
 func TestCompareVersions(t *testing.T) {
@@ -253,5 +255,26 @@ func TestInstallerIsTheReleasesOwn(t *testing.T) {
 		if got := installerFor(bad); got != defaultInstallerURL {
 			t.Fatalf("%q: %s", bad, got)
 		}
+	}
+}
+
+// The menu names one source that needs the owner, counts several, and says
+// nothing when none does.
+func TestNeedLine(t *testing.T) {
+	t.Setenv("OMNILLM_LANG", "zh")
+	if got := needLine(Status{}); got != "" {
+		t.Fatalf("none: %q", got)
+	}
+	one := Status{Problems: []SourceProblem{{Name: "codex", Kind: provider.Codex, Problem: "login"}}}
+	if got := needLine(one); !strings.Contains(got, "要重新登录") {
+		t.Fatalf("one: %q", got)
+	}
+	two := Status{Problems: []SourceProblem{{Name: "codex", Kind: provider.Codex, Problem: "login"}, {Name: "claude", Kind: provider.ClaudeCode, Problem: "limit"}}}
+	if got := needLine(two); got != "2 个模型来源要处理…" {
+		t.Fatalf("two: %q", got)
+	}
+	t.Setenv("OMNILLM_LANG", "en")
+	if got := needLine(one); !strings.HasPrefix(got, "Sign in to ") {
+		t.Fatalf("one, en: %q", got)
 	}
 }

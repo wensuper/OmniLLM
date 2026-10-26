@@ -641,3 +641,209 @@ p code, li code { white-space: nowrap; }
   /* Narrow: the shortened command wraps, so its end (--device) stays in sight. */
   .copyrow span { white-space: normal; overflow-wrap: anywhere; }
 }
+
+/* ---------- 2026-10-26 redesign (design: canvas "OmniLLM Mac 控制台") ----------
+   The dashboard has a sidebar (pages, this computer's state, language and
+   theme) and an Overview first; pages are cards on the Aurora ground. The
+   rules above stay for what they draw (tables, dialogs, pairing, cards);
+   these come last and set the new frame. */
+:root { --rail: #FBFBFE; --cyan: #0092B0; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --rail: #0C0E17; --cyan: #00CFE8; } }
+:root[data-theme="dark"] { --rail: #0C0E17; --cyan: #00CFE8; }
+body { font-size: 14px; line-height: 1.55; }
+
+/* Line icons as masks, coloured by the text colour. */
+.ic { display: inline-block; width: 18px; height: 18px; flex: none; background: currentColor; -webkit-mask: var(--i) center / contain no-repeat; mask: var(--i) center / contain no-repeat; }
+.i-overview { --i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='7.5' height='9' rx='1.6'/%3E%3Crect x='13.5' y='3' width='7.5' height='5.5' rx='1.6'/%3E%3Crect x='13.5' y='11.5' width='7.5' height='9.5' rx='1.6'/%3E%3Crect x='3' y='15' width='7.5' height='6' rx='1.6'/%3E%3C/svg%3E"); }
+.i-devices { --i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='2.5' y='5' width='13' height='10' rx='1.6'/%3E%3Cpath d='M1.5 18h15'/%3E%3Crect x='17' y='8' width='5.5' height='11' rx='1.4'/%3E%3C/svg%3E"); }
+.i-models { --i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 2.5l8.5 4.8v9.4L12 21.5l-8.5-4.8V7.3z'/%3E%3Cpath d='M3.8 7.4L12 12l8.2-4.6M12 12v9.4'/%3E%3C/svg%3E"); }
+.i-apps { --i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 8l-5 4 5 4M16 8l5 4-5 4M14 4l-4 16'/%3E%3C/svg%3E"); }
+.i-usage { --i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 20V10M10 20V4M16 20v-8M22 20H2'/%3E%3C/svg%3E"); }
+.i-theme { --i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z'/%3E%3C/svg%3E"); width: 16px; height: 16px; }
+
+/* Before the dashboard: a light bar with the brand, language and theme. */
+.top { background: transparent; border-bottom: 0; position: static; justify-content: space-between; padding: 16px max(24px, env(safe-area-inset-left)); }
+.top .brand-name, .side .brand-name { font-size: 16px; font-weight: 650; }
+.mark { width: 28px; height: 28px; border-radius: 7px; }
+.tools { align-items: center; gap: 8px; }
+.lang-seg { margin: 0; border-radius: 999px; padding: 2px; }
+.lang-seg button { border-radius: 999px; min-height: 26px; min-width: 42px; padding: 0 10px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.theme-btn { width: 32px; height: 32px; min-height: 0; padding: 0; display: inline-grid; place-items: center; border-radius: 8px; color: var(--muted); }
+body[data-screen="dash"] > .top { display: none; }
+
+/* The dashboard's frame. */
+.shell { min-height: 100vh; }
+.side { display: none; }
+body[data-screen="dash"] .shell { display: grid; grid-template-columns: 248px minmax(0, 1fr); }
+body[data-screen="dash"] .side { display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; padding: 18px 14px 16px; background: var(--rail); border-right: 1px solid var(--line); }
+.side .brand { padding: 2px 8px 18px; }
+.side .tabs { flex-direction: column; gap: 2px; border: 0; margin: 0; overflow: visible; }
+.side .tabs button { display: flex; align-items: center; gap: 11px; min-height: 38px; padding: 0 10px; border: 0; border-radius: 9px; background: none; color: var(--ink-2); font-size: 14px; font-weight: 520; text-align: left; }
+.side .tabs button:hover:not(:disabled) { background: var(--surface-2); color: var(--ink); }
+.side .tabs button[aria-selected="true"] { background: var(--accent-soft); color: var(--accent-text); font-weight: 640; border: 0; }
+.nav-t { flex: 1; min-width: 0; }
+.nav-n { font-size: 12px; color: var(--muted); font-weight: 500; }
+.side .tabs button[aria-selected="true"] .nav-n { color: var(--accent-text); }
+.nav-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn-hi); }
+.side-foot { margin-top: auto; display: flex; flex-direction: column; gap: 12px; }
+.mac-card { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); padding: 12px 12px 11px; color: var(--ink); font-size: 13px; white-space: normal; overflow: visible; }
+.mac-card b { display: flex; align-items: center; gap: 8px; font-weight: 620; font-size: 13.5px; }
+.mac-card small { display: block; color: var(--muted); font-size: 12px; margin-top: 3px; line-height: 1.45; }
+.live { width: 8px; height: 8px; border-radius: 50%; flex: none; display: inline-block; background: var(--ok); box-shadow: 0 0 0 3px var(--ok-soft); }
+.live.warn { background: var(--warn-hi); box-shadow: 0 0 0 3px var(--warn-soft); }
+.live.off { background: var(--line-2); box-shadow: 0 0 0 3px var(--surface-2); }
+.side-tools { display: flex; align-items: center; justify-content: space-between; padding: 0 2px; }
+
+main { max-width: 880px; }
+body[data-screen="dash"] main { max-width: 1240px; width: 100%; margin: 0; padding: 26px 40px 64px; }
+body:not([data-screen="dash"]) main { padding-top: 8px; max-width: 968px; }
+
+/* Pages: a heading with its one-line meaning and the page's action. */
+.tab { background: none; border: 0; padding: 0; box-shadow: none; overflow: visible; }
+.page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; }
+.page-head h1 { font-size: 26px; font-weight: 690; letter-spacing: -.022em; line-height: 1.2; margin: 0; }
+.page-head p { margin: 4px 0 0; font-size: 14px; max-width: 720px; }
+.page-head .acts { display: flex; gap: 10px; }
+.page-head button { margin-top: 0; }
+.page-head .seg { margin: 0; }
+button.primary { border-radius: 10px; font-weight: 620; box-shadow: var(--glow); }
+button.secondary { border-radius: 10px; }
+.card { border-radius: 16px; padding: 0; }
+.card-h { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px 6px; }
+.card-h h2 { font-size: 15px; font-weight: 650; margin: 0; }
+.table-card { padding: 4px 12px 8px; overflow-x: auto; margin-bottom: 16px; }
+.table-card > table { margin-top: 0; }
+.table-card > h3 { margin: 12px 8px 4px; }
+th { font-size: 12px; font-weight: 600; padding: 12px 8px; }
+td { padding: 12px 8px; }
+tr:last-child > td { border-bottom: 0; }
+.empty { padding: 16px 8px; }
+
+/* What needs the owner: one line each, with its fix. */
+.alerts { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+.alerts:empty { display: none; }
+.alert { position: relative; display: flex; align-items: center; gap: 12px; padding: 11px 14px 11px 44px; border-radius: 14px; background: var(--warn-soft); border: 1px solid var(--warn-line); }
+.alert::before { content: ""; position: absolute; left: 16px; top: 50%; margin-top: -8px; width: 16px; height: 16px; background: var(--warn-hi); -webkit-mask: var(--warn-icon) center / contain no-repeat; mask: var(--warn-icon) center / contain no-repeat; }
+.alert p { flex: 1; margin: 0; font-size: 14px; }
+.alert button { margin: 0; flex: none; }
+
+/* Overview */
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
+.stat { padding: 16px 18px; }
+.stat .k { font-size: 13px; color: var(--muted); }
+.stat .v { font-size: 28px; font-weight: 690; letter-spacing: -.02em; margin-top: 6px; line-height: 1.15; }
+.stat .v small { font-size: 15px; font-weight: 550; color: var(--muted); letter-spacing: 0; }
+.stat .s { font-size: 12.5px; color: var(--muted); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.meter-bar { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; margin-top: 10px; }
+.meter-bar i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--cyan), var(--accent)); }
+.ov-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.ov-side { display: flex; flex-direction: column; gap: 16px; }
+.ov-card .empty { padding: 4px 20px 18px; }
+.ov-list { list-style: none; margin: 0; padding: 4px 20px 14px; }
+.ov-list li { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.ov-list li:first-child { border-top: 0; }
+.ov-list .t { flex: 1; min-width: 0; font-weight: 580; }
+.ov-list .t b { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ov-list .t small { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 12.5px; }
+.ov-list .r { font-size: 13px; color: var(--ink-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.tile { width: 36px; height: 36px; border-radius: 10px; display: inline-grid; place-items: center; background: var(--surface-2); color: var(--ink-2); flex: none; font-weight: 700; font-size: 13px; }
+.tile.sm { width: 30px; height: 30px; border-radius: 8px; font-size: 12px; }
+.tile-ic { width: 18px; height: 18px; stroke-width: 1.8; }
+.chip { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 8px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; flex: none; }
+.chip.ok { background: var(--ok-soft); color: var(--ok-ink); }
+.chip.warn { background: var(--warn-soft); color: var(--warn); }
+.chip.off { background: var(--surface-2); color: var(--muted); }
+.bars { display: flex; flex-direction: column; gap: 10px; padding: 8px 20px 18px; }
+.bar-row { display: grid; grid-template-columns: minmax(0, 120px) minmax(0, 1fr) 48px; align-items: center; gap: 12px; font-size: 13px; }
+.bar-row .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar-row b { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+.track { display: block; height: 8px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
+.track i { display: block; height: 100%; border-radius: 4px; background: var(--accent); }
+
+/* Devices: the kind's icon before the name; the daily total under the list. */
+.nm-wrap { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.nm-wrap > .tile { width: 32px; height: 32px; border-radius: 9px; }
+.nm-txt { min-width: 0; flex: 1; }
+.cap { padding: 0 4px; }
+.dot-ok { font-size: 10px; vertical-align: 1px; }
+
+/* Models: sources as cards; the last adds one. */
+.src-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-bottom: 16px; }
+.src { padding: 16px 16px 14px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.src.paused { opacity: .75; }
+.src-h { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.src-t { min-width: 0; }
+.src-t b { display: block; font-weight: 640; font-size: 14.5px; overflow-wrap: anywhere; }
+.src-t small { display: block; font-size: 12px; color: var(--muted); }
+.src-b { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.5; }
+.src-b.warn-text { color: var(--warn); }
+.src-f { display: flex; align-items: center; gap: 8px; margin-top: auto; flex-wrap: wrap; }
+.src-f button { margin: 0; }
+.src-acts { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+.src-acts > div.sw { display: flex; }
+.src .row-ask { margin-top: 4px; }
+.src.add { border-style: dashed; border-color: var(--line-2); background: transparent; box-shadow: none; align-items: center; justify-content: center; color: var(--accent-text); font-weight: 620; min-height: 132px; gap: 6px; cursor: pointer; }
+.src.add:hover:not(:disabled) { background: var(--accent-soft); border-color: var(--accent); }
+.src.add .plus { font-size: 22px; line-height: 1; }
+
+/* Apps: the list, and how programs connect beside it. */
+.apps-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.how-card { padding: 16px 20px 18px; }
+.how-card h2 { font-size: 15px; font-weight: 650; margin: 0 0 12px; }
+.how-card .hc-rows { gap: 10px 16px; font-size: 13.5px; }
+.inline-add.card, .token-box.card { padding: 16px 18px; margin: 0 0 16px; }
+
+/* Usage: a bar per line, by calls. */
+.usage-table col.c-bar { width: 26%; }
+.bar-cell .track { height: 7px; }
+
+/* Add device, from the dashboard: a dialog over the page. */
+#pair-dash.pair-panel { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 20; width: min(880px, calc(100vw - 48px)); margin: 0; max-height: calc(100vh - 48px); overflow: auto; border-radius: 20px; padding: 22px 26px 26px;
+  box-shadow: 0 0 0 100vmax var(--scrim), 0 30px 80px -20px rgba(0,0,0,.45); }
+#pair-dash .pair-title { font-size: 19px; font-weight: 680; }
+.pair { grid-template-columns: 260px minmax(0, 1fr); }
+
+/* First run: the steps, then the ways in as cards side by side. */
+#wizard { max-width: 920px; margin: 0 auto; padding: 30px 32px 32px; border-radius: 20px; }
+#wizard h1 { font-size: 26px; font-weight: 690; letter-spacing: -.02em; }
+.wiz-sub { margin: -2px 0 16px; }
+.steps li { border-top-width: 3px; padding-top: 10px; }
+.choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
+#subs { display: contents; }
+.choices .choice, #subs > * { margin: 0; border-radius: 16px; padding: 18px; background: var(--surface); }
+.choices details.choice[open] { grid-column: 1 / -1; }
+#ollama-box { border-radius: 16px; }
+
+/* Narrow windows: the sidebar becomes a bar on top with the pages in a row. */
+@media (max-width: 760px) {
+  body[data-screen="dash"] .shell { display: block; }
+  body[data-screen="dash"] .side { position: sticky; top: 0; z-index: 5; height: auto; flex-direction: row; flex-wrap: wrap; align-items: center; padding: 10px 16px 0; border-right: 0; border-bottom: 1px solid var(--line); }
+  .side .brand { padding: 0; flex: 1; }
+  .side-foot { margin: 0; flex-direction: row; }
+  .side-foot .mac-card { display: none; }
+  body[data-screen="dash"] main { padding-top: 12px; }
+  .side .tabs { order: 3; flex-basis: 100%; flex-direction: row; overflow-x: auto; gap: 6px; padding: 10px 0; scrollbar-width: none; }
+  .side .tabs button { flex: none; min-height: 32px; border-radius: 999px; padding: 0 12px; border: 1px solid var(--line); background: var(--surface); }
+  .side .tabs .ic { display: none; }
+  body[data-screen="dash"] main { padding: 16px 16px 48px; }
+  .page-head h1 { font-size: 22px; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .stat { padding: 12px 14px; }
+  .stat .v { font-size: 22px; }
+  .ov-grid, .apps-grid, .choices { grid-template-columns: minmax(0, 1fr); }
+  .src-grid { grid-template-columns: minmax(0, 1fr); }
+  .usage-table col.c-bar { width: 22%; }
+  #wizard { padding: 20px 18px; }
+  .pair { grid-template-columns: minmax(0, 1fr); }
+}
+@media (min-width: 761px) and (max-width: 1100px) {
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .src-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ov-grid { grid-template-columns: minmax(0, 1fr); }
+}
+/* A long name wraps rather than being cut off beside the sidebar. */
+.devices-table td.nm, .apps-table td.nm, .devices-table td:not(.actions).nm { white-space: normal; }
+.devices-table .nm-line .nm-text, .apps-table .nm-line .nm-text { white-space: normal; overflow-wrap: anywhere; }
+.devices-table .nm-line .tag.warn-tag, .apps-table .nm-line .tag.warn-tag { white-space: normal; }
+.devices-table .nm-line .tag.warn-tag, .apps-table .nm-line .tag.warn-tag { flex: 0 1 auto; min-width: 0; max-width: 100%; }
+.devices-table .nm-line .tag.warn-tag, .apps-table .nm-line .tag.warn-tag { word-break: normal; }

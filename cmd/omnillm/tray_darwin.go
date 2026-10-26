@@ -87,6 +87,10 @@ func trayReady() {
 	// Shown only while the hub does not answer.
 	start := systray.AddMenuItem(t("启动 OmniLLM", "Start OmniLLM"), "")
 	start.Hide()
+	// A model source that needs the owner, right under the status; a click
+	// opens the console where it is fixed. Hidden while nothing does.
+	need := systray.AddMenuItem("", "")
+	need.Hide()
 	systray.AddSeparator()
 	devices := systray.AddMenuItem("", "")
 	sources := systray.AddMenuItem("", "")
@@ -185,6 +189,7 @@ func trayReady() {
 			systray.SetTemplateIcon(trayDown, trayDown)
 			devices.Hide()
 			sources.Hide()
+			need.Hide()
 			add.Disable()
 			open.Disable()
 			// While an update installs, the hub is down on purpose and
@@ -202,6 +207,12 @@ func trayReady() {
 		open.Enable()
 		devices.SetTitle(devicesLine(st))
 		sources.SetTitle(sourcesLine(st))
+		if nl := needLine(st); nl != "" {
+			need.SetTitle(nl)
+			need.Show()
+		} else {
+			need.Hide()
+		}
 		devices.Show()
 		sources.Show()
 		if (!st.RelayConfigured || st.RelayUp) && !st.RegionPaused {
@@ -339,6 +350,8 @@ func trayReady() {
 			case <-devices.ClickedCh:
 				trayOpen("&tab=devices")
 			case <-sources.ClickedCh:
+				trayOpen("&tab=models")
+			case <-need.ClickedCh:
 				trayOpen("&tab=models")
 			case <-add.ClickedCh:
 				trayOpen("&add")

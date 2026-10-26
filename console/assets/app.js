@@ -132,6 +132,11 @@ const T = {
     appTokenFor: "“{0}”的令牌", appTokenOnce: "只显示这一次，现在复制。",
     appName: "应用的名字",
     tryText: "你好",
+    needsYou: "有要处理的事", navOverview: "概览", ariaNav: "控制台", ovSub: "你的订阅、API Key 和{here}上的模型，给你自己的设备用。", devSub: "每台设备每天有自己的额度；关掉开关就暂停，配对保留。",
+    ovOnline: "在线设备", ovModels: "能用的模型", ovSrc: "{0} 个来源", ovSrcOne: "1 个来源", ovBad: "{0} 个要处理", ovBadOne: "1 个要处理", ovCalls: "今天调用", ovCallsSub: "Token：发出 {0} · 收到 {1}",
+    ovAllDevices: "全部设备", ovToday: "今天的用量", ovNoDevicesOnline: "现在没有设备在线", fix: "去处理", w1Sub: "已经登录的订阅会自动接上；没有的话，选一个最方便的。",
+    macOn: "{Here} · 在线", macOnLine: "手机和其他设备可以连上", macOff: "远程连接断开", macOffLine: "设备暂时连不上，网络恢复后会自动连上", macNone: "只在{here}上用", macNoneLine: "还没有设置远程连接",
+    srcModels: "{0} 个模型", srcModelsOne: "1 个模型", srcNoModels: "还没有模型", apHow: "接入方式", limitChip: "到上限了",
     never: "还没用过", copy: "复制", copied: "已复制", undo: "撤销", oops: "出了点问题，请再试一次。",
   },
   en: {
@@ -257,6 +262,11 @@ const T = {
     appTokenFor: "Token for “{0}”", appTokenOnce: "Shown once — copy it now.",
     appName: "App name",
     tryText: "Hello",
+    needsYou: "Needs you", navOverview: "Overview", ariaNav: "Console", ovSub: "Your subscriptions, API keys and models on {here}, for your own devices.", devSub: "Each device has its own daily limit; switch one off to pause it and keep its pairing.",
+    ovOnline: "Devices online", ovModels: "Models ready", ovSrc: "{0} sources", ovSrcOne: "1 source", ovBad: "{0} need you", ovBadOne: "1 needs you", ovCalls: "Calls today", ovCallsSub: "Tokens: {0} sent · {1} received",
+    ovAllDevices: "All devices", ovToday: "Today’s use", ovNoDevicesOnline: "No device is online now", fix: "Fix it", w1Sub: "Subscriptions you’re signed in to connect by themselves; otherwise pick the easiest one.",
+    macOn: "{Here} · Online", macOnLine: "Phones and other devices can reach it", macOff: "Remote access is down", macOffLine: "Devices can’t connect for now; it reconnects by itself", macNone: "Only on {here}", macNoneLine: "Remote access isn’t set up",
+    srcModels: "{0} models", srcModelsOne: "1 model", srcNoModels: "No models yet", apHow: "How to connect", limitChip: "At its limit",
     never: "Not yet", copy: "Copy", copied: "Copied", undo: "Undo", oops: "Something went wrong. Try again.",
   },
 };
@@ -334,7 +344,7 @@ function applyLang() {
   document.querySelectorAll("[data-t]").forEach((n) => { if (n.hasAttribute("data-rich")) rich(n, t(n.dataset.t)); else n.textContent = t(n.dataset.t); });
   document.querySelectorAll("[data-tip]").forEach((n) => { n.title = t(n.dataset.tip); });
   document.querySelectorAll("[data-aria]").forEach((n) => { n.setAttribute("aria-label", t(n.dataset.aria)); });
-  $("lang").textContent = lang === "zh" ? "English" : "中文";
+  document.querySelectorAll(".lang-seg [data-lang]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
   const tt = $("try-text"); // only while it is still the default
   if (!tt.value || tt.value === T.zh.tryText || tt.value === T.en.tryText) tt.value = t("tryText");
 }
@@ -470,7 +480,7 @@ setInterval(async () => {
 // or on screen is thrown away.
 function busy() {
   // A hover card being read counts too: the redraw would take it away.
-  return !!(curPair || pairTimer || hcOpen || document.querySelector("tr.editing, tr.asking, .cap-edit, .pair-panel, .dialog-scrim"));
+  return !!(curPair || pairTimer || hcOpen || document.querySelector("tr.editing, tr.asking, .cap-edit, .pair-panel, .dialog-scrim, .src .row-ask"));
 }
 setInterval(async () => {
   if (!S || signedOut || document.hidden || $("dash").hidden || busy()) return;
@@ -485,40 +495,41 @@ setInterval(async () => {
 
 function wizardDone() { return store("omnillm.wizard") === "done"; }
 
-// renderStatus: the header line speaks only when something needs the
-// owner: remote access down or not set up, or the region changed. While
-// phones can connect it says nothing (that is the normal state).
+// renderStatus: the sidebar's card says how this computer is doing
+// (online and reachable, remote access down, or not set up); what needs the
+// owner (a changed region, the phones' page differs, remote access down)
+// is a line at the top of every page, with its fix where there is one.
 function renderStatus() {
-  const s = $("status");
-  s.textContent = "";
-  s.removeAttribute("title");
-  // Left empty, not hidden: it is the spacer that keeps the tools right.
-  // The phones' web page differs from the signed release: said first.
+  const card = $("status");
+  const before = card.textContent;
+  card.textContent = "";
   const wc = S.web_check, webBad = wc && !wc.ok && !wc.error;
-  if (S.relay_configured && S.relay_up && !(S.region && S.region.paused) && !webBad) return;
   const paused = S.region && S.region.paused;
-  const text = [webBad ? t("webBad") : !S.relay_configured ? t("relayNone") : S.relay_up ? "" : t("relayOff"), paused ? t("regionPaused") : ""].filter(Boolean).join(" · ");
-  // A warning (paused, the phones' page differs) is spelled out on a
-  // phone-width window too, not left to a tooltip a touch screen can't show.
-  s.classList.toggle("alert", !!(paused || webBad));
-  // On a phone-width window only the dot shows; it carries the sentence
-  // for screen readers and as a tooltip.
-  const dot = el("span", "", "dot" + (S.relay_up && !webBad && !paused ? " on" : ""));
-  dot.setAttribute("role", "img");
-  dot.setAttribute("aria-label", text);
-  s.title = text;
-  const words = el("span", text, "status-text");
-  words.setAttribute("aria-hidden", "true");
-  s.append(dot, words);
+  const state = !S.relay_configured ? "none" : S.relay_up ? "on" : "off";
+  const head = el("b");
+  head.append(el("span", "", "live" + (state === "on" && !paused && !webBad ? "" : state === "none" ? " off" : " warn")), t(state === "on" ? "macOn" : state === "off" ? "macOff" : "macNone"));
+  card.append(head, el("small", t(state === "on" ? "macOnLine" : state === "off" ? "macOffLine" : "macNoneLine")));
+  card.setAttribute("aria-live", card.textContent === before ? "off" : "polite");
+  const box = $("alerts");
+  box.textContent = "";
+  const addAlert = (text, btn) => {
+    const a = el("div", undefined, "alert");
+    a.append(el("p", text));
+    if (btn) a.append(btn);
+    box.append(a);
+  };
+  // The phones' web page differs from the signed release: said first.
+  if (webBad) addAlert(t("webBad"));
   if (paused) {
-    const b = el("button", t("regionConfirm"), "link");
+    const b = el("button", t("regionConfirm"), "secondary small-btn");
     b.type = "button";
     b.addEventListener("click", async () => { try { await api("region/confirm", {}); await refresh(); } catch (e) { toast(e.message, true); } });
-    s.append(document.createTextNode(" "), b);
+    addAlert(t("regionPaused"), b);
   }
+  if (state === "off") addAlert(t("relayOff"));
 }
 
-function show(id) { ["loading", "login-needed", "wizard", "dash"].forEach((x) => { $(x).hidden = x !== id; }); }
+function show(id) { ["loading", "login-needed", "wizard", "dash"].forEach((x) => { $(x).hidden = x !== id; }); document.body.dataset.screen = id; }
 
 // ---------- wizard ----------
 
@@ -1134,6 +1145,7 @@ function showDash() {
   fromDash = false;
   const total = (S.usage || []).find((u) => u.who === "_total");
   $("spend-today").textContent = money(total ? total.micro_usd : 0);
+  renderOverview(total);
   renderCap();
   renderDevices();
   renderModels();
@@ -1141,12 +1153,113 @@ function showDash() {
   renderUsage();
 }
 
+// renderOverview: how things are at a glance: devices online, models
+// ready, today's spend and calls; the devices, the sources (with what
+// needs fixing) and today's use by device and app. The sidebar's counts
+// and its dot (a source needs the owner) come from the same data.
+function renderOverview(total) {
+  const ds = S.devices, on = ds.filter((d) => d.Online);
+  $("nav-n-devices").textContent = ds.length ? num(ds.length) : "";
+  $("nav-n-apps").textContent = S.apps.length ? num(S.apps.length) : "";
+  const bad = S.providers.filter((p) => !p.off && p.problem);
+  $("nav-dot-models").hidden = bad.length === 0;
+  $("nav-dot-models").setAttribute("aria-label", t("needsYou"));
+  $("ov-online").textContent = num(on.length);
+  $("ov-online").append(el("small", " / " + num(ds.length)));
+  $("ov-online-sub").textContent = on.length ? on.map((d) => d.Name).join(lang === "zh" ? "、" : ", ") : t("ovNoDevicesOnline");
+  const ready = S.models.filter((m) => !m.source_off).length;
+  $("ov-models").textContent = num(ready);
+  const live = S.providers.filter((p) => !p.off).length;
+  $("ov-models-sub").textContent = [live === 1 ? t("ovSrcOne") : t("ovSrc", num(live)), bad.length === 1 ? t("ovBadOne") : bad.length ? t("ovBad", num(bad.length)) : ""].filter(Boolean).join(" · ");
+  const cap = S.daily_total_micro_usd, spent = total ? total.micro_usd : 0;
+  $("ov-cap").textContent = cap === NO_LIMIT ? "" : " / " + money(cap);
+  $("ov-spend-bar").style.width = cap > 0 ? Math.min(100, Math.round(spent * 100 / cap)) + "%" : "0%";
+  $("ov-calls").textContent = num(total ? total.calls : 0);
+  $("ov-calls-sub").textContent = t("ovCallsSub", num(total ? total.input_tokens : 0), num(total ? total.output_tokens : 0));
+  // Sources that need the owner: what is wrong and where it is fixed.
+  const oa = $("ov-alerts"); oa.textContent = "";
+  for (const p of bad) {
+    const a = el("div", undefined, "alert");
+    const label = sourceName(p.kind, p.name) || p.display_name || p.name;
+    a.append(el("p", label + " · " + problemText(p)));
+    const b = el("button", t("fix"), "secondary small-btn"); b.type = "button";
+    b.addEventListener("click", () => goTab("models"));
+    a.append(b);
+    oa.append(a);
+  }
+  // The devices, those online first.
+  const dl = $("ov-devices"); dl.textContent = "";
+  [...ds].sort((a, b) => (b.Online - a.Online) || String(b.LastSeen).localeCompare(String(a.LastSeen))).slice(0, 5).forEach((d) => {
+    const li = el("li");
+    const tx = el("span", undefined, "t");
+    const sub = el("small");
+    sub.append(el("span", "", "live" + (d.Online ? "" : " off")), d.Paused ? t("pausedChip") : d.Online ? t("online") : timeWords(d.LastSeen));
+    tx.append(el("b", d.Name), sub);
+    li.append(devIcon(d), tx, el("span", spentText("device/" + d.ID, d.BudgetMicroUSD), "r"));
+    dl.append(li);
+  });
+  $("ov-devices-empty").hidden = ds.length > 0;
+  // The sources, with their state.
+  const sl = $("ov-sources"); sl.textContent = "";
+  for (const p of S.providers) {
+    const li = el("li");
+    const label = sourceName(p.kind, p.name) || p.display_name || p.name;
+    li.append(srcTile(p, "sm"), el("span", label, "t"), srcChip(p));
+    sl.append(li);
+  }
+  // Today's use: each device or app, by calls.
+  const ub = $("ov-usage"); ub.textContent = "";
+  const rows = (S.usage || []).filter((u) => u.who !== "_total" && !u.removed && (u.who === "host" || u.name) && u.calls > 0).sort((a, b) => b.calls - a.calls).slice(0, 5);
+  const max = rows.length ? rows[0].calls : 1;
+  for (const u of rows) {
+    const r = el("div", undefined, "bar-row");
+    const tr = el("span", undefined, "track"), fill = el("i");
+    fill.style.width = Math.max(3, Math.round(u.calls * 100 / max)) + "%";
+    tr.append(fill);
+    r.append(el("span", u.who === "host" ? t("usageHost") : u.name, "nm"), tr, el("b", num(u.calls)));
+    ub.append(r);
+  }
+  $("ov-usage-empty").hidden = rows.length > 0;
+}
+
+// devIcon: a device's kind at a glance (phone, tablet, computer, server),
+// from what it is called and how it is used.
+function devIcon(d) {
+  const n = String(d.Name || "");
+  const kind = d.BackgroundOnly ? "server" : /iPad|平板|tablet/i.test(n) ? "tablet" : /iPhone|手机|phone|Android/i.test(n) ? "phone" : "computer";
+  const parts = {
+    phone: [["rect", { x: 7, y: 2.5, width: 10, height: 19, rx: 2.5 }], ["path", { d: "M11 18.5h2" }]],
+    tablet: [["rect", { x: 4.5, y: 3, width: 15, height: 18, rx: 2.2 }], ["path", { d: "M11 18h2" }]],
+    computer: [["rect", { x: 4, y: 5, width: 16, height: 11, rx: 1.5 }], ["path", { d: "M2 19h20" }]],
+    server: [["rect", { x: 3, y: 4, width: 18, height: 7, rx: 1.6 }], ["rect", { x: 3, y: 13, width: 18, height: 7, rx: 1.6 }], ["path", { d: "M7 7.5h.01M7 16.5h.01" }]],
+  }[kind];
+  const tile = el("span", undefined, "tile");
+  tile.append(icon(parts, "tile-ic"));
+  return tile;
+}
+// srcTile: a source's mark: a computer for one on this machine, else the
+// letter of who runs it (Claude, GPT, Gemini, Anthropic, OpenAI…).
+function srcTile(p, cls) {
+  const tile = el("span", undefined, "tile" + (cls ? " " + cls : ""));
+  if (p.local) { tile.append(icon([["rect", { x: 3, y: 4, width: 18, height: 12, rx: 2 }], ["path", { d: "M9 20h6M12 16v4" }]], "tile-ic")); return tile; }
+  const k = { "claude-code": "C", codex: "G", antigravity: "G", anthropic: "A", openai: "O" }[p.kind];
+  tile.textContent = k || String(p.name || "?").replace(/[^A-Za-z0-9]/g, "").slice(0, 1).toUpperCase() || "?";
+  return tile;
+}
+// srcChip: a source's state as a chip with its sign: connected, off, or
+// what needs the owner.
+function srcChip(p) {
+  if (p.off) return el("span", t("sourceOffTag"), "chip off");
+  if (p.problem) return el("span", "! " + (p.problem === "login" ? t("subSignIn") : t("limitChip")), "chip warn");
+  return el("span", "✓ " + t("subOn"), "chip ok");
+}
+
 // isSub: a Claude or ChatGPT subscription (the official programs on this
 // computer), not merely a model kept for people.
 function isSub(m) { const k = kindOf(m.provider); return k === "claude-code" || k === "codex" || k === "antigravity"; }
 // kindOf: what kind of source a provider name is (its kind, as connected).
 function kindOf(name) { const p = S.providers.find((x) => x.name === name); return p ? p.kind : name; }
-function cell(row, text, cls) { const td = el("td", text, cls); row.append(td); return td; }
+function cell(row, text, cls) { const td = el(row.tagName === "TR" ? "td" : "div", text, cls); row.append(td); return td; }
 
 // removeButton: Remove in a table row; it asks in a line of its own right
 // under the row (the question, then Cancel and Remove).
@@ -1282,14 +1395,6 @@ function clickCard(target, build) {
 addEventListener("click", () => { if (hcOpen && hcOpen.card.classList.contains("sticky")) closeCard(); });
 
 // appsHelpCard: how a program connects, with the address to copy.
-function appsHelpCard() {
-  const box = el("div");
-  box.append(el("div", t("appsHelp"), "hc-title hc-head"));
-  const addr = el("span", undefined, "hc-addr");
-  addr.append(el("code", S.api_url), copyBtn(S.api_url));
-  box.append(hcRows([[t("apAddr"), addr], [t("apKey"), t("apKeyV")], [t("apFmt"), t("apFmtV")], [t("apWho"), t("apWhoV")]]));
-  return box;
-}
 addEventListener("keydown", (e) => { if (e.key === "Escape") closeCard(); });
 addEventListener("scroll", closeCard, true);
 
@@ -1424,19 +1529,21 @@ function renderDevices() {
   const tb = $("devices");
   tb.textContent = "";
   const n = S.devices.length;
-  $("devices-count").textContent = n ? (n === 1 ? t("deviceCountOne") : t("deviceCount", num(n))) : "";
+  $("devices-count").textContent = n ? (n === 1 ? t("deviceCountOne") : t("deviceCount", num(n))) + (lang === "zh" ? "。" : ". ") : "";
   for (const d of S.devices) {
     const tr = el("tr", undefined, d.Paused ? "paused" : "");
     tr.dataset.id = d.ID;
     if (d.ID === fresh.id && Date.now() < fresh.until) tr.classList.add("fresh");
     const spent = spentText("device/" + d.ID, d.BudgetMicroUSD);
     const nc = nameCell(tr, d.Name, d.Paused, d.Online, spent, d.LastSeen);
+    const nw = el("div", undefined, "nm-wrap"), nt = el("div", undefined, "nm-txt");
+    nt.append(...nc.childNodes); nw.append(devIcon(d), nt); nc.append(nw);
     hoverCard(nc.querySelector(".nm-text"), () => nameCard(d, "device", spent));
     // Nothing on its list is left for it (removed, or kept off devices).
     if (!deviceHasModels(d)) {
       const tag = el("span", t("appNoModels"), "tag warn-tag");
       tag.title = t(devNoModelsWhy(d));
-      nc.firstChild.append(el("span", "", "brk narrow-only"), tag);
+      nc.querySelector(".nm-line").append(el("span", "", "brk narrow-only"), tag);
     }
     seenText(cell(tr, "", "seen"), d.Online, d.LastSeen);
     cell(tr, spent, "spent");
@@ -1924,21 +2031,23 @@ function renderModels() {
   const pb = $("providers");
   pb.textContent = "";
   for (const p of S.providers) {
-    const tr = el("tr", undefined, p.off ? "paused" : "");
+    const card = el("div", undefined, "card src" + (p.off ? " paused" : ""));
     // Sources by the names people know them by; "(this Mac)" is in
     // Ollama's own name.
     const own = sourceName(p.kind, p.name), label = own || p.display_name || p.name;
     const how = p.subscription ? t("subLogin") : p.key_last4 ? t("key") + " …" + p.key_last4 : t("local");
-    // On a phone-width window the row stacks: the name, then how it is
-    // connected; Remove on the right.
-    const nc = cell(tr, "", "src");
-    nc.append(el("div", p.local && !own ? withDot(label, t("local")) : label, "src-name"));
-    nc.append(el("div", how, "nm-sub narrow-only"));
-    const pt = problemText(p);
-    if (pt) nc.append(el("span", pt, "tag warn-tag"));
+    const head = el("div", undefined, "src-h");
+    const names = el("span", undefined, "src-t");
+    names.append(el("b", p.local && !own ? withDot(label, t("local")) : label), el("small", how));
+    head.append(srcTile(p), names);
+    card.append(head);
+    const n = S.models.filter((m) => m.provider === p.name).length;
+    card.append(el("p", problemText(p) || (n === 1 ? t("srcModelsOne") : n ? t("srcModels", num(n)) : t("srcNoModels")), "src-b" + (p.problem && !p.off ? " warn-text" : "")));
+    const foot = el("div", undefined, "src-f");
+    foot.append(srcChip(p));
     // Signed out: the sign-in right here (the phone and the error point to it).
     if (p.problem === "login" && p.subscription) {
-      const b = el("button", t("subSignIn"), "link"); b.type = "button";
+      const b = el("button", t("subSignIn"), "secondary small-btn"); b.type = "button";
       b.addEventListener("click", async () => {
         // Not a Mac: no window to open here; the card shows the command.
         if (!onMac()) { fromDash = true; return showWizard(); }
@@ -1946,16 +2055,37 @@ function renderModels() {
         try { await api("subs/login", { kind: p.kind }); toast(t("subHow")); } catch (e) { toast(e.message, true); }
         setTimeout(() => { b.disabled = false; }, 5000);
       });
-      nc.append(" ", b);
+      foot.append(b);
     }
-    cell(tr, how, "how");
-    // Off keeps the login or key; Remove (quieter) deletes it.
-    pauseSwitch(tr, label, "providers/off", p.name, !!p.off, "off", ["sourceOffToast", "sourceOnToast"]);
-    const rm = removeButton(label, "providers/remove", p.name, renderModels, "removeConfirmSource");
-    rm.className = "danger-text";
-    cell(tr, "", "actions").append(rm);
-    pb.append(tr);
+    // Off keeps the login or key; Remove (quieter) deletes it, asked in
+    // the card itself.
+    const right = el("div", undefined, "src-acts");
+    pauseSwitch(right, label, "providers/off", p.name, !!p.off, "off", ["sourceOffToast", "sourceOnToast"]);
+    const rm = el("button", t("remove"), "danger-text"); rm.type = "button";
+    rm.addEventListener("click", () => {
+      foot.hidden = true;
+      const ask = el("div", undefined, "row-ask");
+      const no = el("button", t("cancel"), "secondary small-btn"); no.type = "button";
+      const yes = el("button", t("remove"), "danger"); yes.type = "button";
+      no.addEventListener("click", renderModels);
+      yes.addEventListener("click", async () => {
+        no.disabled = yes.disabled = true;
+        try { await api("providers/remove", { id: p.name }); toast(t("removed")); refresh(); } catch (e) { toast(e.message, true); no.disabled = yes.disabled = false; }
+      });
+      const btns = el("div", undefined, "btns"); btns.append(no, yes);
+      ask.append(el("p", t("removeConfirmSource", label)), btns);
+      card.append(ask);
+      no.focus();
+    });
+    right.append(rm);
+    foot.append(right);
+    card.append(foot);
+    pb.append(card);
   }
+  const add = el("button", undefined, "card src add"); add.type = "button";
+  add.append(el("span", "+", "plus"), el("span", t("addProvider")));
+  add.addEventListener("click", () => $("add-provider").click());
+  pb.append(add);
 }
 
 function renderApps() {
@@ -1964,7 +2094,14 @@ function renderApps() {
   where.textContent = "";
   where.hidden = !!S.api_url;
   if (!S.api_url) where.append(el("span", t(S.api_off ? "appsOffSet" : "appsOff"), "tag warn-tag"));
-  $("apps-help").hidden = !S.api_url;
+  const how = $("apps-how");
+  how.textContent = "";
+  how.hidden = !S.api_url;
+  if (S.api_url) {
+    const addr = el("span", undefined, "hc-addr");
+    addr.append(el("code", S.api_url), copyBtn(S.api_url));
+    how.append(el("h2", t("apHow")), hcRows([[t("apAddr"), addr], [t("apKey"), t("apKeyV")], [t("apFmt"), t("apFmtV")], [t("apWho"), t("apWhoV")]]));
+  }
   const tb = $("apps");
   tb.textContent = "";
   for (const a of S.apps) {
@@ -2039,6 +2176,7 @@ function renderUsage() {
     const one = gone.n === 1 && gone.name;
     rows.push({ ...gone, label: one ? t("usageGoneOne", gone.name) : t("usageGone"), count: one ? 0 : gone.n, short: one ? "" : t("usageGoneShort"), muted: true });
   }
+  let barMax = 1;
   const line = (u, into, cls) => {
     const tr = el("tr", undefined, cls);
     const c = cell(tr, "", u.muted ? "muted nm" : "nm");
@@ -2048,11 +2186,14 @@ function renderUsage() {
     else c.append(u.label);
     if (u.count) c.append(lang === "zh" ? "" : " ", el("span", t("goneCount", num(u.count)), "nowrap"));
     if (u.paused) c.append(" ", el("span", t("pausedChip"), "tag paused-tag"));
+    const bc = cell(tr, "", "bar-cell");
+    if (cls !== "total") { const tk = el("span", undefined, "track"), f = el("i"); f.style.width = Math.max(2, Math.round((u.calls || 0) * 100 / barMax)) + "%"; tk.append(f); bc.append(tk); }
     cell(tr, num(u.calls), "num");
     cell(tr, money(u.micro_usd), "num");
     cell(tr, num(u.input_tokens) + " / " + num(u.output_tokens), "num narrow-hide");
     into.append(tr);
   };
+  barMax = Math.max(1, ...rows.map((u) => u.calls || 0));
   rows.forEach((u) => line(u, tb));
   if (total && rows.length) line({ ...total, label: totalLabel }, foot, "total");
   $("usage-empty").textContent = emptyText;
@@ -2079,6 +2220,7 @@ function renderUsage() {
   if (total && mrows.length && (total.calls > sum.calls || total.micro_usd > sum.micro_usd)) {
     mrows.push({ ...Object.fromEntries(fields.map((k) => [k, Math.max(0, (total[k] || 0) - sum[k])])), label: t("byModelEarlier"), muted: true });
   }
+  barMax = Math.max(1, ...mrows.map((u) => u.calls || 0));
   mrows.forEach((u) => line(u, mt));
   if (mrows.length) line({ ...(total || sum), label: totalLabel }, mfoot, "total");
   $("usage-models-box").hidden = mrows.length === 0;
@@ -2093,6 +2235,29 @@ document.querySelectorAll(".tabs button").forEach((b) => {
 });
 
 $("add-device").addEventListener("click", () => startPair($("pair-dash"), (id) => { closePair($("pair-dash")); afterPair(id); }, true));
+// The overview's buttons and links go to their page.
+const goTab = (tab) => document.querySelector('.tabs button[data-tab="' + tab + '"]').click();
+$("ov-add-device").addEventListener("click", () => { goTab("devices"); if (!curPair) $("add-device").click(); });
+// The add-device dialog over the dashboard is modal: the rest can't be
+// reached while it is open (inert), and Escape closes it as its x does.
+const pairDash = $("pair-dash");
+new MutationObserver(() => {
+  const open = pairDash.classList.contains("pair-panel");
+  document.querySelector(".side").inert = open;
+  for (const n of $("dash").children) if (n.id !== "tab-devices") n.inert = open;
+  for (const n of $("tab-devices").children) if (n !== pairDash) n.inert = open;
+  if (open) { pairDash.setAttribute("role", "dialog"); pairDash.setAttribute("aria-modal", "true"); pairDash.setAttribute("aria-label", t("addDevice")); }
+  else { pairDash.removeAttribute("role"); pairDash.removeAttribute("aria-modal"); pairDash.removeAttribute("aria-label"); }
+}).observe(pairDash, { attributes: true, attributeFilter: ["class"] });
+addEventListener("keydown", (e) => {
+  if (e.key !== "Escape" || composing(e) || !pairDash.classList.contains("pair-panel")) return;
+  const x = pairDash.querySelector(".close-x");
+  if (x) x.click();
+});
+$("ov-add-model").addEventListener("click", () => $("add-provider").click());
+$("ov-all-devices").addEventListener("click", () => goTab("devices"));
+$("ov-all-models").addEventListener("click", () => goTab("models"));
+$("ov-all-usage").addEventListener("click", () => goTab("usage"));
 
 // afterPair: the new device opens its session a moment after it is
 // added; look again (every second, for up to 10 s) until it shows online.
@@ -2125,7 +2290,6 @@ $("wiz-back").addEventListener("click", async () => { fromDash = false; store("o
 // with its Copy button.
 const appForm = $("app-add"), appName = $("app-name");
 const closeAppForm = () => { appForm.hidden = true; $("add-app").hidden = false; appName.value = ""; };
-clickCard($("apps-help"), appsHelpCard);
 $("add-app").addEventListener("click", () => {
   appForm.hidden = false; $("add-app").hidden = true; $("app-add-ok").disabled = true;
   appName.focus();
@@ -2181,18 +2345,19 @@ document.addEventListener("visibilitychange", async () => {
   if (document.hidden || !S || signedOut) return;
   try { followLang((await api("relay")).lang); } catch (_) {}
 });
-$("lang").addEventListener("click", () => {
-  const l = lang === "zh" ? "en" : "zh";
+document.querySelectorAll(".lang-seg [data-lang]").forEach((b) => b.addEventListener("click", () => {
+  const l = b.dataset.lang;
+  if (l === lang) return;
   if (S) S.lang = l;
   useLang(l);
   api("lang", { lang: l }).catch(() => {});
-});
-$("theme").addEventListener("click", () => {
+}));
+document.querySelectorAll(".theme-btn").forEach((tb) => tb.addEventListener("click", () => {
   const cur = document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
   const next = cur === "dark" ? "light" : "dark";
   store("omnillm.theme", next);
   applyTheme(next);
-});
+}));
 
 document.querySelectorAll("button[data-copy]").forEach((b) => copyBtn(b.dataset.copy, b));
 
@@ -2202,7 +2367,7 @@ async function boot() {
   applyTheme(store("omnillm.theme"));
   // The menu bar's counts open their tab with &tab=devices / &tab=models.
   const ht = /[#&]tab=(\w+)/.exec(location.hash);
-  const tab = (ht && ht[1]) || store("omnillm.tab") || "devices";
+  const tab = (ht && ht[1]) || store("omnillm.tab") || "overview";
   const tb = document.querySelector('.tabs button[data-tab="' + tab + '"]') || document.querySelector(".tabs button");
   tb.click();
   const m = /(?:^|[#&])login=([0-9a-f]{64})/.exec(location.hash);

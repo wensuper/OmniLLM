@@ -4,6 +4,13 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.67](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.67) - 2026-10-26
+
+### Changed
+
+- The Mac console is redesigned. A sidebar holds Overview, Devices, Models, Apps and Usage, with this Mac's state at the bottom. The new Overview shows what needs you, online devices, models, today's spend and calls, and today's use by device and app. Warnings sit at the top of every page. Devices get type icons and add-device opens as a dialog. Model sources are cards with their state, sign-in, switch and remove. Apps always show how to connect. Usage rows get a bar by calls. First-run setup puts subscriptions and an API key side by side. A narrow window gets a top bar.
+- Menu bar: when a model source needs signing in again or is at its limit, a line under the status says so; clicking it opens the console's Models page. A source you switched off is no longer counted.
+
 ## [0.2.0-alpha.66](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.66) - 2026-10-26
 
 ### Fixed

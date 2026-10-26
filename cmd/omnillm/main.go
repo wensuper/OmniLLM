@@ -1380,7 +1380,7 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 			}
 			var problems []SourceProblem
 			for _, p := range ps {
-				if p.Problem != "" {
+				if p.Problem != "" && !p.Off {
 					problems = append(problems, SourceProblem{Name: p.Name, Kind: p.Kind, DisplayName: p.DisplayName, Problem: p.Problem, ResetsAt: p.ResetsAt})
 				}
 			}

@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/wensuper/OmniLLM/hub"
 	"github.com/wensuper/OmniLLM/internal/provider"
 )
 
@@ -530,6 +531,24 @@ func sourcesLine(st Status) string {
 		return t("模型来源  还没有接入", "Model sources  none yet")
 	}
 	return fmt.Sprintf(t("模型来源  %d 个", "Model sources  %d"), st.Providers)
+}
+
+// needLine is the menu's line for model sources that need the owner (signed
+// out, at the limit), right under the status: one is named with what to do,
+// several are counted. It opens the console's Models page; "" when none.
+func needLine(st Status) string {
+	switch len(st.Problems) {
+	case 0:
+		return ""
+	case 1:
+		p := st.Problems[0]
+		name := sourceNameIn(lang(), hub.ProviderInfo{Name: p.Name, Kind: p.Kind, DisplayName: p.DisplayName})
+		if p.Problem == "login" {
+			return fmt.Sprintf(t("%s 要重新登录…", "Sign in to %s again…"), name)
+		}
+		return fmt.Sprintf(t("%s 到上限了…", "%s is at its limit…"), name)
+	}
+	return fmt.Sprintf(t("%d 个模型来源要处理…", "%d model sources need you…"), len(st.Problems))
 }
 
 // httpsOnly follows a redirect only while it stays on https (as install.sh
