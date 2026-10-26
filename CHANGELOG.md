@@ -4,6 +4,12 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.57](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.57) - 2026-10-26
+
+### Fixed
+
+- Console: *Check again* showed a red error when Ollama had only a non-chat model (such as an embedding model), though nothing had failed. It is now a plain note: Ollama on this Mac has no chat model yet; to use it, run `ollama pull qwen3` in Terminal.
+
 ## [0.2.0-alpha.56](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.56) - 2026-10-25
 
 ### Fixed
