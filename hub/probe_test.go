@@ -329,6 +329,19 @@ func TestSignedOutSubscriptionShowsBeforeAnyCall(t *testing.T) {
 	if _, err := h.AddProvider(ctx, provider.Config{Name: "claude-code", Kind: provider.ClaudeCode, Path: path}, ""); err != nil {
 		t.Fatal(err)
 	}
+	// A check another one is already running is skipped (loginsBusy): one
+	// started in the background (adding the source, listing models) is
+	// waited out first, so this one really runs.
+	check := func() {
+		idle := func() {
+			for h.loginsBusy.Load() {
+				time.Sleep(5 * time.Millisecond)
+			}
+		}
+		idle() // one started before the change has finished
+		h.checkLogins(ctx)
+		idle() // and one started since (it saw the change) too
+	}
 	problems := func() map[string]bool {
 		ms, _ := h.Models(ctx)
 		out := map[string]bool{}
@@ -337,19 +350,19 @@ func TestSignedOutSubscriptionShowsBeforeAnyCall(t *testing.T) {
 		}
 		return out
 	}
-	h.checkLogins(ctx)
+	check()
 	if p := problems(); p["login"] {
 		t.Fatalf("signed in, but the models say login: %v", p)
 	}
 	if err := os.WriteFile(flag, nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	h.checkLogins(ctx)
+	check()
 	if p := problems(); !p["login"] || len(p) != 1 {
 		t.Fatalf("signed out, but the models don't say so: %v", p)
 	}
 	_ = os.Remove(flag)
-	h.checkLogins(ctx)
+	check()
 	if p := problems(); p["login"] {
 		t.Fatalf("signed in again, but the models still say login: %v", p)
 	}
