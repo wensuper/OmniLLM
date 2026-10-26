@@ -41,7 +41,7 @@ func TestLoginScriptsAreValidBash(t *testing.T) {
 	t.Setenv("PATH", odd+":/usr/bin:/bin")
 	for _, l := range []string{"zh", "en"} {
 		t.Setenv("OMNILLM_LANG", l)
-		for _, k := range []provider.Kind{provider.ClaudeCode, provider.Codex} {
+		for _, k := range []provider.Kind{provider.ClaudeCode, provider.Codex, provider.Antigravity} {
 			for _, headless := range []bool{false, true} {
 				s := loginScript(k, filepath.Join(odd, "claude"), headless, !headless)
 				if out, err := exec.Command("bash", "-n", "-c", s).CombinedOutput(); err != nil {
@@ -138,9 +138,51 @@ func TestLoginScriptStopsWhenTheInstallFails(t *testing.T) {
 }
 
 func TestLoginKindWords(t *testing.T) {
-	for w, k := range map[string]provider.Kind{"claude": provider.ClaudeCode, "Claude": provider.ClaudeCode, "chatgpt": provider.Codex, "codex": provider.Codex, "gemini": ""} {
+	for w, k := range map[string]provider.Kind{"claude": provider.ClaudeCode, "Claude": provider.ClaudeCode, "chatgpt": provider.Codex, "codex": provider.Codex, "gemini": provider.Antigravity, "agy": provider.Antigravity, "grok": ""} {
 		if got := loginKind(w); got != k {
 			t.Errorf("%s: %q", w, got)
 		}
+	}
+}
+
+// Antigravity signs in where the hub runs it (its own home), not in the
+// owner's; a run that ends signed out says so and fails.
+func TestAgyLoginScriptSignsInTheHubHome(t *testing.T) {
+	home, bin := fakeHome(t)
+	t.Setenv("OMNILLM_HOME", filepath.Join(home, "omni"))
+	log := filepath.Join(home, "calls")
+	agy := filepath.Join(bin, "agy")
+	writeExec(t, agy, `echo "HOME=$HOME agy $*" >> `+shq(log)+`
+if [ "$1" = models ]; then [ -f "$HOME/signed" ]; exit $?; fi
+touch "$HOME/signed"
+`)
+	out, err := exec.Command("bash", "-c", loginScript(provider.Antigravity, agy, false, false)).CombinedOutput()
+	if err != nil {
+		t.Fatalf("%v %s", err, out)
+	}
+	calls, _ := os.ReadFile(log)
+	want := "HOME=" + provider.AgyHome() + " agy"
+	lines := strings.Split(strings.TrimSpace(string(calls)), "\n")
+	if len(lines) != 3 || lines[1] != want+" " || !strings.HasSuffix(lines[2], " models") {
+		t.Fatalf("calls:\n%s", calls)
+	}
+	if _, err := os.Stat(filepath.Join(provider.AgyHome(), "signed")); err != nil {
+		t.Fatal("not signed in in the hub's home")
+	}
+	// Already signed in: nothing to do.
+	os.Remove(log)
+	if out, err := exec.Command("bash", "-c", loginScript(provider.Antigravity, agy, false, false)).CombinedOutput(); err != nil {
+		t.Fatalf("%v %s", err, out)
+	}
+	if calls, _ := os.ReadFile(log); strings.Count(string(calls), "\n") != 1 {
+		t.Fatalf("calls:\n%s", calls)
+	}
+	// Left signed out: it fails.
+	os.Remove(filepath.Join(provider.AgyHome(), "signed"))
+	writeExec(t, agy, `if [ "$1" = models ]; then exit 1; fi
+exit 0
+`)
+	if out, err := exec.Command("bash", "-c", loginScript(provider.Antigravity, agy, false, false)).CombinedOutput(); err == nil {
+		t.Fatalf("signed out must fail: %s", out)
 	}
 }

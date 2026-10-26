@@ -790,6 +790,18 @@ zc 10-22：网页对话在 2000 px 宽的电脑浏览器里像一张被拉宽的
 - **如实说明**：会话文件是官方程序自己的格式，明文，权限和主人自己的 Claude / Codex 历史一样，只在中心节点上，不经过 relay、不到设备。原则 4 “对话内容默认不保存”为此加了这一条例外（zc 10-21 定：用省下的 token 和更快的回答，换中心节点上最多一天的对话留存）。Codex 删除会话后，它的 SQLite 数据库空闲页里可能残留文字，直到被覆盖。
 - **测试**：`internal/provider/chats_test.go`（续接、改了更早的话重来、别的设备不续接、失败即删、文件没了重来、限额和过期、同一位置的旧会话被删、进行中被移除的设备不留、哈希覆盖每一项且图片换成说明后仍接得上、Codex 续接和删除、刚开始就被取消的 Codex 一轮也删掉、两种程序的后台调用都不留）、`hub/chats_test.go`（设备对话续接，移除设备、移除订阅来源后文件都没了）；`OMNILLM_REAL_CLI=1 go test -run TestRealChatContinues ./internal/provider` 用真的 Claude Code 和 Codex 验证第二句记得第一句、用的是同一个会话、删除后不留文件。hub 的测试把 `HOME`、`OMNILLM_HOME` 指向临时目录，不碰真实的会话。
 
+### 13.4b Google AI 订阅：Antigravity CLI（2026-10-26）
+
+zc 10-26 要接 Gemini 订阅。Google 的 Gemini CLI 用个人账号登录后已经不能用（“This client is no longer supported for Gemini Code Assist for individuals”，6 月 18 日起换成 Antigravity CLI），所以接的是 Antigravity CLI（命令 `agy`，Homebrew cask `antigravity-cli`）。新提供方 `antigravity`，名字“Gemini 订阅（Antigravity）”，和 Claude Code、Codex 同一套：只给人手动对话、一次一个、限速、每个新版本先过一遍“运行命令、读文件”的检查（clicheck.go）。
+
+- **风险如实说**：Google 对“用第三方工具调用 Antigravity / Gemini CLI 登录”封过号（2026 年 2 月一批，第二次永久封）。OmniLLM 运行的是 Google 官方的 agy 本身，不碰它的登录，但 Google 没有明说这样算不算；zc 知道这个风险后决定接（10-26）。不想冒险就用 Gemini API Key（`omnillm hub provider add openai-compatible --name gemini --base-url https://generativelanguage.googleapis.com/v1beta/openai/`）。
+- **agy 没有关工具的参数**，而且工具很多（终端、读写文件、浏览器、联网搜索、定时任务、子代理、MCP），规则文件（`~/.gemini/GEMINI.md`、`AGENTS.md`、`~/.gemini/config/rules`）和设置都从 HOME 读。所以中心节点给它一个自己的 HOME：`OmniLLM/agy-home`，每次运行前（`prepareAgyHome`）：0700、必须是本人的真目录；删掉规则、技能、插件、MCP 配置；写入全局钩子 `.gemini/config/hooks.json`，`PreToolUse` 匹配 `*` 一律 `deny`（任何工具在执行前被拦，不管叫什么名字）；设置里再加 `permissions.deny`（`command(*)`、`read_file(*)`、`write_file(*)`、`read_url(*)`、`execute_url(*)`、`mcp(*)`）、`toolPermission: strict`、`disableSlashCommands`。agy 自己会改设置文件，所以每次只改我们的几项，它的其他项保留。实测：让它运行命令、读文件、写文件、联网搜索、定时任务、建子代理，全部被钩子拒绝，标记文件没出现。
+- **要单独登录一次**：agy 的登录跟着 HOME 走，主人自己的 agy 登录中心节点用不上。`omnillm login gemini`（控制台卡片的按钮打开同一个脚本）：没装就 `brew install --cask antigravity-cli`；然后 `HOME=<agy-home> agy` 启动，主人选 Google OAuth、在浏览器确认，看到对话界面按 Ctrl+C；脚本再用 `agy models` 确认登录好了才接入。主人自己用的 agy 不受影响。
+- **怎么调用**：`agy --print= --input-format stream-json --output-format stream-json --disable-slash-commands --model <模型>`，消息从标准输入进（`{"event":"user","message":{"role":"user","content":…}}`），不放在命令行参数里（本机其他用户看得到）。没有系统提示参数，和 Codex 一样把说明放在消息开头。回答读 `step_update` 里 `agent_response` 的 `text_delta`，结束读 `result`（`status`、`usage`、`error`）。不收图片：带图片的消息直接回“这个模型看不了图片”。
+- **登录和模型**：`agy models`（不调用模型）同时回答“登录了吗”和“有哪些模型”，一行一个“编号<Tab>名字”。第一个是默认模型（`antigravity/default`，按名字显示，运行时用 `--model` 指明），其余每个一项，按 agy 的顺序；和 Codex 一样随它的列表增删。Antigravity 也提供 Claude 和 GPT-OSS 模型，列表里跟在 Gemini 后面，和 Claude 订阅的模型分开排。
+- **对话续接**：第一轮从 `init` 事件拿 `conversation_id`，之后 `--conversation <id>`，只发新的一句。不在对话里的调用（检查、探测）结束后删掉它的 `conversations/<id>.db` 和 `brain/<id>` 等文件；对话的删除规则同 §13.4。
+- **测试**：`internal/provider/agy_test.go`（模型列表解析、参数和输入格式、事件解析、失败分类、主目录被清理且钩子和规则写好）；`cmd/omnillm/login_test.go`（登录脚本在中心节点的 HOME 里登录、已登录不重复、没登录成功报错）；`OMNILLM_REAL_CLI=1 go test -run TestRealAgy ./internal/provider` 用真的 agy 验证对话、没有工具、不读主人的规则、拒收图片、单次调用不留会话、续接、工具检查通过。
+
 ### 13.5 还没做（按里程碑排期）
 
 | 内容 | 排在 |

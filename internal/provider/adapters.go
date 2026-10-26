@@ -248,8 +248,11 @@ func (c *Client) ListModels(ctx context.Context, cred Credential) ([]string, err
 			return nil, err
 		}
 		ids := append([]string(nil), cliModels[c.cfg.Kind]...)
-		if c.cfg.Kind == Codex {
+		switch c.cfg.Kind {
+		case Codex:
 			ids = append(ids, CodexExtra(ctx, c.cfg.Path)...)
+		case Antigravity:
+			ids = append(ids, agyExtra(ctx, c.cfg.Path)...)
 		}
 		return ids, nil
 	}

@@ -18,8 +18,9 @@ import (
 
 // desktopApps are the desktop apps that come with each subscription.
 var desktopApps = map[Kind][]string{
-	ClaudeCode: {"Claude.app"},
-	Codex:      {"ChatGPT.app", "Codex.app"},
+	ClaudeCode:  {"Claude.app"},
+	Codex:       {"ChatGPT.app", "Codex.app"},
+	Antigravity: {"Antigravity.app", "Antigravity IDE.app", "Gemini.app"},
 }
 
 // DesktopApp is the subscription's desktop app installed here ("Claude",

@@ -758,7 +758,7 @@ func (s *Server) subsLogin(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &in) {
 		return
 	}
-	if in.Kind != "claude-code" && in.Kind != "codex" {
+	if !provider.Kind(in.Kind).Subscription() {
 		writeErr(w, r, http.StatusBadRequest, &omnillm.Error{Code: omnillm.CodeBadRequest, Msg: omnillm.MsgNotFound})
 		return
 	}

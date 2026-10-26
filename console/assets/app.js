@@ -22,6 +22,8 @@ const T = {
     w1Title: "先接入一个模型",
     w1Claude: "我有 Claude 订阅",
     w1Codex: "我有 ChatGPT 订阅",
+    w1Agy: "我有 Google AI 订阅（Gemini）", subPlanAgy: "用你的 Google 账号登录；Google AI Pro、Ultra 订阅的额度更多。",
+    subSignedOutAgy: "{1} 已经装好。还要给 OmniLLM 单独登录一次（你自己用的不受影响）。",
     subOn: "已接入", subOnBody: "可以用了：手机和其他设备现在就能用这个订阅。",
     subDesktop: "发现 {0}。同一个订阅也能给手机用：再装上官方命令行版 {1}（安装不收费，约 1 分钟），用同一个账号登录就好。{2}",
     subNone: "在{here}上装好官方的 {1}（安装不收费，约 1 分钟），用你的订阅账号登录。{2}",
@@ -39,7 +41,7 @@ const T = {
     w1Key: "我有 API Key",
     w1Free: "想免费：安装 Ollama，用{here}上的模型。",
     recheck: "重新检查", recheckNone: "还没发现已登录的订阅，也没发现{here}上的模型。", recheckNoMore: "没有发现别的已登录订阅或{here}上的模型。", connectedNames: "已接入 {0}。",
-    srcClaude: "Claude 订阅", srcCodex: "ChatGPT 订阅（Codex）", srcOllama: "Ollama（{here}）", srcLocal: "{here}上的模型（{0}）", srcFailed: "{0}：{1}",
+    srcClaude: "Claude 订阅", srcCodex: "ChatGPT 订阅（Codex）", srcAgy: "Gemini 订阅（Antigravity）", srcOllama: "Ollama（{here}）", srcLocal: "{here}上的模型（{0}）", srcFailed: "{0}：{1}",
     ollamaFound: "发现了{here}上的本地模型（Ollama）",
     ollamaUse: "使用{here}上的模型",
     source: "来源", otherCompatible: "其他 OpenAI 兼容服务",
@@ -77,7 +79,7 @@ const T = {
     discardQ: "放弃没保存的修改？", discard: "放弃", keepEditing: "继续编辑",
     providers: "模型来源", keyLast4: "接入方式", subLogin: "订阅登录（只留在{here}上）",
     problemLogin: "登录已失效：在终端运行 omnillm login claude", problemLoginOther: "登录已失效：在终端里运行 omnillm login claude",
-    problemLoginCodex: "登录已失效：在终端运行 omnillm login chatgpt", problemLoginCodexOther: "登录已失效：在终端里运行 omnillm login chatgpt",
+    problemLoginCodex: "登录已失效：在终端运行 omnillm login chatgpt", problemLoginAgy: "登录已失效：在终端运行 omnillm login gemini", problemLoginCodexOther: "登录已失效：在终端里运行 omnillm login chatgpt",
     problemLimit: "用量到上限，约 {0}后恢复", problemLimitNow: "用量到上限，稍后恢复", hours: "{0} 小时", hour: "1 小时", minutes: "{0} 分钟", minute: "1 分钟",
     noDevices: "还没有设备。点“添加设备”。", deviceCount: "{0} 台设备", deviceCountOne: "1 台设备", always: "始终",
     appsBody: "供脚本和程序后台调用，仅可使用 API Key 和{here}上的模型。",
@@ -144,6 +146,8 @@ const T = {
     w1Title: "First, connect a model",
     w1Claude: "I have a Claude subscription",
     w1Codex: "I have a ChatGPT subscription",
+    w1Agy: "I have a Google AI subscription (Gemini)", subPlanAgy: "Sign in with your Google account; Google AI Pro and Ultra plans get more usage.",
+    subSignedOutAgy: "{1} is installed. Sign in once more, for OmniLLM only (the one you use yourself isn’t affected).",
     subOn: "Connected", subOnBody: "Ready: your phone and other devices can use this subscription now.",
     subDesktop: "Found {0}. The same subscription can serve your phone too: add {1}, the official command-line program (no charge to install, about a minute), and sign in with the same account. {2}",
     subNone: "Install {1}, the official program, on {here} (no charge to install, about a minute) and sign in with your subscription account. {2}",
@@ -161,7 +165,7 @@ const T = {
     w1Key: "I have an API key",
     w1Free: "Want it free? Install Ollama to use models on {here}.",
     recheck: "Check again", recheckNone: "No signed-in subscription or model on {here} found yet.", recheckNoMore: "No other signed-in subscription or model on {here} found.", connectedNames: "Connected {0}.",
-    srcClaude: "Claude subscription", srcCodex: "ChatGPT subscription (Codex)", srcOllama: "Ollama ({here})", srcLocal: "Model on {here} ({0})", srcFailed: "{0}: {1}",
+    srcClaude: "Claude subscription", srcCodex: "ChatGPT subscription (Codex)", srcAgy: "Google AI subscription (Antigravity)", srcOllama: "Ollama ({here})", srcLocal: "Model on {here} ({0})", srcFailed: "{0}: {1}",
     ollamaFound: "A local model (Ollama) is running on {here}",
     ollamaUse: "Use models on {here}",
     source: "Source", otherCompatible: "Other OpenAI-compatible service",
@@ -199,7 +203,7 @@ const T = {
     discardQ: "Discard unsaved changes?", discard: "Discard", keepEditing: "Keep editing",
     providers: "Model sources", keyLast4: "Connected with", subLogin: "Subscription login (stays on {here})",
     problemLogin: "Signed out: in Terminal, run omnillm login claude", problemLoginOther: "Signed out: in a terminal, run omnillm login claude",
-    problemLoginCodex: "Signed out: in Terminal, run omnillm login chatgpt", problemLoginCodexOther: "Signed out: in a terminal, run omnillm login chatgpt",
+    problemLoginCodex: "Signed out: in Terminal, run omnillm login chatgpt", problemLoginAgy: "Signed out: in Terminal, run omnillm login gemini", problemLoginCodexOther: "Signed out: in a terminal, run omnillm login chatgpt",
     problemLimit: "Usage limit reached; back in about {0}", problemLimitNow: "Usage limit reached; back soon", hours: "{0} hours", hour: "1 hour", minutes: "{0} minutes", minute: "1 minute",
     noDevices: "No devices yet. Choose “Add device”.", deviceCount: "{0} devices", deviceCountOne: "1 device", always: "Always",
     appsBody: "For scripts and programs: background calls only, with API keys and models on {here}.",
@@ -291,7 +295,7 @@ function noImeSubmit(form) { form.addEventListener("keydown", (e) => { if (e.key
 // from its kind; null when it has no fixed name.
 // Only the Ollama app itself is "Ollama"; another server on this Mac
 // (llama.cpp, LM Studio) added under its own name goes by that name.
-const sourceName = (kind, name) => kind === "claude-code" ? t("srcClaude") : kind === "codex" ? t("srcCodex")
+const sourceName = (kind, name) => kind === "claude-code" ? t("srcClaude") : kind === "codex" ? t("srcCodex") : kind === "antigravity" ? t("srcAgy")
   : kind === "ollama" ? (name && name !== "ollama" ? t("srcLocal", name) : t("srcOllama")) : null;
 
 // rich sets text where `backticked` parts are commands, shown in code style.
@@ -532,6 +536,7 @@ let fromDash = false;
 const SUB = {
   "claude-code": { title: "w1Claude", app: "Claude", plan: "subPlanClaude", word: "claude", program: "Claude Code" },
   "codex": { title: "w1Codex", app: "ChatGPT", plan: "subPlanCodex", word: "chatgpt", program: "Codex" },
+  "antigravity": { title: "w1Agy", app: "Antigravity", plan: "subPlanAgy", word: "gemini", program: "Antigravity CLI", signedOut: "subSignedOutAgy" },
 };
 // The desktop app by its name ("Claude", "ChatGPT", "Codex").
 const desktopName = (n) => lang === "zh" ? n + " 桌面版" : "the " + n + " desktop app";
@@ -589,7 +594,7 @@ function subCard(x, k) {
   else if (x.logged_in && x.problem) { text = x.problem; btn = t("recheck"); act = "connect"; }
   else if (x.logged_in) { card.append(el("p", fill("subPending"), "muted")); return card; }
   else if (x.elsewhere) { text = t("subElsewhere"); btn = t("subSignIn"); act = "login"; }
-  else if (x.installed) { text = fill("subSignedOut"); btn = t("subSignIn"); act = "login"; }
+  else if (x.installed) { text = fill(k.signedOut || "subSignedOut"); btn = t("subSignIn"); act = "login"; }
   else { text = fill(x.desktop ? "subDesktop" : "subNone"); btn = t("subInstall"); act = "login"; }
   card.append(el("p", text, "muted"));
   const cmd = "omnillm login " + k.word;
@@ -1122,7 +1127,7 @@ function showDash() {
 
 // isSub: a Claude or ChatGPT subscription (the official programs on this
 // computer), not merely a model kept for people.
-function isSub(m) { const k = kindOf(m.provider); return k === "claude-code" || k === "codex"; }
+function isSub(m) { const k = kindOf(m.provider); return k === "claude-code" || k === "codex" || k === "antigravity"; }
 // kindOf: what kind of source a provider name is (its kind, as connected).
 function kindOf(name) { const p = S.providers.find((x) => x.name === name); return p ? p.kind : name; }
 function cell(row, text, cls) { const td = el("td", text, cls); row.append(td); return td; }
@@ -1830,7 +1835,7 @@ function sortModels(ms) {
 function vendorChip(m) {
   if (m.locality === "local") return el("span", t("localChip"), "tag local");
   const k = kindOf(m.provider);
-  const v = k === "claude-code" || k === "anthropic" ? "Anthropic" : k === "codex" || k === "openai" ? "OpenAI" : t("remote");
+  const v = k === "claude-code" || k === "anthropic" ? "Anthropic" : k === "codex" || k === "openai" ? "OpenAI" : k === "antigravity" ? "Google" : t("remote");
   return el("span", v, "tag");
 }
 
@@ -1843,7 +1848,7 @@ function aboutText(sec) {
 // problemText: what is wrong with a model source right now, if anything:
 // signed out, or at its usage limit until resets_at (unix seconds).
 function problemText(p) {
-  if (p.problem === "login") return p.kind === "codex" ? t("problemLoginCodex") : t("problemLogin");
+  if (p.problem === "login") return p.kind === "codex" ? t("problemLoginCodex") : p.kind === "antigravity" ? t("problemLoginAgy") : t("problemLogin");
   if (p.problem === "limit") {
     const sec = p.resets_at ? p.resets_at - Date.now() / 1000 : 0;
     return sec > 0 ? t("problemLimit", aboutText(sec)) : t("problemLimitNow");
@@ -2169,7 +2174,7 @@ async function boot() {
   const wantAdd = /[#&]add(?:&|$)/.test(location.hash);
   // The installer opened the sign-in window for this subscription: its
   // card waits for that sign-in (and looks every few seconds).
-  const si = /[#&]signin=(claude-code|codex)(?:&|$)/.exec(location.hash);
+  const si = /[#&]signin=(claude-code|codex|antigravity)(?:&|$)/.exec(location.hash);
   if (si) subsWaiting[si[1]] = Date.now();
   if (m) {
     history.replaceState(null, "", "/console/");

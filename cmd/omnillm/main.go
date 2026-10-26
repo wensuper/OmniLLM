@@ -1143,8 +1143,11 @@ func hubHandler(h *hub.Hub, relayURL string, con *console.Server) control.Handle
 				return hubSay(l, err)
 			}
 			name := tl(l, "Claude 订阅", "Claude subscription")
-			if a["kind"] == string(provider.Codex) {
+			switch provider.Kind(a["kind"]) {
+			case provider.Codex:
 				name = tl(l, "ChatGPT 订阅", "ChatGPT subscription")
+			case provider.Antigravity:
+				name = tl(l, "Gemini 订阅（Antigravity）", "Google AI subscription (Antigravity)")
 			}
 			return c.Send(control.Reply{Event: "ok", Text: fmt.Sprintf(tl(l, "已接入 %s：手机和其他设备现在就能用。", "Connected your %s: your phone and other devices can use it now."), name)})
 		case "console.login":

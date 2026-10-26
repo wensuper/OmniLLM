@@ -48,6 +48,12 @@ func subscriptionLimits(host func(string) egress.Limits) func(string) egress.Lim
 }
 
 func subscriptionModelName(k provider.Kind, id string) string {
+	if k == provider.Antigravity {
+		if n, _ := provider.AgyDisplay(id); n != "" {
+			return n
+		}
+		return "Gemini (Antigravity)"
+	}
 	if k == provider.Codex || id == "" {
 		return "ChatGPT (Codex)"
 	}
@@ -131,7 +137,7 @@ var probeDelay, probeGap = 30 * time.Second, 20 * time.Second
 // client and is probed, while the old client's probe stops.
 func (h *Hub) probeLaterLocked(c *provider.Client) {
 	// Claude by a tiny call (once a week); Codex from its catalog (free).
-	if k := c.Config().Kind; h.ctx == nil || (k != provider.ClaudeCode && k != provider.Codex) || h.probing[c] {
+	if k := c.Config().Kind; h.ctx == nil || (k != provider.ClaudeCode && k != provider.Codex && k != provider.Antigravity) || h.probing[c] {
 		return
 	}
 	if h.probing == nil {
@@ -187,8 +193,13 @@ func (h *Hub) probeModels(ctx context.Context, c *provider.Client) {
 	if err := c.Prepare(ctx); err != nil {
 		return
 	}
-	if c.Config().Kind == provider.Codex {
+	switch c.Config().Kind {
+	case provider.Codex:
 		h.syncCodexModels(ctx, c)
+	case provider.Antigravity:
+		// agy's list names every model, so nothing is asked.
+		h.syncAgyModels(ctx, c)
+		return
 	}
 	ms, err := h.listModels(ctx)
 	if err != nil {
@@ -253,6 +264,42 @@ func (h *Hub) syncCodexModels(ctx context.Context, c *provider.Client) {
 			continue
 		}
 		m := Model{ID: cfg.Name + "/" + e.Slug, Provider: cfg.Name, Upstream: e.Slug, DisplayName: subscriptionModelName(cfg.Kind, e.Slug),
+			PriceSet: true, HumanOnly: true}
+		_ = h.putModel(ctx, m)
+	}
+}
+
+// syncAgyModels keeps a connected Antigravity's models in step with what
+// `agy models` lists, like syncCodexModels.
+func (h *Hub) syncAgyModels(ctx context.Context, c *provider.Client) {
+	cfg := c.Config()
+	list, err := provider.AgyModels(ctx, cfg.Path)
+	if err != nil {
+		return
+	}
+	want := map[string]bool{}
+	for _, e := range list[1:] {
+		want[e.Slug] = true
+	}
+	ms, err := h.listModels(ctx)
+	if err != nil {
+		return
+	}
+	have := map[string]bool{}
+	for _, m := range ms {
+		if m.Provider != cfg.Name || m.Upstream == "default" {
+			continue
+		}
+		have[m.Upstream] = true
+		if !want[m.Upstream] {
+			_ = h.opts.Store.Delete(ctx, "model/"+m.ID)
+		}
+	}
+	for _, e := range list[1:] {
+		if have[e.Slug] {
+			continue
+		}
+		m := Model{ID: cfg.Name + "/" + e.Slug, Provider: cfg.Name, Upstream: e.Slug, DisplayName: e.Name,
 			PriceSet: true, HumanOnly: true}
 		_ = h.putModel(ctx, m)
 	}
@@ -335,7 +382,7 @@ func (h *Hub) DetectSubscriptions(ctx context.Context) []provider.Config {
 
 func (h *Hub) detectSubscriptions(ctx context.Context, evenRemoved bool) []provider.Config {
 	var out []provider.Config
-	for _, k := range []provider.Kind{provider.ClaudeCode, provider.Codex} {
+	for _, k := range []provider.Kind{provider.ClaudeCode, provider.Codex, provider.Antigravity} {
 		if h.subscription(string(k)) {
 			continue
 		}
@@ -441,7 +488,7 @@ func (h *Hub) SubscriptionStates(ctx context.Context) []SubscriptionState {
 	defer cancel()
 	h.subStale.Store(false)
 	var out []SubscriptionState
-	for _, k := range []provider.Kind{provider.ClaudeCode, provider.Codex} {
+	for _, k := range []provider.Kind{provider.ClaudeCode, provider.Codex, provider.Antigravity} {
 		st := SubscriptionState{Kind: string(k), Desktop: provider.DesktopApp(k), Connected: h.subscription(string(k))}
 		var removed bool
 		st.Removed = store.GetJSON(ctx, h.opts.Store, removedKey(k), &removed) == nil && removed

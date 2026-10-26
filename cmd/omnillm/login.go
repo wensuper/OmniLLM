@@ -30,6 +30,8 @@ func loginKind(s string) provider.Kind {
 		return provider.ClaudeCode
 	case "chatgpt", "codex", "openai":
 		return provider.Codex
+	case "gemini", "google", "antigravity", "agy":
+		return provider.Antigravity
 	}
 	return ""
 }
@@ -47,6 +49,9 @@ func shq(s string) string { return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'
 func loginScript(k provider.Kind, cli string, headless, window bool) string {
 	home, _ := os.UserHomeDir()
 	var name, sub, word, install, bin, login, how, failed string
+	if k == provider.Antigravity {
+		return agyLoginScript(cli, headless, window)
+	}
 	if k == provider.ClaudeCode {
 		name, sub, word = "Claude Code", t("Claude 订阅", "Claude subscription"), "claude"
 		install = "curl -fsSL https://claude.ai/install.sh | bash"
@@ -118,8 +123,11 @@ func phoneNext(k provider.Kind) string {
 
 // cliWord is the program's command name.
 func cliWord(k provider.Kind) string {
-	if k == provider.ClaudeCode {
+	switch k {
+	case provider.ClaudeCode:
 		return "claude"
+	case provider.Antigravity:
+		return "agy"
 	}
 	return "codex"
 }
@@ -147,8 +155,11 @@ func openLoginWindow(kind string) error {
 
 // loginWord is the word omnillm login takes for kind.
 func loginWord(k provider.Kind) string {
-	if k == provider.ClaudeCode {
+	switch k {
+	case provider.ClaudeCode:
 		return "claude"
+	case provider.Antigravity:
+		return "gemini"
 	}
 	return "chatgpt"
 }
@@ -165,8 +176,8 @@ func loginCmd(args []string) {
 	}
 	if len(args) != 1 || loginKind(args[0]) == "" {
 		// The one line that says it all; the whole command list would bury it.
-		fmt.Fprintln(os.Stderr, runnable(t("用法：omnillm login claude（Claude 订阅）或 omnillm login chatgpt（ChatGPT 订阅）。",
-			"Usage: omnillm login claude (Claude subscription) or omnillm login chatgpt (ChatGPT subscription).")))
+		fmt.Fprintln(os.Stderr, runnable(t("用法：omnillm login claude（Claude 订阅）、omnillm login chatgpt（ChatGPT 订阅）或 omnillm login gemini（Gemini 订阅，用 Antigravity）。",
+			"Usage: omnillm login claude (Claude subscription), omnillm login chatgpt (ChatGPT subscription) or omnillm login gemini (Google AI subscription, through Antigravity).")))
 		os.Exit(2)
 	}
 	k := loginKind(args[0])

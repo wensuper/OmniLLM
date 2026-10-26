@@ -470,8 +470,11 @@ func chatExists(r ChatRecord) bool {
 	if !validChatID(r.ID) {
 		return false
 	}
-	if r.Kind == ClaudeCode {
+	switch r.Kind {
+	case ClaudeCode:
 		return len(claudeSessionFiles(r.ID)) > 0
+	case Antigravity:
+		return len(agyConversationFiles(r.ID)) > 0
 	}
 	return len(codexSessionFiles(r.ID)) > 0
 }
@@ -480,6 +483,10 @@ func chatExists(r ChatRecord) bool {
 // its own database, so Codex deletes it; its files go even if that fails.
 func removeChat(r ChatRecord) {
 	if !validChatID(r.ID) {
+		return
+	}
+	if r.Kind == Antigravity {
+		removeAgyConversation(r.ID)
 		return
 	}
 	if r.Kind == ClaudeCode {

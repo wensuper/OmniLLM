@@ -41,12 +41,15 @@ const (
 
 // Subscription reports whether the kind runs an official program logged in
 // with the owner's subscription.
-func (k Kind) Subscription() bool { return k == ClaudeCode || k == Codex }
+func (k Kind) Subscription() bool { return k == ClaudeCode || k == Codex || k == Antigravity }
 
 // cliName is the program's file name for a kind.
 func cliName(k Kind) string {
-	if k == ClaudeCode {
+	switch k {
+	case ClaudeCode:
 		return "claude"
+	case Antigravity:
+		return "agy"
 	}
 	return "codex"
 }
@@ -58,6 +61,8 @@ func DisplayName(k Kind) string {
 		return "Claude (subscription)"
 	case Codex:
 		return "ChatGPT (Codex)"
+	case Antigravity:
+		return "Gemini (Antigravity)"
 	}
 	return string(k)
 }
@@ -67,6 +72,8 @@ func DisplayName(k Kind) string {
 var cliModels = map[Kind][]string{
 	ClaudeCode: {"sonnet", "opus", "haiku"},
 	Codex:      {"default"},
+	// Antigravity: its first listed model; the others from `agy models`.
+	Antigravity: {"default"},
 }
 
 // cliDirs are where the official installers put the programs; a launchd or
@@ -169,6 +176,11 @@ func CLILoggedIn(ctx context.Context, k Kind, path string) bool {
 	defer os.RemoveAll(dir)
 	var cmd *exec.Cmd
 	env := cliEnv(path, dir)
+	if k == Antigravity {
+		// Signed in where the hub runs it: then it lists its models.
+		_, err := readAgyModels(ctx, path)
+		return err == nil
+	}
 	if k == ClaudeCode {
 		cmd = exec.CommandContext(ctx, path, "auth", "status")
 	} else {
@@ -289,10 +301,12 @@ func cliPrompt(k Kind, msgs []omnillm.Message) (system, prompt string) {
 		}
 	}
 	var b strings.Builder
-	if k == Codex {
+	// Codex and agy take no system text apart: it leads the prompt.
+	inline := k == Codex || k == Antigravity
+	if inline {
 		b.WriteString("Instructions:\n" + system + "\n\nYou have no tools. Answer in text only.\n\n")
 	}
-	if len(turns) == 1 && k != Codex {
+	if len(turns) == 1 && !inline {
 		return system, noCommand(turns[0].Content)
 	}
 	b.WriteString("The conversation so far is below. Reply to the user's last message as the assistant.\n")
@@ -363,6 +377,7 @@ type cliStream struct {
 	limit  time.Time // a subscription limit's reset time, if reported
 	model  string    // the exact model, once the program says
 	told   bool      // model passed on
+	agyID  string    // agy's conversation, deleted at the end when no chat keeps it
 
 	chat     *chatTurn       // a person's conversation (nil: nothing kept)
 	peek     []byte          // a first line read early, for Recv
@@ -399,7 +414,7 @@ func (c *Client) streamCLI(ctx context.Context, model string, req omnillm.Reques
 // it ends. With chats, the conversation keeps the program's session: a
 // follow-up of a kept one sends only its new message.
 func (c *Client) spawnCLI(ctx context.Context, model string, msgs []omnillm.Message, release egress.Release, chats *Chats, owner string) (*cliStream, error) {
-	codexName := "" // Codex's model for people ("GPT-6-Astra"), when it was picked here
+	codexName := "" // Codex's or agy's model for people ("GPT-6-Astra"), when it was picked here
 	scratch, err := os.MkdirTemp("", "omnillm-cli-")
 	if err != nil {
 		release(egress.ClientError, 0)
@@ -476,6 +491,33 @@ func (c *Client) spawnCLI(ctx context.Context, model string, msgs []omnillm.Mess
 			args = append(args, "--input-format", "stream-json")
 			prompt = claudeInput(images, prompt)
 		}
+	} else if c.cfg.Kind == Antigravity {
+		if len(images) > 0 {
+			// agy's stream-json input takes text only.
+			return fail(&omnillm.Error{Code: omnillm.CodeBadRequest, Msg: omnillm.MsgNoVision})
+		}
+		home, err := prepareAgyHome()
+		if err != nil {
+			return fail(&omnillm.Error{Code: omnillm.CodeUpstream, Msg: omnillm.MsgUpstream, Detail: "antigravity home: " + err.Error()})
+		}
+		env = agyEnv(c.cfg.Path, scratch, home)
+		id := ""
+		if turn != nil && turn.resumed {
+			id = turn.id
+		}
+		// No model chosen: the first one agy lists, named, so the model
+		// shown is the one that answers.
+		pick := model
+		if pick == "" || pick == "default" {
+			if list, err := AgyModels(ctx, c.cfg.Path); err == nil {
+				pick, codexName = list[0].Slug, list[0].Name
+			}
+		}
+		args = agyArgs(pick, id)
+		if strings.TrimSpace(prompt) == "" {
+			prompt = "(empty message)"
+		}
+		prompt = agyInput(prompt)
 	} else {
 		home, err := prepareCodexHome()
 		if err != nil {
@@ -656,6 +698,9 @@ func (s *cliStream) Recv() (omnillm.Chunk, error) {
 
 // line reads one JSON line and returns text to pass on.
 func (s *cliStream) line(b []byte) (text string, final bool) {
+	if s.kind == Antigravity {
+		return s.agyLine(b)
+	}
 	var ev struct {
 		Type      string `json:"type"`
 		Model     string `json:"model"`      // Claude Code's system/init
@@ -834,7 +879,8 @@ func (s *cliStream) classify(text string) (*omnillm.Error, egress.Outcome, time.
 		return &omnillm.Error{Code: omnillm.CodeBadRequest, Msg: omnillm.MsgContextTooLong, Args: []string{modelName(s.kind, s.alias)},
 			Detail: string(s.kind) + ": too long"}, egress.ClientError, 0
 	case !limit.IsZero() || strings.Contains(lower, "usage limit") || strings.Contains(lower, "rate limit") ||
-		strings.Contains(lower, "limit reached") || strings.Contains(lower, "429") || strings.Contains(lower, "too many requests"):
+		strings.Contains(lower, "limit reached") || strings.Contains(lower, "429") || strings.Contains(lower, "too many requests") ||
+		strings.Contains(lower, "resource_exhausted") || strings.Contains(lower, "quota"):
 		wait := 15 * time.Minute
 		if !limit.IsZero() {
 			wait = time.Until(limit)
@@ -844,7 +890,7 @@ func (s *cliStream) classify(text string) (*omnillm.Error, egress.Outcome, time.
 			Args: []string{name}, RetryAfter: wait, Detail: string(s.kind) + ": limit"}, egress.LimitReached, wait
 	case strings.Contains(lower, "login") || strings.Contains(lower, "log in") || strings.Contains(lower, "logged in") ||
 		strings.Contains(lower, "authenticat") || strings.Contains(lower, "401") || strings.Contains(lower, "unauthorized") ||
-		strings.Contains(lower, "oauth") || strings.Contains(lower, "token expired"):
+		strings.Contains(lower, "oauth") || strings.Contains(lower, "token expired") || strings.Contains(lower, "sign in") || strings.Contains(lower, "signed in"):
 		return &omnillm.Error{Code: omnillm.CodeCredentialProblem, Msg: omnillm.MsgCLILogin,
 			Args: []string{name}, Detail: string(s.kind) + ": login"}, egress.ClientError, 0
 	}
@@ -933,9 +979,16 @@ func (s *cliStream) finishWith2(o egress.Outcome, wait time.Duration, err error)
 			turn.keep(reply)
 			turn = nil
 		}
+		s.mu.Lock()
+		agyID := s.agyID
+		s.mu.Unlock()
+		if s.chat != nil {
+			agyID = "" // the chat keeps it, or discards it below
+		}
 		go func() {
 			_ = s.wait()
 			os.RemoveAll(s.scratch)
+			removeAgyConversation(agyID)
 			// After the program has exited: its session file is complete,
 			// or no longer written to.
 			if turn != nil {

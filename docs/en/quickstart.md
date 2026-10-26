@@ -75,9 +75,12 @@ Subscriptions work through the official command-line programs: [Claude Code](htt
   ```bash
   omnillm login claude     # Claude Pro / Max
   omnillm login chatgpt    # ChatGPT Plus / Pro
+  omnillm login gemini     # Google AI subscription (through Antigravity CLI)
   ```
 
 If you’re already signed in, the hub finds it and connects. Claude’s Sonnet, Opus, and Haiku, and Codex’s default model, appear in the model list with nothing to fill in.
+
+A Google AI subscription (Gemini) works through Antigravity CLI (`agy`), Google's official program. You sign in to it once more, for OmniLLM only; that sign-in is kept in OmniLLM's own folder, and the agy you use yourself isn't affected. Note: Google has banned accounts that used third-party tools with an Antigravity sign-in. OmniLLM runs the official program itself, but Google hasn't said whether that is allowed; if you'd rather not take the risk, use a Gemini API key.
 
 Codex sometimes stores its sign-in in the system keychain, which OmniLLM can’t use. The console then asks you to sign in once more, and this sign-in is saved to a file OmniLLM can use (`~/.codex/auth.json`).
 

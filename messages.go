@@ -169,6 +169,7 @@ var skipArgs = map[string]int{MsgBusyPace: 1}
 var providerNames = map[string][2]string{
 	"claude-code":                  {"Claude 订阅", "your Claude subscription"},
 	"codex":                        {"ChatGPT 订阅", "your ChatGPT subscription"},
+	"antigravity":                  {"Gemini 订阅（Antigravity）", "your Google AI subscription (Antigravity)"},
 	"Claude (subscription)":        {"Claude 订阅", "your Claude subscription"},
 	"ChatGPT Codex (subscription)": {"ChatGPT 订阅", "your ChatGPT subscription"},
 	"openai":                       {"OpenAI", "OpenAI"},
@@ -185,6 +186,8 @@ func subscriptionOf(args []string) string {
 			return "claude"
 		case "codex", "ChatGPT Codex (subscription)":
 			return "codex"
+		case "antigravity":
+			return "antigravity"
 		}
 	}
 	return ""
@@ -216,6 +219,8 @@ func (e *Error) render(lang string, s slot, i int) string {
 			return "Claude Code"
 		case "codex":
 			return "Codex"
+		case "antigravity":
+			return "Antigravity CLI"
 		}
 	case slotLogin:
 		switch subscriptionOf(e.Args) {
@@ -223,6 +228,8 @@ func (e *Error) render(lang string, s slot, i int) string {
 			return pick(lang, "运行 omnillm login claude", "run omnillm login claude")
 		case "codex":
 			return pick(lang, "运行 omnillm login chatgpt", "run omnillm login chatgpt")
+		case "antigravity":
+			return pick(lang, "运行 omnillm login gemini", "run omnillm login gemini")
 		}
 	case slotWait:
 		if e.RetryAfter > 0 {

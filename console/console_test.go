@@ -681,7 +681,7 @@ func TestSubscriptionCards(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &out); err != nil || w.Code != 200 {
 		t.Fatalf("%d %s", w.Code, w.Body)
 	}
-	if len(out.Subs) != 2 || out.Subs[0].Kind != "claude-code" || out.Subs[1].Kind != "codex" || out.CanOpen {
+	if len(out.Subs) != 3 || out.Subs[0].Kind != "claude-code" || out.Subs[1].Kind != "codex" || out.Subs[2].Kind != "antigravity" || out.CanOpen {
 		t.Fatalf("%+v", out)
 	}
 	w = r.do(req{method: "POST", path: "/console/api/subs/login", body: `{"kind":"claude-code"}`, origin: origin, header: true, cookie: sid})

@@ -75,9 +75,12 @@ curl -fsSL https://raw.githubusercontent.com/wensuper/OmniLLM/main/install.sh | 
   ```bash
   omnillm login claude     # Claude Pro / Max
   omnillm login chatgpt    # ChatGPT Plus / Pro
+  omnillm login gemini     # Google AI 订阅（用 Antigravity CLI）
   ```
 
 已经登录过的，主机会自己发现并接上。Claude 的 Sonnet、Opus、Haiku 和 Codex 的默认模型会出现在模型列表里，不用填任何东西。
+
+Google AI 订阅（Gemini）用 Google 官方的 Antigravity CLI（`agy`）。它要给 OmniLLM 单独登录一次，登录放在 OmniLLM 自己的文件夹里，你自己平时用的 agy 不受影响。注意：Google 封过用第三方工具调用 Antigravity 登录的账号，OmniLLM 运行的是官方程序本身，但 Google 没有明说这样是否允许；不想冒险就用 Gemini 的 API Key。
 
 Codex 有时把登录存在系统钥匙串里，OmniLLM 用不了；控制台会提示“再登一次”，这次的登录会存成 OmniLLM 能用的文件（`~/.codex/auth.json`）。
 

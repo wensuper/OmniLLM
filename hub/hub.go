@@ -728,6 +728,11 @@ func (h *Hub) info(m Model) omnillm.ModelInfo {
 		// so that name is the version. The owner's ~/.codex/config.toml
 		// plays no part (--ignore-user-config).
 		mi.DisplayName, mi.Latest = subscriptionModelName(provider.Codex, m.Upstream), true
+	case provider.Antigravity:
+		// agy lists every model by name: no alias, no version to wait for.
+		if n, r := provider.AgyDisplay(m.Upstream); n != "" {
+			mi.DisplayName, mi.Rank = n, r
+		}
 	}
 	// The version the provider last said it answered with ("Claude Opus"
 	// behind the alias "opus" is "Claude Opus 5.5" today). Codex keeps its
@@ -741,7 +746,7 @@ func (h *Hub) info(m Model) omnillm.ModelInfo {
 	case kind == provider.Codex && resolved != "":
 		mi.Version, mi.Latest = resolved, false
 		mi.Rank = provider.CodexRankOf(resolved)
-	case resolved != "":
+	case resolved != "" && kind != provider.Antigravity:
 		mi.DisplayName, mi.Latest = resolved, false
 	}
 	if c != nil {

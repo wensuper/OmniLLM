@@ -4,6 +4,12 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.59](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.59) - 2026-10-26
+
+### Added
+
+- Google AI subscriptions (Gemini) through Antigravity CLI, Google's official program: run `omnillm login gemini`, or use the new *I have a Google AI subscription (Gemini)* card in the console. It installs Antigravity CLI with Homebrew if needed and signs it in once more, for OmniLLM only (the agy you use yourself isn't affected). Every model Antigravity offers your account is listed, in its order, under subscriptions. As with Claude and ChatGPT, it is for chatting only: all of Antigravity's tools are refused before they run, and your own rule files aren't read. It takes text only. Google has banned accounts that used third-party tools with an Antigravity sign-in; OmniLLM runs the official program itself, but Google hasn't said whether that is allowed, so a Gemini API key is the safer choice.
+
 ## [0.2.0-alpha.58](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.58) - 2026-10-26
 
 ### Fixed

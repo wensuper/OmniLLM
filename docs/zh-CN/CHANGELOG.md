@@ -2,6 +2,10 @@
 
 [English](../../CHANGELOG.md) | 简体中文
 
+## v0.2.0-alpha.59（2026-10-26）
+
+- 可以接 Google AI 订阅（Gemini）了，用 Google 官方的 Antigravity CLI：运行 `omnillm login gemini`，或者点控制台里新的「我有 Google AI 订阅（Gemini）」卡片。没装会先用 Homebrew 装上，再给 OmniLLM 单独登录一次（你自己用的 agy 不受影响）。你账号能用的 Antigravity 模型全部按它的顺序列在“订阅”里。和 Claude、ChatGPT 一样只能手动对话：Antigravity 的所有工具在执行前就被拒绝，你自己的规则文件不会被读到；只收文字。Google 封过用第三方工具调用 Antigravity 登录的账号，OmniLLM 运行的是官方程序本身，但 Google 没有明说是否允许，用 Gemini API Key 更稳妥。
+
 ## v0.2.0-alpha.58（2026-10-26）
 
 - 用自己的名字接入的本机模型服务（不是 Ollama 程序本身，比如 llama.cpp 的 llama-server）以前显示成“Ollama（这台 Mac）”，现在显示为“这台 Mac 上的模型（名字）”，控制台和命令行一致。已经接入了本机模型时，「重新检查」不再提 Ollama。

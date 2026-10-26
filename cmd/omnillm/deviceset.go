@@ -256,7 +256,7 @@ func findApp(l string, as []hub.App, q string) (hub.App, error) {
 // either language, or as the console lists it ("… · 订阅").
 func findModel(l string, ms []hub.ModelView, q string) (hub.ModelView, error) {
 	return findNamed(l, ms, q, func(m hub.ModelView) (string, []string) {
-		sub := m.Kind == string(provider.ClaudeCode) || m.Kind == string(provider.Codex)
+		sub := provider.Kind(m.Kind).Subscription()
 		var names []string
 		for _, ln := range []string{"zh", "en"} {
 			for _, n := range []string{m.DisplayName, modelNameIn(ln, m.ModelInfo)} {

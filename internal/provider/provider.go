@@ -55,7 +55,7 @@ func Default(kind Kind) (Config, error) {
 		return Config{Name: "anthropic", Kind: Anthropic, BaseURL: "https://api.anthropic.com", NeedsKey: true}, nil
 	case Ollama:
 		return Config{Name: "ollama", Kind: Ollama, BaseURL: "http://127.0.0.1:11434/v1", NeedsKey: false}, nil
-	case ClaudeCode, Codex:
+	case ClaudeCode, Codex, Antigravity:
 		p := FindCLI(kind)
 		if p == "" {
 			return Config{}, &omnillm.Error{Code: omnillm.CodeBadRequest, Msg: omnillm.MsgCLINotFound, Args: []string{string(kind)}}

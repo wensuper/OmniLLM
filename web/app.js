@@ -36,7 +36,7 @@ const T = {
     addImage: "添加图片", voice: "语音输入", voiceStop: "停止语音输入", listening: "正在听，说完再点一下……", voiceFirst: "语音由浏览器识别：Chrome 交给 Google，Safari 交给 Apple。识别出的文字只填进输入框，你确认后再发。", voiceDenied: "没有麦克风权限。在浏览器的网站设置里允许麦克风，再点一次。", voiceNoMic: "没找到麦克风。", voiceNoSpeech: "没听到声音，再说一次试试。", voiceNetwork: "语音识别要联网，现在连不上。", voiceFailed: "语音输入没能开始，再试一次。", removeImage: "移除图片", tooManyImages: "每条消息最多 4 张图片。", imageFailed: "这张图片打不开，换一张试试。", imageTooBig: "图片太大，换一张小一点的。", imageTitle: "图片",
     offline: "连不上你的 Mac：它可能睡眠了或者没联网。醒来后会自动恢复。", retry: "重试",
     noNetwork: "这台设备没有联网，联网后会自动连上。", kept: "刚才输入的还在。", loadingModels: "正在连接你的 Mac……",
-    noModels: "这台设备现在没有能用的模型。在 Mac 的控制台里接入模型，或在“设备”里给它开放模型。", noModelsOpt: "没有可用的模型", probLogin: "要在 Mac 上登录", probLimit: "到上限，{0} 恢复", probLoginNote: "{0}在你的 Mac 上没有登录，现在发不出去。在 Mac 上运行 omnillm login {1}，或点控制台里 {2} 卡片上的按钮，登录后就能用。", probLimitNote: "{0}的用量到上限了，{1} 恢复。可以先换一个模型。", subClaude: "Claude 订阅", subChatGPT: "ChatGPT 订阅",
+    noModels: "这台设备现在没有能用的模型。在 Mac 的控制台里接入模型，或在“设备”里给它开放模型。", noModelsOpt: "没有可用的模型", probLogin: "要在 Mac 上登录", probLimit: "到上限，{0} 恢复", probLoginNote: "{0}在你的 Mac 上没有登录，现在发不出去。在 Mac 上运行 omnillm login {1}，或点控制台里 {2} 卡片上的按钮，登录后就能用。", probLimitNote: "{0}的用量到上限了，{1} 恢复。可以先换一个模型。", subClaude: "Claude 订阅", subChatGPT: "ChatGPT 订阅", subGemini: "Gemini 订阅",
     modelGone: "原来的模型已从你的 Mac 上移除，换成了 {0}",
     grpSub: "订阅（不另花钱）", grpKey: "API Key", grpLocal: "你的 Mac 上", latest: "（最新版）", codex: "ChatGPT（Codex · 最新版）", codexV: "ChatGPT（Codex · {0}）",
     forget: "移除这台设备", forgetQ: "这里的对话会删除。以后要用，在 Mac 上重新添加。", removing: "正在移除……",
@@ -81,7 +81,7 @@ const T = {
     addImage: "Add image", voice: "Voice input", voiceStop: "Stop voice input", listening: "Listening… tap again when you’re done", voiceFirst: "Your browser turns speech into text: Chrome uses Google, Safari uses Apple. The words only fill the box; you send them.", voiceDenied: "No microphone permission. Allow the microphone in the browser’s site settings, then try again.", voiceNoMic: "No microphone found.", voiceNoSpeech: "Didn’t hear anything. Try again.", voiceNetwork: "Voice input needs the internet, which isn’t reachable right now.", voiceFailed: "Voice input couldn’t start. Try again.", removeImage: "Remove image", tooManyImages: "Up to 4 images per message.", imageFailed: "This image can’t be opened; try another one.", imageTooBig: "Image too large; try a smaller one.", imageTitle: "Image",
     offline: "Can’t reach your Mac: it may be asleep or offline. It reconnects when your Mac wakes.", retry: "Retry",
     noNetwork: "This device is offline; it reconnects when the network is back.", kept: "What you typed is kept.", loadingModels: "Connecting to your Mac…",
-    noModels: "No models are available to this device. On your Mac, connect a model or allow this device more models under Devices.", noModelsOpt: "No models", probLogin: "Sign in on your Mac", probLimit: "At its limit until {0}", probLoginNote: "{0} is signed out on your Mac, so messages to it won’t go through. On your Mac, run omnillm login {1}, or use the button on the {2} card in the console; it works once you’re signed in.", probLimitNote: "{0} has reached its usage limit until {1}. Pick another model for now.", subClaude: "Claude subscription", subChatGPT: "ChatGPT subscription",
+    noModels: "No models are available to this device. On your Mac, connect a model or allow this device more models under Devices.", noModelsOpt: "No models", probLogin: "Sign in on your Mac", probLimit: "At its limit until {0}", probLoginNote: "{0} is signed out on your Mac, so messages to it won’t go through. On your Mac, run omnillm login {1}, or use the button on the {2} card in the console; it works once you’re signed in.", probLimitNote: "{0} has reached its usage limit until {1}. Pick another model for now.", subClaude: "Claude subscription", subChatGPT: "ChatGPT subscription", subGemini: "Google AI subscription",
     modelGone: "The previous model was removed from your Mac; switched to {0}",
     grpSub: "Subscriptions (no extra cost)", grpKey: "API key", grpLocal: "On your Mac", latest: " (latest)", codex: "ChatGPT (Codex · latest)", codexV: "ChatGPT (Codex · {0})",
     forget: "Remove this device", forgetQ: "Chats here will be deleted. To use this device later, add it on your Mac again.", removing: "Removing…",
@@ -718,9 +718,9 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden) rech
 addEventListener("pageshow", (e) => { if (e.persisted) recheck(); });
 setInterval(recheck, 120000);
 
-// isSub: a Claude or ChatGPT subscription (the official programs on the
-// hub), not merely a model kept for people (a local model can be that too).
-function isSub(m) { const k = m.kind || m.provider; return k === "claude-code" || k === "codex"; }
+// isSub: a Claude, ChatGPT or Google AI subscription (the official programs
+// on the hub), not merely a model kept for people (a local model can be that too).
+function isSub(m) { const k = m.kind || m.provider; return k === "claude-code" || k === "codex" || k === "antigravity"; }
 // isLocal: runs on the Mac itself. The hub tells a device every model is
 // remote (the data leaves the phone), so this goes by the provider: local
 // models come through Ollama.
@@ -733,8 +733,8 @@ function modelName(id) { const m = S.models.find((x) => x.id === id); return m ?
 // a notice above the box while it is the chosen one.
 function problemOf(m) {
   if (!m || !m.problem) return null;
-  const claude = m.kind !== "codex", src = t(claude ? "subClaude" : "subChatGPT");
-  if (m.problem === "login") return { short: t("probLogin"), long: t("probLoginNote", src, claude ? "claude" : "chatgpt", claude ? "Claude" : "ChatGPT") };
+  const sub = { codex: ["subChatGPT", "chatgpt", "ChatGPT"], antigravity: ["subGemini", "gemini", "Gemini"] }[m.kind] || ["subClaude", "claude", "Claude"], src = t(sub[0]);
+  if (m.problem === "login") return { short: t("probLogin"), long: t("probLoginNote", src, sub[1], sub[2]) };
   if (m.problem === "limit") {
     const at = m.resetsAt ? new Date(m.resetsAt * 1000) : null;
     if (at && at <= new Date()) return null;
@@ -753,7 +753,15 @@ function label(m) {
   return m.latest ? m.name + t("latest") : m.name;
 }
 // family orders Claude's models Opus, Sonnet, Haiku (largest first).
-function family(m) { const s = (m.id + " " + m.name).toLowerCase(), i = ["opus", "sonnet", "haiku"].findIndex((f) => s.includes(f)); return i < 0 ? 3 : i; }
+// Subscriptions stay together: Claude, then ChatGPT, then Google AI
+// (Antigravity also offers a Claude model; it stays with Antigravity's).
+function family(m) {
+  const k = m.kind || m.provider;
+  if (k === "codex") return 10;
+  if (k === "antigravity") return 20;
+  const s = (m.id + " " + m.name).toLowerCase(), i = ["opus", "sonnet", "haiku"].findIndex((f) => s.includes(f));
+  return i < 0 ? 3 : i;
+}
 
 async function loadModels() {
   const ms = await omnillm.models();

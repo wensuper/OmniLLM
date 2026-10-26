@@ -184,8 +184,8 @@ func problemText(p hub.ProviderInfo, now time.Time) string {
 	}
 	switch p.Problem {
 	case provider.ProblemLogin:
-		if p.Kind == provider.Codex {
-			return fmt.Sprintf(t("登录已失效：%s运行 omnillm login chatgpt", "Signed out: %s, run omnillm login chatgpt"), inTerminal())
+		if p.Kind == provider.Codex || p.Kind == provider.Antigravity {
+			return fmt.Sprintf(t("登录已失效：%s运行 omnillm login %s", "Signed out: %s, run omnillm login %s"), inTerminal(), loginWord(p.Kind))
 		}
 		return fmt.Sprintf(t("登录已失效：%s运行 omnillm login claude", "Signed out: %s, run omnillm login claude"), inTerminal())
 	case provider.ProblemLimit:
@@ -223,6 +223,8 @@ func sourceLabelIn(l string, k provider.Kind, name string) string {
 		return tl(l, "Claude 订阅", "Claude subscription")
 	case provider.Codex:
 		return tl(l, "ChatGPT 订阅（Codex）", "ChatGPT subscription (Codex)")
+	case provider.Antigravity:
+		return tl(l, "Gemini 订阅（Antigravity）", "Google AI subscription (Antigravity)")
 	case provider.Ollama:
 		// Only the Ollama app itself is "Ollama"; another server on this
 		// machine (llama.cpp, LM Studio) added with its own name is a
