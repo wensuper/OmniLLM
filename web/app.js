@@ -26,15 +26,15 @@ const T = {
     getHubTitle: "先装好 OmniLLM", getHubBody: "在电脑上打开终端（Mac：按 ⌘+空格，输入“终端”后回车），粘贴这一行，按回车。装好后回到这里扫码。", getHubLongPress: "请长按上面这一行复制。", getHubBodyHere: "在要运行 OmniLLM 的电脑上打开终端（Mac：按 ⌘+空格，输入“终端”后回车），粘贴这一行，按回车。大约一分钟。",
     getHubShare: "发到我的电脑", getHubCopy: "复制", getHubGuide: "完整安装说明", getHubCopied: "已复制。把它发到电脑上，在终端里粘贴运行。",
     getHubSend: "在电脑上安装 OmniLLM：在终端里运行这一行",
-    homeTitle: "先放到主屏幕", homeSub: "主屏幕上的 OmniLLM 和 {0} 不共用配对。先放过去，在那里扫码，只配一次。",
-    homeS1Safari: "点 Safari 的 ⋯ 或“分享”", homeS1Chrome: "点地址栏右边的“分享”", homeS1Edge: "点底部的 ⋯，再点“分享”", homeS1Firefox: "点菜单 ≡，再点“分享”",
-    homeS2: "选“添加到主屏幕”", homeS3: "从主屏幕打开 OmniLLM，扫同一个二维码", homeHere: "就在 {0} 里用", cantFind: "找不到“添加到主屏幕”？",
-    inappTitle: "在浏览器里打开", inappSub: "在{0}里打开的页面存不下配对，也放不到主屏幕。", inappThisApp: "这个 App ",
-    inappS1: "点右上角的 ⋯", inappS2ios: "选“在 Safari 中打开”", inappS2android: "选“在浏览器打开”",
-    inappS3ios: "在 Safari 里放到主屏幕，再从主屏幕扫码", inappS3android: "浏览器会接着添加这台手机", inappHere: "仍在{0}里用", inappHereAny: "仍在这里用",
+    homeOpen: "想像 App 一样放到主屏幕？",
+    homeTitle: "放到主屏幕", homeSub: "以后从主屏幕直接打开，像一个 App。主屏幕上的 OmniLLM 要单独添加一次：在 {0} 里加好的不会带过去。",
+    homeS1Safari: "点“分享”按钮（新版 Safari 在右下角的 ⋯ 里）", homeS1Chrome: "点地址栏右边的“分享”", homeS1Edge: "点底部的 ⋯，再点“分享”", homeS1Firefox: "点菜单 ≡，再点“分享”",
+    homeS2: "往下找到“添加到主屏幕”", homeS3: "从主屏幕打开 OmniLLM，扫电脑上的二维码",
+    inappTitle: "在{0}里也能直接用", inappSub: "只是{0}可能清掉页面保存的东西，那时要在电脑上重新添加这台手机。想一直保存，就复制网址，到手机的浏览器里打开。",
+    inappHere: "就在{0}里用", copyForBrowser: "复制网址，到浏览器里打开", inappHow: "也可以点右上角的 ⋯，选“在浏览器打开”。",
     appWechat: "微信", appQQ: "QQ", appWeibo: "微博", appLark: "飞书", appDingtalk: "钉钉", appAlipay: "支付宝", appDouyin: "抖音", appXhs: "小红书", appFacebook: "Facebook", appInstagram: "Instagram", appLine: "LINE", appLinkedin: "LinkedIn",
     volTitle: "这个浏览器存不下配对", volSub: "在这里添加，关掉页面就失效，下次还要再加。无痕窗口也是这样。用 Safari、Chrome 或 Edge 的普通窗口打开 omni.ixxzh.com 可以一直用。",
-    copyUrl: "复制网址", urlCopied: "已复制网址", onceHere: "仍在这里用一次",
+    copyUrl: "复制网址，换个窗口打开", urlCopied: "已复制网址", onceHere: "就在这里用",
     pastePh: "粘贴链接或配对文字", add: "添加", cancel: "取消", back: "返回", delete: "删除", remove: "移除", gotIt: "知道了",
     scanHint: "对准电脑屏幕上的二维码", camDenied: "没有拿到摄像头权限。在浏览器设置里允许这个网站用摄像头后再试，或者粘贴链接或配对文字。",
     pairConnecting: "正在连接你的电脑……",
@@ -89,15 +89,15 @@ const T = {
     getHubTitle: "Set up OmniLLM first", getHubBody: "On your computer, open a terminal (Mac: press ⌘-Space, type “Terminal”, press Return), paste this line and press Return. Then come back here and scan.", getHubLongPress: "Touch and hold the line above to copy it.", getHubBodyHere: "On the computer that will run OmniLLM, open a terminal (Mac: press ⌘-Space, type “Terminal”, press Return), paste this line and press Return. It takes about a minute.",
     getHubShare: "Send to my computer", getHubCopy: "Copy", getHubGuide: "Full setup guide", getHubCopied: "Copied. Get it to your computer and paste it into a terminal there.",
     getHubSend: "Install OmniLLM on your computer: run this line in a terminal",
-    homeTitle: "Add to Home Screen first", homeSub: "The Home Screen app doesn’t share its pairing with {0}. Add it first and scan from there, so you pair only once.",
-    homeS1Safari: "Tap ⋯ or Share in Safari", homeS1Chrome: "Tap Share at the right of the address bar", homeS1Edge: "Tap ⋯ at the bottom, then Share", homeS1Firefox: "Tap the ≡ menu, then Share",
-    homeS2: "Choose “Add to Home Screen”", homeS3: "Open OmniLLM from the Home Screen and scan the same QR code", homeHere: "Use it in {0} instead", cantFind: "Can’t find “Add to Home Screen”?",
-    inappTitle: "Open in your browser", inappSub: "Pages opened in {0} can’t keep the pairing or go on the Home Screen.", inappThisApp: "this app",
-    inappS1: "Tap ⋯ in the top-right corner", inappS2ios: "Choose “Open in Safari”", inappS2android: "Choose “Open in Browser”",
-    inappS3ios: "In Safari, add it to the Home Screen and scan from there", inappS3android: "Your browser picks up right here", inappHere: "Use it in {0} anyway", inappHereAny: "Use it here anyway",
+    homeOpen: "Put it on the Home Screen, like an app?",
+    homeTitle: "Add to Home Screen", homeSub: "Open it from the Home Screen like an app. The Home Screen OmniLLM is added on its own, once: the one added in {0} doesn’t carry over.",
+    homeS1Safari: "Tap Share (in newer Safari it’s in the ⋯ menu at the bottom right)", homeS1Chrome: "Tap Share at the right of the address bar", homeS1Edge: "Tap ⋯ at the bottom, then Share", homeS1Firefox: "Tap the ≡ menu, then Share",
+    homeS2: "Scroll to “Add to Home Screen”", homeS3: "Open OmniLLM from the Home Screen and scan the QR code on your computer",
+    inappTitle: "You can use it right in {0}", inappSub: "{0} may clear what the page keeps, though, and then this phone has to be added again on your computer. To keep it, copy the address and open it in your phone’s browser.",
+    inappHere: "Use it in {0}", copyForBrowser: "Copy the address for your browser", inappHow: "Or tap ⋯ at the top right and choose “Open in Browser”.",
     appWechat: "WeChat", appQQ: "QQ", appWeibo: "Weibo", appLark: "Lark", appDingtalk: "DingTalk", appAlipay: "Alipay", appDouyin: "Douyin", appXhs: "Xiaohongshu", appFacebook: "Facebook", appInstagram: "Instagram", appLine: "LINE", appLinkedin: "LinkedIn",
     volTitle: "This browser can’t keep the pairing", volSub: "Added here, it stops working when you close the page; private windows do the same. Open omni.ixxzh.com in a normal Safari, Chrome or Edge window to keep it.",
-    copyUrl: "Copy the address", urlCopied: "Address copied", onceHere: "Use it here just this once",
+    copyUrl: "Copy the address for another window", urlCopied: "Address copied", onceHere: "Use it here",
     pastePh: "Paste the link or pairing text", add: "Add", cancel: "Cancel", back: "Back", delete: "Delete", remove: "Remove", gotIt: "Got it",
     scanHint: "Point at the QR code on your computer’s screen", camDenied: "No camera access. Allow the camera for this site in your browser settings and try again, or paste a link or pairing text.",
     pairConnecting: "Connecting to your computer…",
@@ -538,9 +538,8 @@ function gateView() {
   const p = S.passed || (S.passed = passedBefore());
   if (isStandalone || S.device) return "";
   if (IN_APP && !p.has("inapp")) return "inapp";
-  // The in-app screen also stands for the Home Screen one ("can't find it"
-  // leads there): passed, it is the person's choice to stay.
-  if (IOS_HOME && !p.has("home") && !p.has("inapp")) return "home";
+  // The Home Screen is never a gate: pairing here comes first, and the
+  // start screen offers it as a choice (zc 10-26, on a real iPhone).
   if (S.volatile && !p.has("vol") && !p.has("inapp")) return "vol";
   return "";
 }
@@ -633,28 +632,28 @@ $("get-copy").addEventListener("click", () => {
   if (!navigator.clipboard) return fail();
   navigator.clipboard.writeText(INSTALL_CMD).then(() => toastText(t("getHubCopied")), fail);
 });
-// iPhone or iPad, not on the Home Screen yet: put it there first.
+// iPhone or iPad in a browser: the Home Screen, if the person wants it
+// (a choice on the start screen; the steps for this browser).
+$("home-open").hidden = !IOS_HOME || isStandalone || !!IN_APP;
+$("home-open").addEventListener("click", () => welcome("home"));
+$("home-back").addEventListener("click", () => welcome("start"));
 quoted($("home-sub"), t("homeSub", IOS_BROWSER || "Safari"));
 quoted($("home-s1"), t("homeS1" + (IOS_BROWSER || "Safari")));
-quoted($("home-here"), t("homeHere", IOS_BROWSER || "Safari"));
-$("home-here").addEventListener("click", passGate);
-// No "Add to Home Screen" in the menu: most likely a page opened inside an
-// app (it looks like Safari), so the same way out as one.
-$("home-cant").addEventListener("click", () => { inappWords(""); welcome("inapp"); });
-// Inside another app: open it in the browser. On Android the link is still
-// in the address, so the browser carries on with it.
-function inappWords(app) {
-  const os = ANDROID ? "android" : "ios";
-  quoted($("inapp-sub"), t("inappSub", app ? t(app) : t("inappThisApp")));
-  quoted($("inapp-s2"), t("inappS2" + os));
-  quoted($("inapp-s3"), t("inappS3" + os));
-  $("inapp-s3-ic").className = "ic s20 " + (ANDROID ? "i-arrow" : "i-addsq");
-  quoted($("inapp-here"), app ? t("inappHere", t(app)) : t("inappHereAny"));
+// Inside another app (WeChat, Lark…): use it here, or take the address to
+// the browser. The apps named here all keep their menu at the top right.
+if (IN_APP) {
+  quoted($("inapp-title"), t("inappTitle", t(IN_APP)));
+  quoted($("inapp-sub"), t("inappSub", t(IN_APP)));
+  quoted($("inapp-here"), t("inappHere", t(IN_APP)));
+  quoted($("inapp-how"), t("inappHow"));
 }
-inappWords(IN_APP);
 $("inapp-here").addEventListener("click", passGate);
+// The address to open elsewhere: with the pairing link still waiting, so
+// the browser goes straight on with it.
+const placeUrl = () => location.origin + location.pathname + (S.heldLink ? "#pair=" + S.heldLink : "");
+$("inapp-copy").addEventListener("click", () => copyText(placeUrl(), () => toastText(t("urlCopied"))));
 // A browser that can't keep the pairing: say so before pairing, not after.
-$("vol-copy").addEventListener("click", () => copyText(location.origin + location.pathname, () => toastText(t("urlCopied"))));
+$("vol-copy").addEventListener("click", () => copyText(placeUrl(), () => toastText(t("urlCopied"))));
 $("vol-here").addEventListener("click", passGate);
 // welcomeNote: a calm notice at the top of the welcome screen (this device
 // was removed, or remove it on the Mac too).

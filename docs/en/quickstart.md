@@ -107,7 +107,7 @@ Install [Ollama](https://ollama.com) and download a model (for example `ollama p
 ## Step 3: Add a phone or tablet
 
 1. In the console, click *Devices → Add device* (on a Mac, also the menu bar icon → *Add device…*; or run `omnillm open --add`). The switch at the top is on *Phone or tablet*: the QR code is on the left, the three steps on the right, and a line below says what the panel is waiting for.
-2. Scan the code with your phone’s **camera** and open the link. The web page asks “Add this phone?” and shows which connection service it goes through; tap *Add*. On an iPhone or iPad the page first asks you to add it to the Home Screen: do that, open OmniLLM from the Home Screen, tap the viewfinder and scan the same QR code there, so you pair only once.
+2. Scan the code with your phone’s **camera** and open the link. The web page asks “Add this phone?” and shows which connection service it goes through; tap *Add*. On an iPhone or iPad it is added right there too.
 3. The QR code turns into a 6-digit number, and your phone shows one too. **Check that they match**, then click *Matches, add* on the computer (*Doesn’t match, don’t add* if they don’t).
 4. A chat screen appears on the phone. Send a message to try it.
 
@@ -119,7 +119,7 @@ A few notes:
 
 - The QR code is valid for 5 minutes (the ring around the countdown shows how long is left) and works once. If it expires, or the device wasn’t added, click *New QR code* right on top of it.
 - If the phone can’t scan, choose *Paste a link or pairing text* on the page and paste a pairing link or pairing text from the console (*Computer or server*); it goes straight to the 6 digits. On another computer, the page opens with that paste box.
-- To open it like an app: on Android, tap *Add to Home Screen* in Chrome’s menu (it keeps the pairing). On iPhone and iPad the Home Screen app keeps its own pairing, which is why the page sends you there first. Opened inside WeChat or another app, the page asks you to open it in your browser first.
+- To open it like an app: on Android, tap *Add to Home Screen* in Chrome’s menu (it keeps the pairing). On iPhone and iPad, *Put it on the Home Screen, like an app?* under the welcome screen shows the steps; the Home Screen OmniLLM is added on its own, once. Opened inside WeChat or another app, you can *Use it in WeChat*, or copy the address and open it in your browser (which keeps the pairing).
 - By default each device can use every connected model, with a daily limit of $5 (an estimate; subscription models aren’t counted in money but limited by number of requests). You can change this under *Devices* in the console.
 - Tablets work the same as phones. Pair each device once.
 

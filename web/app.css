@@ -485,6 +485,10 @@ body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-i
 .wv .link, .wl-foot .link { min-height: 44px; }
 .wv-end { margin-top: auto; padding-top: 16px; align-self: center; }
 .wv-acts { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+/* A gate's two ways on: use it here (first), or take it elsewhere. */
+.gate-acts { margin-top: 26px; gap: 10px; }
+.gate-how { margin: 14px 0 0; font-size: 13.5px; line-height: 1.5; color: var(--muted); }
+.home-open { margin-top: 14px; align-self: center; font-size: 14px; }
 
 /* Phones and tablets: the viewfinder is the one button. */
 .vf { position: relative; display: block; width: 100%; max-width: 46vh; aspect-ratio: 1 / 1; align-self: center; margin-top: 24px; padding: 0; border: 0; border-radius: 28px; cursor: pointer; overflow: hidden; color: #EDEEF5;

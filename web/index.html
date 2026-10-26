@@ -53,6 +53,8 @@
               <span class="vf-mid"><span class="vf-cam"><span class="ic i-camera s28"></span></span><span data-t="tapScan"></span></span>
             </button>
             <button id="paste-open" type="button" class="secondary wl-wide"><span class="ic i-paste s18"></span><span data-t="pasteBtn"></span></button>
+            <!-- iPhone and iPad: the Home Screen is a choice, never a step. -->
+            <button id="home-open" type="button" class="link quiet home-open" data-t="homeOpen" hidden></button>
             <form id="paste" class="pastebar" hidden>
               <span class="ic i-link s20 pb-ic"></span>
               <input id="paste-text" data-ta="pastePh" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="go">
@@ -72,6 +74,7 @@
           </div>
 
           <div id="wv-home" class="wv" hidden>
+            <button id="home-back" type="button" class="link back"><span class="ic i-back s16"></span><span data-t="back"></span></button>
             <span class="appicon"><img src="icon.svg" alt="" width="48" height="48"><span class="appicon-plus"><span class="ic i-plus s14"></span></span></span>
             <h1 class="wl-title" data-t="homeTitle"></h1>
             <p id="home-sub" class="wl-sub"></p>
@@ -80,29 +83,27 @@
               <li><span class="step-ic"><span class="ic i-addsq s20"></span></span><span data-t="homeS2"></span></li>
               <li><span class="step-ic"><span class="ic i-scan s20"></span></span><span data-t="homeS3"></span></li>
             </ol>
-            <button id="home-cant" type="button" class="link" data-t="cantFind"></button>
-            <button id="home-here" type="button" class="link quiet wv-end"></button>
           </div>
 
           <div id="wv-inapp" class="wv" hidden>
             <span class="tile"><span class="ic i-compass s30"></span></span>
-            <h1 class="wl-title" data-t="inappTitle"></h1>
+            <h1 id="inapp-title" class="wl-title"></h1>
             <p id="inapp-sub" class="wl-sub"></p>
-            <ol class="steps">
-              <li><span class="step-ic"><span class="ic i-more s20"></span></span><span data-t="inappS1"></span></li>
-              <li><span class="step-ic"><span class="ic i-out s20"></span></span><span id="inapp-s2"></span></li>
-              <li><span class="step-ic"><span id="inapp-s3-ic" class="ic i-addsq s20"></span></span><span id="inapp-s3"></span></li>
-            </ol>
-            <button id="inapp-here" type="button" class="link quiet wv-end"></button>
+            <!-- Using it here comes first; the browser is the other way. -->
+            <div class="wv-acts gate-acts">
+              <button id="inapp-here" type="button" class="primary wl-wide"></button>
+              <button id="inapp-copy" type="button" class="secondary wl-wide"><span class="ic i-copy s18"></span><span data-t="copyForBrowser"></span></button>
+            </div>
+            <p id="inapp-how" class="gate-how"></p>
           </div>
 
           <div id="wv-vol" class="wv" hidden>
             <span class="tile warn-tile"><span class="ic i-warn s28"></span></span>
             <h1 class="wl-title" data-t="volTitle"></h1>
             <p class="wl-sub" data-t="volSub"></p>
-            <div class="wv-end wv-acts">
-              <button id="vol-copy" type="button" class="primary wl-wide"><span class="ic i-copy s18"></span><span data-t="copyUrl"></span></button>
-              <button id="vol-here" type="button" class="link quiet" data-t="onceHere"></button>
+            <div class="wv-acts gate-acts">
+              <button id="vol-here" type="button" class="primary wl-wide" data-t="onceHere"></button>
+              <button id="vol-copy" type="button" class="secondary wl-wide"><span class="ic i-copy s18"></span><span data-t="copyUrl"></span></button>
             </div>
           </div>
 

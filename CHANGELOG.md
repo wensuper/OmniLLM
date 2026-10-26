@@ -6,6 +6,10 @@ All notable changes to OmniLLM are documented here. OmniLLM is in early pre-rele
 
 ## [0.2.0-alpha.65](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.65) - 2026-10-26
 
+### Changed
+
+- Phone page, from a real iPhone: Safari no longer has to add the page to the Home Screen first. You pair right there, and *Put it on the Home Screen, like an app?* under the welcome screen shows the steps if you want it. Opened inside WeChat or another app, *Use it in WeChat* is now the main button, with *Copy the address for your browser* second; the corner-menu hint only appears for apps it is right for. In a browser that can't keep the pairing, *Use it here* comes first. The wrong steps (“⋯ at the top right”, “Open in Safari”) no longer show in Safari.
+
 ### Fixed
 
 - Auto isn't offered when you've taken every model out of it (it could only fail). A program asking for Auto where only chat-only models are left is told that, not that models are signed out. Auto names each model once: the model's own name no longer arrives as a second one mid-reply, which overwrote a name you gave it and read as a switch.
