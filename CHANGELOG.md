@@ -6,6 +6,10 @@ All notable changes to OmniLLM are documented here. OmniLLM is in early pre-rele
 
 ## [0.2.0-alpha.65](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.65) - 2026-10-26
 
+### Changed
+
+- Phone page: a new welcome and pairing page, with a language switch, dark mode and one action per device (a computer pastes the link, which starts pairing; a phone taps to scan). iPhone and iPad go to the Home Screen first, and the Home Screen app pairs with the same code once; pages inside WeChat and other apps open in the browser first; one line shows the pairing (connecting, the six digits, connected, failed); a relay other than relay.ixxzh.com is shown as a warning.
+
 ### Fixed
 
 - Auto isn't offered when you've taken every model out of it (it could only fail). A program asking for Auto where only chat-only models are left is told that, not that models are signed out. Auto names each model once: the model's own name no longer arrives as a second one mid-reply, which overwrote a name you gave it and read as a switch.
