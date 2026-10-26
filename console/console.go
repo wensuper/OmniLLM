@@ -601,7 +601,13 @@ func (s *Server) detectProviders(w http.ResponseWriter, r *http.Request) {
 	}
 	failed := []map[string]string{}
 	for _, f := range failures {
-		failed = append(failed, map[string]string{"kind": f.Kind, "message": omnillm.Describe(lang(r), f.Err)})
+		m := map[string]string{"kind": f.Kind, "message": omnillm.Describe(lang(r), f.Err)}
+		// An Ollama with no chat model is something to know, not an
+		// error: nothing the owner asked for failed.
+		if e := omnillm.AsError(f.Err); e != nil && e.Msg == omnillm.MsgNoChatModel {
+			m["note"] = "1"
+		}
+		failed = append(failed, m)
 	}
 	writeJSON(w, map[string]any{"connected": orEmpty(kinds), "failed": failed})
 }

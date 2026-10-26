@@ -702,12 +702,15 @@ $("recheck").addEventListener("click", async (ev) => {
   b.disabled = true;
   try {
     const r = await api("providers/detect", {});
-    const kinds = r.connected || [], failed = r.failed || [];
+    const kinds = r.connected || [], all = r.failed || [];
+    // Notes (an Ollama without a chat model) are said, never in red.
+    const failed = all.filter((f) => !f.note), notes = all.filter((f) => f.note);
     const name = (k) => sourceName(k) || k;
     const lines = [];
     if (kinds.length) lines.push(t("connectedNames", kinds.map(name).join(lang === "zh" ? "、" : ", ")));
-    else if (!failed.length) lines.push(S.providers.length || (fromDash && sourcesBefore) ? t("recheckNoMore") : t("recheckNone"));
+    else if (!failed.length && !notes.length) lines.push(S.providers.length || (fromDash && sourcesBefore) ? t("recheckNoMore") : t("recheckNone"));
     for (const f of failed) lines.push(t("srcFailed", name(f.kind), f.message));
+    for (const f of notes) lines.push(f.message);
     toast(lines.join(lang === "zh" ? "" : " "), failed.length > 0);
     if (kinds.length) await refresh();
   } catch (e) { toast(e.message, true); } finally { b.disabled = false; }

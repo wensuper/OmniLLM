@@ -113,7 +113,7 @@ var texts = map[string][2]string{ // zh, en
 	MsgBadBudget:          {"每天额度要大于 0，或者选“不设上限”。", "The daily limit must be above 0, or choose “No limit”."},
 	MsgBrowserRefused:     {"本机接口不接受网页发来的请求。请用程序直接调用。", "This local interface doesn’t accept requests from web pages. Call it from a program."},
 	MsgWrongHost:          {"请用 127.0.0.1 或 localhost 访问本机接口。", "Reach the local interface as 127.0.0.1 or localhost."},
-	MsgNoChatModel:        {"这台 Mac 上的 Ollama 里没有能对话的模型（只有向量 / 重排模型）。在终端运行 ollama pull qwen3 下载一个。", "Ollama on this Mac has no chat model (only embedding or rerank models). Run ollama pull qwen3 in Terminal to get one."},
+	MsgNoChatModel:        {"这台 Mac 上的 Ollama 还没有能聊天的模型。想用的话，在终端运行 ollama pull qwen3。", "Ollama on this Mac has no chat model yet. To use it, run ollama pull qwen3 in Terminal."},
 	MsgLocalToken:         {"本机接口的令牌缺失或不对。令牌在这台设备 OmniLLM 数据文件夹里的 device/local.token 文件中（只有本用户能读）。", "The local token is missing or wrong. It is in device/local.token inside OmniLLM’s data folder on this device (readable only by you)."},
 	MsgRelayUnavailable:   {"远程连接暂时不可用。检查你的 Mac 的网络后再试一次。", "Remote access is unavailable right now. Check your Mac’s network, then try again."},
 	MsgCLILogin:           {"你的电脑上的 %s 没有登录或登录已过期。在那台电脑的终端里%s，然后再试。", "%s on your computer is signed out. In a terminal on that computer, %s, then try again."},
