@@ -4,6 +4,12 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.71](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.71) - 2026-10-26
+
+### Changed
+
+- Web page on a computer: clearer words on the welcome screen. The title is “Use your OmniLLM / in this browser”; the line under it says OmniLLM runs on one of your own computers, where your models and subscriptions are, and that pasting a link from it lets this browser use them (even on that same computer). Step 1 goes straight to the menu bar's *Add device…*.
+
 ## [0.2.0-alpha.70](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.70) - 2026-10-26
 
 ### Changed
