@@ -4,6 +4,12 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.58](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.58) - 2026-10-26
+
+### Fixed
+
+- A model server on this Mac other than the Ollama app (for example llama.cpp’s llama-server) that was added under its own name showed as “Ollama (this Mac)”. It now shows as “Model on this Mac (its name)” in the console and on the command line. *Check again* no longer mentions Ollama when a model on this Mac is already connected.
+
 ## [0.2.0-alpha.57](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.57) - 2026-10-26
 
 ### Fixed
