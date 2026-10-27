@@ -4,6 +4,12 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.81](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.81) - 2026-10-27
+
+### Fixed
+
+- A text-only local llama.cpp model (llama-server without a vision projector) refuses a chat that holds a picture with “image input is not supported”. That showed “The model source had an error, try again later” and counted as a source failure. It now says the model can’t read images and this chat has one: pick a model that can, or start a new chat with text only.
+
 ## [0.2.0-alpha.80](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.80) - 2026-10-27
 
 ### Fixed
