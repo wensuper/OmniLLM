@@ -4,6 +4,12 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.80](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.80) - 2026-10-27
+
+### Fixed
+
+- A chat longer than a local llama.cpp model’s window (llama-server’s “exceeds the available context size”) showed “The model source had an error, try again later.” It now says the chat is too long for that model and to start a new chat, as other sources already did. LM Studio’s wording is recognised too.
+
 ## [0.2.0-alpha.79](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.79) - 2026-10-27
 
 ### Fixed
