@@ -102,7 +102,7 @@ omnillm hub usage                   # 用量
 |---|---|---|
 | 连不上你的 Mac：它可能睡眠了或者没联网 | 主机睡眠、关机或断网 | 唤醒主机，会自动恢复 |
 | 这台设备没有联网 | 手机自己没网 | 联网后自动恢复，输入的内容还在 |
-| 你的 Mac 上的 Claude 订阅（或 ChatGPT、Gemini 订阅）要重新登录 | 订阅登录过期 | 在主机上运行 `omnillm login claude`（或 `chatgpt`、`gemini`），或在控制台里点“登录” |
+| 你的 Mac 上的 Claude 订阅（或 ChatGPT、Gemini 订阅）要重新登录 | 订阅登录过期 | 在主机上运行 `omnillm login claude`（或 `chatgpt`、`gemini`），或在控制台里点「登录」 |
 | 要用……，你的 Mac 上需要先安装 Claude Code / Codex 并登录 | 主机上没装，或被卸载了 | 在主机上运行 `omnillm login claude`（或 `chatgpt`），或用控制台里的卡片 |
 | 订阅按一个人聊天的节奏使用，两次请求之间要隔开一点 | 一分钟内发得太快 | 等提示的时间；20 秒内能轮到的会自动等，不会报错 |
 | 这台设备用订阅模型太频繁了 | 超过了每小时 60 次或每天 300 次 | 稍后再试，或换一个用 API Key 的模型 |

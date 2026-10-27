@@ -4,6 +4,13 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.77](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.77) - 2026-10-27
+
+### Changed
+
+- ChatGPT sign-in on a machine without a browser names ChatGPT's real setting: turn on *Device code authorization* in Settings → Security.
+- Docs quote the console's *Sign in* button in the same style as other buttons.
+
 ## [0.2.0-alpha.76](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.76) - 2026-10-27
 
 ### Changed

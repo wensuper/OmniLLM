@@ -102,7 +102,7 @@ Devices work only while the hub is on and online.
 |---|---|---|
 | Can’t reach your Mac: it may be asleep or offline | The hub is asleep, off, or offline | Wake the hub; it recovers automatically |
 | This device is offline | The phone itself has no network | It recovers once you’re online; what you typed is kept |
-| Your Claude subscription (or ChatGPT, Gemini subscription) on your Mac needs you to sign in again | The subscription sign-in expired | On the hub, run `omnillm login claude` (or `chatgpt`, `gemini`), or choose “Sign in” in the console |
+| Your Claude subscription (or ChatGPT, Gemini subscription) on your Mac needs you to sign in again | The subscription sign-in expired | On the hub, run `omnillm login claude` (or `chatgpt`, `gemini`), or choose *Sign in* in the console |
 | To use …, install Claude Code / Codex on your Mac and sign in first | It isn’t installed on the hub, or was uninstalled | On the hub, run `omnillm login claude` (or `chatgpt`), or use the card in the console |
 | Subscriptions are used at one person’s chatting pace, so requests are spaced out | Too many requests within a minute | Wait the time shown; if your turn comes within 20 seconds, it waits automatically instead of failing |
 | This device is using the subscription models faster than a person chats | Over 60 requests an hour or 300 a day | Try again later, or switch to a model that uses an API key |

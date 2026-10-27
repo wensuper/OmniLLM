@@ -73,7 +73,7 @@ func loginScript(k provider.Kind, cli string, headless, window bool) string {
 		how = t("登录：浏览器会打开，用你的 ChatGPT 账号确认就行。", "Sign in: your browser opens; confirm with your ChatGPT account.")
 		if headless {
 			login += " --device-auth"
-			how = t("登录：下面会显示一个网址和一次性代码，在手机或别的电脑上打开网址、输入代码。要先在 ChatGPT 的“安全”设置里打开“设备码登录”。", "Sign in: an address and a one-time code appear below; open the address on your phone or another computer and enter the code. Turn on device code login in ChatGPT’s security settings first.")
+			how = t("登录：下面会显示一个网址和一次性代码，在手机或别的电脑上打开网址、输入代码。要先在 ChatGPT 的“设置 → 安全”里打开“Device code authorization”（设备码授权）。", "Sign in: an address and a one-time code appear below; open the address on your phone or another computer and enter the code. Turn on “Device code authorization” in ChatGPT’s Settings → Security first.")
 		}
 		failed = t("登录没有完成。再试一次：", "The sign-in didn’t finish. Try again: ")
 	}
