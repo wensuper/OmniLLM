@@ -4,6 +4,12 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.82](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.82) - 2026-10-27
+
+### Changed
+
+- A model that can’t read images (such as a text-only local llama.cpp model) no longer fails a chat because of pictures in earlier turns: they are left out, the model is told a picture was there, and it answers. Your Mac remembers the model, so later turns skip the pictures at once. Only a picture in the message you are sending still gets “this model can’t read images”.
+
 ## [0.2.0-alpha.81](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.81) - 2026-10-27
 
 ### Fixed
