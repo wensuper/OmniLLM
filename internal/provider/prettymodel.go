@@ -50,7 +50,11 @@ func modelName(k Kind, upstream string) string {
 // "context_length_exceeded", Anthropic's and Claude Code's "prompt is too
 // long", Codex's "exceeds the context window".
 func tooLong(lower string) bool {
-	for _, w := range []string{"context_length", "context length", "context window", "maximum context", "too long", "too many tokens"} {
+	// OpenAI, Anthropic, vLLM, Ollama; llama.cpp's llama-server ("exceeds
+	// the available context size", exceed_context_size_error); LM Studio
+	// ("context size has been exceeded").
+	for _, w := range []string{"context_length", "context length", "context window", "maximum context", "too long", "too many tokens",
+		"context size", "exceed_context_size"} {
 		if strings.Contains(lower, w) {
 			return true
 		}

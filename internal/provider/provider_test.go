@@ -364,3 +364,24 @@ func TestContextTooLongIsNamed(t *testing.T) {
 		}
 	}
 }
+
+// A local llama.cpp server says a chat is over its window in its own words;
+// that is "too long, start a new chat", not "the source failed".
+func TestLlamaCppContextOverflowIsTooLong(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(400)
+		_, _ = io.WriteString(w, `{"error":{"code":400,"message":"request (12632 tokens) exceeds the available context size (8192 tokens), try increasing it","type":"exceed_context_size_error","n_prompt_tokens":12632,"n_ctx":8192}}`)
+	}))
+	defer srv.Close()
+	AllowLoopbackForTests()
+	c, err := New(Config{Name: "judge32", Kind: Ollama, BaseURL: srv.URL + "/v1"}, nil, egress.New(nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = c.Stream(context.Background(), "qwen3-32b", omnillm.Request{Caller: omnillm.Interactive, MaxTokens: 100,
+		Messages: []omnillm.Message{{Role: "user", Content: "hi"}}}, Credential{})
+	if e := omnillm.AsError(err); e == nil || e.Msg != omnillm.MsgContextTooLong {
+		t.Fatalf("got %v, want the too-long message", err)
+	}
+}
