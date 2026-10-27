@@ -2,6 +2,10 @@
 
 [English](../../CHANGELOG.md) | 简体中文
 
+## v0.2.0-alpha.79（2026-10-27）
+
+- 修复：网页版里订阅模型回答时到了用量上限（或登录失效），模型选择器马上标出来：圆点变成警告色，模型下面写“到上限，… 恢复”。以前要等页面下次重新拉模型列表，期间一直是绿点，看起来还能用。
+
 ## v0.2.0-alpha.78（2026-10-27）
 
 - 修复：Mac 上接了 Gemini 订阅后，反复弹出“A keychain cannot be found to store “antigravity””。现在 OmniLLM 里的 Antigravity 有了自己的钥匙串，放在 OmniLLM 自己的文件夹里，不动你自己的钥匙串，也不再弹框。之前弹出的话点“Cancel”，不要点“Reset To Defaults”（那会重置你自己的钥匙串）。

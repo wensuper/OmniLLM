@@ -1866,6 +1866,11 @@ async function run(chat, model, fresh, old) {
         await loadModels().catch(() => {});
         if (chat.gone) quiet = true;
       }
+      // At its limit or signed out: the Mac now knows; load the list so
+      // the picker marks the model (dot, "到上限，… 恢复") right away.
+      else if (err && (err.msg === "subscription_limit" || err.msg === "cli_login")) {
+        await loadModels().then(() => setOnline(true)).catch(() => {});
+      }
     }
     if (!reply.content) {
       chat.messages.pop();
