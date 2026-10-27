@@ -385,3 +385,26 @@ func TestLlamaCppContextOverflowIsTooLong(t *testing.T) {
 		t.Fatalf("got %v, want the too-long message", err)
 	}
 }
+
+// A text-only llama.cpp server refuses a chat with a picture with a 500;
+// that is "this model can't read images", not "the source failed".
+func TestLlamaCppImageRefusalIsNoVision(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(500)
+		_, _ = io.WriteString(w, `{"error":{"code":500,"message":"image input is not supported - hint: if this is unexpected, you may need to provide the mmproj","type":"server_error"}}`)
+	}))
+	defer srv.Close()
+	AllowLoopbackForTests()
+	c, err := New(Config{Name: "judge32", Kind: Ollama, BaseURL: srv.URL + "/v1"}, nil, egress.New(nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	png := []byte("\x89PNG\r\n\x1a\n")
+	_, err = c.Stream(context.Background(), "qwen3-32b", omnillm.Request{Caller: omnillm.Interactive, MaxTokens: 100,
+		Messages: []omnillm.Message{{Role: "user", Content: "look", Images: []omnillm.Image{{MIME: "image/png", Data: png}}},
+			{Role: "assistant", Content: "ok"}, {Role: "user", Content: "and now?"}}}, Credential{})
+	if e := omnillm.AsError(err); e == nil || e.Msg != omnillm.MsgNoVision {
+		t.Fatalf("got %v, want the no-vision message", err)
+	}
+}

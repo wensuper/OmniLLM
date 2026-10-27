@@ -557,8 +557,10 @@ func (c *Client) classify(resp *http.Response, cred Credential, req omnillm.Requ
 	case (resp.StatusCode == 400 || resp.StatusCode == 413 || resp.StatusCode == 422) && tooLong(lower):
 		return &omnillm.Error{Code: omnillm.CodeBadRequest, Msg: omnillm.MsgContextTooLong, Args: []string{modelName(c.cfg.Kind, model)},
 			Detail: detail}, egress.ClientError, 0
-	case (resp.StatusCode == 400 || resp.StatusCode == 422) && req.HasImages() &&
-		(strings.Contains(lower, "image") || strings.Contains(lower, "vision") || strings.Contains(lower, "multimodal")):
+	// llama.cpp's llama-server says "image input is not supported" with a
+	// 500 when it runs without a vision projector (mmproj).
+	case (resp.StatusCode == 400 || resp.StatusCode == 422 || resp.StatusCode == 500) && req.HasImages() &&
+		(strings.Contains(lower, "image") || strings.Contains(lower, "vision") || strings.Contains(lower, "multimodal") || strings.Contains(lower, "mmproj")):
 		return &omnillm.Error{Code: omnillm.CodeBadRequest, Msg: omnillm.MsgNoVision, Detail: detail}, egress.ClientError, 0
 	case resp.StatusCode == http.StatusNotFound && strings.Contains(lower, "model"):
 		return &omnillm.Error{Code: omnillm.CodeModelNotAllowed, Msg: omnillm.MsgUnknownModel, Detail: detail}, egress.ClientError, 0

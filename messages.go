@@ -121,7 +121,7 @@ var texts = map[string][2]string{ // zh, en
 	MsgCLINotFound:        {"要用 %s，你的 Mac 上需要先安装 %s 并登录。", "To use %s, install %s on your Mac and sign in first."},
 	MsgCLIUnsafe:          {"你的 Mac 上这个版本的 %s 关不掉工具（能运行命令或读文件），为了安全暂时不用它。请更新 OmniLLM。", "This version of %s on your Mac couldn’t be kept from using tools (running commands or reading files), so OmniLLM won’t use it for now. Update OmniLLM."},
 	MsgBadImage:           {"图片不能用：只支持 PNG、JPEG、GIF、WebP，每张不超过 2 MB，每条消息最多 4 张。", "That image can’t be used: PNG, JPEG, GIF or WebP only, up to 2 MB each and 4 per message."},
-	MsgNoVision:           {"这个模型看不了图片。换一个能看图的模型，或者只发文字。", "This model can’t read images. Pick another model, or send text only."},
+	MsgNoVision:           {"这个模型看不了图片，而这段对话里有图片。换一个能看图的模型，或开一个新对话只发文字。", "This model can’t read images, and this chat has one. Pick a model that can, or start a new chat with text only."},
 	MsgNoAutoModel:        {"Auto 现在没有能用的模型：都没登录、到了上限，或者被关掉了。在 Mac 的控制台里看看，或者先手动选一个模型。", "Auto has no model it can use right now: they’re signed out, at their limit, or switched off. Check the console on your Mac, or pick a model yourself for now."},
 	MsgBusyPace:           {"订阅按一个人聊天的节奏使用，两次请求之间要隔开一点。%s后再试。", "Subscriptions are used at one person’s chatting pace, so requests are spaced out. Try again in %s."},
 	MsgSubscriptionPace:   {"这台设备用订阅模型太频繁了，超过了一个人聊天的速度。%s后再试，或者换一个用 API Key 或你的 Mac 上的模型，免得账号被当成自动化调用。", "This device is using the subscription models faster than a person chats. Try again in %s, or pick a model that uses an API key or runs on your Mac, so the account isn’t flagged as automated."},
