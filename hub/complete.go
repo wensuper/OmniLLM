@@ -123,7 +123,18 @@ func (h *Hub) complete(ctx context.Context, p principal, req omnillm.Request) (o
 		}
 		cred.Key = string(k)
 	}
+	// Earlier pictures are left out for a model that can't read them
+	// (vision.go): at once when it is known, else after its refusal.
+	older := req.HasImages() && !newMessageHasImages(req)
+	if older && h.knownNoVision(m.ID) {
+		req = withoutImages(req)
+	}
 	s, err := c.StreamChat(ctx, m.Upstream, req, cred, h.chats, p.key)
+	if err != nil && older && req.HasImages() && omnillm.AsError(err).Msg == omnillm.MsgNoVision {
+		h.markNoVision(m.ID)
+		req = withoutImages(req)
+		s, err = c.StreamChat(ctx, m.Upstream, req, cred, h.chats, p.key)
+	}
 	cred.Key = ""
 	if err != nil {
 		h.unreserve(p, worst)

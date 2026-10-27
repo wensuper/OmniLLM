@@ -81,9 +81,11 @@ type Hub struct {
 	seen map[string]time.Time
 	// probing: clients whose model-version probe is running (mu).
 	probing map[*provider.Client]bool
-	lim     *egress.Limiter
-	subs    subscriptionPace
-	key     e2e.KeyPair
+	// noVision: models that refused pictures (mu); see vision.go.
+	noVision map[string]bool
+	lim      *egress.Limiter
+	subs     subscriptionPace
+	key      e2e.KeyPair
 	// chats: kept sessions of people's conversations with subscription
 	// programs (provider/chats.go).
 	chats *provider.Chats
