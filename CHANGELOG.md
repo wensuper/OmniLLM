@@ -4,6 +4,12 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.78](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.78) - 2026-10-27
+
+### Fixed
+
+- Gemini subscription on a Mac: the dialog “A keychain cannot be found to store “antigravity”” kept coming back. OmniLLM's Antigravity now has its own keychain inside OmniLLM's folder, so it never touches your own keychain and no longer asks. If you saw the dialog, choose *Cancel*, not *Reset To Defaults*, which resets your own keychain.
+
 ## [0.2.0-alpha.77](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.77) - 2026-10-27
 
 ### Changed

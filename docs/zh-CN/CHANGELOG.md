@@ -2,6 +2,10 @@
 
 [English](../../CHANGELOG.md) | 简体中文
 
+## v0.2.0-alpha.78（2026-10-27）
+
+- 修复：Mac 上接了 Gemini 订阅后，反复弹出“A keychain cannot be found to store “antigravity””。现在 OmniLLM 里的 Antigravity 有了自己的钥匙串，放在 OmniLLM 自己的文件夹里，不动你自己的钥匙串，也不再弹框。之前弹出的话点“Cancel”，不要点“Reset To Defaults”（那会重置你自己的钥匙串）。
+
 ## v0.2.0-alpha.77（2026-10-27）
 
 - 没有浏览器的机器上登录 ChatGPT 时，写出 ChatGPT 里真正的设置名：在“设置 → 安全”里打开“Device code authorization”（设备码授权）。

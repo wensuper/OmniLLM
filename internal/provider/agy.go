@@ -135,6 +135,7 @@ func prepareAgyHome() (string, error) {
 	if err := writePrivate(sp, append(b, '\n')); err != nil {
 		return "", err
 	}
+	agyKeychain(home)
 	return home, nil
 }
 
