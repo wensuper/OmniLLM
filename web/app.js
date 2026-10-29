@@ -1490,7 +1490,8 @@ function bubble(m, isLast, who) {
   }
   // A touch screen has no hover: a tap on the message shows its row and
   // time (the last reply's sit in the row under it).
-  if (hasRow || time) b.addEventListener("click", (e) => { if (!e.target.closest("button, a, pre")) b.classList.toggle("tapped"); });
+  // (Selecting text with the mouse ends in a click too: that isn't a tap.)
+  if (hasRow || time) b.addEventListener("click", (e) => { if (!e.target.closest("button, a, pre") && !String(getSelection())) b.classList.toggle("tapped"); });
   return b;
 }
 // holdBack: while words arrive, a line that so far is only a list marker
@@ -1588,7 +1589,14 @@ function thoughts(m) {
   const open = S.openThoughts.has(m);
   box.classList.toggle("open", open);
   head.setAttribute("aria-expanded", String(open));
-  if (open) { const all = el("div", undefined, "th-all"); fill(all, m.think); box.append(all); }
+  if (open) {
+    // Drawn once and moved into each redraw while the answer goes on
+    // arriving (its links and buttons keep working; a copy would lose them).
+    S.thoughtsDrawn ??= new WeakMap();
+    let d = S.thoughtsDrawn.get(m);
+    if (!d || d.think !== m.think) { d = { think: m.think, all: el("div", undefined, "th-all") }; fill(d.all, m.think); S.thoughtsDrawn.set(m, d); }
+    box.append(d.all);
+  }
   head.addEventListener("click", (e) => {
     e.stopPropagation();
     if (S.openThoughts.has(m)) S.openThoughts.delete(m); else S.openThoughts.add(m);
@@ -1677,19 +1685,24 @@ const KEYWORDS = new Set(("abstract and as async await break case catch chan cla
 const LITERALS = new Set("true false null nil none undefined NaN True False None".split(" "));
 function highlight(code, lang) {
   const c = el("code");
-  if (code.length > 50000 || /^(text|txt|plain|plaintext|markdown|md|log|output)$/.test(lang)) { c.textContent = code; return c; }
+  // A line past LONG_LINE (a pasted data: URL, minified code) stays plain.
+  if (code.length > 50000 || /^(text|txt|plain|plaintext|markdown|md|log|output)$/.test(lang) || code.split("\n").some((l) => l.length > LONG_LINE)) { c.textContent = code; return c; }
   if (/^(diff|patch)$/.test(lang) || (!lang && /^@@ .* @@/m.test(code))) return diffLines(c, code);
+  // Words are read whole and what follows them looked at afterwards: a
+  // lookahead after [\w-]+ retried from every letter of a long word.
+  const after = (end, re) => re.test(code.slice(end, code.indexOf("\n", end) >>> 0));
   if (/^(html|xml|svg|vue|jsx|tsx)$/.test(lang) && /^\s*</.test(code)) {
-    // 1: comment, 2: <tag or </tag, 3: attribute name, 4: string, 5: > or />
-    return paint(c, code, /(<!--[\s\S]*?-->)|(<\/?[A-Za-z][\w:.-]*)|([A-Za-z_:@][\w:.-]*)(?=\s*=)|("[^"]*"|'[^']*')|(\/?>)/g,
-      (m) => [[m[0], m[1] ? "c" : m[2] || m[5] ? "k" : m[3] ? "p" : "s"]]);
+    // 1: comment, 2: <tag or </tag, 3: string, 4: > or />, 5: a name (an
+    // attribute when "=" follows)
+    return paint(c, code, /(<!--[\s\S]*?-->)|(<\/?[A-Za-z][\w:.-]*)|("[^"]*"|'[^']*')|(\/?>)|([A-Za-z_:@][\w:.-]*)/g,
+      (m, end) => [[m[0], m[1] ? "c" : m[2] || m[4] ? "k" : m[3] ? "s" : after(end, /^\s*=/) ? "p" : ""]]);
   }
   if (/^(css|scss|sass|less)$/.test(lang)) {
     // 1: comment, 2: string, 3: @rule or !important, 4: #hex, 5: number with
-    // its unit, 6: function name, 7: property (a name before ":" on a line
-    // that opens no block), 8: .class or #id
-    return paint(c, code, /(\/\*[\s\S]*?\*\/|\/\/[^\n]*)|("[^"\n]*"|'[^'\n]*')|(@[\w-]+|!important)|(#[\da-fA-F]{3,8}\b)|(-?\b\d*\.?\d+(?:px|em|rem|%|vh|vw|vmin|vmax|ch|fr|deg|s|ms|pt)?\b)|([\w-]+)(?=\()|([\w-]+)(?=\s*:[^{\n]*(?:;|$))|([.#][A-Za-z_][\w-]*)/gm,
-      (m) => [[m[0], m[1] ? "c" : m[2] ? "s" : m[3] ? "k" : m[4] || m[5] ? "n" : m[6] ? "f" : m[7] ? "p" : "t"]]);
+    // its unit, 6: .class or #id, 7: a name (a function before "(", a
+    // property before ":" on a line that opens no block)
+    return paint(c, code, /(\/\*[\s\S]*?\*\/|\/\/[^\n]*)|("[^"\n]*"|'[^'\n]*')|(@[\w-]+|!important)|(#[\da-fA-F]{3,8}\b)|(-?\.?\d[\w.%-]*)|([.#][A-Za-z_][\w-]*)|([\w-]+)/g,
+      (m, end) => [[m[0], m[1] ? "c" : m[2] ? "s" : m[3] ? "k" : m[4] || m[5] ? "n" : m[6] ? "t" : code[end] === "(" ? "f" : after(end, /^\s*:[^{]*(?:;|$)/) ? "p" : ""]]);
   }
   const hash = /^(py|python|sh|bash|zsh|shell|console|ruby|rb|yaml|yml|toml|r|perl|dockerfile|makefile|ini|conf|nginx|ps1|powershell)$/.test(lang);
   const sql = /^(sql|mysql|postgresql|psql|sqlite|hive|hql|sparksql|lua|haskell|hs)$/.test(lang);
@@ -1776,16 +1789,22 @@ function prose(b, text) {
     const h = heading(line);
     if (h) { end(); const e = el("h" + Math.min(h.level, 4)); inline(e, h.text); b.append(e); continue; }
     if (RULE.test(line)) { end(); b.append(el("hr")); continue; }
-    // A formula on lines of its own: $$ … $$ or \[ … \], up to a blank line
-    // (until it closes, while it is still arriving, it stays text).
-    const open = line.match(/^\s*(\$\$|\\\[)/);
-    if (open) {
-      const close = open[1] === "$$" ? "$$" : "\\]";
-      let j = i, tex = line.trim().slice(2);
-      while (!tex.trimEnd().endsWith(close) && j + 1 < lines.length && lines[j + 1].trim()) tex += "\n" + lines[++j];
-      if (tex.trimEnd().endsWith(close)) {
+    // A formula on lines of its own: a line that is all one formula ($$…$$,
+    // \[…\]), or "$$" / "\[" alone and the lines after it up to the one that
+    // closes it: no blank line between, at most 60 lines (until it closes,
+    // while it is still arriving, it stays text). "$$a$$ and more" is a
+    // paragraph with a formula in it.
+    const own = line.trim(), open = own.slice(0, 2), close = open === "$$" ? "$$" : open === "\\[" ? "\\]" : "";
+    if (close && own.length > 4 && own.endsWith(close) && !own.slice(2, -2).includes(close)) {
+      end(); b.append(math(own.slice(2, -2), true)); continue;
+    }
+    if (close && own === open) {
+      let j = i + 1;
+      while (j < lines.length && j - i <= 60 && lines[j].trim() && !lines[j].trimEnd().endsWith(close)) j++;
+      if (j < lines.length && j - i <= 60 && lines[j].trim()) {
+        const last = lines[j].trimEnd();
         end();
-        b.append(math(tex.trimEnd().slice(0, -2), true));
+        b.append(math(lines.slice(i + 1, j).concat(last.slice(0, -2)).join("\n"), true));
         i = j;
         continue;
       }
@@ -1896,7 +1915,9 @@ function loadTemml() {
   temmlLoaded ??= new Promise((res, rej) => {
     const css = document.createElement("link"); css.rel = "stylesheet"; css.href = "vendor/temml.css"; document.head.append(css);
     const s = document.createElement("script"); s.src = "vendor/temml.min.js"; s.onload = res;
-    s.onerror = () => { temmlLoaded = null; css.remove(); s.remove(); rej(); }; // try again next time
+    // Failed (offline): math stays as written; try again after a while, not
+    // on every redraw.
+    s.onerror = () => { css.remove(); s.remove(); rej(); setTimeout(() => { temmlLoaded = null; }, 15000); };
     document.body.append(s);
   });
   return temmlLoaded;
@@ -1907,6 +1928,7 @@ function math(tex, display) {
   const e = el(display ? "div" : "span", undefined, display ? "math block" : "math");
   const raw = () => { e.textContent = display ? "$$" + tex + "$$" : "$" + tex + "$"; e.classList.add("raw"); };
   const draw = () => {
+    if (!e.isConnected && drawn.has(key)) return; // redrawn meanwhile, and drawn once already
     try { e.classList.remove("raw"); temml.render(tex.trim(), e, { displayMode: display, throwOnError: true, trust: false }); }
     catch { raw(); }
     if (drawn.size >= 300) drawn.delete(drawn.keys().next().value);
@@ -2256,7 +2278,9 @@ async function run(chat, model, fresh, old) {
   const flush = () => {
     raf = 0;
     const stick = nearBottom();
-    const nb = bubble(reply, true, S.lastWho); node.replaceWith(nb); node = nb; // its head stays while it streams
+    let nb;
+    try { nb = bubble(reply, true, S.lastWho); } catch { nb = el("div", undefined, "msg assistant last"); nb.append(el("p", reply.content)); }
+    node.replaceWith(nb); node = nb; // its head stays while it streams
     if (stick) toBottom(); else if (reply.content) $("jump").hidden = false;
   };
   // quiet: the error is said elsewhere (the banner, or the "model
@@ -2271,6 +2295,12 @@ async function run(chat, model, fresh, old) {
         reply.think = (reply.think || "") + think;
         if (!raf) raf = requestAnimationFrame(flush);
         return;
+      }
+      // The Mac has the request: on a second try (the connection dropped
+      // before any answer) the reasoning comes again from the start.
+      if (acked && !reply.content && reply.think) {
+        delete reply.think; delete reply.thinkAt;
+        if (!raf) raf = requestAnimationFrame(flush);
       }
       // "Claude Opus 5.5", as the hub reports it; under Auto, the one it chose.
       if (exact) {

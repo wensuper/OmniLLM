@@ -150,7 +150,12 @@ func parseOpenAI(s *stream, _ string, data string) (string, bool, error) {
 	text := ""
 	for _, ch := range ev.Choices {
 		text += ch.Delta.Content
-		s.think.add(jsonText(ch.Delta.Reasoning) + jsonText(ch.Delta.ReasoningContent))
+		// Some servers send the same text under both names: take one.
+		think := jsonText(ch.Delta.Reasoning)
+		if think == "" {
+			think = jsonText(ch.Delta.ReasoningContent)
+		}
+		s.think.add(think)
 		if ch.FinishReason != nil && *ch.FinishReason != "" {
 			s.setFinish(*ch.FinishReason)
 		}
