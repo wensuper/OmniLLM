@@ -4,6 +4,12 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.83](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.83) - 2026-10-29
+
+### Added
+
+- Web app (phone and computer): point at a message, or tap it on a phone, to see its time to the second. A question shows when you sent it; a reply shows when it finished, how long its first words took and how long it took in all (“14:42:59 · waited 12s · 18s in all”). Point at the time for the whole date. A chat that runs over several days has a line where each day begins. Nothing new shows otherwise, and chats from before this version show no times.
+
 ## [0.2.0-alpha.82](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.82) - 2026-10-27
 
 ### Changed
