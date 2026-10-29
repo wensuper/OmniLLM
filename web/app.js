@@ -72,6 +72,7 @@ const T = {
     kNew: "新对话", kSearch: "搜索对话", kSide: "收起或展开侧栏", kStop: "停止回答", kCopyLast: "复制最后一条回答", kFocus: "跳到输入框", kSend: "发送", kLine: "换行",
     dropped: "（连接断了，回答没写完。连上后点“重试”。）",
     longChat: "对话已经很长，每次都会整段发出。开个新对话会更快，用 API Key 时也更省。", longChatSub: "对话已经很长，开个新对话回答会更快。", paused: "已暂停", pausedDot: "已在你的 Mac 上暂停", waited: "{0} 秒", slow: "比平常慢。可以点停止，换个模型再问。",
+    waitedFor: "等了 {0}", tookAll: "共 {0}", nSecs: "{0} 秒", nMinSecs: "{0} 分 {1} 秒",
     switchedTo: "换成了 {0}", newContent: "↓ 新内容", waitReply: "等这条回答完成，或先点停止。",
     liveOn: "在线：你的 Mac 连得上，模型可以用", liveOff: "离线：现在连不上你的 Mac", liveWait: "正在连接你的 Mac……",
     volatile: "这个浏览器不能安全地保存配对，所以只在这个页面打开时有效；关掉后要在 Mac 上重新添加。换用 Safari、Chrome 或 Edge 可以一直保存。",
@@ -137,6 +138,7 @@ const T = {
     kNew: "New chat", kSearch: "Search chats", kSide: "Hide or show the sidebar", kStop: "Stop the answer", kCopyLast: "Copy the last answer", kFocus: "Go to the message box", kSend: "Send", kLine: "New line",
     dropped: "(Connection lost; the reply is incomplete. Tap Retry once reconnected.)",
     longChat: "This chat is long and is sent in full each time. A new chat is faster, and cheaper with an API key.", longChatSub: "This chat is long; a new chat gets faster replies.", paused: "Paused", pausedDot: "Paused on your Mac", waited: "{0}s", slow: "Slower than usual. You can tap Stop and try another model.",
+    waitedFor: "waited {0}", tookAll: "{0} in all", nSecs: "{0}s", nMinSecs: "{0}m {1}s",
     switchedTo: "Switched to {0}", newContent: "↓ New", waitReply: "Wait for this reply, or tap Stop first.",
     liveOn: "Online: your Mac answers; models are ready", liveOff: "Offline: your Mac can’t be reached now", liveWait: "Connecting to your Mac…",
     volatile: "This browser can’t keep the pairing safely, so it only lasts while this page is open; after closing it, add the device on your Mac again. Safari, Chrome or Edge keep it.",
@@ -1221,8 +1223,13 @@ function renderLog(keep) {
   // one and doesn't count.
   let last = "", userEl = null;
   S.lastWho = false;
+  // A chat that runs over more than one day says where each day begins.
+  const days = new Set(msgs.map(dayOf).filter(Boolean));
+  let day = "";
   msgs.forEach((m, i) => {
     if (m.prev) { log.append(earlier(m)); return; }
+    const d = days.size > 1 && dayOf(m);
+    if (d && d !== day) { day = d; log.append(dayLine(askedAt(m))); }
     let who = false;
     if (m.role === "assistant" && m.by) {
       // Under Auto the model may change from one reply to the next: say
@@ -1345,6 +1352,8 @@ function actsRow() {
   again.addEventListener("click", answerAgain);
   row.append(again);
   if (end.role === "assistant" && end.by && !S.lastWho) row.append(el("span", end.by, "by"));
+  const time = end.role === "assistant" && when(end);
+  if (time) row.append(time);
   return row;
 }
 // refreshActs redraws only that row (the picker or the connection changed).
@@ -1386,6 +1395,50 @@ function copyText(text, done) {
   navigator.clipboard.writeText(text).then(done, () => {});
 }
 
+// when: a message's time to the second, shown on hover or after a tap: a
+// question's when it was sent, a reply's when it ended, how long its first
+// words took (from a second up) and how long it took in all. Holding the
+// pointer on it gives the whole date. Messages kept before times were
+// recorded show nothing.
+function when(m) {
+  const at = m.role === "user" ? m.at : m.done;
+  if (!at) return null;
+  const parts = [stamp(at)];
+  if (m.role === "assistant" && m.sent) {
+    if (m.first && m.first - m.sent >= 1000) parts.push(t("waitedFor", span(m.first - m.sent)));
+    parts.push(t("tookAll", span(at - m.sent)));
+  }
+  const w = el("span", parts.join(" · "), "when");
+  w.title = new Date(at).toLocaleString(document.documentElement.lang, { dateStyle: "full", timeStyle: "medium", hourCycle: "h23" });
+  return w;
+}
+// stamp: just the time today, the day before it this year, the year too
+// before that.
+function stamp(ms) {
+  const d = new Date(ms), now = new Date();
+  const o = { hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" };
+  if (d.toDateString() !== now.toDateString()) {
+    o.month = "short"; o.day = "numeric";
+    if (d.getFullYear() !== now.getFullYear()) o.year = "numeric";
+  }
+  return d.toLocaleString(document.documentElement.lang, o);
+}
+function span(ms) {
+  const s = Math.max(1, Math.round(ms / 1000));
+  return s < 60 ? t("nSecs", s) : t("nMinSecs", Math.floor(s / 60), s % 60);
+}
+// dayOf: the day a turn was asked, for the line between days.
+const askedAt = (m) => m.role === "user" ? m.at : m.sent;
+function dayOf(m) { const at = askedAt(m); return at ? new Date(at).toDateString() : ""; }
+function dayLine(at) {
+  const d = new Date(at), now = new Date(), y = new Date(now); y.setDate(now.getDate() - 1);
+  if (d.toDateString() === now.toDateString()) return switchLine(t("grpToday"));
+  if (d.toDateString() === y.toDateString()) return switchLine(t("grpYesterday"));
+  const o = { month: "long", day: "numeric", weekday: "short" };
+  if (d.getFullYear() !== now.getFullYear()) o.year = "numeric";
+  return switchLine(d.toLocaleDateString(document.documentElement.lang, o));
+}
+
 // bubble renders a message; fenced code becomes a code block, the rest
 // stays text. who heads a reply with its model's name. Until a reply's
 // first words arrive it shows "connecting to your Mac", then that model
@@ -1419,14 +1472,19 @@ function bubble(m, isLast, who) {
     const quietNote = [T.zh.stopped, T.en.stopped, T.zh.cut, T.en.cut].includes(m.note);
     b.append(quoted(el("p", undefined, "note" + (quietNote ? " quiet" : "")), m.note.replace(/^[（(]|[）)]$/g, "")));
   }
-  if (m.role === "assistant" && m.content && !m.live && !isLast) {
+  const time = m.live ? null : when(m);
+  if (m.role === "user" && time) b.append(time);
+  const hasRow = m.role === "assistant" && m.content && !m.live && !isLast;
+  if (hasRow) {
     const row = el("div", undefined, "acts");
     row.append(copyButton(m.content));
     if (m.by && !who) row.append(el("span", m.by, "by"));
+    if (time) row.append(time);
     b.append(row);
-    // A touch screen has no hover: a tap on the reply shows its row.
-    b.addEventListener("click", (e) => { if (!e.target.closest("button, a, pre")) b.classList.toggle("tapped"); });
   }
+  // A touch screen has no hover: a tap on the message shows its row and
+  // time (the last reply's sit in the row under it).
+  if (hasRow || time) b.addEventListener("click", (e) => { if (!e.target.closest("button, a, pre")) b.classList.toggle("tapped"); });
   return b;
 }
 // holdBack: while words arrive, a line that so far is only a list marker
@@ -1760,7 +1818,7 @@ $("composer").addEventListener("submit", async (e) => {
   input.value = ""; grow(); clearPending();
   const chat = S.cur; // this reply belongs to this conversation, whatever happens meanwhile
   if (!chat.title) chat.title = text.slice(0, 40) || t("imageTitle");
-  chat.messages.push(images.length ? { role: "user", content: text, images } : { role: "user", content: text });
+  chat.messages.push(images.length ? { role: "user", content: text, images, at: Date.now() } : { role: "user", content: text, at: Date.now() });
   await run(chat, model, { text, images });
 });
 // answerAgain asks the same question again with the model selected now.
@@ -1801,8 +1859,10 @@ async function run(chat, model, fresh, old) {
     if (lm && isSub(lm)) chat.longSub = true;
   }
   if (S.hello === chat.id) S.hello = null;
-  const reply = { role: "assistant", content: "", by: modelName(model), model, live: true };
+  // sent, first and done (ms) are when it was asked for, when its first
+  // words came and when it ended: shown with the reply on hover or a tap.
   S.sentAt = Date.now();
+  const reply = { role: "assistant", content: "", by: modelName(model), model, live: true, sent: S.sentAt };
   chat.messages.push(reply);
   // Saved now: the page may be thrown away (a phone in the background)
   // before the reply is done; the question must not go with it.
@@ -1842,6 +1902,7 @@ async function run(chat, model, fresh, old) {
         } else if (model !== "auto") reply.by = exact;
         S.versionSeen = true;
       }
+      if (d && !reply.first) reply.first = Date.now();
       reply.content += d || ""; if (!raf) raf = requestAnimationFrame(flush);
     });
     if (r.finish === "length") reply.note = t("cut");
@@ -1886,6 +1947,7 @@ async function run(chat, model, fresh, old) {
     }
   } finally {
     delete reply.live;
+    if (reply.content) reply.done = Date.now();
     S.busy = null; busyUI(false); setTimeout(takePending);
     setTimeout(reloadIfIdle, 1500); // a new version waited for this reply
     // The picker learns the version too (the hub now knows it).
