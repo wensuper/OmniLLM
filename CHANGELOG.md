@@ -4,6 +4,12 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.84](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.84) - 2026-10-29
+
+### Added
+
+- Web app: replies are laid out the way Claude shows them. Tables have a header and row lines and scroll sideways on a phone; headings come in sizes; quotes, rules, nested lists, checklists, struck text and links show as such; code is colored by language; math written in TeX ($…$, $$…$$) shows as formulas. A few HTML tags models use for layout (`<br>`, `<sub>`, `<sup>`, `<kbd>`, `<mark>`…) work too. Anything else a model writes in HTML stays plain text, so a reply can’t run code in the page.
+
 ## [0.2.0-alpha.83](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.83) - 2026-10-29
 
 ### Added
