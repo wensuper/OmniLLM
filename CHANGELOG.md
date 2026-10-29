@@ -4,6 +4,12 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.86](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.86) - 2026-10-29
+
+### Added
+
+- A thinking model’s reasoning now shows above its answer, as in Claude: “Thinking · 7s” with its latest lines while it thinks, then “Thought for 12s”, which you can open to read it all. It works with models that show their thinking: Ollama models such as Qwen3.5, DeepSeek, Claude Code and Codex. Your Mac needs this version too (`omnillm update`). Apps using OmniLLM’s local API get it as `reasoning_content`.
+
 ## [0.2.0-alpha.85](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.85) - 2026-10-29
 
 ### Added
