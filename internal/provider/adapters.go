@@ -123,6 +123,11 @@ func parseOpenAI(s *stream, _ string, data string) (string, bool, error) {
 		Choices []struct {
 			Delta struct {
 				Content string `json:"content"`
+				// A thinking model's reasoning: "reasoning" in Ollama and
+				// OpenRouter, "reasoning_content" in DeepSeek, vLLM and
+				// llama.cpp.
+				Reasoning        string `json:"reasoning"`
+				ReasoningContent string `json:"reasoning_content"`
 			} `json:"delta"`
 			FinishReason *string `json:"finish_reason"`
 		} `json:"choices"`
@@ -144,6 +149,7 @@ func parseOpenAI(s *stream, _ string, data string) (string, bool, error) {
 	text := ""
 	for _, ch := range ev.Choices {
 		text += ch.Delta.Content
+		s.think.add(ch.Delta.Reasoning + ch.Delta.ReasoningContent)
 		if ch.FinishReason != nil && *ch.FinishReason != "" {
 			s.setFinish(*ch.FinishReason)
 		}
@@ -210,6 +216,7 @@ func parseAnthropic(s *stream, event, data string) (string, bool, error) {
 		Delta struct {
 			Type       string `json:"type"`
 			Text       string `json:"text"`
+			Thinking   string `json:"thinking"`
 			StopReason string `json:"stop_reason"`
 		} `json:"delta"`
 		Usage struct {
@@ -225,6 +232,9 @@ func parseAnthropic(s *stream, event, data string) (string, bool, error) {
 	case "content_block_delta":
 		if ev.Delta.Type == "text_delta" {
 			return ev.Delta.Text, false, nil
+		}
+		if ev.Delta.Type == "thinking_delta" {
+			s.think.add(ev.Delta.Thinking)
 		}
 	case "message_delta":
 		if ev.Delta.StopReason != "" {

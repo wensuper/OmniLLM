@@ -64,7 +64,7 @@ const T = {
     close: "关闭", deleteChat: "删除这个对话", rename: "重命名", renameChat: "重命名对话", chatMore: "更多操作", deleteChatQ: "删除对话“{0}”？", chatsLocal: "对话保存在这台设备上。用订阅模型（Claude、ChatGPT、Gemini）时，你的 Mac 也会留一份，方便接着聊；一天没用，Mac 上的那份就会删除。", searchChats: "搜索对话", noMatch: "没有找到",
     addHome: "添加到主屏幕", addHomeTip: "点浏览器的“共享”（或“分享”）按钮，选“添加到主屏幕”。第一次从主屏幕打开时，需要再扫一次码。",
     deviceLine: "这台设备：{0}", empty: "有什么可以帮你？", cut: "（回复太长被截断了。发“继续”让它接着写。）", stopped: "（已停止）",
-    today: "今天", copy: "复制", copied: "已复制", again: "重新回答", againWith: "用 {0} 再答一次", thinking: "正在思考", thinkingBy: "{0} 正在思考", autoPicking: "Auto 正在选模型",
+    today: "今天", copy: "复制", copied: "已复制", again: "重新回答", againWith: "用 {0} 再答一次", thinking: "正在思考", thinkingBy: "{0} 正在思考", autoPicking: "Auto 正在选模型", thinkingFor: "正在思考 · {0}", thoughtFor: "已思考 {0}",
     earlier: "之前的回答（{0}）", earlierOpen: "之前的回答（{0}）",
     yourMac: "你的 Mac", macOn: "在线", macOff: "连不上 · 醒来后自动恢复", macWait: "正在连接……", macPaused: "已暂停这台设备", macNoNet: "这台设备没有联网",
     language: "语言", langMac: "跟随你的 Mac", shortcuts: "键盘快捷键", hideSide: "收起侧栏", showSide: "展开侧栏", dropHere: "松开就能添加图片",
@@ -131,7 +131,7 @@ const T = {
     close: "Close", deleteChat: "Delete this chat", rename: "Rename", renameChat: "Rename chat", chatMore: "More", deleteChatQ: "Delete the chat “{0}”?", chatsLocal: "Chats are kept on this device. With subscription models (Claude, ChatGPT, Gemini), your Mac also keeps a copy so it can continue the chat; it deletes that copy after a day without use.", searchChats: "Search chats", noMatch: "No matching chats",
     addHome: "Add to Home Screen", addHomeTip: "Tap the browser’s “Share” button and choose “Add to Home Screen”. The first time it’s opened from the Home Screen, you’ll scan the QR code once more.",
     deviceLine: "This device: {0}", empty: "How can I help?", cut: "(The reply was cut off. Send “continue” to have it go on.)", stopped: "(stopped)",
-    today: "Today", copy: "Copy", copied: "Copied", again: "Answer again", againWith: "Answer again with {0}", thinking: "Thinking", thinkingBy: "{0} is thinking", autoPicking: "Auto is picking a model",
+    today: "Today", copy: "Copy", copied: "Copied", again: "Answer again", againWith: "Answer again with {0}", thinking: "Thinking", thinkingBy: "{0} is thinking", autoPicking: "Auto is picking a model", thinkingFor: "Thinking · {0}", thoughtFor: "Thought for {0}",
     earlier: "Earlier answer ({0})", earlierOpen: "Earlier answer ({0})",
     yourMac: "Your Mac", macOn: "Online", macOff: "Can’t reach it · back when it wakes", macWait: "Connecting…", macPaused: "Paused this device", macNoNet: "This device is offline",
     language: "Language", langMac: "Follow your Mac", shortcuts: "Keyboard shortcuts", hideSide: "Hide sidebar", showSide: "Show sidebar", dropHere: "Drop to add images",
@@ -1460,9 +1460,10 @@ function bubble(m, isLast, who) {
     for (const im of m.images) { const i = el("img"); i.alt = t("imageTitle"); i.src = "data:" + im.mime + ";base64," + im.data; pics.append(i); }
     b.append(pics);
   }
+  if (m.think) b.append(thoughts(m));
   const body = el("div", undefined, "body");
   b.append(body);
-  if (m.live && !m.content) body.append(thinking(m));
+  if (m.live && !m.content) { if (!m.think) body.append(thinking(m)); }
   else fill(body, m.live ? holdBack(m.content) : m.content, m.live);
   if (m.live && m.content) {
     let last = body.lastElementChild;
@@ -1550,6 +1551,44 @@ function thinking(m) {
     setTimeout(tick, 1000);
   };
   setTimeout(tick, 1000);
+  return box;
+}
+// thoughts: a model's reasoning, when its source shows it (a thinking model
+// in Ollama, Claude Code, Codex). While it thinks: "Thinking · N s" over
+// its latest lines. Once the answer starts: "Thought for N s", which opens
+// to all of it (and stays open across redraws). N runs from the first
+// reasoning to the first words of the answer.
+function thoughts(m) {
+  const live = !!m.live && !m.content;
+  const box = el("div", undefined, "thoughts" + (live ? " live" : ""));
+  const head = el("button", undefined, "th-head"); head.type = "button";
+  const label = el("span", undefined, "th-label");
+  const ms = () => (m.first || m.done || Date.now()) - (m.thinkAt || m.sent || Date.now());
+  head.append(icon("i-chev s14"), label);
+  box.append(head);
+  if (live) {
+    head.disabled = true;
+    const paint = () => { label.textContent = t("thinkingFor", span(ms())); };
+    paint();
+    const tick = () => { if (!box.isConnected) return; paint(); setTimeout(tick, 1000); };
+    setTimeout(tick, 1000);
+    // The last few lines, as they come (the start scrolls away), as plain
+    // text without Markdown's marks.
+    const tail = m.think.length > 600 ? m.think.slice(-600).replace(/^[^\n]*\n/, "") : m.think;
+    box.append(el("div", tail.replace(/\*\*|__|`+|^#+\s*/gm, ""), "th-tail"));
+    return box;
+  }
+  label.textContent = t("thoughtFor", span(ms()));
+  S.openThoughts ??= new WeakSet();
+  const open = S.openThoughts.has(m);
+  box.classList.toggle("open", open);
+  head.setAttribute("aria-expanded", String(open));
+  if (open) { const all = el("div", undefined, "th-all"); fill(all, m.think); box.append(all); }
+  head.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (S.openThoughts.has(m)) S.openThoughts.delete(m); else S.openThoughts.add(m);
+    box.replaceWith(thoughts(m));
+  });
   return box;
 }
 // fill draws a message: fenced code becomes code blocks, the rest prose.
@@ -2161,7 +2200,15 @@ async function run(chat, model, fresh, old) {
   // removed" line), not again as a red note.
   let quiet = false;
   try {
-    const r = await omnillm.chat(id, model, JSON.stringify(msgs), (d, exact) => {
+    const r = await omnillm.chat(id, model, JSON.stringify(msgs), (d, exact, acked, think) => {
+      // The model's reasoning, ahead of its answer (thinkAt: when it began
+      // to show; first, below, ends it).
+      if (think) {
+        reply.thinkAt ??= Date.now();
+        reply.think = (reply.think || "") + think;
+        if (!raf) raf = requestAnimationFrame(flush);
+        return;
+      }
       // "Claude Opus 5.5", as the hub reports it; under Auto, the one it chose.
       if (exact) {
         if (model === "auto" && exact !== reply.picked) {

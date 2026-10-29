@@ -307,8 +307,9 @@ func hubOS(_ js.Value, _ []js.Value) any {
 }
 
 // chat(id, model, messagesJSON, onDelta) → {in, out, finish}. onDelta is
-// (text), ("", model) once the exact model is known, or ("", "", true) once
-// the Mac has acknowledged the request.
+// (text), ("", model) once the exact model is known, ("", "", true) once
+// the Mac has acknowledged the request, or ("", "", false, think) with the
+// model's reasoning ahead of its answer.
 func chat(_ js.Value, a []js.Value) any {
 	id, model, msgsJSON, onDelta := a[0].String(), a[1].String(), a[2].String(), a[3]
 	return promise(func() (any, error) {
@@ -360,6 +361,9 @@ func chat(_ js.Value, a []js.Value) any {
 				}
 				if c.Model != "" {
 					onDelta.Invoke("", c.Model) // which model and version is answering
+				}
+				if c.Think != "" {
+					onDelta.Invoke("", "", false, c.Think)
 				}
 				if c.Text != "" {
 					got = true

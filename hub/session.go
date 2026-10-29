@@ -430,8 +430,8 @@ func (ds *devSession) startChat(ctx context.Context, env proto.Envelope, d Devic
 // frames: less mobile data, less timing signal for the relay).
 func (ds *devSession) relayStream(ctx, cctx context.Context, id uint64, s omnillm.Stream) {
 	type item struct {
-		text, model string
-		err         error
+		text, think, model string
+		err                error
 	}
 	ch := make(chan item, 64)
 	go func() {
@@ -439,7 +439,7 @@ func (ds *devSession) relayStream(ctx, cctx context.Context, id uint64, s omnill
 		for {
 			c, err := s.Recv()
 			select {
-			case ch <- item{c.Text, c.Model, err}:
+			case ch <- item{c.Text, c.Think, c.Model, err}:
 			case <-cctx.Done():
 				return
 			}
@@ -448,15 +448,18 @@ func (ds *devSession) relayStream(ctx, cctx context.Context, id uint64, s omnill
 			}
 		}
 	}()
-	var buf strings.Builder
+	// buf is the answer so far, think the reasoning ahead of it; a frame
+	// carries both, reasoning first.
+	var buf, think strings.Builder
 	tick := time.NewTicker(100 * time.Millisecond)
 	defer tick.Stop()
 	flush := func() bool {
-		if buf.Len() == 0 {
+		if buf.Len() == 0 && think.Len() == 0 {
 			return true
 		}
-		err := ds.send(ctx, proto.Envelope{T: proto.TChatDelta, ID: id, Text: buf.String()})
+		err := ds.send(ctx, proto.Envelope{T: proto.TChatDelta, ID: id, Text: buf.String(), Think: think.String()})
 		buf.Reset()
+		think.Reset()
 		return err == nil
 	}
 	// stopped: the hub ended the chat (the owner paused this device); the
@@ -481,6 +484,7 @@ func (ds *devSession) relayStream(ctx, cctx context.Context, id uint64, s omnill
 				}
 			}
 			buf.WriteString(it.text)
+			think.WriteString(it.think)
 			if it.err != nil {
 				if !flush() {
 					return
@@ -493,7 +497,7 @@ func (ds *devSession) relayStream(ctx, cctx context.Context, id uint64, s omnill
 				}
 				return
 			}
-			if buf.Len() >= 8<<10 && !flush() {
+			if buf.Len()+think.Len() >= 8<<10 && !flush() {
 				return
 			}
 		case <-tick.C:

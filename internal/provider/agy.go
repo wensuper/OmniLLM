@@ -397,6 +397,10 @@ func (s *cliStream) agyLine(b []byte) (text string, final bool) {
 			s.mu.Unlock()
 		}
 	case "step_update":
+		// Gemini's thinking, where agy shows it as a step of its own.
+		if strings.Contains(ev.Step.StepType, "think") {
+			s.think.add(ev.Step.TextDelta)
+		}
 		if ev.Step.StepType == "agent_response" && ev.Step.TextDelta != "" {
 			s.mu.Lock()
 			s.gotAny = true

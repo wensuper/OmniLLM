@@ -388,6 +388,7 @@ type cliStream struct {
 	chat     *chatTurn       // a person's conversation (nil: nothing kept)
 	peek     []byte          // a first line read early, for Recv
 	reply    strings.Builder // the answer as passed on, for chat
+	think    thinking        // reasoning read by line, passed on by Recv
 	finished bool            // the program ended the answer itself
 
 	waitOnce sync.Once
@@ -684,10 +685,11 @@ func (s *cliStream) Recv() (omnillm.Chunk, error) {
 			s.reply.WriteString(text)
 			s.mu.Unlock()
 		}
+		think := s.think.take()
 		if final {
-			if text != "" {
+			if text != "" || think != "" {
 				s.sent += len(text)
-				return omnillm.Chunk{Text: text}, nil
+				return omnillm.Chunk{Text: text, Think: think}, nil
 			}
 			continue
 		}
@@ -697,7 +699,9 @@ func (s *cliStream) Recv() (omnillm.Chunk, error) {
 				s.finishWith(egress.OK, &omnillm.Error{Code: omnillm.CodeUpstream, Msg: omnillm.MsgUpstream, Detail: "reply too long"})
 				continue
 			}
-			return omnillm.Chunk{Text: text}, nil
+		}
+		if text != "" || think != "" {
+			return omnillm.Chunk{Text: text, Think: think}, nil
 		}
 	}
 }
@@ -719,6 +723,7 @@ func (s *cliStream) line(b []byte) (text string, final bool) {
 			Delta struct {
 				Type       string `json:"type"`
 				Text       string `json:"text"`
+				Thinking   string `json:"thinking"`
 				StopReason string `json:"stop_reason"`
 			} `json:"delta"`
 		} `json:"event"`
@@ -765,6 +770,9 @@ func (s *cliStream) line(b []byte) (text string, final bool) {
 			s.gotAny = true
 			s.mu.Unlock()
 			return ev.Event.Delta.Text, false
+		}
+		if ev.Event.Type == "content_block_delta" && ev.Event.Delta.Type == "thinking_delta" {
+			s.think.add(ev.Event.Delta.Thinking)
 		}
 		if ev.Event.Type == "message_delta" && ev.Event.Delta.StopReason != "" {
 			s.setFinish(mapStop(ev.Event.Delta.StopReason))
@@ -817,6 +825,9 @@ func (s *cliStream) line(b []byte) (text string, final bool) {
 			}
 		}
 	case "item.completed": // Codex
+		if ev.Item.Type == "reasoning" { // its summary of what it thought
+			s.think.add(ev.Item.Text + "\n\n")
+		}
 		if ev.Item.Type == "agent_message" {
 			s.mu.Lock()
 			s.gotAny = true

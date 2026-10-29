@@ -55,8 +55,11 @@ type Envelope struct {
 	Models   []omnillm.ModelInfo `json:"models,omitempty"`
 	Req      *omnillm.Request    `json:"req,omitempty"`
 	Text     string              `json:"text,omitempty"`
-	Usage    *omnillm.Usage      `json:"usage,omitempty"`
-	Finish   string              `json:"finish,omitempty"`
+	// Think in chat.delta is the model's reasoning, ahead of Text, when
+	// its provider shows it (omnillm.Chunk.Think).
+	Think  string         `json:"think,omitempty"`
+	Usage  *omnillm.Usage `json:"usage,omitempty"`
+	Finish string         `json:"finish,omitempty"`
 	// Model in chat.delta names the model answering, for people, with its
 	// version ("Claude Opus 5.5"); sent once, when the provider says.
 	Model  string          `json:"model,omitempty"`

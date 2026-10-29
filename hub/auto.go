@@ -452,7 +452,7 @@ func (a *autoStream) Recv() (omnillm.Chunk, error) {
 		// name always means another model took over (the screens rely on
 		// it), and a name the owner gave stays.
 		ch.Model = ""
-		if ch.Text == "" && err == nil {
+		if ch.Text == "" && ch.Think == "" && err == nil {
 			continue
 		}
 		if !a.started && err != nil && !errors.Is(err, io.EOF) && autoRetry(err) && a.tried < len(a.cands) && a.tried < autoAttempts {

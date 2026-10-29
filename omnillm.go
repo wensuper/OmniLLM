@@ -163,6 +163,11 @@ type Usage struct {
 // Chunk is one piece of a streamed reply.
 type Chunk struct {
 	Text string `json:"text"`
+	// Think is the model's reasoning, ahead of its answer, when the
+	// provider shows it (a thinking model in Ollama, Claude Code, Codex).
+	// It is for people to read, never part of the answer: callers that
+	// want only the answer read Text.
+	Think string `json:"think,omitempty"`
 	// Model, when set, is the exact model that is answering as the
 	// provider reports it (e.g. "claude-opus-5-5" behind the alias
 	// "opus"). It comes at most once, possibly with no text.

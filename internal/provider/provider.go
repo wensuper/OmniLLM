@@ -343,6 +343,33 @@ type stream struct {
 	finish string
 	done   atomic.Bool
 	once   sync.Once
+	think  thinking
+}
+
+// thinking holds reasoning a parser has read until Recv passes it on, and
+// stops taking more past maxThink (a model that thinks for a book).
+type thinking struct {
+	pend  strings.Builder
+	total int
+}
+
+const maxThink = 256 << 10
+
+func (t *thinking) add(s string) {
+	if s == "" || t.total >= maxThink {
+		return
+	}
+	if t.total+len(s) > maxThink {
+		s = s[:maxThink-t.total]
+	}
+	t.total += len(s)
+	t.pend.WriteString(s)
+}
+
+func (t *thinking) take() string {
+	s := t.pend.String()
+	t.pend.Reset()
+	return s
 }
 
 func (s *stream) setUsage(in, out int) {
@@ -405,15 +432,16 @@ func (s *stream) Recv() (omnillm.Chunk, error) {
 				s.finishCall(egress.Failed)
 				return omnillm.Chunk{}, err
 			}
+			think := s.think.take()
 			if done {
 				s.finishCall(egress.OK)
-				if text != "" {
-					return omnillm.Chunk{Text: text}, nil
+				if text != "" || think != "" {
+					return omnillm.Chunk{Text: text, Think: think}, nil
 				}
 				return omnillm.Chunk{}, io.EOF
 			}
-			if text != "" {
-				return omnillm.Chunk{Text: text}, nil
+			if text != "" || think != "" {
+				return omnillm.Chunk{Text: text, Think: think}, nil
 			}
 		}
 	}

@@ -394,7 +394,15 @@ func chat(w http.ResponseWriter, r *http.Request, b Backend) {
 			fmt.Fprint(w, "data: [DONE]\n\n")
 			return
 		}
-		send(chunk(c.Text, nil))
+		if c.Text == "" && c.Think == "" {
+			continue
+		}
+		ck := chunk(c.Text, nil)
+		if c.Think != "" {
+			// The model's reasoning, where OpenAI-compatible clients look for it.
+			ck["choices"].([]any)[0].(map[string]any)["delta"].(map[string]string)["reasoning_content"] = c.Think
+		}
+		send(ck)
 	}
 	u := s.Usage()
 	end := chunk("", "stop")
