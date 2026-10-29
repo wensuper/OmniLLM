@@ -147,7 +147,35 @@ h1 { font-size: 21px; font-weight: 600; letter-spacing: -.02em; line-height: 1.3
 .msg ul, .msg ol { margin: 0 0 14px; padding-left: 1.3em; }
 .msg li { white-space: pre-wrap; }
 .msg li + li { margin-top: 4px; }
-.msg p code, .msg li code { font-family: var(--mono); font-size: .88em; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-xs); padding: 1px 5px; }
+.msg li > ul, .msg li > ol { margin: 4px 0 0; }
+.msg li.task { list-style: none; }
+.msg li.task .box { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; margin: 0 8px 0 -1.3em; vertical-align: -2px; border: 1.5px solid var(--line-2); border-radius: 4px; font-size: 11px; font-weight: 700; line-height: 1; color: var(--accent-ink); }
+.msg li.task .box.on { background: var(--accent); border-color: var(--accent); }
+.msg :not(pre) > code { font-family: var(--mono); font-size: .88em; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-xs); padding: 1px 5px; }
+/* Headings, rules, quotes, links and tables in a reply. */
+.msg h1, .msg h2, .msg h3, .msg h4 { margin: 22px 0 10px; font-weight: 600; line-height: 1.45; letter-spacing: 0; color: var(--ink); white-space: pre-wrap; }
+.msg h1 { font-size: 1.3em; } .msg h2 { font-size: 1.18em; } .msg h3 { font-size: 1.06em; } .msg h4 { font-size: 1em; }
+.msg .body > :first-child { margin-top: 0; }
+.msg hr { border: 0; border-top: 1px solid var(--line); margin: 22px 0; }
+.msg blockquote { margin: 0 0 14px; padding: 2px 0 2px 14px; border-left: 3px solid var(--line-2); color: var(--ink-2); }
+.msg blockquote > :last-child { margin-bottom: 0; }
+.msg a { color: var(--accent-text); text-decoration: underline; text-underline-offset: 2px; }
+.msg del, .msg s { color: var(--muted); }
+.msg mark { background: var(--warn-soft); color: inherit; border-radius: 3px; padding: 0 2px; }
+.msg kbd { font: .85em var(--mono); border: 1px solid var(--line-2); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; }
+.msg .table { overflow-x: auto; margin: 0 0 14px; -webkit-overflow-scrolling: touch; }
+.msg table { border-collapse: collapse; min-width: 100%; font-size: 14px; line-height: 1.6; overflow-wrap: normal; }
+.msg th, .msg td { padding: 9px 14px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); white-space: pre-wrap; min-width: 8em; max-width: 26em; }
+.msg th { font-weight: 600; color: var(--ink); border-bottom-color: var(--line-2); }
+.msg th:first-child, .msg td:first-child { padding-left: 0; }
+.msg tbody tr:last-child td { border-bottom: 0; }
+/* Math (MathML from Temml): a touch larger than the text around it, as
+   math fonts run small next to PingFang; a wide formula scrolls in its box. */
+.msg math { font-size: 1.12em; }
+.msg .math.block { display: block; margin: 0 0 14px; padding: 6px 0; overflow-x: auto; overflow-y: hidden; text-align: center; }
+.msg .math.raw { font-family: var(--mono); font-size: .88em; color: var(--ink-2); white-space: pre-wrap; }
+.msg .math.block.raw { text-align: left; }
+.msg th.al-center, .msg td.al-center { text-align: center; } .msg th.al-right, .msg td.al-right { text-align: right; }
 .msg .pics { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
 .msg .pics img { max-width: 160px; max-height: 160px; border-radius: 10px; display: block; }
 /* Code: a small head with the language and Copy. */
@@ -158,6 +186,11 @@ h1 { font-size: 21px; font-weight: 600; letter-spacing: -.02em; line-height: 1.3
 @media (hover: hover) { .code-h button:hover { background: var(--surface-3); color: var(--ink); } }
 .code pre { margin: 0; padding: 12px 14px; overflow-x: auto; font: 13px/1.6 var(--mono); }
 .code code { font: 13px/1.6 var(--mono); color: var(--ink); white-space: pre; }
+/* Code colors (GitHub's light and dark palettes, which read well on both). */
+:root { --tk-c: #6E7781; --tk-s: #0A3069; --tk-n: #0550AE; --tk-k: #CF222E; --tk-f: #8250DF; --tk-t: #953800; }
+@media (prefers-color-scheme: dark) { :root { --tk-c: #8B949E; --tk-s: #A5D6FF; --tk-n: #79C0FF; --tk-k: #FF7B72; --tk-f: #D2A8FF; --tk-t: #FFA657; } }
+.tk-c { color: var(--tk-c); font-style: italic; } .tk-s { color: var(--tk-s); } .tk-n { color: var(--tk-n); }
+.tk-k { color: var(--tk-k); } .tk-f { color: var(--tk-f); } .tk-t { color: var(--tk-t); }
 /* Who is answering: named on the first reply and where the model changes. */
 .who { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
 .who .by { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

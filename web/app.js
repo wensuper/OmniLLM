@@ -1567,54 +1567,220 @@ function codeBlock(p) {
   cp.append(icon("i-copy s14"), word);
   cp.addEventListener("click", () => copyText(code, () => { word.textContent = t("copied"); setTimeout(() => { word.textContent = t("copyCode"); }, 1200); }));
   head.append(el("span", lang), cp);
-  pre.append(el("code", code));
+  pre.append(highlight(code, lang.toLowerCase()));
   box.append(head, pre);
   return box;
 }
-// prose shows the light Markdown models write (headings, **bold**, `code`,
-// lists) as formatting: paragraphs split at blank lines, list lines become
-// real <ul>/<ol>. Everything stays text nodes: nothing a model writes is
-// ever parsed as HTML.
+// highlight colors code the way chat apps do: comments, strings, numbers
+// and literals, keywords, types and function calls, for the languages
+// models write most. Each token is a <span> holding text, never HTML; a
+// language it doesn't know gets the common C-like rules.
+const KEYWORDS = new Set(("abstract and as async await break case catch chan class const continue def defer del do elif else enum except export extends final finally fn for from func function go goto if impl implements import in interface is lambda let loop match mod mut new not of or package pass private protected pub public raise range return select self static struct super switch this throw throws trait try type typeof use var void where while with yield " +
+  "echo then fi esac done local " +
+  "insert update delete into values create table drop alter index primary key join left right inner outer on group by order having limit distinct union all").split(" "));
+const LITERALS = new Set("true false null nil none undefined NaN True False None".split(" "));
+function highlight(code, lang) {
+  const c = el("code");
+  if (code.length > 50000 || /^(text|txt|plain|plaintext|markdown|md|log|output)$/.test(lang)) { c.textContent = code; return c; }
+  const hash = /^(py|python|sh|bash|zsh|shell|console|ruby|rb|yaml|yml|toml|r|perl|dockerfile|makefile|ini|conf|nginx|ps1|powershell)$/.test(lang);
+  const sql = /^(sql|mysql|postgresql|psql|sqlite|hive|hql|sparksql|lua|haskell|hs)$/.test(lang);
+  const markup = /^(html|xml|svg|vue)$/.test(lang);
+  const rules = [
+    markup ? "<!--[\\s\\S]*?-->" : "\\/\\*[\\s\\S]*?\\*\\/",
+    hash ? "#[^\\n]*" : sql ? "--[^\\n]*" : "\\/\\/[^\\n]*",
+    '"""[\\s\\S]*?"""', "'''[\\s\\S]*?'''",
+    '"(?:\\\\.|[^"\\\\\\n])*"', "'(?:\\\\.|[^'\\\\\\n])*'", "`(?:\\\\.|[^`\\\\])*`",
+  ];
+  // 1: comment, 2: string, 3: number, 4: word, 5: "(" after it
+  const re = new RegExp("(" + rules.slice(0, 2).join("|") + ")|(" + rules.slice(2).join("|") + ")|(\\b0x[\\da-fA-F_]+\\b|\\b\\d[\\d_]*(?:\\.\\d+)?(?:[eE][+-]?\\d+)?\\b)|([A-Za-z_$][\\w$]*)(\\s*\\()?", "g");
+  let last = 0, m;
+  const tok = (s, cls) => c.append(cls ? el("span", s, "tk-" + cls) : s);
+  while ((m = re.exec(code))) {
+    if (m.index > last) tok(code.slice(last, m.index));
+    last = re.lastIndex;
+    if (m[1]) tok(m[1], "c");
+    else if (m[2]) tok(m[2], "s");
+    else if (m[3]) tok(m[3], "n");
+    else {
+      const w = m[4], key = sql ? w.toLowerCase() : w;
+      tok(w, LITERALS.has(w) ? "n" : KEYWORDS.has(key) ? "k" : m[5] ? "f" : /^[A-Z][a-z]\w*$/.test(w) && !sql ? "t" : "");
+      if (m[5]) tok(m[5]);
+    }
+  }
+  if (last < code.length) tok(code.slice(last));
+  return c;
+}
+// prose shows the Markdown models write as formatting: # headings, lists
+// (nested by indent, with [ ] / [x] tasks), | tables |, > quotes, ---
+// rules, and paragraphs split at blank lines; inline() does the rest.
+// Everything is built with createElement and text nodes: nothing a model
+// writes is ever parsed as HTML (see HTML_TAGS for the few tags it may use).
 const LIST_ITEM = /^(\s*)([-*+]|\d+[.)])\s+(.*)$/;
+const RULE = /^ {0,3}([-*_])( *\1){2,} *$/;
+const TABLE_SEP = /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/;
 function prose(b, text) {
-  let p = null, list = null;
-  for (const line of text.split("\n")) {
-    if (!line.trim()) { p = null; list = null; continue; }
-    const h = line.match(/^#{1,6}\s+(.*)$/);
-    if (h) { p = null; list = null; const hp = el("p"); inline(hp, h[1], true); b.append(hp); continue; }
+  const lines = text.split("\n");
+  // lists: the lists open at this point, outermost first, with the indent
+  // of their items.
+  let p = null, lists = [];
+  const end = () => { p = null; lists = []; };
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line.trim()) { end(); continue; }
+    const h = line.match(/^ {0,3}(#{1,6})\s+(.*?)(\s+#+)?\s*$/);
+    if (h) { end(); const e = el("h" + Math.min(h[1].length, 4)); inline(e, h[2]); b.append(e); continue; }
+    if (RULE.test(line)) { end(); b.append(el("hr")); continue; }
+    // A formula on lines of its own: $$ … $$ or \[ … \] (until it closes,
+    // while it is still arriving, it stays text).
+    const open = line.match(/^\s*(\$\$|\\\[)/);
+    if (open) {
+      const close = open[1] === "$$" ? "$$" : "\\]";
+      let j = i, tex = line.trim().slice(2);
+      while (!tex.trimEnd().endsWith(close) && j + 1 < lines.length) tex += "\n" + lines[++j];
+      if (tex.trimEnd().endsWith(close)) {
+        end();
+        b.append(math(tex.trimEnd().slice(0, -2), true));
+        i = j;
+        continue;
+      }
+    }
+    if (line.includes("|") && TABLE_SEP.test(lines[i + 1] || "") && lines[i + 1].includes("|")) {
+      end();
+      let j = i + 2;
+      while (j < lines.length && lines[j].includes("|") && lines[j].trim()) j++;
+      b.append(table(line, lines[i + 1], lines.slice(i + 2, j)));
+      i = j - 1;
+      continue;
+    }
+    if (/^ {0,3}>/.test(line)) {
+      end();
+      let j = i;
+      while (j < lines.length && /^ {0,3}>/.test(lines[j])) j++;
+      const q = el("blockquote");
+      fill(q, lines.slice(i, j).map((s) => s.replace(/^ {0,3}> ?/, "")).join("\n"));
+      b.append(q);
+      i = j - 1;
+      continue;
+    }
     const li = line.match(LIST_ITEM);
     if (li) {
-      const tag = /\d/.test(li[2]) ? "ol" : "ul";
-      if (!list || list.tagName.toLowerCase() !== tag) {
-        list = el(tag);
-        const n = parseInt(li[2], 10);
-        if (tag === "ol" && n > 1) list.start = n;
-        b.append(list);
-      }
       p = null;
-      const item = el("li"); inline(item, li[3], false); list.append(item);
+      const indent = li[1].replace(/\t/g, "    ").length, tag = /\d/.test(li[2]) ? "ol" : "ul";
+      let top = lists[lists.length - 1];
+      while (top && indent < top.indent) { lists.pop(); top = lists[lists.length - 1]; }
+      // Indented further than the last item: a list inside that item.
+      if (top && indent > top.indent + 1 && top.el.lastElementChild) {
+        top = { el: newList(tag, li[2]), indent };
+        lists[lists.length - 1].el.lastElementChild.append(top.el);
+        lists.push(top);
+      } else if (!top || top.el.tagName.toLowerCase() !== tag) {
+        if (top) lists.pop();
+        top = { el: newList(tag, li[2]), indent };
+        (lists.length ? lists[lists.length - 1].el.lastElementChild : b).append(top.el);
+        lists.push(top);
+      }
+      const item = el("li"), task = li[3].match(/^\[([ xX])\]\s+(.*)$/);
+      if (task) { item.className = "task"; item.append(el("span", task[1] === " " ? "" : "✓", "box" + (task[1] === " " ? "" : " on"))); inline(item, task[2]); } else inline(item, li[3]);
+      top.el.append(item);
       continue;
     }
     // An indented line under a list item continues that item.
-    if (list && /^\s/.test(line)) { const item = list.lastElementChild; item.append("\n"); inline(item, line.trim(), false); continue; }
-    list = null;
+    if (lists.length && /^\s/.test(line)) { const item = lists[lists.length - 1].el.lastElementChild; item.append("\n"); inline(item, line.trim()); continue; }
+    lists = [];
     if (!p) { p = el("p"); b.append(p); } else p.append("\n");
-    inline(p, line, false);
+    inline(p, line);
   }
 }
-function inline(p, line, strong) {
-  // **bold**, __bold__, `code`, and *italic* that isn't part of a word
-  // (no lookbehind: older iPhones' Safari lacks it).
-  const re = /\*\*([^*]+)\*\*|__([^_]+)__|`([^`]+)`|(^|[^*\w])\*([^*\s][^*]*?)\*(?![*\w])/g;
+function newList(tag, marker) {
+  const list = el(tag), n = parseInt(marker, 10);
+  if (tag === "ol" && n > 1) list.start = n;
+  return list;
+}
+// table: a Markdown table; it scrolls sideways when it doesn't fit.
+// Columns align as the line under the head says (:--, :-:, --:).
+function table(head, sep, rows) {
+  const cells = (row) => row.trim().replace(/^\|/, "").replace(/\|$/, "").replace(/\\\|/g, "\u0000").split("|").map((c) => c.replace(/\u0000/g, "|").trim());
+  const align = cells(sep).map((c) => c.endsWith(":") ? (c.startsWith(":") ? "al-center" : "al-right") : "");
+  const box = el("div", undefined, "table"), tb = el("table"), thead = el("thead"), tbody = el("tbody");
+  const row = (parent, tag, cs) => {
+    const tr = el("tr");
+    align.forEach((a, k) => { const c = el(tag, undefined, a || undefined); inline(c, cs[k] || ""); tr.append(c); });
+    parent.append(tr);
+  };
+  row(thead, "th", cells(head));
+  rows.forEach((r) => row(tbody, "td", cells(r)));
+  tb.append(thead, tbody); box.append(tb);
+  return box;
+}
+// math: a formula in TeX, drawn by Temml (web/vendor) as MathML, which the
+// browser lays out with its own math fonts (the page loads no font files).
+// Temml is fetched the first time a reply has math; until then, and when
+// it can't read the TeX, the TeX shows as written. trust stays off, so no
+// \href, \class or \style: what a model writes adds no links or styles.
+let temmlLoaded = null;
+function loadTemml() {
+  temmlLoaded ??= new Promise((res, rej) => {
+    const css = document.createElement("link"); css.rel = "stylesheet"; css.href = "vendor/temml.css"; document.head.append(css);
+    const s = document.createElement("script"); s.src = "vendor/temml.min.js"; s.onload = res; s.onerror = rej; document.body.append(s);
+  });
+  return temmlLoaded;
+}
+function math(tex, display) {
+  const e = el(display ? "div" : "span", undefined, display ? "math block" : "math");
+  const raw = () => { e.textContent = display ? "$$" + tex + "$$" : "$" + tex + "$"; e.classList.add("raw"); };
+  const draw = () => {
+    try { e.classList.remove("raw"); temml.render(tex.trim(), e, { displayMode: display, throwOnError: true, trust: false }); }
+    catch { raw(); }
+  };
+  if (window.temml) draw(); else { raw(); loadTemml().then(draw, () => {}); }
+  return e;
+}
+// HTML_TAGS: the inline HTML tags models write for layout (<br> in a table
+// cell, <sub>2</sub>, <kbd>⌘</kbd>). Each becomes a new element of that
+// name, without attributes; any other tag, or one with attributes, stays
+// text as written.
+const HTML_TAGS = new Set(["b", "strong", "i", "em", "u", "s", "del", "ins", "mark", "sub", "sup", "small", "kbd", "code", "br"]);
+// inline: `code`, math ($$…$$, \[…\], \(…\), and $…$ that hugs its TeX and
+// isn't a price: "$5 and $10" stays text), **bold**, __bold__, ~~struck~~,
+// *italic* that isn't part of a word, [links](https://…), bare https://
+// addresses, and HTML_TAGS. Links go only to http(s) and mailto, in a new
+// tab, without a referrer. (No lookbehind: older iPhones' Safari lacks it.)
+const INLINE = /`([^`]+)`|\$\$([^$]+?)\$\$|\\\[(.+?)\\\]|\\\((.+?)\\\)|(^|[^\w$\\])\$([^\s$](?:[^$\n]*?[^\s$\\])?)\$(?![\w$])|\*\*([^*]+?)\*\*|__([^_]+?)__|~~([^~]+?)~~|(^|[^*\w])\*([^*\s][^*]*?)\*(?![*\w])|\[([^\]]+)\]\(((?:https?:\/\/|mailto:)[^\s)]+)\)|(https?:\/\/[^\s<>()（）「」，。；：！？、]*[^\s<>().,;:!?'"（）「」，。；：！？、])|<(\/?)([a-zA-Z]+)\s*\/?>/g;
+function inline(p, line) {
+  // stack: p and the HTML_TAGS elements open inside it; text goes into the
+  // innermost. A tag left open ends with the line.
+  const stack = [p], top = () => stack[stack.length - 1];
+  const wrap = (tag, s) => { const e = el(tag); inline(e, s); top().append(e); };
+  // A bare address is its own label, as text (formatting it would find the
+  // address again).
+  const link = (label, href) => {
+    const a = el("a"); a.href = href; a.target = "_blank"; a.rel = "noopener noreferrer";
+    if (label === href) a.textContent = label; else inline(a, label);
+    top().append(a);
+  };
+  const re = new RegExp(INLINE.source, "g"); // its own position: wrap() calls inline() again
   let last = 0, m;
-  const put = (s, tag) => { if (!s) return; if (tag) p.append(el(tag, s)); else if (strong) p.append(el("strong", s)); else p.append(s); };
   while ((m = re.exec(line))) {
-    const lead = m[4] || "";
-    put(line.slice(last, m.index) + lead);
-    if (m[3] !== undefined) put(m[3], "code"); else if (m[5] !== undefined) put(m[5], "em"); else put(m[1] || m[2], "strong");
+    const before = line.slice(last, m.index) + (m[5] || "") + (m[10] || "");
+    if (before) top().append(before);
     last = re.lastIndex;
+    if (m[1] !== undefined) top().append(el("code", m[1]));
+    else if (m[2] !== undefined || m[3] !== undefined) top().append(math(m[2] !== undefined ? m[2] : m[3], true));
+    else if (m[4] !== undefined || m[6] !== undefined) top().append(math(m[4] !== undefined ? m[4] : m[6], false));
+    else if (m[7] !== undefined || m[8] !== undefined) wrap("strong", m[7] !== undefined ? m[7] : m[8]);
+    else if (m[9] !== undefined) wrap("del", m[9]);
+    else if (m[11] !== undefined) wrap("em", m[11]);
+    else if (m[12] !== undefined) link(m[12], m[13]);
+    else if (m[14] !== undefined) link(m[14], m[14]);
+    else {
+      const name = m[16].toLowerCase(), names = stack.map((e) => e.tagName.toLowerCase());
+      if (!HTML_TAGS.has(name)) top().append(m[0]);
+      else if (name === "br") top().append(el("br"));
+      else if (m[15]) { const k = names.lastIndexOf(name); if (k > 0) stack.length = k; else top().append(m[0]); }
+      else { const e = el(name); top().append(e); if (!m[0].endsWith("/>")) stack.push(e); }
+    }
   }
-  put(line.slice(last));
+  if (last < line.length) top().append(line.slice(last));
 }
 
 // ---------- the chat list ----------

@@ -16,8 +16,13 @@ mkdir -p "$out"
 want=$(cat web/vendor/jsqr.sha256)
 got=$(shasum -a 256 web/vendor/jsqr.js | cut -d' ' -f1)
 [ "$want" = "$got" ] || { echo "web/vendor/jsqr.js changed (sha256 $got)" >&2; exit 1; }
+# Temml 0.14.0 (MIT) from npm, checked the same way: it turns TeX in
+# replies into MathML. temml.min.js is dist/temml.min.js as published;
+# temml.css is dist/Temml-Local.css without its one @font-face (the page's
+# CSP loads no fonts, so the browser would only log a refusal).
+(cd web/vendor && shasum -a 256 -c temml.sha256 >/dev/null) || { echo "web/vendor/temml.* changed" >&2; exit 1; }
 cp -R web/. "$out/"
-rm -f "$out/vendor/jsqr.sha256"
+rm -f "$out/vendor/jsqr.sha256" "$out/vendor/temml.sha256"
 cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" "$out/wasm_exec.js"
 # Size matters on a phone's first open (docs/design.md §13.3). nojsonv2 keeps
 # encoding/json on its classic code instead of the json/v2 engine Go 1.27
