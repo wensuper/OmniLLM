@@ -614,6 +614,7 @@ func (c *Client) spawnCLI(ctx context.Context, model string, msgs []omnillm.Mess
 			if text, _ := s.line(first); text != "" || s.chatID() == "" {
 				s.peek = first // not the session line: Recv reads it as usual
 			}
+			s.think.take() // Recv reads that line again (or it was the session line)
 		}
 	}
 	return s, nil

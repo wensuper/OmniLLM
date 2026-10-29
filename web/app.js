@@ -64,7 +64,7 @@ const T = {
     close: "关闭", deleteChat: "删除这个对话", rename: "重命名", renameChat: "重命名对话", chatMore: "更多操作", deleteChatQ: "删除对话“{0}”？", chatsLocal: "对话保存在这台设备上。用订阅模型（Claude、ChatGPT、Gemini）时，你的 Mac 也会留一份，方便接着聊；一天没用，Mac 上的那份就会删除。", searchChats: "搜索对话", noMatch: "没有找到",
     addHome: "添加到主屏幕", addHomeTip: "点浏览器的“共享”（或“分享”）按钮，选“添加到主屏幕”。第一次从主屏幕打开时，需要再扫一次码。",
     deviceLine: "这台设备：{0}", empty: "有什么可以帮你？", cut: "（回复太长被截断了。发“继续”让它接着写。）", stopped: "（已停止）",
-    today: "今天", copy: "复制", copied: "已复制", again: "重新回答", againWith: "用 {0} 再答一次", thinking: "正在思考", thinkingBy: "{0} 正在思考", autoPicking: "Auto 正在选模型", thinkingFor: "正在思考 · {0}", thoughtFor: "已思考 {0}",
+    today: "今天", copy: "复制", copied: "已复制", again: "重新回答", againWith: "用 {0} 再答一次", thinking: "正在思考", thinkingBy: "{0} 正在思考", autoPicking: "Auto 正在选模型", thinkingFor: "正在思考 · {0}", thoughtFor: "已思考 {0}", thoughtNoTime: "思考过程",
     earlier: "之前的回答（{0}）", earlierOpen: "之前的回答（{0}）",
     yourMac: "你的 Mac", macOn: "在线", macOff: "连不上 · 醒来后自动恢复", macWait: "正在连接……", macPaused: "已暂停这台设备", macNoNet: "这台设备没有联网",
     language: "语言", langMac: "跟随你的 Mac", shortcuts: "键盘快捷键", hideSide: "收起侧栏", showSide: "展开侧栏", dropHere: "松开就能添加图片",
@@ -131,7 +131,7 @@ const T = {
     close: "Close", deleteChat: "Delete this chat", rename: "Rename", renameChat: "Rename chat", chatMore: "More", deleteChatQ: "Delete the chat “{0}”?", chatsLocal: "Chats are kept on this device. With subscription models (Claude, ChatGPT, Gemini), your Mac also keeps a copy so it can continue the chat; it deletes that copy after a day without use.", searchChats: "Search chats", noMatch: "No matching chats",
     addHome: "Add to Home Screen", addHomeTip: "Tap the browser’s “Share” button and choose “Add to Home Screen”. The first time it’s opened from the Home Screen, you’ll scan the QR code once more.",
     deviceLine: "This device: {0}", empty: "How can I help?", cut: "(The reply was cut off. Send “continue” to have it go on.)", stopped: "(stopped)",
-    today: "Today", copy: "Copy", copied: "Copied", again: "Answer again", againWith: "Answer again with {0}", thinking: "Thinking", thinkingBy: "{0} is thinking", autoPicking: "Auto is picking a model", thinkingFor: "Thinking · {0}", thoughtFor: "Thought for {0}",
+    today: "Today", copy: "Copy", copied: "Copied", again: "Answer again", againWith: "Answer again with {0}", thinking: "Thinking", thinkingBy: "{0} is thinking", autoPicking: "Auto is picking a model", thinkingFor: "Thinking · {0}", thoughtFor: "Thought for {0}", thoughtNoTime: "Thinking",
     earlier: "Earlier answer ({0})", earlierOpen: "Earlier answer ({0})",
     yourMac: "Your Mac", macOn: "Online", macOff: "Can’t reach it · back when it wakes", macWait: "Connecting…", macPaused: "Paused this device", macNoNet: "This device is offline",
     language: "Language", langMac: "Follow your Mac", shortcuts: "Keyboard shortcuts", hideSide: "Hide sidebar", showSide: "Show sidebar", dropHere: "Drop to add images",
@@ -163,7 +163,7 @@ function computerWords(k, s) {
   if (hubOS === "darwin" || MAC_HINTS.has(k)) return s; // not known yet: "computer" too
   return lang === "zh" ? s.replace(/ ?Mac ?/g, "电脑") : s.replace(/\bMac\b/g, "computer");
 }
-function t(k, ...a) { let s = computerWords(k, T[lang][k] ?? T.en[k] ?? k); a.forEach((v, i) => { s = s.replace("{" + i + "}", v); }); return s; }
+function t(k, ...a) { let s = computerWords(k, T[lang][k] ?? T.en[k] ?? k); a.forEach((v, i) => { s = s.replace("{" + i + "}", () => v); }); return s; }
 const $ = (id) => document.getElementById(id);
 function el(tag, text, cls) { const e = document.createElement(tag); if (text !== undefined) e.textContent = text; if (cls) e.className = cls; return e; }
 // quoted sets a text whose quoted UI names (“添加设备”) never break inside:
@@ -1248,7 +1248,10 @@ function renderLog(keep) {
     }
     const isLast = i === msgs.length - 1;
     if (isLast) S.lastWho = who;
-    const b = bubble(m, isLast, who);
+    // A message the formatting can't draw shows as plain text rather than
+    // taking the whole chat down with it.
+    let b;
+    try { b = bubble(m, isLast, who); } catch { b = el("div", undefined, "msg " + m.role + (isLast ? " last" : "")); b.append(el("p", m.content || "")); }
     if (m.role === "user") userEl = b;
     log.append(b);
     if (S.cur.long === i + 1) log.append(switchLine(t(S.cur.longSub ? "longChatSub" : "longChat")));
@@ -1578,7 +1581,9 @@ function thoughts(m) {
     box.append(el("div", tail.replace(/\*\*|__|`+|^#+\s*/gm, ""), "th-tail"));
     return box;
   }
-  label.textContent = t("thoughtFor", span(ms()));
+  // Cut off before the answer began (a reload, a lost connection): no end
+  // to measure to, so no time.
+  label.textContent = m.first || m.done ? t("thoughtFor", span(ms())) : t("thoughtNoTime");
   S.openThoughts ??= new WeakSet();
   const open = S.openThoughts.has(m);
   box.classList.toggle("open", open);
@@ -1598,12 +1603,13 @@ function thoughts(m) {
 let notes = null;
 function fill(b, text, live) {
   const outer = !notes;
+  const parts = text.split(/```/);
   if (outer) {
+    // Definitions only outside code: a code block may show "[^1]: …".
     notes = { defs: new Map(), order: [] };
-    text = text.replace(/^\[\^([^\]\s]+)\]:[ \t]*(.*)$/gm, (s, id, def) => { notes.defs.set(id, def); return ""; });
+    for (let i = 0; i < parts.length; i += 2) parts[i] = parts[i].replace(/^\[\^([^\]\s]+)\]:[ \t]*(.*)$/gm, (s, id, def) => { notes.defs.set(id, def); return ""; });
   }
   try {
-    const parts = text.split(/```/);
     parts.forEach((p, i) => {
       if (i % 2) b.append(codeBlock(p, live));
       else if (p.trim()) prose(b, p.replace(/^\n+|\n+$/g, ""));
@@ -1621,6 +1627,7 @@ function fill(b, text, live) {
 // Past FOLD_LINES a finished block shows its start and "Show all N lines"
 // (kept open once opened, across redraws).
 const FOLD_LINES = 30;
+const colored = new Map();
 function codeBlock(p, live) {
   const lang = (p.match(/^([\w+-]*)\n/) || [])[1] || "";
   const code = p.replace(/^[\w+-]*\n/, "").replace(/\n+$/, "");
@@ -1630,7 +1637,16 @@ function codeBlock(p, live) {
   cp.append(icon("i-copy s14"), word);
   cp.addEventListener("click", () => copyText(code, () => { word.textContent = t("copied"); setTimeout(() => { word.textContent = t("copyCode"); }, 1200); }));
   head.append(el("span", lang), cp);
-  pre.append(highlight(code, lang.toLowerCase()));
+  // Colored once, then copied: earlier blocks don't change while a reply
+  // goes on arriving (the last 60 are kept).
+  const key = lang.toLowerCase() + "\n" + code;
+  let hl = colored.get(key);
+  if (!hl) {
+    hl = highlight(code, lang.toLowerCase());
+    if (colored.size >= 60) colored.delete(colored.keys().next().value);
+    colored.set(key, hl);
+  }
+  pre.append(hl.cloneNode(true));
   box.append(head, pre);
   const n = code.split("\n").length;
   if (!live && n > FOLD_LINES) {
@@ -1732,7 +1748,16 @@ function diffLines(c, code) {
 // writes is ever parsed as HTML (see HTML_TAGS for the few tags it may use).
 const LIST_ITEM = /^(\s*)([-*+]|\d+[.)])\s+(.*)$/;
 const RULE = /^ {0,3}([-*_])( *\1){2,} *$/;
-const TABLE_SEP = /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/;
+const TABLE_SEP = /^ *(?:\| *)?:?-+:? *(?:\| *:?-+:? *)*(?:\| *)?$/;
+// LONG_LINE: a line longer than this stays plain text. The patterns here
+// are quick on what people write, but some (an unclosed "[" repeated, long
+// runs of spaces) slow down with the square of a line's length, and a
+// reply is drawn again many times a second while it arrives.
+const LONG_LINE = 2000;
+// QUOTE_DEPTH: quotes inside quotes past this stay text (each level draws
+// the next, and thousands of ">" would run out of stack).
+const QUOTE_DEPTH = 8;
+let quoteDepth = 0;
 function prose(b, text) {
   const lines = text.split("\n");
   // lists: the lists open at this point, outermost first, with the indent
@@ -1742,16 +1767,22 @@ function prose(b, text) {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     if (!line.trim()) { end(); continue; }
-    const h = line.match(/^ {0,3}(#{1,6})\s+(.*?)(\s+#+)?\s*$/);
-    if (h) { end(); const e = el("h" + Math.min(h[1].length, 4)); inline(e, h[2]); b.append(e); continue; }
+    if (line.length > LONG_LINE) {
+      lists = [];
+      if (!p) { p = el("p"); b.append(p); } else p.append("\n");
+      p.append(line);
+      continue;
+    }
+    const h = heading(line);
+    if (h) { end(); const e = el("h" + Math.min(h.level, 4)); inline(e, h.text); b.append(e); continue; }
     if (RULE.test(line)) { end(); b.append(el("hr")); continue; }
-    // A formula on lines of its own: $$ … $$ or \[ … \] (until it closes,
-    // while it is still arriving, it stays text).
+    // A formula on lines of its own: $$ … $$ or \[ … \], up to a blank line
+    // (until it closes, while it is still arriving, it stays text).
     const open = line.match(/^\s*(\$\$|\\\[)/);
     if (open) {
       const close = open[1] === "$$" ? "$$" : "\\]";
       let j = i, tex = line.trim().slice(2);
-      while (!tex.trimEnd().endsWith(close) && j + 1 < lines.length) tex += "\n" + lines[++j];
+      while (!tex.trimEnd().endsWith(close) && j + 1 < lines.length && lines[j + 1].trim()) tex += "\n" + lines[++j];
       if (tex.trimEnd().endsWith(close)) {
         end();
         b.append(math(tex.trimEnd().slice(0, -2), true));
@@ -1767,12 +1798,13 @@ function prose(b, text) {
       i = j - 1;
       continue;
     }
-    if (/^ {0,3}>/.test(line)) {
+    if (/^ {0,3}>/.test(line) && quoteDepth < QUOTE_DEPTH) {
       end();
       let j = i;
       while (j < lines.length && /^ {0,3}>/.test(lines[j])) j++;
       const q = el("blockquote");
-      fill(q, lines.slice(i, j).map((s) => s.replace(/^ {0,3}> ?/, "")).join("\n"));
+      quoteDepth++;
+      try { fill(q, lines.slice(i, j).map((s) => s.replace(/^ {0,3}> ?/, "")).join("\n")); } finally { quoteDepth--; }
       b.append(q);
       i = j - 1;
       continue;
@@ -1806,6 +1838,16 @@ function prose(b, text) {
     inline(p, line);
   }
 }
+// heading: "## Title ##" → {level 2, "Title"}, or null. Done by hand: the
+// one pattern for it slowed down on long runs of spaces.
+function heading(line) {
+  const m = line.match(/^ {0,3}(#{1,6})[ \t]/);
+  if (!m) return null;
+  let s = line.slice(m[0].length).trim();
+  const k = s.replace(/#+$/, "");
+  if (k !== s && (k === "" || /\s$/.test(k))) s = k.trim();
+  return { level: m[1].length, text: s };
+}
 function newList(tag, marker) {
   const list = el(tag), n = parseInt(marker, 10);
   if (tag === "ol" && n > 1) list.start = n;
@@ -1818,14 +1860,18 @@ function newList(tag, marker) {
 function table(head, sep, rows) {
   const cells = (row) => row.trim().replace(/^\|/, "").replace(/\|$/, "").replace(/\\\|/g, "\u0000").split("|").map((c) => c.replace(/\u0000/g, "|").trim());
   const align = cells(sep).map((c) => c.endsWith(":") ? (c.startsWith(":") ? "al-center" : "al-right") : "");
+  const all = [cells(head), ...rows.map(cells)];
+  // As many columns as the widest row (a row with a cell too many keeps
+  // it), up to 50.
+  const n = Math.min(50, Math.max(align.length, ...all.map((r) => r.length)));
   const wrap = el("div", undefined, "tbl"), box = el("div", undefined, "table"), tb = el("table"), thead = el("thead"), tbody = el("tbody");
   const row = (parent, tag, cs) => {
     const tr = el("tr");
-    align.forEach((a, k) => { const c = el(tag, undefined, a || undefined); inline(c, cs[k] || ""); tr.append(c); });
+    for (let k = 0; k < n; k++) { const c = el(tag, undefined, align[k] || undefined); inline(c, cs[k] || ""); tr.append(c); }
     parent.append(tr);
   };
-  row(thead, "th", cells(head));
-  rows.forEach((r) => row(tbody, "td", cells(r)));
+  row(thead, "th", all[0]);
+  all.slice(1).forEach((r) => row(tbody, "td", r));
   tb.append(thead, tbody); box.append(tb);
   const cp = el("button", undefined, "tbl-copy"); cp.type = "button";
   const word = el("span", t("copyTable"));
@@ -1842,20 +1888,29 @@ function table(head, sep, rows) {
 // Temml is fetched the first time a reply has math; until then, and when
 // it can't read the TeX, the TeX shows as written. trust stays off, so no
 // \href, \class or \style: what a model writes adds no links or styles.
+// A formula drawn once is copied after that (a reply is drawn again many
+// times a second while it arrives); the last 300 are kept.
 let temmlLoaded = null;
+const drawn = new Map();
 function loadTemml() {
   temmlLoaded ??= new Promise((res, rej) => {
     const css = document.createElement("link"); css.rel = "stylesheet"; css.href = "vendor/temml.css"; document.head.append(css);
-    const s = document.createElement("script"); s.src = "vendor/temml.min.js"; s.onload = res; s.onerror = rej; document.body.append(s);
+    const s = document.createElement("script"); s.src = "vendor/temml.min.js"; s.onload = res;
+    s.onerror = () => { temmlLoaded = null; css.remove(); s.remove(); rej(); }; // try again next time
+    document.body.append(s);
   });
   return temmlLoaded;
 }
 function math(tex, display) {
+  const key = (display ? "D" : "I") + tex;
+  if (drawn.has(key)) return drawn.get(key).cloneNode(true);
   const e = el(display ? "div" : "span", undefined, display ? "math block" : "math");
   const raw = () => { e.textContent = display ? "$$" + tex + "$$" : "$" + tex + "$"; e.classList.add("raw"); };
   const draw = () => {
     try { e.classList.remove("raw"); temml.render(tex.trim(), e, { displayMode: display, throwOnError: true, trust: false }); }
     catch { raw(); }
+    if (drawn.size >= 300) drawn.delete(drawn.keys().next().value);
+    drawn.set(key, e.cloneNode(true));
   };
   if (window.temml) draw(); else { raw(); loadTemml().then(draw, () => {}); }
   return e;
@@ -1871,12 +1926,14 @@ const HTML_TAGS = new Set(["b", "strong", "i", "em", "u", "s", "del", "ins", "ma
 // addresses, and HTML_TAGS. Links go only to http(s) and mailto, in a new
 // tab, without a referrer. An image ![…](https://…) is a link to it, as
 // the page loads no pictures from elsewhere; [^1] cites a footnote.
-// (No lookbehind: older iPhones' Safari lacks it.)
-const INLINE = /`([^`]+)`|\$\$([^$]+?)\$\$|\\\[(.+?)\\\]|\\\((.+?)\\\)|(^|[^\w$\\])\$([^\s$](?:[^$\n]*?[^\s$\\])?)\$(?![\w$])|\*\*([^*]+?)\*\*|__([^_]+?)__|~~([^~]+?)~~|(^|[^*\w])\*([^*\s][^*]*?)\*(?![*\w])|!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)|\[\^([^\]\s]+)\]|\[([^\]]+)\]\(((?:https?:\/\/|mailto:)[^\s)]+)\)|(https?:\/\/[^\s<>()（）「」，。；：！？、]*[^\s<>().,;:!?'"（）「」，。；：！？、])|<(\/?)([a-zA-Z]+)\s*\/?>/g;
+// A tag opens only when the line closes it too, so List<u> or Vec<i> in
+// prose stay text. (No lookbehind: older iPhones' Safari lacks it.)
+const INLINE = /`([^`]+)`|\$\$([^$]+?)\$\$|\\\[(.+?)\\\]|\\\((.+?)\\\)|(^|[^\w$\\])\$([^\s$](?:[^$\n]*?[^\s$\\])?)\$(?![\w$])|\*\*([^*]+?)\*\*|__([^_]+?)__|~~([^~]+?)~~|(^|[^*\w])\*([^*\s][^*]*?)\*(?![*\w])|!\[([^[\]]*)\]\((https?:\/\/[^\s)]+)\)|\[\^([^\]\s]+)\]|\[([^[\]]+)\]\(((?:https?:\/\/|mailto:)[^\s)]+)\)|(https?:\/\/[^\s<>()（）「」，。；：！？、]*[^\s<>().,;:!?'"（）「」，。；：！？、])|<(\/?)([a-zA-Z]+)\s*\/?>/g;
 function inline(p, line) {
+  if (line.length > LONG_LINE) { p.append(line); return; }
   // stack: p and the HTML_TAGS elements open inside it; text goes into the
   // innermost. A tag left open ends with the line.
-  const stack = [p], top = () => stack[stack.length - 1];
+  const stack = [p], top = () => stack[stack.length - 1], lower = line.toLowerCase();
   const wrap = (tag, s) => { const e = el(tag); inline(e, s); top().append(e); };
   // A bare address is its own label, as text (formatting it would find the
   // address again).
@@ -1908,7 +1965,8 @@ function inline(p, line) {
       if (!notes.order.includes(m[14])) notes.order.push(m[14]);
       const n = notes.order.indexOf(m[14]) + 1, sup = el("sup", undefined, "fn"), go = el("button", String(n)); go.type = "button";
       go.addEventListener("click", () => {
-        const note = go.closest(".body") && go.closest(".body").querySelector(":scope > .notes > li:nth-child(" + n + ")");
+        const where = go.closest(".body, .th-all");
+        const note = where && where.querySelector(":scope > .notes > li:nth-child(" + n + ")");
         if (note) { note.scrollIntoView({ block: "center", behavior: "smooth" }); note.classList.add("lit"); setTimeout(() => note.classList.remove("lit"), 1600); }
       });
       sup.append(go); top().append(sup);
@@ -1920,7 +1978,12 @@ function inline(p, line) {
       if (!HTML_TAGS.has(name)) top().append(m[0]);
       else if (name === "br") top().append(el("br"));
       else if (m[18]) { const k = names.lastIndexOf(name); if (k > 0) stack.length = k; else top().append(m[0]); }
-      else { const e = el(name); top().append(e); if (!m[0].endsWith("/>")) stack.push(e); }
+      else {
+        // Its own close must come before the next tag of that name opens.
+        const close = lower.indexOf("</" + name, last), again = lower.indexOf("<" + name, last);
+        if (m[0].endsWith("/>") || close < 0 || (again >= 0 && again < close)) top().append(m[0]);
+        else { const e = el(name); top().append(e); stack.push(e); }
+      }
     }
   }
   if (last < line.length) top().append(line.slice(last));
@@ -2215,6 +2278,9 @@ async function run(chat, model, fresh, old) {
           // Auto has chosen (or another model took over): its head or the
           // "Switched to" line goes in now, not when the reply is done.
           reply.picked = exact; reply.by = "Auto · " + exact;
+          // Another model took over before any answer: what the one
+          // passed over thought isn't this answer's thinking.
+          if (!reply.content) { delete reply.think; delete reply.thinkAt; }
           renderLog(true); node = log.querySelector(":scope > .msg.last");
         } else if (model !== "auto") reply.by = exact;
         S.versionSeen = true;

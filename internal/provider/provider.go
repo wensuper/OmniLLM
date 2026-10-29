@@ -19,6 +19,7 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	omnillm "github.com/wensuper/OmniLLM"
 	"github.com/wensuper/OmniLLM/internal/egress"
@@ -360,7 +361,14 @@ func (t *thinking) add(s string) {
 		return
 	}
 	if t.total+len(s) > maxThink {
-		s = s[:maxThink-t.total]
+		n := maxThink - t.total
+		for n > 0 && !utf8.RuneStart(s[n]) { // not inside a character
+			n--
+		}
+		s = s[:n]
+		t.total = maxThink // and nothing more after this
+		t.pend.WriteString(s)
+		return
 	}
 	t.total += len(s)
 	t.pend.WriteString(s)

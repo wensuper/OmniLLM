@@ -381,9 +381,19 @@ func chat(w http.ResponseWriter, r *http.Request, b Backend) {
 		return map[string]any{"id": id, "object": "chat.completion.chunk", "created": created, "model": req.Model,
 			"choices": []any{map[string]any{"index": 0, "delta": map[string]string{"content": text}, "finish_reason": finish}}}
 	}
-	if first.Text != "" {
-		send(chunk(first.Text, nil))
+	// pass sends a chunk's answer, and the model's reasoning where
+	// OpenAI-compatible clients look for it (reasoning_content).
+	pass := func(c omnillm.Chunk) {
+		if c.Text == "" && c.Think == "" {
+			return
+		}
+		ck := chunk(c.Text, nil)
+		if c.Think != "" {
+			ck["choices"].([]any)[0].(map[string]any)["delta"].(map[string]string)["reasoning_content"] = c.Think
+		}
+		send(ck)
 	}
+	pass(first)
 	for ferr == nil {
 		c, err := s.Recv()
 		if errors.Is(err, io.EOF) {
@@ -394,15 +404,7 @@ func chat(w http.ResponseWriter, r *http.Request, b Backend) {
 			fmt.Fprint(w, "data: [DONE]\n\n")
 			return
 		}
-		if c.Text == "" && c.Think == "" {
-			continue
-		}
-		ck := chunk(c.Text, nil)
-		if c.Think != "" {
-			// The model's reasoning, where OpenAI-compatible clients look for it.
-			ck["choices"].([]any)[0].(map[string]any)["delta"].(map[string]string)["reasoning_content"] = c.Think
-		}
-		send(ck)
+		pass(c)
 	}
 	u := s.Usage()
 	end := chunk("", "stop")

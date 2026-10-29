@@ -3,6 +3,7 @@ package provider
 import (
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 // A thinking model's reasoning reaches Chunk.Think, apart from the answer,
@@ -43,7 +44,8 @@ func TestReasoningIsKeptApartFromTheAnswer(t *testing.T) {
 	}
 }
 
-// Reasoning past maxThink is dropped, not held in memory or sent.
+// Reasoning past maxThink is dropped, not held in memory or sent, and the
+// cut never splits a character.
 func TestReasoningIsCapped(t *testing.T) {
 	var th thinking
 	th.add(strings.Repeat("x", maxThink-3))
@@ -51,5 +53,22 @@ func TestReasoningIsCapped(t *testing.T) {
 	th.add("more")
 	if got := th.take(); len(got) != maxThink || !strings.HasSuffix(got, "abc") {
 		t.Fatalf("kept %d bytes ending %q; want %d ending abc", len(got), got[len(got)-3:], maxThink)
+	}
+	var zh thinking
+	zh.add(strings.Repeat("x", maxThink-4))
+	zh.add("思考") // 6 bytes: only the first character fits
+	zh.add("x")
+	if got := zh.take(); !utf8.ValidString(got) || !strings.HasSuffix(got, "x思") {
+		t.Fatalf("cut inside a character or kept the wrong end: %q", got[len(got)-8:])
+	}
+}
+
+// A server that puts something other than text in "reasoning" still gets
+// its answer through.
+func TestOddReasoningDoesNotBreakTheAnswer(t *testing.T) {
+	s := &stream{}
+	text, _, err := parseOpenAI(s, "", `{"choices":[{"delta":{"content":"ok","reasoning":{"summary":"x"},"reasoning_content":null}}]}`)
+	if err != nil || text != "ok" || s.think.take() != "" {
+		t.Fatalf("got %q, %v", text, err)
 	}
 }

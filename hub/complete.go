@@ -194,7 +194,8 @@ func (a *accounted) Recv() (omnillm.Chunk, error) {
 	if c.Model != "" {
 		a.h.noteModel(a.m.ID, c.Model)
 	}
-	a.outBytes.Add(int64(len(c.Text)))
+	// Reasoning is output too: it counts when the provider reports no usage.
+	a.outBytes.Add(int64(len(c.Text) + len(c.Think)))
 	if c.Text != "" {
 		a.first.CompareAndSwap(0, time.Now().UnixNano())
 	}

@@ -125,9 +125,10 @@ func parseOpenAI(s *stream, _ string, data string) (string, bool, error) {
 				Content string `json:"content"`
 				// A thinking model's reasoning: "reasoning" in Ollama and
 				// OpenRouter, "reasoning_content" in DeepSeek, vLLM and
-				// llama.cpp.
-				Reasoning        string `json:"reasoning"`
-				ReasoningContent string `json:"reasoning_content"`
+				// llama.cpp. Raw, so a server that sends something other
+				// than text there doesn't break the answer.
+				Reasoning        json.RawMessage `json:"reasoning"`
+				ReasoningContent json.RawMessage `json:"reasoning_content"`
 			} `json:"delta"`
 			FinishReason *string `json:"finish_reason"`
 		} `json:"choices"`
@@ -149,12 +150,22 @@ func parseOpenAI(s *stream, _ string, data string) (string, bool, error) {
 	text := ""
 	for _, ch := range ev.Choices {
 		text += ch.Delta.Content
-		s.think.add(ch.Delta.Reasoning + ch.Delta.ReasoningContent)
+		s.think.add(jsonText(ch.Delta.Reasoning) + jsonText(ch.Delta.ReasoningContent))
 		if ch.FinishReason != nil && *ch.FinishReason != "" {
 			s.setFinish(*ch.FinishReason)
 		}
 	}
 	return text, false, nil
+}
+
+// jsonText is a JSON string's text; anything else (absent, null, an
+// object) is "".
+func jsonText(raw json.RawMessage) string {
+	var s string
+	if json.Unmarshal(raw, &s) != nil {
+		return ""
+	}
+	return s
 }
 
 // ---- Anthropic Messages ----
