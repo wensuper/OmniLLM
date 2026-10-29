@@ -69,6 +69,7 @@ const T = {
     yourMac: "你的 Mac", macOn: "在线", macOff: "连不上 · 醒来后自动恢复", macWait: "正在连接……", macPaused: "已暂停这台设备", macNoNet: "这台设备没有联网",
     language: "语言", langMac: "跟随你的 Mac", shortcuts: "键盘快捷键", hideSide: "收起侧栏", showSide: "展开侧栏", dropHere: "松开就能添加图片",
     grpToday: "今天", grpYesterday: "昨天", grpWeek: "前 7 天", grpOlder: "更早", copyCode: "复制", modelMenu: "选择模型",
+    copyTable: "复制表格", codeAll: "展开全部 {0} 行", codeLess: "收起", imageLink: "图片：{0}", imageNoAlt: "图片",
     kNew: "新对话", kSearch: "搜索对话", kSide: "收起或展开侧栏", kStop: "停止回答", kCopyLast: "复制最后一条回答", kFocus: "跳到输入框", kSend: "发送", kLine: "换行",
     dropped: "（连接断了，回答没写完。连上后点“重试”。）",
     longChat: "对话已经很长，每次都会整段发出。开个新对话会更快，用 API Key 时也更省。", longChatSub: "对话已经很长，开个新对话回答会更快。", paused: "已暂停", pausedDot: "已在你的 Mac 上暂停", waited: "{0} 秒", slow: "比平常慢。可以点停止，换个模型再问。",
@@ -135,6 +136,7 @@ const T = {
     yourMac: "Your Mac", macOn: "Online", macOff: "Can’t reach it · back when it wakes", macWait: "Connecting…", macPaused: "Paused this device", macNoNet: "This device is offline",
     language: "Language", langMac: "Follow your Mac", shortcuts: "Keyboard shortcuts", hideSide: "Hide sidebar", showSide: "Show sidebar", dropHere: "Drop to add images",
     grpToday: "Today", grpYesterday: "Yesterday", grpWeek: "Previous 7 days", grpOlder: "Earlier", copyCode: "Copy", modelMenu: "Choose a model",
+    copyTable: "Copy table", codeAll: "Show all {0} lines", codeLess: "Show less", imageLink: "Image: {0}", imageNoAlt: "Image",
     kNew: "New chat", kSearch: "Search chats", kSide: "Hide or show the sidebar", kStop: "Stop the answer", kCopyLast: "Copy the last answer", kFocus: "Go to the message box", kSend: "Send", kLine: "New line",
     dropped: "(Connection lost; the reply is incomplete. Tap Retry once reconnected.)",
     longChat: "This chat is long and is sent in full each time. A new chat is faster, and cheaper with an API key.", longChatSub: "This chat is long; a new chat gets faster replies.", paused: "Paused", pausedDot: "Paused on your Mac", waited: "{0}s", slow: "Slower than usual. You can tap Stop and try another model.",
@@ -1461,7 +1463,7 @@ function bubble(m, isLast, who) {
   const body = el("div", undefined, "body");
   b.append(body);
   if (m.live && !m.content) body.append(thinking(m));
-  else fill(body, m.live ? holdBack(m.content) : m.content);
+  else fill(body, m.live ? holdBack(m.content) : m.content, m.live);
   if (m.live && m.content) {
     let last = body.lastElementChild;
     if (last && (last.tagName === "UL" || last.tagName === "OL")) last = last.lastElementChild;
@@ -1550,15 +1552,37 @@ function thinking(m) {
   setTimeout(tick, 1000);
   return box;
 }
-function fill(b, text) {
-  const parts = text.split(/```/);
-  parts.forEach((p, i) => {
-    if (i % 2) b.append(codeBlock(p));
-    else if (p.trim()) prose(b, p.replace(/^\n+|\n+$/g, ""));
-  });
+// fill draws a message: fenced code becomes code blocks, the rest prose.
+// live: the reply is still arriving (a long code block doesn't fold yet).
+// Footnotes ([^1] … "[^1]: text" on a line of its own) are gathered for the
+// whole message and listed at its end, numbered in the order they're cited.
+let notes = null;
+function fill(b, text, live) {
+  const outer = !notes;
+  if (outer) {
+    notes = { defs: new Map(), order: [] };
+    text = text.replace(/^\[\^([^\]\s]+)\]:[ \t]*(.*)$/gm, (s, id, def) => { notes.defs.set(id, def); return ""; });
+  }
+  try {
+    const parts = text.split(/```/);
+    parts.forEach((p, i) => {
+      if (i % 2) b.append(codeBlock(p, live));
+      else if (p.trim()) prose(b, p.replace(/^\n+|\n+$/g, ""));
+    });
+    if (outer && notes.order.length) {
+      const list = el("ol", undefined, "notes");
+      for (const id of notes.order) { const li = el("li"); inline(li, notes.defs.get(id)); list.append(li); }
+      b.append(list);
+    }
+  } finally {
+    if (outer) notes = null;
+  }
 }
 // codeBlock: the code with a head naming its language and a Copy button.
-function codeBlock(p) {
+// Past FOLD_LINES a finished block shows its start and "Show all N lines"
+// (kept open once opened, across redraws).
+const FOLD_LINES = 30;
+function codeBlock(p, live) {
   const lang = (p.match(/^([\w+-]*)\n/) || [])[1] || "";
   const code = p.replace(/^[\w+-]*\n/, "").replace(/\n+$/, "");
   const box = el("div", undefined, "code"), head = el("div", undefined, "code-h"), pre = el("pre");
@@ -1569,12 +1593,29 @@ function codeBlock(p) {
   head.append(el("span", lang), cp);
   pre.append(highlight(code, lang.toLowerCase()));
   box.append(head, pre);
+  const n = code.split("\n").length;
+  if (!live && n > FOLD_LINES) {
+    S.unfolded ??= new Set();
+    const tg = el("button", undefined, "code-f"); tg.type = "button";
+    const paint = () => {
+      const open = S.unfolded.has(code);
+      box.classList.toggle("folded", !open);
+      tg.textContent = open ? t("codeLess") : t("codeAll", n);
+      tg.setAttribute("aria-expanded", String(open));
+    };
+    tg.addEventListener("click", () => {
+      if (S.unfolded.has(code)) { S.unfolded.delete(code); paint(); box.scrollIntoView({ block: "nearest" }); } else { S.unfolded.add(code); paint(); }
+    });
+    paint();
+    box.append(tg);
+  }
   return box;
 }
 // highlight colors code the way chat apps do: comments, strings, numbers
-// and literals, keywords, types and function calls, for the languages
-// models write most. Each token is a <span> holding text, never HTML; a
-// language it doesn't know gets the common C-like rules.
+// and literals, keywords, types, function calls, keys and variables, for
+// the languages models write most; markup and CSS have their own rules,
+// and a diff colors whole lines. Each token is a <span> holding text,
+// never HTML; a language it doesn't know gets the common C-like rules.
 const KEYWORDS = new Set(("abstract and as async await break case catch chan class const continue def defer del do elif else enum except export extends final finally fn for from func function go goto if impl implements import in interface is lambda let loop match mod mut new not of or package pass private protected pub public raise range return select self static struct super switch this throw throws trait try type typeof use var void where while with yield " +
   "echo then fi esac done local " +
   "insert update delete into values create table drop alter index primary key join left right inner outer on group by order having limit distinct union all").split(" "));
@@ -1582,32 +1623,67 @@ const LITERALS = new Set("true false null nil none undefined NaN True False None
 function highlight(code, lang) {
   const c = el("code");
   if (code.length > 50000 || /^(text|txt|plain|plaintext|markdown|md|log|output)$/.test(lang)) { c.textContent = code; return c; }
+  if (/^(diff|patch)$/.test(lang) || (!lang && /^@@ .* @@/m.test(code))) return diffLines(c, code);
+  if (/^(html|xml|svg|vue|jsx|tsx)$/.test(lang) && /^\s*</.test(code)) {
+    // 1: comment, 2: <tag or </tag, 3: attribute name, 4: string, 5: > or />
+    return paint(c, code, /(<!--[\s\S]*?-->)|(<\/?[A-Za-z][\w:.-]*)|([A-Za-z_:@][\w:.-]*)(?=\s*=)|("[^"]*"|'[^']*')|(\/?>)/g,
+      (m) => [[m[0], m[1] ? "c" : m[2] || m[5] ? "k" : m[3] ? "p" : "s"]]);
+  }
+  if (/^(css|scss|sass|less)$/.test(lang)) {
+    // 1: comment, 2: string, 3: @rule or !important, 4: #hex, 5: number with
+    // its unit, 6: function name, 7: property (a name before ":" on a line
+    // that opens no block), 8: .class or #id
+    return paint(c, code, /(\/\*[\s\S]*?\*\/|\/\/[^\n]*)|("[^"\n]*"|'[^'\n]*')|(@[\w-]+|!important)|(#[\da-fA-F]{3,8}\b)|(-?\b\d*\.?\d+(?:px|em|rem|%|vh|vw|vmin|vmax|ch|fr|deg|s|ms|pt)?\b)|([\w-]+)(?=\()|([\w-]+)(?=\s*:[^{\n]*(?:;|$))|([.#][A-Za-z_][\w-]*)/gm,
+      (m) => [[m[0], m[1] ? "c" : m[2] ? "s" : m[3] ? "k" : m[4] || m[5] ? "n" : m[6] ? "f" : m[7] ? "p" : "t"]]);
+  }
   const hash = /^(py|python|sh|bash|zsh|shell|console|ruby|rb|yaml|yml|toml|r|perl|dockerfile|makefile|ini|conf|nginx|ps1|powershell)$/.test(lang);
   const sql = /^(sql|mysql|postgresql|psql|sqlite|hive|hql|sparksql|lua|haskell|hs)$/.test(lang);
-  const markup = /^(html|xml|svg|vue)$/.test(lang);
+  const shell = /^(sh|bash|zsh|shell|console|dockerfile|makefile|ps1|powershell)$/.test(lang);
+  const yaml = /^(yaml|yml)$/.test(lang);
   const rules = [
-    markup ? "<!--[\\s\\S]*?-->" : "\\/\\*[\\s\\S]*?\\*\\/",
+    "\\/\\*[\\s\\S]*?\\*\\/",
     hash ? "#[^\\n]*" : sql ? "--[^\\n]*" : "\\/\\/[^\\n]*",
     '"""[\\s\\S]*?"""', "'''[\\s\\S]*?'''",
     '"(?:\\\\.|[^"\\\\\\n])*"', "'(?:\\\\.|[^'\\\\\\n])*'", "`(?:\\\\.|[^`\\\\])*`",
   ];
-  // 1: comment, 2: string, 3: number, 4: word, 5: "(" after it
-  const re = new RegExp("(" + rules.slice(0, 2).join("|") + ")|(" + rules.slice(2).join("|") + ")|(\\b0x[\\da-fA-F_]+\\b|\\b\\d[\\d_]*(?:\\.\\d+)?(?:[eE][+-]?\\d+)?\\b)|([A-Za-z_$][\\w$]*)(\\s*\\()?", "g");
+  // 1: comment, 2: string, 3: number, 4: $variable (shells), 5: word,
+  // 6: "(" after it
+  const re = new RegExp("(" + rules.slice(0, 2).join("|") + ")|(" + rules.slice(2).join("|") + ")|(\\b0x[\\da-fA-F_]+\\b|\\b\\d[\\d_]*(?:\\.\\d+)?(?:[eE][+-]?\\d+)?\\b)|" +
+    (shell ? "(\\$\\{[^}\\n]*\\}|\\$[A-Za-z_]\\w*|\\$[0-9@#?*$!])" : "((?!))") + "|([A-Za-z_$][\\w$]*)(\\s*\\()?", "g");
+  // A string or (in YAML) a word just before ":" is a key.
+  const key = (end) => /^[ \t]*:(?!:)/.test(code.slice(end, end + 12));
+  return paint(c, code, re, (m, end) => {
+    if (m[1]) return [[m[1], "c"]];
+    // In a shell's "double quotes", $variables still stand out.
+    if (m[2] && shell && m[2][0] === '"') return m[2].split(/(\$\{[^}\n]*\}|\$[A-Za-z_]\w*)/).filter(Boolean).map((s) => [s, s[0] === "$" ? "v" : "s"]);
+    if (m[2]) return [[m[2], key(end) ? "p" : "s"]];
+    if (m[3]) return [[m[3], "n"]];
+    if (m[4]) return [[m[4], "v"]];
+    const w = m[5], k = sql ? w.toLowerCase() : w;
+    const cls = LITERALS.has(w) ? "n" : yaml && key(m.index + w.length) ? "p" : KEYWORDS.has(k) ? "k" : m[6] ? "f" : /^[A-Z][a-z]\w*$/.test(w) && !sql ? "t" : "";
+    return m[6] ? [[w, cls], [m[6]]] : [[w, cls]];
+  });
+}
+// paint splits code by re; kind turns each match into [text, kind] pieces.
+function paint(c, code, re, kind) {
   let last = 0, m;
-  const tok = (s, cls) => c.append(cls ? el("span", s, "tk-" + cls) : s);
   while ((m = re.exec(code))) {
-    if (m.index > last) tok(code.slice(last, m.index));
+    if (!m[0]) { re.lastIndex++; continue; }
+    if (m.index > last) c.append(code.slice(last, m.index));
     last = re.lastIndex;
-    if (m[1]) tok(m[1], "c");
-    else if (m[2]) tok(m[2], "s");
-    else if (m[3]) tok(m[3], "n");
-    else {
-      const w = m[4], key = sql ? w.toLowerCase() : w;
-      tok(w, LITERALS.has(w) ? "n" : KEYWORDS.has(key) ? "k" : m[5] ? "f" : /^[A-Z][a-z]\w*$/.test(w) && !sql ? "t" : "");
-      if (m[5]) tok(m[5]);
-    }
+    for (const [s, cls] of kind(m, last)) c.append(cls ? el("span", s, "tk-" + cls) : s);
   }
-  if (last < code.length) tok(code.slice(last));
+  if (last < code.length) c.append(code.slice(last));
+  return c;
+}
+// diffLines: one line per row, added lines green, removed red, hunk heads
+// and file names quiet.
+function diffLines(c, code) {
+  c.className = "diff";
+  for (const line of code.split("\n")) {
+    const k = /^(\+\+\+|---)( |$)/.test(line) ? "meta" : line.startsWith("@@") ? "hunk" : line[0] === "+" ? "add" : line[0] === "-" ? "del" : "";
+    c.append(el("span", line, "dl" + (k ? " dl-" + k : "")));
+  }
   return c;
 }
 // prose shows the Markdown models write as formatting: # headings, lists
@@ -1697,11 +1773,13 @@ function newList(tag, marker) {
   return list;
 }
 // table: a Markdown table; it scrolls sideways when it doesn't fit.
-// Columns align as the line under the head says (:--, :-:, --:).
+// Columns align as the line under the head says (:--, :-:, --:). "Copy
+// table" copies it as tab-separated text, which pastes into a spreadsheet
+// as cells.
 function table(head, sep, rows) {
   const cells = (row) => row.trim().replace(/^\|/, "").replace(/\|$/, "").replace(/\\\|/g, "\u0000").split("|").map((c) => c.replace(/\u0000/g, "|").trim());
   const align = cells(sep).map((c) => c.endsWith(":") ? (c.startsWith(":") ? "al-center" : "al-right") : "");
-  const box = el("div", undefined, "table"), tb = el("table"), thead = el("thead"), tbody = el("tbody");
+  const wrap = el("div", undefined, "tbl"), box = el("div", undefined, "table"), tb = el("table"), thead = el("thead"), tbody = el("tbody");
   const row = (parent, tag, cs) => {
     const tr = el("tr");
     align.forEach((a, k) => { const c = el(tag, undefined, a || undefined); inline(c, cs[k] || ""); tr.append(c); });
@@ -1710,7 +1788,15 @@ function table(head, sep, rows) {
   row(thead, "th", cells(head));
   rows.forEach((r) => row(tbody, "td", cells(r)));
   tb.append(thead, tbody); box.append(tb);
-  return box;
+  const cp = el("button", undefined, "tbl-copy"); cp.type = "button";
+  const word = el("span", t("copyTable"));
+  cp.append(icon("i-copy s14"), word);
+  cp.addEventListener("click", () => {
+    const tsv = [...tb.rows].map((tr) => [...tr.cells].map((c) => c.innerText.replace(/[\t\n]+/g, " ").trim()).join("\t")).join("\n");
+    copyText(tsv, () => { word.textContent = t("copied"); setTimeout(() => { word.textContent = t("copyTable"); }, 1200); });
+  });
+  wrap.append(cp, box);
+  return wrap;
 }
 // math: a formula in TeX, drawn by Temml (web/vendor) as MathML, which the
 // browser lays out with its own math fonts (the page loads no font files).
@@ -1744,8 +1830,10 @@ const HTML_TAGS = new Set(["b", "strong", "i", "em", "u", "s", "del", "ins", "ma
 // isn't a price: "$5 and $10" stays text), **bold**, __bold__, ~~struck~~,
 // *italic* that isn't part of a word, [links](https://…), bare https://
 // addresses, and HTML_TAGS. Links go only to http(s) and mailto, in a new
-// tab, without a referrer. (No lookbehind: older iPhones' Safari lacks it.)
-const INLINE = /`([^`]+)`|\$\$([^$]+?)\$\$|\\\[(.+?)\\\]|\\\((.+?)\\\)|(^|[^\w$\\])\$([^\s$](?:[^$\n]*?[^\s$\\])?)\$(?![\w$])|\*\*([^*]+?)\*\*|__([^_]+?)__|~~([^~]+?)~~|(^|[^*\w])\*([^*\s][^*]*?)\*(?![*\w])|\[([^\]]+)\]\(((?:https?:\/\/|mailto:)[^\s)]+)\)|(https?:\/\/[^\s<>()（）「」，。；：！？、]*[^\s<>().,;:!?'"（）「」，。；：！？、])|<(\/?)([a-zA-Z]+)\s*\/?>/g;
+// tab, without a referrer. An image ![…](https://…) is a link to it, as
+// the page loads no pictures from elsewhere; [^1] cites a footnote.
+// (No lookbehind: older iPhones' Safari lacks it.)
+const INLINE = /`([^`]+)`|\$\$([^$]+?)\$\$|\\\[(.+?)\\\]|\\\((.+?)\\\)|(^|[^\w$\\])\$([^\s$](?:[^$\n]*?[^\s$\\])?)\$(?![\w$])|\*\*([^*]+?)\*\*|__([^_]+?)__|~~([^~]+?)~~|(^|[^*\w])\*([^*\s][^*]*?)\*(?![*\w])|!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)|\[\^([^\]\s]+)\]|\[([^\]]+)\]\(((?:https?:\/\/|mailto:)[^\s)]+)\)|(https?:\/\/[^\s<>()（）「」，。；：！？、]*[^\s<>().,;:!?'"（）「」，。；：！？、])|<(\/?)([a-zA-Z]+)\s*\/?>/g;
 function inline(p, line) {
   // stack: p and the HTML_TAGS elements open inside it; text goes into the
   // innermost. A tag left open ends with the line.
@@ -1770,13 +1858,29 @@ function inline(p, line) {
     else if (m[7] !== undefined || m[8] !== undefined) wrap("strong", m[7] !== undefined ? m[7] : m[8]);
     else if (m[9] !== undefined) wrap("del", m[9]);
     else if (m[11] !== undefined) wrap("em", m[11]);
-    else if (m[12] !== undefined) link(m[12], m[13]);
-    else if (m[14] !== undefined) link(m[14], m[14]);
+    else if (m[13] !== undefined) {
+      const a = el("a", undefined, "img-link"); a.href = m[13]; a.target = "_blank"; a.rel = "noopener noreferrer";
+      a.append(icon("i-image s14"), el("span", m[12].trim() ? t("imageLink", m[12].trim()) : t("imageNoAlt")));
+      top().append(a);
+    }
+    else if (m[14] !== undefined) {
+      // A footnote: its number, which jumps to the note at the end.
+      if (!notes || !notes.defs.has(m[14])) { top().append(m[0]); continue; }
+      if (!notes.order.includes(m[14])) notes.order.push(m[14]);
+      const n = notes.order.indexOf(m[14]) + 1, sup = el("sup", undefined, "fn"), go = el("button", String(n)); go.type = "button";
+      go.addEventListener("click", () => {
+        const note = go.closest(".body") && go.closest(".body").querySelector(":scope > .notes > li:nth-child(" + n + ")");
+        if (note) { note.scrollIntoView({ block: "center", behavior: "smooth" }); note.classList.add("lit"); setTimeout(() => note.classList.remove("lit"), 1600); }
+      });
+      sup.append(go); top().append(sup);
+    }
+    else if (m[15] !== undefined) link(m[15], m[16]);
+    else if (m[17] !== undefined) link(m[17], m[17]);
     else {
-      const name = m[16].toLowerCase(), names = stack.map((e) => e.tagName.toLowerCase());
+      const name = m[19].toLowerCase(), names = stack.map((e) => e.tagName.toLowerCase());
       if (!HTML_TAGS.has(name)) top().append(m[0]);
       else if (name === "br") top().append(el("br"));
-      else if (m[15]) { const k = names.lastIndexOf(name); if (k > 0) stack.length = k; else top().append(m[0]); }
+      else if (m[18]) { const k = names.lastIndexOf(name); if (k > 0) stack.length = k; else top().append(m[0]); }
       else { const e = el(name); top().append(e); if (!m[0].endsWith("/>")) stack.push(e); }
     }
   }

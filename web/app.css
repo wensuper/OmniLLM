@@ -187,10 +187,35 @@ h1 { font-size: 21px; font-weight: 600; letter-spacing: -.02em; line-height: 1.3
 .code pre { margin: 0; padding: 12px 14px; overflow-x: auto; font: 13px/1.6 var(--mono); }
 .code code { font: 13px/1.6 var(--mono); color: var(--ink); white-space: pre; }
 /* Code colors (GitHub's light and dark palettes, which read well on both). */
-:root { --tk-c: #6E7781; --tk-s: #0A3069; --tk-n: #0550AE; --tk-k: #CF222E; --tk-f: #8250DF; --tk-t: #953800; }
-@media (prefers-color-scheme: dark) { :root { --tk-c: #8B949E; --tk-s: #A5D6FF; --tk-n: #79C0FF; --tk-k: #FF7B72; --tk-f: #D2A8FF; --tk-t: #FFA657; } }
+:root { --tk-c: #6E7781; --tk-s: #0A3069; --tk-n: #0550AE; --tk-k: #CF222E; --tk-f: #8250DF; --tk-t: #953800; --tk-p: #0550AE; --tk-v: #953800;
+  --dl-add: rgba(26,127,55,.12); --dl-add-ink: #116329; --dl-del: rgba(207,34,46,.10); --dl-del-ink: #82071E; }
+@media (prefers-color-scheme: dark) { :root { --tk-c: #8B949E; --tk-s: #A5D6FF; --tk-n: #79C0FF; --tk-k: #FF7B72; --tk-f: #D2A8FF; --tk-t: #FFA657; --tk-p: #79C0FF; --tk-v: #FFA657;
+  --dl-add: rgba(46,160,67,.18); --dl-add-ink: #7EE787; --dl-del: rgba(248,81,73,.18); --dl-del-ink: #FFA198; } }
 .tk-c { color: var(--tk-c); font-style: italic; } .tk-s { color: var(--tk-s); } .tk-n { color: var(--tk-n); }
-.tk-k { color: var(--tk-k); } .tk-f { color: var(--tk-f); } .tk-t { color: var(--tk-t); }
+.tk-k { color: var(--tk-k); } .tk-f { color: var(--tk-f); } .tk-t { color: var(--tk-t); } .tk-p { color: var(--tk-p); } .tk-v { color: var(--tk-v); }
+/* A diff: one row per line, the rows as wide as the widest line. */
+.code code.diff { display: inline-block; min-width: 100%; }
+.dl { display: block; min-height: 1.6em; margin: 0 -14px; padding: 0 14px; }
+.dl-add { background: var(--dl-add); color: var(--dl-add-ink); }
+.dl-del { background: var(--dl-del); color: var(--dl-del-ink); }
+.dl-hunk { color: var(--tk-f); } .dl-meta { color: var(--muted); font-weight: 600; }
+/* A long block, folded: its first lines fade out above "Show all N lines". */
+.code.folded pre { max-height: 22.4em; overflow-y: hidden; -webkit-mask-image: linear-gradient(#000 70%, transparent); mask-image: linear-gradient(#000 70%, transparent); }
+.code-f { display: block; width: 100%; min-height: 36px; border: 0; border-top: 1px solid var(--line); background: var(--surface-2); color: var(--accent-text); font-size: 13px; font-weight: 500; cursor: pointer; }
+@media (hover: hover) { .code-f:hover { background: var(--surface-3); } }
+/* Copy table: above the table's right edge; on a mouse, when it's pointed at. */
+.msg .tbl { position: relative; margin: 0 0 14px; }
+.msg .tbl .table { margin: 0; }
+.tbl-copy { display: flex; align-items: center; gap: 6px; margin: -4px 0 2px auto; min-height: 28px; padding: 0 8px; border: 0; border-radius: var(--r-s); background: transparent; color: var(--ink-3); font-size: 12px; cursor: pointer; }
+@media (hover: hover) { .tbl-copy { opacity: 0; transition: opacity .12s; } .tbl:hover .tbl-copy, .tbl-copy:focus-visible { opacity: 1; } .tbl-copy:hover { background: var(--surface-2); color: var(--ink); } }
+/* An image from elsewhere: a link to it. */
+.msg a.img-link { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface-2); color: var(--accent-text); text-decoration: none; font-size: .92em; vertical-align: 1px; }
+/* Footnotes: the number cited, the notes after a thin line at the end. */
+.msg sup.fn { line-height: 0; }
+.msg sup.fn button { min-width: 1.5em; padding: 0 3px; border: 0; border-radius: 4px; background: var(--accent-soft); color: var(--accent-text); font: 600 .78em var(--font); cursor: pointer; }
+.msg ol.notes { margin: 18px 0 0; padding: 12px 0 0 1.5em; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-2); }
+.msg ol.notes li { border-radius: 4px; transition: background .3s; }
+.msg ol.notes li.lit { background: var(--accent-soft); }
 /* Who is answering: named on the first reply and where the model changes. */
 .who { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
 .who .by { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
