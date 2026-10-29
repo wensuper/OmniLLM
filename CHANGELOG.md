@@ -4,6 +4,12 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.85](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.85) - 2026-10-29
+
+### Added
+
+- Web app: a diff shows added lines in green and removed lines in red; HTML, CSS, shell variables and the keys in JSON and YAML get their own colors. Code longer than 30 lines folds once the reply is done (“Show all N lines”). Tables have “Copy table”, which pastes into a spreadsheet as cells. A picture from another site shows as a link you can open. Footnotes ([^1]) are numbered and listed at the end of the reply; tap a number to jump to its note.
+
 ## [0.2.0-alpha.84](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.84) - 2026-10-29
 
 ### Added
