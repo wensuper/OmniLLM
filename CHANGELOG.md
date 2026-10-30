@@ -4,6 +4,16 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.89](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.89) - 2026-10-30
+
+### Changed
+
+- Web app: your own messages show exactly as you typed them, as in Claude: a `#`, `1.`, `**` or `<b>` you type or paste is no longer turned into a heading, list or bold text. Web addresses are still links.
+
+### Fixed
+
+- Web app: while a reply arrives, a link shows its words instead of half-written `[text](https://…` syntax, and a formula appears once it is complete instead of as raw TeX first. Long code in a reply that just finished no longer folds away while you are reading it; it folds when the chat is opened again later.
+
 ## [0.2.0-alpha.88](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.88) - 2026-10-30
 
 ### Changed

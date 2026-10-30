@@ -1468,6 +1468,7 @@ function bubble(m, isLast, who) {
   b.append(body);
   if (m.live && !m.content) { if (!m.think) body.append(thinking(m)); }
   else if (m.live) { b.live = { m, think: m.think, done: "", n: 0, caret: null }; drawLive(b.live, body); }
+  else if (m.role === "user") typed(body, m.content || "");
   else fill(body, m.content, false);
   if (m.note) {
     // Stopped or cut short is a quiet line; anything else went wrong (red).
@@ -1489,6 +1490,22 @@ function bubble(m, isLast, who) {
   // (Selecting text with the mouse ends in a click too: that isn't a tap.)
   if (hasRow || time) b.addEventListener("click", (e) => { if (!e.target.closest("button, a, pre") && !String(getSelection())) b.classList.toggle("tapped"); });
   return b;
+}
+// typed: what the person wrote, shown as written (as Claude and ChatGPT
+// do): a "# note", "1." or **stars** they typed or pasted stay as they
+// are. Only web addresses become links.
+const TYPED_URL = /https?:\/\/[^\s<>()（）「」，。；：！？、]*[^\s<>().,;:!?'"（）「」，。；：！？、]/g;
+function typed(b, text) {
+  const p = el("p");
+  let last = 0, m;
+  if (text.length <= 50000) while ((m = TYPED_URL.exec(text))) {
+    p.append(text.slice(last, m.index));
+    const a = el("a", m[0]); a.href = m[0]; a.target = "_blank"; a.rel = "noopener noreferrer";
+    p.append(a);
+    last = TYPED_URL.lastIndex;
+  }
+  p.append(text.slice(last));
+  b.append(p);
 }
 // drawLive draws a reply still arriving. Its finished part (up to a blank
 // line or the end of a code block, which nothing after it can change) is
@@ -1539,7 +1556,8 @@ function settled(text, from) {
 // before it becomes a bullet. Inside an open code block nothing waits.
 // The same goes for a mark that opens **bold**, *italic*, __bold__ or
 // `code` on the last line before its closing half arrives: it waits, so
-// "**Set" shows as "Set", not as stars.
+// "**Set" shows as "Set", not as stars. So does an unfinished formula or
+// link (below).
 const PAIRED = /\\[*_`]|\*\*\*[^*]+\*\*\*|\*\*[^*]+\*\*|__[^_]+__|`[^`]+`|\*[^*\s][^*]*?\*|_[^_\s][^_]*?_/g;
 function holdBack(text) {
   const bs = blocks(text), lastB = bs[bs.length - 1];
@@ -1547,7 +1565,23 @@ function holdBack(text) {
   text = text.replace(/(^|\n)[ \t]*([-*+]|\d+[.)]?)[ \t]*$/, "$1");
   const at = text.lastIndexOf("\n") + 1;
   // Marks already closed are blanked out; what is left last is open.
-  const line = text.slice(at).replace(PAIRED, (s) => " ".repeat(s.length));
+  let line = text.slice(at).replace(PAIRED, (s) => " ".repeat(s.length));
+  // A formula not closed yet waits, to show whole once it is ("$x^2 + y"
+  // isn't shown as TeX first) while it is short: a "$HOME" that never
+  // closes doesn't hide the rest of its sentence. "$5" is a price.
+  const f = line.replace(/\$[^$]*\$/g, (s) => " ".repeat(s.length)).match(/(^|[^\w$\\])\$(?=[^\s\d$])[^$]*$|\\\((?!.*\\\)).*$/);
+  if (f && line.length - f.index < 80) {
+    const cut = f.index + (f[1] || "").length;
+    text = text.slice(0, at + cut); line = line.slice(0, cut);
+  }
+  // A link still arriving shows its words while its address waits:
+  // "[docs](https://do" and "[do" show "docs" and "do".
+  const k = line.match(/(^|[^\w\]])(!?)\[(?!\^)([^[\]]*)(?:\]\([^)\s]*)?$/);
+  if (k) {
+    const start = k.index + k[1].length, label = at + start + k[2].length + 1;
+    text = text.slice(0, at + start) + text.slice(label, label + k[3].length);
+    line = line.slice(0, start) + k[3];
+  }
   const m = line.match(/(\*+|_+|`+)[^*_`]*$/);
   if (!m) return text;
   const i = m.index, mark = m[1], next = line[i + mark.length];
@@ -2473,6 +2507,13 @@ async function run(chat, model, fresh, old) {
   } finally {
     delete reply.live;
     if (reply.content) reply.done = Date.now();
+    // Its long code stays open: folding it now would pull the block being
+    // read out from under the reader ("Show less" folds it). Opened again
+    // after the page reloads, it is folded like any other.
+    if (reply.content) {
+      S.unfolded ??= new Set();
+      for (const p of blocks(reply.content)) if (p.code && p.lines.length > FOLD_LINES) S.unfolded.add(p.lines.join("\n").replace(/\n+$/, ""));
+    }
     S.busy = null; busyUI(false); setTimeout(takePending);
     setTimeout(reloadIfIdle, 1500); // a new version waited for this reply
     // The picker learns the version too (the hub now knows it).
