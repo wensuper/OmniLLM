@@ -148,6 +148,9 @@ h1 { font-size: 21px; font-weight: 600; letter-spacing: -.02em; line-height: 1.3
 .msg li { white-space: pre-wrap; }
 .msg li + li { margin-top: 4px; }
 .msg li > ul, .msg li > ol { margin: 4px 0 0; }
+.msg .loose > li + li { margin-top: 12px; }
+.msg li > p { margin: 8px 0 0; }
+.msg li > .code { margin: 8px 0; white-space: normal; }
 .msg li.task { list-style: none; }
 .msg li.task .box { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; margin: 0 8px 0 -1.3em; vertical-align: -2px; border: 1.5px solid var(--line-2); border-radius: 4px; font-size: 11px; font-weight: 700; line-height: 1; color: var(--accent-ink); }
 .msg li.task .box.on { background: var(--accent); border-color: var(--accent); }

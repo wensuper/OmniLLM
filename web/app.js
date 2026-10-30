@@ -1467,12 +1467,8 @@ function bubble(m, isLast, who) {
   const body = el("div", undefined, "body");
   b.append(body);
   if (m.live && !m.content) { if (!m.think) body.append(thinking(m)); }
-  else fill(body, m.live ? holdBack(m.content) : m.content, m.live);
-  if (m.live && m.content) {
-    let last = body.lastElementChild;
-    if (last && (last.tagName === "UL" || last.tagName === "OL")) last = last.lastElementChild;
-    (last && (last.tagName === "P" || last.tagName === "LI") ? last : body).append(el("span", "", "caret"));
-  }
+  else if (m.live) { b.live = { m, think: m.think, done: "", n: 0, caret: null }; drawLive(b.live, body); }
+  else fill(body, m.content, false);
   if (m.note) {
     // Stopped or cut short is a quiet line; anything else went wrong (red).
     const quietNote = [T.zh.stopped, T.en.stopped, T.zh.cut, T.en.cut].includes(m.note);
@@ -1494,15 +1490,60 @@ function bubble(m, isLast, who) {
   if (hasRow || time) b.addEventListener("click", (e) => { if (!e.target.closest("button, a, pre") && !String(getSelection())) b.classList.toggle("tapped"); });
   return b;
 }
+// drawLive draws a reply still arriving. Its finished part (up to a blank
+// line or the end of a code block, which nothing after it can change) is
+// drawn once and kept; only what follows is drawn again with each new word.
+// So the end of a long reply costs no more to draw than its start, and a
+// link, a Copy button or text selected in what is finished keeps working
+// while the rest arrives. Footnotes are numbered across the whole reply: one
+// that cites them is drawn whole each time.
+function drawLive(st, body) {
+  const text = holdBack(st.m.content), whole = text.includes("[^");
+  if (whole || !text.startsWith(st.done)) { st.done = ""; st.n = 0; }
+  while (body.childNodes.length > st.n) body.lastChild.remove();
+  if (st.caret) st.caret.remove();
+  if (!whole) {
+    const cut = settled(text, st.done.length);
+    if (cut > st.done.length) { fill(body, text.slice(st.done.length, cut), true); st.done = text.slice(0, cut); st.n = body.childNodes.length; }
+  }
+  fill(body, text.slice(st.done.length), true);
+  let last = body.lastElementChild;
+  if (last && (last.tagName === "UL" || last.tagName === "OL")) last = last.lastElementChild;
+  st.caret = el("span", "", "caret");
+  (last && (last.tagName === "P" || last.tagName === "LI") ? last : body).append(st.caret);
+}
+// settled: where the finished part of text ends, looking on from from (an
+// end found before): after a closed code block (not one indented into a
+// list item, which the list goes on after), or after a blank line when the
+// line after it is all there and starts something new (not a list item or
+// an indented line, which may carry on the list above).
+function settled(text, from) {
+  let cut = from, fence = "", inItem = false, blank = false;
+  for (let i = from, nl; (nl = text.indexOf("\n", i)) >= 0; i = nl + 1) {
+    const line = text.slice(i, nl);
+    if (fence) {
+      const c = line.match(FENCE_END);
+      if (c && c[1][0] === fence[0] && c[1].length >= fence.length) { fence = ""; if (!inItem) cut = nl + 1; }
+      continue;
+    }
+    if (!line.trim()) { blank = true; continue; }
+    if (blank && /^\S/.test(line) && !LIST_ITEM.test(line)) cut = i;
+    blank = false;
+    const f = line.match(FENCE);
+    if (f) { fence = f[2]; inItem = f[1].length > 0; }
+  }
+  return cut;
+}
 // holdBack: while words arrive, a line that so far is only a list marker
 // ("- ", "* ", "1. ") waits for its next character, so no bare "-" flashes
 // before it becomes a bullet. Inside an open code block nothing waits.
 // The same goes for a mark that opens **bold**, *italic*, __bold__ or
 // `code` on the last line before its closing half arrives: it waits, so
 // "**Set" shows as "Set", not as stars.
-const PAIRED = /\*\*[^*]+\*\*|__[^_]+__|`[^`]+`|\*[^*\s][^*]*?\*|_[^_\s][^_]*?_/g;
+const PAIRED = /\\[*_`]|\*\*\*[^*]+\*\*\*|\*\*[^*]+\*\*|__[^_]+__|`[^`]+`|\*[^*\s][^*]*?\*|_[^_\s][^_]*?_/g;
 function holdBack(text) {
-  if ((text.match(/```/g) || []).length % 2) return text;
+  const bs = blocks(text), lastB = bs[bs.length - 1];
+  if (lastB && lastB.code && !lastB.closed) return text;
   text = text.replace(/(^|\n)[ \t]*([-*+]|\d+[.)]?)[ \t]*$/, "$1");
   const at = text.lastIndexOf("\n") + 1;
   // Marks already closed are blanked out; what is left last is open.
@@ -1611,17 +1652,23 @@ function thoughts(m) {
 let notes = null;
 function fill(b, text, live) {
   const outer = !notes;
-  const parts = text.split(/```/);
+  const parts = blocks(text);
   if (outer) {
     // Definitions only outside code: a code block may show "[^1]: …".
     notes = { defs: new Map(), order: [] };
-    for (let i = 0; i < parts.length; i += 2) parts[i] = parts[i].replace(/^\[\^([^\]\s]+)\]:[ \t]*(.*)$/gm, (s, id, def) => { notes.defs.set(id, def); return ""; });
+    for (const p of parts) if (!p.code) p.text = p.text.replace(/^\[\^([^\]\s]+)\]:[ \t]*(.*)$/gm, (s, id, def) => { notes.defs.set(id, def); return ""; });
   }
   try {
-    parts.forEach((p, i) => {
-      if (i % 2) b.append(codeBlock(p, live));
-      else if (p.trim()) prose(b, p.replace(/^\n+|\n+$/g, ""));
-    });
+    // lists: the lists still open where the prose stopped. An indented
+    // code block goes into the item it is indented under, and the prose
+    // after it carries on that list ("1. … ```…``` 2. …" stays one list).
+    let lists = [];
+    for (const p of parts) {
+      if (!p.code) { if (p.text.trim()) lists = prose(b, p.text.replace(/^\n+|\n+$/g, ""), lists); continue; }
+      while (lists.length && p.indent <= lists[lists.length - 1].indent) lists.pop();
+      const item = p.indent > 0 && lists.length && lists[lists.length - 1].el.lastElementChild;
+      if (item) item.append(codeBlock(p, live)); else { lists = []; b.append(codeBlock(p, live)); }
+    }
     if (outer && notes.order.length) {
       const list = el("ol", undefined, "notes");
       for (const id of notes.order) { const li = el("li"); inline(li, notes.defs.get(id)); list.append(li); }
@@ -1631,14 +1678,47 @@ function fill(b, text, live) {
     if (outer) notes = null;
   }
 }
+// blocks splits a message into prose and fenced code: ``` or ~~~ (three or
+// more) starting a line, closed by a line of the same mark at least as long
+// (so ```` can show a block that has ``` in it). The info string's first
+// word is the language ("```c#", "```python title=x"). Code inside a list
+// item loses the fence's indent. A fence not yet closed runs to the end (a
+// reply still arriving).
+const FENCE = /^([ \t]*)(`{3,}|~{3,})[ \t]*([^\s`]*)[^`]*$/;
+const FENCE_END = /^[ \t]*(`{3,}|~{3,})[ \t]*$/;
+function blocks(text) {
+  const out = [];
+  let prose = [], code = null;
+  for (const line of text.split("\n")) {
+    if (code) {
+      const c = line.match(FENCE_END);
+      if (c && c[1][0] === code.mark[0] && c[1].length >= code.mark.length) { code.closed = true; out.push(code); code = null; continue; }
+      let k = 0;
+      while (k < code.indent && (line[k] === " " || line[k] === "\t")) k++;
+      code.lines.push(line.slice(k));
+      continue;
+    }
+    const f = line.match(FENCE);
+    if (f) {
+      if (prose.length) out.push({ text: prose.join("\n") });
+      prose = [];
+      code = { code: true, lang: f[3].replace(/^[{.]+|\}+$/g, ""), mark: f[2], indent: f[1].replace(/\t/g, "    ").length, lines: [], closed: false };
+      continue;
+    }
+    prose.push(line);
+  }
+  if (code) out.push(code);
+  else if (prose.length) out.push({ text: prose.join("\n") });
+  return out;
+}
 // codeBlock: the code with a head naming its language and a Copy button.
 // Past FOLD_LINES a finished block shows its start and "Show all N lines"
 // (kept open once opened, across redraws).
 const FOLD_LINES = 30;
 const colored = new Map();
 function codeBlock(p, live) {
-  const lang = (p.match(/^([\w+-]*)\n/) || [])[1] || "";
-  const code = p.replace(/^[\w+-]*\n/, "").replace(/\n+$/, "");
+  const lang = p.lang;
+  const code = p.lines.join("\n").replace(/\n+$/, "");
   const box = el("div", undefined, "code"), head = el("div", undefined, "code-h"), pre = el("pre");
   const cp = el("button", undefined); cp.type = "button";
   const word = el("span", t("copyCode"));
@@ -1646,13 +1726,16 @@ function codeBlock(p, live) {
   cp.addEventListener("click", () => copyText(code, () => { word.textContent = t("copied"); setTimeout(() => { word.textContent = t("copyCode"); }, 1200); }));
   head.append(el("span", lang), cp);
   // Colored once, then copied: earlier blocks don't change while a reply
-  // goes on arriving (the last 60 are kept).
+  // goes on arriving (the last 60 are kept). A block still arriving changes
+  // with every word, so it isn't kept.
   const key = lang.toLowerCase() + "\n" + code;
   let hl = colored.get(key);
   if (!hl) {
     hl = highlight(code, lang.toLowerCase());
-    if (colored.size >= 60) colored.delete(colored.keys().next().value);
-    colored.set(key, hl);
+    if (p.closed) {
+      if (colored.size >= 60) colored.delete(colored.keys().next().value);
+      colored.set(key, hl);
+    }
   }
   pre.append(hl.cloneNode(true));
   box.append(head, pre);
@@ -1771,15 +1854,27 @@ const LONG_LINE = 2000;
 // the next, and thousands of ">" would run out of stack).
 const QUOTE_DEPTH = 8;
 let quoteDepth = 0;
-function prose(b, text) {
+function prose(b, text, carry) {
   const lines = text.split("\n");
   // lists: the lists open at this point, outermost first, with the indent
-  // of their items.
-  let p = null, lists = [];
+  // of their items (carry: those open before a code block in an item). A
+  // blank line in a list (gap) doesn't end it: the next item continues it
+  // (a "loose" list, spaced out) and an indented line starts a paragraph
+  // inside the last item; anything else ends it. Returned for fill.
+  let p = null, lists = carry ? carry.slice() : [], gap = lists.length ? "code" : false;
   const end = () => { p = null; lists = []; };
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    if (!line.trim()) { end(); continue; }
+    if (!line.trim()) { p = null; gap = lists.length > 0; continue; }
+    const afterGap = gap; gap = false;
+    if (afterGap && /^\s/.test(line) && !LIST_ITEM.test(line)) {
+      // The item it is indented under: an inner list's, or one further out.
+      const indent = line.match(/^\s*/)[0].replace(/\t/g, "    ").length;
+      while (lists.length > 1 && indent <= lists[lists.length - 1].indent) lists.pop();
+      const item = lists[lists.length - 1].el.lastElementChild;
+      if (item) { p = el("p"); item.append(p); inline(p, line.trim()); continue; }
+    }
+    if (afterGap && !LIST_ITEM.test(line)) end();
     if (line.length > LONG_LINE) {
       lists = [];
       if (!p) { p = el("p"); b.append(p); } else p.append("\n");
@@ -1845,17 +1940,20 @@ function prose(b, text) {
         (lists.length ? lists[lists.length - 1].el.lastElementChild : b).append(top.el);
         lists.push(top);
       }
+      if (afterGap === true && top.el.lastElementChild) top.el.classList.add("loose");
       const item = el("li"), task = li[3].match(/^\[([ xX])\]\s+(.*)$/);
       if (task) { item.className = "task"; item.append(el("span", task[1] === " " ? "" : "✓", "box" + (task[1] === " " ? "" : " on"))); inline(item, task[2]); } else inline(item, li[3]);
       top.el.append(item);
       continue;
     }
     // An indented line under a list item continues that item.
-    if (lists.length && /^\s/.test(line)) { const item = lists[lists.length - 1].el.lastElementChild; item.append("\n"); inline(item, line.trim()); continue; }
+    // (Or the paragraph a blank line began in it.)
+    if (lists.length && /^\s/.test(line)) { const into = p || lists[lists.length - 1].el.lastElementChild; into.append("\n"); inline(into, line.trim()); continue; }
     lists = [];
     if (!p) { p = el("p"); b.append(p); } else p.append("\n");
     inline(p, line);
   }
+  return lists;
 }
 // heading: "## Title ##" → {level 2, "Title"}, or null. Done by hand: the
 // one pattern for it slowed down on long runs of spaces.
@@ -1943,14 +2041,17 @@ function math(tex, display) {
 // text as written.
 const HTML_TAGS = new Set(["b", "strong", "i", "em", "u", "s", "del", "ins", "mark", "sub", "sup", "small", "kbd", "code", "br"]);
 // inline: `code`, math ($$…$$, \[…\], \(…\), and $…$ that hugs its TeX and
-// isn't a price: "$5 and $10" stays text), **bold**, __bold__, ~~struck~~,
-// *italic* that isn't part of a word, [links](https://…), bare https://
-// addresses, and HTML_TAGS. Links go only to http(s) and mailto, in a new
+// isn't a price: "$5 and $10" stays text), ***bold italic***, **bold**
+// (with *italic* in it), __bold__, ~~struck~~, *italic* that isn't part of
+// a word, [links](https://…) (a title after the address is dropped),
+// bare https:// addresses (with their own parentheses, as Wikipedia's
+// have), and HTML_TAGS. A backslash shows the mark after it as text
+// (\* \_ \$ \#…); "\[" and "\(" stay math. Links go only to http(s) and mailto, in a new
 // tab, without a referrer. An image ![…](https://…) is a link to it, as
 // the page loads no pictures from elsewhere; [^1] cites a footnote.
 // A tag opens only when the line closes it too, so List<u> or Vec<i> in
 // prose stay text. (No lookbehind: older iPhones' Safari lacks it.)
-const INLINE = /`([^`]+)`|\$\$([^$]+?)\$\$|\\\[(.+?)\\\]|\\\((.+?)\\\)|(^|[^\w$\\])\$([^\s$](?:[^$\n]*?[^\s$\\])?)\$(?![\w$])|\*\*([^*]+?)\*\*|__([^_]+?)__|~~([^~]+?)~~|(^|[^*\w])\*([^*\s][^*]*?)\*(?![*\w])|!\[([^[\]]*)\]\((https?:\/\/[^\s)]+)\)|\[\^([^\]\s]+)\]|\[([^[\]]+)\]\(((?:https?:\/\/|mailto:)[^\s)]+)\)|(https?:\/\/[^\s<>()（）「」，。；：！？、]*[^\s<>().,;:!?'"（）「」，。；：！？、])|<(\/?)([a-zA-Z]+)\s*\/?>/g;
+const INLINE = /\\([\\`*_{}#+\-.!|~$<>])|`([^`]+)`|\$\$([^$]+?)\$\$|\\\[(.+?)\\\]|\\\((.+?)\\\)|(^|[^\w$\\])\$([^\s$](?:[^$\n]*?[^\s$\\])?)\$(?![\w$])|\*\*\*([^*]+?)\*\*\*|\*\*((?:[^*]|\*(?!\*))+?)\*\*|__([^_]+?)__|~~([^~]+?)~~|(^|[^*\w])\*([^*\s][^*]*?)\*(?![*\w])|!\[([^[\]]*)\]\((https?:\/\/[^\s)]+)\)|\[\^([^\]\s]+)\]|\[([^[\]]+)\]\(((?:https?:\/\/|mailto:)(?:[^\s()]|\([^\s()]*\))+)(?:\s+"[^"\n]*")?\)|(https?:\/\/(?:[^\s<>()（）「」，。；：！？、]|\([^\s<>()]*\))*(?:[^\s<>().,;:!?'"（）「」，。；：！？、]|\([^\s<>()]*\)))|<(\/?)([a-zA-Z]+)\s*\/?>/g;
 function inline(p, line) {
   if (line.length > LONG_LINE) { p.append(line); return; }
   // stack: p and the HTML_TAGS elements open inside it; text goes into the
@@ -1967,25 +2068,27 @@ function inline(p, line) {
   const re = new RegExp(INLINE.source, "g"); // its own position: wrap() calls inline() again
   let last = 0, m;
   while ((m = re.exec(line))) {
-    const before = line.slice(last, m.index) + (m[5] || "") + (m[10] || "");
+    const before = line.slice(last, m.index) + (m[6] || "") + (m[12] || "");
     if (before) top().append(before);
     last = re.lastIndex;
-    if (m[1] !== undefined) top().append(el("code", m[1]));
-    else if (m[2] !== undefined || m[3] !== undefined) top().append(math(m[2] !== undefined ? m[2] : m[3], true));
-    else if (m[4] !== undefined || m[6] !== undefined) top().append(math(m[4] !== undefined ? m[4] : m[6], false));
-    else if (m[7] !== undefined || m[8] !== undefined) wrap("strong", m[7] !== undefined ? m[7] : m[8]);
-    else if (m[9] !== undefined) wrap("del", m[9]);
-    else if (m[11] !== undefined) wrap("em", m[11]);
-    else if (m[13] !== undefined) {
-      const a = el("a", undefined, "img-link"); a.href = m[13]; a.target = "_blank"; a.rel = "noopener noreferrer";
-      a.append(icon("i-image s14"), el("span", m[12].trim() ? t("imageLink", m[12].trim()) : t("imageNoAlt")));
+    if (m[1] !== undefined) top().append(m[1]); // \* and the like: the mark as text
+    else if (m[2] !== undefined) top().append(el("code", m[2]));
+    else if (m[3] !== undefined || m[4] !== undefined) top().append(math(m[3] !== undefined ? m[3] : m[4], true));
+    else if (m[5] !== undefined || m[7] !== undefined) top().append(math(m[5] !== undefined ? m[5] : m[7], false));
+    else if (m[8] !== undefined) { const s = el("strong"), e = el("em"); s.append(e); inline(e, m[8]); top().append(s); }
+    else if (m[9] !== undefined || m[10] !== undefined) wrap("strong", m[9] !== undefined ? m[9] : m[10]);
+    else if (m[11] !== undefined) wrap("del", m[11]);
+    else if (m[13] !== undefined) wrap("em", m[13]);
+    else if (m[15] !== undefined) {
+      const a = el("a", undefined, "img-link"); a.href = m[15]; a.target = "_blank"; a.rel = "noopener noreferrer";
+      a.append(icon("i-image s14"), el("span", m[14].trim() ? t("imageLink", m[14].trim()) : t("imageNoAlt")));
       top().append(a);
     }
-    else if (m[14] !== undefined) {
+    else if (m[16] !== undefined) {
       // A footnote: its number, which jumps to the note at the end.
-      if (!notes || !notes.defs.has(m[14])) { top().append(m[0]); continue; }
-      if (!notes.order.includes(m[14])) notes.order.push(m[14]);
-      const n = notes.order.indexOf(m[14]) + 1, sup = el("sup", undefined, "fn"), go = el("button", String(n)); go.type = "button";
+      if (!notes || !notes.defs.has(m[16])) { top().append(m[0]); continue; }
+      if (!notes.order.includes(m[16])) notes.order.push(m[16]);
+      const n = notes.order.indexOf(m[16]) + 1, sup = el("sup", undefined, "fn"), go = el("button", String(n)); go.type = "button";
       go.addEventListener("click", () => {
         const where = go.closest(".body, .th-all");
         const note = where && where.querySelector(":scope > .notes > li:nth-child(" + n + ")");
@@ -1993,13 +2096,13 @@ function inline(p, line) {
       });
       sup.append(go); top().append(sup);
     }
-    else if (m[15] !== undefined) link(m[15], m[16]);
-    else if (m[17] !== undefined) link(m[17], m[17]);
+    else if (m[17] !== undefined) link(m[17], m[18]);
+    else if (m[19] !== undefined) link(m[19], m[19]);
     else {
-      const name = m[19].toLowerCase(), names = stack.map((e) => e.tagName.toLowerCase());
+      const name = m[21].toLowerCase(), names = stack.map((e) => e.tagName.toLowerCase());
       if (!HTML_TAGS.has(name)) top().append(m[0]);
       else if (name === "br") top().append(el("br"));
-      else if (m[18]) { const k = names.lastIndexOf(name); if (k > 0) stack.length = k; else top().append(m[0]); }
+      else if (m[20]) { const k = names.lastIndexOf(name); if (k > 0) stack.length = k; else top().append(m[0]); }
       else {
         // Its own close must come before the next tag of that name opens.
         const close = lower.indexOf("</" + name, last), again = lower.indexOf("<" + name, last);
@@ -2278,9 +2381,18 @@ async function run(chat, model, fresh, old) {
   const flush = () => {
     raf = 0;
     const stick = nearBottom();
-    let nb;
-    try { nb = bubble(reply, true, S.lastWho); } catch { nb = el("div", undefined, "msg assistant last"); nb.append(el("p", reply.content)); }
-    node.replaceWith(nb); node = nb; // its head stays while it streams
+    // More of the same answer: only its unfinished end is drawn again
+    // (drawLive). Anything else (the reasoning, the first words) redraws it.
+    const st = node && node.live;
+    let drawn = false;
+    if (st && st.m === reply && st.think === reply.think && reply.content) {
+      try { drawLive(st, node.querySelector(":scope > .body")); drawn = true; } catch {}
+    }
+    if (!drawn) {
+      let nb;
+      try { nb = bubble(reply, true, S.lastWho); } catch { nb = el("div", undefined, "msg assistant last"); nb.append(el("p", reply.content)); }
+      node.replaceWith(nb); node = nb; // its head stays while it streams
+    }
     if (stick) toBottom(); else if (reply.content) $("jump").hidden = false;
   };
   // quiet: the error is said elsewhere (the banner, or the "model
