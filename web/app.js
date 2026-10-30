@@ -67,7 +67,7 @@ const T = {
     today: "今天", copy: "复制", copied: "已复制", edit: "编辑", editCancel: "取消", editSend: "发送", editReplaces: "发送后，这条之后的对话会换成新的回答。", again: "重新回答", againWith: "用 {0} 再答一次", thinking: "正在思考", thinkingBy: "{0} 正在思考", autoPicking: "Auto 正在选模型", thinkingFor: "正在思考 · {0}", thoughtFor: "已思考 {0}", thoughtNoTime: "思考过程",
     earlier: "之前的回答（{0}）", earlierOpen: "之前的回答（{0}）",
     yourMac: "你的 Mac", macOn: "在线", macOff: "连不上 · 醒来后自动恢复", macWait: "正在连接……", macPaused: "已暂停这台设备", macNoNet: "这台设备没有联网",
-    language: "语言", langMac: "跟随你的 Mac", shortcuts: "键盘快捷键", hideSide: "收起侧栏", showSide: "展开侧栏", dropHere: "松开就能添加图片",
+    language: "语言", langMac: "跟随你的 Mac", appearance: "外观", themeSystem: "跟随系统", themeLight: "浅色", themeDark: "深色", themeTime: "按时间自动", themeTimeSub: "晚 7 点到早 7 点用深色", shortcuts: "键盘快捷键", hideSide: "收起侧栏", showSide: "展开侧栏", dropHere: "松开就能添加图片",
     grpToday: "今天", grpYesterday: "昨天", grpWeek: "前 7 天", grpOlder: "更早", copyCode: "复制", modelMenu: "选择模型",
     copyTable: "复制表格", codeAll: "展开全部 {0} 行", codeLess: "收起", imageLink: "图片：{0}", imageNoAlt: "图片",
     kNew: "新对话", kSearch: "搜索对话", kSide: "收起或展开侧栏", kStop: "停止回答", kCopyLast: "复制最后一条回答", kFocus: "跳到输入框", kSend: "发送", kLine: "换行",
@@ -134,7 +134,7 @@ const T = {
     today: "Today", copy: "Copy", copied: "Copied", edit: "Edit", editCancel: "Cancel", editSend: "Send", editReplaces: "Sending replaces the conversation after this message with a new answer.", again: "Answer again", againWith: "Answer again with {0}", thinking: "Thinking", thinkingBy: "{0} is thinking", autoPicking: "Auto is picking a model", thinkingFor: "Thinking · {0}", thoughtFor: "Thought for {0}", thoughtNoTime: "Thinking",
     earlier: "Earlier answer ({0})", earlierOpen: "Earlier answer ({0})",
     yourMac: "Your Mac", macOn: "Online", macOff: "Can’t reach it · back when it wakes", macWait: "Connecting…", macPaused: "Paused this device", macNoNet: "This device is offline",
-    language: "Language", langMac: "Follow your Mac", shortcuts: "Keyboard shortcuts", hideSide: "Hide sidebar", showSide: "Show sidebar", dropHere: "Drop to add images",
+    language: "Language", langMac: "Follow your Mac", appearance: "Appearance", themeSystem: "Follow system", themeLight: "Light", themeDark: "Dark", themeTime: "By time of day", themeTimeSub: "Dark from 7 pm to 7 am", shortcuts: "Keyboard shortcuts", hideSide: "Hide sidebar", showSide: "Show sidebar", dropHere: "Drop to add images",
     grpToday: "Today", grpYesterday: "Yesterday", grpWeek: "Previous 7 days", grpOlder: "Earlier", copyCode: "Copy", modelMenu: "Choose a model",
     copyTable: "Copy table", codeAll: "Show all {0} lines", codeLess: "Show less", imageLink: "Image: {0}", imageNoAlt: "Image",
     kNew: "New chat", kSearch: "Search chats", kSide: "Hide or show the sidebar", kStop: "Stop the answer", kCopyLast: "Copy the last answer", kFocus: "Go to the message box", kSend: "Send", kLine: "New line",
@@ -2680,7 +2680,8 @@ $("side-show").addEventListener("click", () => setSide(false));
 function macMenu(open) {
   $("mac-menu").hidden = !open; $("mac").setAttribute("aria-expanded", String(open));
   $("lang-list").hidden = true; $("lang-btn").setAttribute("aria-expanded", "false");
-  if (open) paintLang();
+  $("theme-list").hidden = true; $("theme-btn").setAttribute("aria-expanded", "false");
+  if (open) { paintLang(); paintTheme(); }
 }
 $("mac").addEventListener("click", () => macMenu($("mac-menu").hidden));
 $("lang-btn").addEventListener("click", () => {
@@ -2701,6 +2702,22 @@ document.querySelectorAll("#lang-list [data-lang]").forEach((b) => b.addEventLis
   saveForReload();
   S.reloading = true;
   location.reload();
+}));
+// Appearance: follow the system, light, dark, or by the local time (dark
+// from 7 pm to 7 am). Kept on this device; it changes at once (theme.js).
+$("theme-btn").addEventListener("click", () => {
+  const open = $("theme-list").hidden;
+  $("theme-list").hidden = !open; $("theme-btn").setAttribute("aria-expanded", String(open));
+});
+const THEME_NAMES = { "": "themeSystem", light: "themeLight", dark: "themeDark", time: "themeTime" };
+function paintTheme() {
+  const chosen = window.omniTheme ? omniTheme.get() : "";
+  $("theme-now").textContent = t(THEME_NAMES[chosen] || "themeSystem");
+  document.querySelectorAll("#theme-list [data-theme-pick]").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.themePick === chosen)));
+}
+document.querySelectorAll("#theme-list [data-theme-pick]").forEach((b) => b.addEventListener("click", () => {
+  if (window.omniTheme) omniTheme.set(b.dataset.themePick);
+  paintTheme();
 }));
 $("keys-btn").addEventListener("click", () => { macMenu(false); showKeys(); });
 document.addEventListener("click", (e) => {

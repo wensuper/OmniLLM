@@ -20,8 +20,7 @@
   --icon-ink: %235F6275; --send-ink: white;
   color-scheme: light;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
+:root[data-theme="dark"] {
     --bg: #080912; --surface: #10121C; --surface-2: #181A25; --surface-3: #21232F;
     --line: #292A36; --line-2: #3A3C4A;
     --ink: #EDEEF5; --ink-2: #C1C3D1; --muted: #9497A8;
@@ -35,7 +34,6 @@
     --focus: 0 0 0 1px var(--accent), 0 0 0 4px rgba(155,138,255,.30);
     color-scheme: dark;
   }
-}
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
 body { background: var(--bg); color: var(--ink); font: 16px/1.6 var(--font); -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: 100%; overscroll-behavior: none; }
@@ -78,8 +76,8 @@ h1 { font-size: 21px; font-weight: 600; letter-spacing: -.02em; line-height: 1.3
    is a drawer and a bar names the chat. */
 :root { --ink-3: var(--muted); --rail: #FFFFFF; --bad: #D02F14; --bad-line: rgba(208,47,20,.26);
   --shadow-pop: 0 2px 6px rgba(14,20,32,.06), 0 18px 44px -12px rgba(14,20,32,.30); --scrim: rgba(8,9,18,.45); --col: 704px; }
-@media (prefers-color-scheme: dark) { :root { --rail: #0C0E17; --bad: #FD6844; --bad-line: rgba(253,104,68,.32);
-  --shadow-pop: 0 0 0 1px rgba(255,255,255,.05), 0 20px 48px -12px rgba(0,0,0,.8); --scrim: rgba(0,0,0,.6); } }
+:root[data-theme="dark"] { --rail: #0C0E17; --bad: #FD6844; --bad-line: rgba(253,104,68,.32);
+  --shadow-pop: 0 0 0 1px rgba(255,255,255,.05), 0 20px 48px -12px rgba(0,0,0,.8); --scrim: rgba(0,0,0,.6); }
 
 /* Line icons as masks, coloured by the text colour. */
 .ic { display: inline-block; width: 18px; height: 18px; flex: none; background: currentColor; -webkit-mask: var(--i) center / contain no-repeat; mask: var(--i) center / contain no-repeat; }
@@ -100,6 +98,7 @@ h1 { font-size: 21px; font-weight: 600; letter-spacing: -.02em; line-height: 1.3
 .i-bad { --i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7.5v5.5'/%3E%3Ccircle cx='12' cy='16.5' r='.6' fill='black'/%3E%3C/svg%3E"); }
 .i-mac { --i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='12' rx='2'/%3E%3Cpath d='M2 20h20'/%3E%3C/svg%3E"); }
 .i-x { --i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M6 6l12 12M18 6 6 18'/%3E%3C/svg%3E"); }
+.i-moon { --i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z'/%3E%3C/svg%3E"); }
 .i-lang { --i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18'/%3E%3C/svg%3E"); }
 .i-more { --i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Ccircle cx='5' cy='12' r='1.8'/%3E%3Ccircle cx='12' cy='12' r='1.8'/%3E%3Ccircle cx='19' cy='12' r='1.8'/%3E%3C/svg%3E"); }
 .i-pen { --i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 20h4L19 9l-4-4L4 16v4zM14 6l4 4'/%3E%3C/svg%3E"); }
@@ -192,8 +191,8 @@ h1 { font-size: 21px; font-weight: 600; letter-spacing: -.02em; line-height: 1.3
 /* Code colors (GitHub's light and dark palettes, which read well on both). */
 :root { --tk-c: #6E7781; --tk-s: #0A3069; --tk-n: #0550AE; --tk-k: #CF222E; --tk-f: #8250DF; --tk-t: #953800; --tk-p: #0550AE; --tk-v: #953800;
   --dl-add: rgba(26,127,55,.12); --dl-add-ink: #116329; --dl-del: rgba(207,34,46,.10); --dl-del-ink: #82071E; }
-@media (prefers-color-scheme: dark) { :root { --tk-c: #8B949E; --tk-s: #A5D6FF; --tk-n: #79C0FF; --tk-k: #FF7B72; --tk-f: #D2A8FF; --tk-t: #FFA657; --tk-p: #79C0FF; --tk-v: #FFA657;
-  --dl-add: rgba(46,160,67,.18); --dl-add-ink: #7EE787; --dl-del: rgba(248,81,73,.18); --dl-del-ink: #FFA198; } }
+:root[data-theme="dark"] { --tk-c: #8B949E; --tk-s: #A5D6FF; --tk-n: #79C0FF; --tk-k: #FF7B72; --tk-f: #D2A8FF; --tk-t: #FFA657; --tk-p: #79C0FF; --tk-v: #FFA657;
+  --dl-add: rgba(46,160,67,.18); --dl-add-ink: #7EE787; --dl-del: rgba(248,81,73,.18); --dl-del-ink: #FFA198; }
 .tk-c { color: var(--tk-c); font-style: italic; } .tk-s { color: var(--tk-s); } .tk-n { color: var(--tk-n); }
 .tk-k { color: var(--tk-k); } .tk-f { color: var(--tk-f); } .tk-t { color: var(--tk-t); } .tk-p { color: var(--tk-p); } .tk-v { color: var(--tk-v); }
 /* A diff: one row per line, the rows as wide as the widest line. */
@@ -472,6 +471,7 @@ p.note.err { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12p
 .lang-list .tick { color: var(--accent-text); visibility: hidden; }
 .lang-list [aria-checked="true"] .tick { visibility: visible; }
 .lang-list [aria-checked="true"] { font-weight: 500; }
+.theme-sub { display: block; font-size: 12px; font-weight: 400; color: var(--ink-3); }
 .pop-note { margin: 6px 10px 8px; font-size: 12px; line-height: 1.5; color: var(--ink-3); }
 .keys-item { display: none; }
 @media (pointer: fine) { .keys-item { display: flex; } }
@@ -490,7 +490,7 @@ p.note.err { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12p
 .toast { position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 30; max-width: min(90vw, 420px); background: var(--ink); color: var(--bg); border-radius: var(--r); padding: 8px 14px; font-size: 14px; text-align: center; box-shadow: var(--shadow-2); }
 /* Another tab took over: this one rests under a full-screen notice. */
 :root { --cyan: #0B8FAE; }
-@media (prefers-color-scheme: dark) { :root { --cyan: #22D3EE; } }
+:root[data-theme="dark"] { --cyan: #22D3EE; }
 
 /* Tablets: the column, wider gutters. */
 @media (min-width: 768px) {
@@ -531,7 +531,7 @@ details[open] > summary::before { transform: translateY(-3px) rotate(45deg); }
    (red when it deletes). */
 .ask { width: min(340px, calc(100vw - 32px)); margin: auto; padding: 20px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--ink); box-shadow: var(--shadow-2); }
 .ask::backdrop { background: rgba(8,9,18,.45); }
-@media (prefers-color-scheme: dark) { .ask::backdrop { background: rgba(0,0,0,.6); } }
+[data-theme="dark"] .ask::backdrop { background: rgba(0,0,0,.6); }
 .ask p { margin: 0 0 18px; text-wrap: pretty; }
 .ask-btns { display: flex; gap: 10px; }
 .ask-btns button { flex: 1; min-width: 0; max-width: none; }
@@ -543,7 +543,7 @@ details[open] > summary::before { transform: translateY(-3px) rotate(45deg); }
    band across the top (cyan → purple → magenta, NEXA's spectrum). The chat
    keeps its plain background. */
 :root { --cyan: #0092B0; --magenta: #C348A7; --aur-a: rgba(0,146,176,.13); --aur-b: rgba(114,77,231,.16); --aur-c: rgba(195,72,167,.10); --dot: rgba(19,21,36,.07); }
-@media (prefers-color-scheme: dark) { :root { --cyan: #00CFE8; --magenta: #FB7BDA; --aur-a: rgba(0,207,232,.12); --aur-b: rgba(155,138,255,.18); --aur-c: rgba(251,123,218,.09); --dot: rgba(237,238,245,.06); } }
+:root[data-theme="dark"] { --cyan: #00CFE8; --magenta: #FB7BDA; --aur-a: rgba(0,207,232,.12); --aur-b: rgba(155,138,255,.18); --aur-c: rgba(251,123,218,.09); --dot: rgba(237,238,245,.06); }
 body { background:
   radial-gradient(38% 260px at 18% 0%, var(--aur-a), transparent 75%),
   radial-gradient(40% 300px at 52% 0%, var(--aur-b), transparent 75%),
@@ -565,7 +565,7 @@ body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-i
 .seg { display: inline-flex; padding: 3px; gap: 2px; border: 1px solid var(--line); border-radius: 999px; background: color-mix(in srgb, var(--surface) 70%, transparent); }
 .seg button { border: 0; background: none; border-radius: 999px; min-width: 48px; height: 34px; padding: 0 12px; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; }
 .seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-1), 0 0 0 1px var(--line); }
-@media (prefers-color-scheme: dark) { .seg button[aria-pressed="true"] { background: var(--surface-3); } }
+[data-theme="dark"] .seg button[aria-pressed="true"] { background: var(--surface-3); }
 .welcome-note { margin: 4px 0 0; }
 
 .wl-main { flex: 1; display: flex; flex-direction: column; padding: 22px 0 6px; }
@@ -665,7 +665,7 @@ body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-i
 .mock-tog { display: flex; padding: 3px; margin: 16px 0 20px; border-radius: 11px; background: var(--surface-2); border: 1px solid var(--line); }
 .mock-tog span { flex: 1; text-align: center; font-size: 13.5px; font-weight: 550; color: var(--muted); padding: 8px 0; border-radius: 8px; }
 .mock-tog .on { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-1), 0 0 0 1px var(--line); }
-@media (prefers-color-scheme: dark) { .mock-tog .on { background: var(--surface-3); } }
+[data-theme="dark"] .mock-tog .on { background: var(--surface-3); }
 .mock-field { height: 46px; display: flex; align-items: center; padding: 0 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); font: 13px var(--mono); color: var(--muted); overflow: hidden; white-space: nowrap; }
 .mock-btn { position: relative; display: flex; align-items: center; justify-content: center; height: 46px; margin-top: 12px; border-radius: 10px; background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: 14.5px; animation: mock-pulse 1.8s ease-out infinite; }
 .mock-sas { margin: 22px 0; padding: 22px 0; text-align: center; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--line); font: 650 44px var(--mono); letter-spacing: .12em; }

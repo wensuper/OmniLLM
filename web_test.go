@@ -53,7 +53,7 @@ func TestWebVendorPinned(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, f := range []string{"vendor/jsqr.js", "vendor/temml.min.js", "vendor/temml.css"} {
+	for _, f := range []string{"theme.js", "vendor/jsqr.js", "vendor/temml.min.js", "vendor/temml.css"} {
 		if !strings.Contains(string(sw), `"`+f+`"`) {
 			t.Errorf("web/sw.js doesn't keep %s for offline use", f)
 		}

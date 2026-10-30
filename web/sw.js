@@ -2,7 +2,7 @@
 // with: everything is served from this cache, and a new version is cached
 // as a whole before it replaces the old one (no half-updated page).
 const VERSION = "dev";
-const FILES = ["./", "index.html", "app.js", "app.css", "wasm_exec.js", "omni.wasm", "manifest.webmanifest", "icon.svg", "icon-180.png", "icon-512.png", "vendor/jsqr.js", "vendor/temml.min.js", "vendor/temml.css"];
+const FILES = ["./", "index.html", "app.js", "app.css", "theme.js", "wasm_exec.js", "omni.wasm", "manifest.webmanifest", "icon.svg", "icon-180.png", "icon-512.png", "vendor/jsqr.js", "vendor/temml.min.js", "vendor/temml.css"];
 self.addEventListener("install", (e) => {
   // Cache the whole set, then check it is one build (a deploy can switch
   // mid-download); a mixed set is thrown away and tried on the next visit.

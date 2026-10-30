@@ -19,6 +19,7 @@
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="stylesheet" href="app.css">
+<script src="theme.js"></script>
 <title>OmniLLM</title>
 </head>
 <body>
@@ -214,6 +215,13 @@
               <button type="button" class="pop-item" role="menuitemradio" data-lang=""><span class="nm" data-t="langMac"></span><span class="ic i-check s16 tick"></span></button>
               <button type="button" class="pop-item" role="menuitemradio" data-lang="zh"><span class="nm">中文</span><span class="ic i-check s16 tick"></span></button>
               <button type="button" class="pop-item" role="menuitemradio" data-lang="en"><span class="nm">English</span><span class="ic i-check s16 tick"></span></button>
+            </div>
+            <button id="theme-btn" type="button" class="pop-item" role="menuitem" aria-expanded="false" aria-controls="theme-list"><span class="ic i-moon s16"></span><span class="nm" data-t="appearance"></span><small id="theme-now"></small><span class="ic i-chev s14 lang-chev"></span></button>
+            <div id="theme-list" class="lang-list" role="group" hidden>
+              <button type="button" class="pop-item" role="menuitemradio" data-theme-pick=""><span class="nm" data-t="themeSystem"></span><span class="ic i-check s16 tick"></span></button>
+              <button type="button" class="pop-item" role="menuitemradio" data-theme-pick="light"><span class="nm" data-t="themeLight"></span><span class="ic i-check s16 tick"></span></button>
+              <button type="button" class="pop-item" role="menuitemradio" data-theme-pick="dark"><span class="nm" data-t="themeDark"></span><span class="ic i-check s16 tick"></span></button>
+              <button type="button" class="pop-item" role="menuitemradio" data-theme-pick="time"><span class="nm"><span data-t="themeTime"></span><small class="theme-sub" data-t="themeTimeSub"></small></span><span class="ic i-check s16 tick"></span></button>
             </div>
             <button id="keys-btn" type="button" class="pop-item keys-item" role="menuitem"><span class="ic i-key s16"></span><span class="nm" data-t="shortcuts"></span><small class="kbd-hint" data-k="⌘/"></small></button>
             <button id="install-tip" type="button" class="pop-item" role="menuitem" hidden><span class="ic i-home s16"></span><span class="nm" data-t="addHome"></span></button>

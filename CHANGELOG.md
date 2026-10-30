@@ -4,6 +4,12 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.91](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.91) - 2026-10-30
+
+### Added
+
+- Web app: choose the appearance under Your Mac → Appearance: follow the system (as before), always light, always dark, or by time of day (dark from 7 pm to 7 am, by this device's clock). It changes at once and is remembered on this device.
+
 ## [0.2.0-alpha.90](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.90) - 2026-10-30
 
 ### Added
