@@ -38,7 +38,7 @@
     <div class="wl">
       <div class="wl-top">
         <div class="wl-brand"><img src="icon.svg" alt="" width="28" height="28"><span>OmniLLM</span></div>
-        <div class="seg" role="group" data-ta="language"><button type="button" data-setlang="zh" lang="zh-CN">中文</button><button type="button" data-setlang="en" lang="en">EN</button></div>
+        <div class="wl-right"><div class="tools" data-tools="theme"></div><div class="seg" role="group" data-ta="language"><button type="button" data-setlang="zh" lang="zh-CN">中文</button><button type="button" data-setlang="en" lang="en">EN</button></div></div>
       </div>
       <p id="welcome-note" class="warn welcome-note" role="status" hidden></p>
       <div class="wl-main">
@@ -236,6 +236,7 @@
       <header class="bar">
         <button id="menu" type="button" class="ibtn" data-ta="chats"><span class="ic i-menu s20"></span></button>
         <button id="bar-title" type="button" class="bar-t" aria-haspopup="menu" aria-expanded="false"></button>
+        <div class="tools" data-tools></div>
         <button id="new" type="button" class="ibtn" data-ta="newChat"><span class="ic i-compose s20"></span></button>
       </header>
       <!-- Sidebar hidden on a wide screen: show it again, or start a chat. -->
@@ -244,6 +245,7 @@
         <button id="new-float" type="button" class="ibtn" data-ta="newChat"><span class="ic i-compose s20"></span></button>
       </div>
       <!-- The chat's name at the top (wide screens; phones have it in the bar). Click: its menu. -->
+      <div class="tools wide-tools" data-tools></div>
       <div id="chat-head" class="chat-head" hidden><button id="head-title" type="button" class="head-t" aria-haspopup="menu" aria-expanded="false"></button></div>
       <main id="log" class="log" aria-live="polite"></main>
       <div class="dock">

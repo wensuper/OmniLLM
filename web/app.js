@@ -67,7 +67,7 @@ const T = {
     today: "今天", copy: "复制", copied: "已复制", edit: "编辑", editCancel: "取消", editSend: "发送", editReplaces: "发送后，这条之后的对话会换成新的回答。", again: "重新回答", againWith: "用 {0} 再答一次", thinking: "正在思考", thinkingBy: "{0} 正在思考", autoPicking: "Auto 正在选模型", thinkingFor: "正在思考 · {0}", thoughtFor: "已思考 {0}", thoughtNoTime: "思考过程",
     earlier: "之前的回答（{0}）", earlierOpen: "之前的回答（{0}）",
     yourMac: "你的 Mac", macOn: "在线", macOff: "连不上 · 醒来后自动恢复", macWait: "正在连接……", macPaused: "已暂停这台设备", macNoNet: "这台设备没有联网",
-    language: "语言", langMac: "跟随你的 Mac", appearance: "外观", themeSystem: "跟随系统", themeLight: "浅色", themeDark: "深色", themeTime: "按时间自动", themeTimeSub: "晚 7 点到早 7 点用深色", shortcuts: "键盘快捷键", hideSide: "收起侧栏", showSide: "展开侧栏", dropHere: "松开就能添加图片",
+    language: "语言", langMac: "跟随你的 Mac", appearance: "外观", toLang: "切换成英文", themeSystem: "跟随系统", themeLight: "浅色", themeDark: "深色", themeTime: "按时间自动", themeTimeSub: "晚 7 点到早 7 点用深色", shortcuts: "键盘快捷键", hideSide: "收起侧栏", showSide: "展开侧栏", dropHere: "松开就能添加图片",
     grpToday: "今天", grpYesterday: "昨天", grpWeek: "前 7 天", grpOlder: "更早", copyCode: "复制", modelMenu: "选择模型",
     copyTable: "复制表格", codeAll: "展开全部 {0} 行", codeLess: "收起", imageLink: "图片：{0}", imageNoAlt: "图片",
     kNew: "新对话", kSearch: "搜索对话", kSide: "收起或展开侧栏", kStop: "停止回答", kCopyLast: "复制最后一条回答", kFocus: "跳到输入框", kSend: "发送", kLine: "换行",
@@ -134,7 +134,7 @@ const T = {
     today: "Today", copy: "Copy", copied: "Copied", edit: "Edit", editCancel: "Cancel", editSend: "Send", editReplaces: "Sending replaces the conversation after this message with a new answer.", again: "Answer again", againWith: "Answer again with {0}", thinking: "Thinking", thinkingBy: "{0} is thinking", autoPicking: "Auto is picking a model", thinkingFor: "Thinking · {0}", thoughtFor: "Thought for {0}", thoughtNoTime: "Thinking",
     earlier: "Earlier answer ({0})", earlierOpen: "Earlier answer ({0})",
     yourMac: "Your Mac", macOn: "Online", macOff: "Can’t reach it · back when it wakes", macWait: "Connecting…", macPaused: "Paused this device", macNoNet: "This device is offline",
-    language: "Language", langMac: "Follow your Mac", appearance: "Appearance", themeSystem: "Follow system", themeLight: "Light", themeDark: "Dark", themeTime: "By time of day", themeTimeSub: "Dark from 7 pm to 7 am", shortcuts: "Keyboard shortcuts", hideSide: "Hide sidebar", showSide: "Show sidebar", dropHere: "Drop to add images",
+    language: "Language", langMac: "Follow your Mac", appearance: "Appearance", toLang: "Switch to Chinese", themeSystem: "Follow system", themeLight: "Light", themeDark: "Dark", themeTime: "By time of day", themeTimeSub: "Dark from 7 pm to 7 am", shortcuts: "Keyboard shortcuts", hideSide: "Hide sidebar", showSide: "Show sidebar", dropHere: "Drop to add images",
     grpToday: "Today", grpYesterday: "Yesterday", grpWeek: "Previous 7 days", grpOlder: "Earlier", copyCode: "Copy", modelMenu: "Choose a model",
     copyTable: "Copy table", codeAll: "Show all {0} lines", codeLess: "Show less", imageLink: "Image: {0}", imageNoAlt: "Image",
     kNew: "New chat", kSearch: "Search chats", kSide: "Hide or show the sidebar", kStop: "Stop the answer", kCopyLast: "Copy the last answer", kFocus: "Go to the message box", kSend: "Send", kLine: "New line",
@@ -2270,6 +2270,7 @@ let rowClick = { id: "", at: 0 }; // the last click on a chat row (double click 
 function rowMenu(li, btn, title, c) {
   const open = document.querySelector(".row-menu");
   if (open) { const same = open.parentElement === li; closeRowMenu(); if (same) return; }
+  toolsMenu(null, null); // one menu at a time
   const m = el("div", undefined, "pop row-menu"); m.setAttribute("role", "menu");
   const item = (ic, label, run, bad) => {
     const b = el("button", undefined, "pop-item" + (bad ? " danger" : "")); b.type = "button"; b.setAttribute("role", "menuitem");
@@ -2695,14 +2696,15 @@ function paintLang() {
 }
 // A language chosen here is kept on this device only; the page reloads in
 // it (what was typed stays).
-document.querySelectorAll("#lang-list [data-lang]").forEach((b) => b.addEventListener("click", () => {
+function setLang(code) {
   if (S.busy || (S.pending && S.pending.length)) return toastText(t(S.busy ? "waitReply" : "langPending"));
   if (S.volatile) return toastText(t("langVolatile"));
-  localStorageSet("lang", b.dataset.lang);
+  localStorageSet("lang", code);
   saveForReload();
   S.reloading = true;
   location.reload();
-}));
+}
+document.querySelectorAll("#lang-list [data-lang]").forEach((b) => b.addEventListener("click", () => setLang(b.dataset.lang)));
 // Appearance: follow the system, light, dark, or by the local time (dark
 // from 7 pm to 7 am). Kept on this device; it changes at once (theme.js).
 $("theme-btn").addEventListener("click", () => {
@@ -2719,8 +2721,58 @@ document.querySelectorAll("#theme-list [data-theme-pick]").forEach((b) => b.addE
   if (window.omniTheme) omniTheme.set(b.dataset.themePick);
   paintTheme();
 }));
+// The top-right corner (the bar on phones, the page's corner on wide
+// screens, the welcome screen): the appearance, as a sun or a moon that
+// opens the same four choices, and the language, one tap to the other one
+// (the welcome screen has its own 中文 / EN).
+function paintTools() {
+  const on = document.documentElement.dataset.theme === "dark", chosen = window.omniTheme ? omniTheme.get() : "";
+  document.querySelectorAll("[data-tools]").forEach((box) => {
+    if (!box.firstChild) {
+      const th = iconButton("i-moon s20", t("appearance")); th.classList.add("tools-theme");
+      th.setAttribute("aria-haspopup", "menu"); th.setAttribute("aria-expanded", "false");
+      // (Not stopped: the click also closes any other menu that is open.)
+      th.addEventListener("click", () => toolsMenu(box, box.querySelector(".tools-pop") ? null : th));
+      box.append(th);
+      if (box.dataset.tools !== "theme") {
+        const lb = el("button", undefined, "tools-lang"); lb.type = "button";
+        lb.addEventListener("click", () => setLang(lang === "zh" ? "en" : "zh"));
+        box.append(lb);
+      }
+    }
+    const th = box.querySelector(".tools-theme");
+    th.firstChild.className = "ic s20 " + (on ? "i-moon" : "i-sun");
+    th.title = t("appearance") + " · " + t(THEME_NAMES[chosen] || "themeSystem");
+    const lb = box.querySelector(".tools-lang");
+    if (lb) { lb.textContent = lang === "zh" ? "中" : "EN"; lb.title = t("toLang"); lb.setAttribute("aria-label", t("toLang")); }
+    const pop = box.querySelector(".tools-pop");
+    if (pop) pop.querySelectorAll("[data-pick]").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.pick === chosen)));
+  });
+}
+// toolsMenu opens the four choices under the sun/moon (by: its button), or
+// closes them (null).
+function toolsMenu(box, by) {
+  document.querySelectorAll(".tools-pop").forEach((p) => p.remove());
+  document.querySelectorAll(".tools-theme").forEach((b) => b.setAttribute("aria-expanded", "false"));
+  if (!by) return;
+  const pop = el("div", undefined, "pop tools-pop"); pop.setAttribute("role", "menu");
+  for (const k of ["", "light", "dark", "time"]) {
+    const it = el("button", undefined, "pop-item"); it.type = "button"; it.setAttribute("role", "menuitemradio"); it.dataset.pick = k;
+    const nm = el("span", t(THEME_NAMES[k]), "nm");
+    if (k === "time") nm.append(el("small", t("themeTimeSub"), "theme-sub"));
+    it.append(nm, icon("i-check s16 tick"));
+    it.addEventListener("click", () => { omniTheme.set(k); toolsMenu(box, null); paintTheme(); });
+    pop.append(it);
+  }
+  box.append(pop);
+  by.setAttribute("aria-expanded", "true");
+  paintTools();
+}
+document.addEventListener("omnitheme", paintTools);
+paintTools();
 $("keys-btn").addEventListener("click", () => { macMenu(false); showKeys(); });
 document.addEventListener("click", (e) => {
+  if (!e.target.closest(".tools")) toolsMenu(null, null);
   if (!e.target.closest(".row-menu")) closeRowMenu();
   if (!$("mac-menu").hidden && !e.target.closest(".drawer-foot")) macMenu(false);
   if (!$("mmenu").hidden && !e.target.closest(".mwrap")) pickMenu(false);

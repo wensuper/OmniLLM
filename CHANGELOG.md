@@ -4,6 +4,16 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.92](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.92) - 2026-10-30
+
+### Added
+
+- Web app: the top-right corner now has a sun or moon button for the appearance (follow system, light, dark, by time of day) and, in chats, a button that switches between Chinese and English. Switching between light and dark fades across smoothly.
+
+### Fixed
+
+- Web app: under a short message of yours, its time and the Copy and Edit buttons stay on one line.
+
 ## [0.2.0-alpha.91](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.91) - 2026-10-30
 
 ### Added

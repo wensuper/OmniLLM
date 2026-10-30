@@ -12,6 +12,7 @@
     // The browser's bar follows (one tag, without the media query).
     const metas = document.querySelectorAll('meta[name="theme-color"]');
     metas.forEach((m, i) => { if (i) m.remove(); else { m.removeAttribute("media"); m.content = on ? "#080912" : "#F6F6FB"; } });
+    document.dispatchEvent(new Event("omnitheme"));
   };
   apply();
   // (Safari before 14 has only addListener.)
@@ -22,6 +23,11 @@
   document.addEventListener("visibilitychange", () => { if (!document.hidden) apply(); });
   window.omniTheme = {
     get,
-    set(c) { try { localStorage.setItem("omnillm.theme", c); } catch {} apply(); },
+    // A choice made here fades across (unless motion is turned down).
+    set(c) {
+      try { localStorage.setItem("omnillm.theme", c); } catch {}
+      if (!matchMedia("(prefers-reduced-motion: reduce)").matches) { root.classList.add("theming"); setTimeout(() => root.classList.remove("theming"), 350); }
+      apply();
+    },
   };
 })();
