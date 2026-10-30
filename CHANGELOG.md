@@ -4,6 +4,12 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.90](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.90) - 2026-10-30
+
+### Added
+
+- Web app: copy and edit your own messages, as in Claude. Hover over a message you sent (or tap it on a phone) to see its time, Copy and Edit. Edit turns it into a box; Send replaces the message and gets a new answer with the model selected now, replacing everything after it; Cancel or Esc leaves it as it was. Pictures in the message stay as they are.
+
 ## [0.2.0-alpha.89](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.89) - 2026-10-30
 
 ### Changed

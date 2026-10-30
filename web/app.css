@@ -274,7 +274,20 @@ h1 { font-size: 21px; font-weight: 600; letter-spacing: -.02em; line-height: 1.3
 .acts { flex-wrap: wrap; }
 .acts .by { max-width: 100%; }
 .when { display: none; font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; white-space: nowrap; margin-left: 8px; }
-.msg.user > .when { position: absolute; top: calc(100% + 4px); right: 6px; margin: 0; }
+.msg.user { margin-bottom: 10px; }
+.msg.user > .uacts { position: absolute; top: calc(100% + 2px); right: -4px; margin: 0; min-height: 32px; visibility: hidden; }
+.msg.user > .uacts .ibtn { width: 32px; height: 32px; }
+.msg.user > .uacts .when { margin: 0 4px 0 0; }
+.msg.user:hover > .uacts, .msg.user:focus-within > .uacts, .msg.user.tapped > .uacts { visibility: visible; }
+.msg.user.editing { width: calc(var(--col) * .82); padding: 12px 14px; }
+.msg.editing textarea { display: block; width: 100%; border: 0; padding: 0; background: transparent; color: var(--ink); font: inherit; line-height: 1.6; resize: none; outline: none; }
+.msg.editing textarea:focus-visible { outline: none; box-shadow: none; }
+.edit-hint { margin: 8px 0 0; font-size: 12px; color: var(--ink-3); }
+.edit-btns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+.edit-btns button { min-height: 32px; padding: 0 14px; border-radius: var(--r-s); border: 1px solid var(--line-2); background: var(--surface); color: var(--ink); font-size: 14px; font-weight: 500; cursor: pointer; }
+.edit-btns .edit-send { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.edit-btns .edit-send:disabled { opacity: .5; cursor: default; }
+@media (pointer: coarse) { .edit-btns button { min-height: 40px; } }
 .msg:hover .when, .msg:focus-within .when, .msg.tapped .when, .acts:hover .when, .acts:focus-within .when,
 .msg.last:hover ~ .acts .when, .msg.last.tapped ~ .acts .when { display: inline; }
 .retry { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 12px; border-radius: var(--r-s); border: 1px solid var(--line-2); background: var(--surface); color: var(--ink); font-size: 14px; font-weight: 500; cursor: pointer; }

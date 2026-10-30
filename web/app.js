@@ -64,7 +64,7 @@ const T = {
     close: "关闭", deleteChat: "删除这个对话", rename: "重命名", renameChat: "重命名对话", chatMore: "更多操作", deleteChatQ: "删除对话“{0}”？", chatsLocal: "对话保存在这台设备上。用订阅模型（Claude、ChatGPT、Gemini）时，你的 Mac 也会留一份，方便接着聊；一天没用，Mac 上的那份就会删除。", searchChats: "搜索对话", noMatch: "没有找到",
     addHome: "添加到主屏幕", addHomeTip: "点浏览器的“共享”（或“分享”）按钮，选“添加到主屏幕”。第一次从主屏幕打开时，需要再扫一次码。",
     deviceLine: "这台设备：{0}", empty: "有什么可以帮你？", cut: "（回复太长被截断了。发“继续”让它接着写。）", stopped: "（已停止）",
-    today: "今天", copy: "复制", copied: "已复制", again: "重新回答", againWith: "用 {0} 再答一次", thinking: "正在思考", thinkingBy: "{0} 正在思考", autoPicking: "Auto 正在选模型", thinkingFor: "正在思考 · {0}", thoughtFor: "已思考 {0}", thoughtNoTime: "思考过程",
+    today: "今天", copy: "复制", copied: "已复制", edit: "编辑", editCancel: "取消", editSend: "发送", editReplaces: "发送后，这条之后的对话会换成新的回答。", again: "重新回答", againWith: "用 {0} 再答一次", thinking: "正在思考", thinkingBy: "{0} 正在思考", autoPicking: "Auto 正在选模型", thinkingFor: "正在思考 · {0}", thoughtFor: "已思考 {0}", thoughtNoTime: "思考过程",
     earlier: "之前的回答（{0}）", earlierOpen: "之前的回答（{0}）",
     yourMac: "你的 Mac", macOn: "在线", macOff: "连不上 · 醒来后自动恢复", macWait: "正在连接……", macPaused: "已暂停这台设备", macNoNet: "这台设备没有联网",
     language: "语言", langMac: "跟随你的 Mac", shortcuts: "键盘快捷键", hideSide: "收起侧栏", showSide: "展开侧栏", dropHere: "松开就能添加图片",
@@ -131,7 +131,7 @@ const T = {
     close: "Close", deleteChat: "Delete this chat", rename: "Rename", renameChat: "Rename chat", chatMore: "More", deleteChatQ: "Delete the chat “{0}”?", chatsLocal: "Chats are kept on this device. With subscription models (Claude, ChatGPT, Gemini), your Mac also keeps a copy so it can continue the chat; it deletes that copy after a day without use.", searchChats: "Search chats", noMatch: "No matching chats",
     addHome: "Add to Home Screen", addHomeTip: "Tap the browser’s “Share” button and choose “Add to Home Screen”. The first time it’s opened from the Home Screen, you’ll scan the QR code once more.",
     deviceLine: "This device: {0}", empty: "How can I help?", cut: "(The reply was cut off. Send “continue” to have it go on.)", stopped: "(stopped)",
-    today: "Today", copy: "Copy", copied: "Copied", again: "Answer again", againWith: "Answer again with {0}", thinking: "Thinking", thinkingBy: "{0} is thinking", autoPicking: "Auto is picking a model", thinkingFor: "Thinking · {0}", thoughtFor: "Thought for {0}", thoughtNoTime: "Thinking",
+    today: "Today", copy: "Copy", copied: "Copied", edit: "Edit", editCancel: "Cancel", editSend: "Send", editReplaces: "Sending replaces the conversation after this message with a new answer.", again: "Answer again", againWith: "Answer again with {0}", thinking: "Thinking", thinkingBy: "{0} is thinking", autoPicking: "Auto is picking a model", thinkingFor: "Thinking · {0}", thoughtFor: "Thought for {0}", thoughtNoTime: "Thinking",
     earlier: "Earlier answer ({0})", earlierOpen: "Earlier answer ({0})",
     yourMac: "Your Mac", macOn: "Online", macOff: "Can’t reach it · back when it wakes", macWait: "Connecting…", macPaused: "Paused this device", macNoNet: "This device is offline",
     language: "Language", langMac: "Follow your Mac", shortcuts: "Keyboard shortcuts", hideSide: "Hide sidebar", showSide: "Show sidebar", dropHere: "Drop to add images",
@@ -1451,6 +1451,7 @@ function dayLine(at) {
 // own row (Copy and who answered), shown on hover or a tap; the last
 // reply's row sits under it in the log instead.
 function bubble(m, isLast, who) {
+  if (S.editing && S.editing.m === m) return editor(m);
   const b = el("div", undefined, "msg " + m.role + (isLast ? " last" : ""));
   if (m.role === "assistant" && m.by && who) {
     const head = el("div", undefined, "who");
@@ -1476,7 +1477,16 @@ function bubble(m, isLast, who) {
     b.append(quoted(el("p", undefined, "note" + (quietNote ? " quiet" : "")), m.note.replace(/^[（(]|[）)]$/g, "")));
   }
   const time = m.live ? null : when(m);
-  if (m.role === "user" && time) b.append(time);
+  // The person's message: its time, Copy and Edit, shown on hover or a tap.
+  if (m.role === "user") {
+    const row = el("div", undefined, "acts uacts");
+    if (time) row.append(time);
+    if (m.content) row.append(copyButton(m.content));
+    const ed = iconButton("i-pen s16", t("edit"));
+    ed.addEventListener("click", () => startEdit(m));
+    row.append(ed);
+    b.append(row);
+  }
   const hasRow = m.role === "assistant" && m.content && !m.live && !isLast;
   if (hasRow) {
     const row = el("div", undefined, "acts");
@@ -1488,7 +1498,7 @@ function bubble(m, isLast, who) {
   // A touch screen has no hover: a tap on the message shows its row and
   // time (the last reply's sit in the row under it).
   // (Selecting text with the mouse ends in a click too: that isn't a tap.)
-  if (hasRow || time) b.addEventListener("click", (e) => { if (!e.target.closest("button, a, pre") && !String(getSelection())) b.classList.toggle("tapped"); });
+  if (hasRow || time || m.role === "user") b.addEventListener("click", (e) => { if (!e.target.closest("button, a, pre") && !String(getSelection())) b.classList.toggle("tapped"); });
   return b;
 }
 // typed: what the person wrote, shown as written (as Claude and ChatGPT
@@ -1550,6 +1560,62 @@ function settled(text, from) {
     if (f) { fence = f[2]; inItem = f[1].length > 0; }
   }
   return cut;
+}
+// Editing a question (as in Claude): the message turns into a box with
+// what it said; Send replaces it, drops what came after it and asks again
+// with the model selected now; Cancel or Esc leaves it as it was. Its
+// pictures go with it unchanged. What is typed survives a redraw (S.editing).
+function startEdit(m) {
+  if (S.busy) return toastText(t("waitReply"));
+  S.editing = { m, text: m.content || "" };
+  renderLog(true);
+  const f = $("log").querySelector(".msg.editing textarea");
+  if (f) { f.focus(); f.setSelectionRange(f.value.length, f.value.length); }
+}
+function stopEdit() { S.editing = null; renderLog(true); }
+function editor(m) {
+  const b = el("div", undefined, "msg user editing");
+  if (m.images && m.images.length) {
+    const pics = el("div", undefined, "pics");
+    for (const im of m.images) { const i = el("img"); i.alt = t("imageTitle"); i.src = "data:" + im.mime + ";base64," + im.data; pics.append(i); }
+    b.append(pics);
+  }
+  const f = el("textarea"); f.value = S.editing.text; f.rows = 1; f.setAttribute("aria-label", t("edit"));
+  const size = () => { f.style.height = "auto"; f.style.height = Math.min(f.scrollHeight, Math.round(innerHeight * 0.5)) + "px"; };
+  const btns = el("div", undefined, "edit-btns");
+  const no = el("button", t("editCancel")); no.type = "button";
+  const go = el("button", t("editSend"), "edit-send"); go.type = "button";
+  const empty = () => !f.value.trim() && !(m.images && m.images.length);
+  go.disabled = empty();
+  f.addEventListener("input", () => { S.editing.text = f.value; size(); go.disabled = empty(); });
+  f.addEventListener("keydown", (e) => {
+    if (e.isComposing || e.keyCode === 229) return;
+    if (e.key === "Escape") { e.preventDefault(); stopEdit(); }
+    else if (e.key === "Enter" && !e.shiftKey && matchMedia("(pointer: fine)").matches) { e.preventDefault(); if (!empty()) sendEdit(m); }
+  });
+  no.addEventListener("click", stopEdit);
+  go.addEventListener("click", () => sendEdit(m));
+  btns.append(no, go);
+  b.append(f);
+  if (S.cur && S.cur.messages.indexOf(m) < S.cur.messages.length - 1) b.append(el("p", t("editReplaces"), "edit-hint"));
+  b.append(btns);
+  requestAnimationFrame(size);
+  return b;
+}
+async function sendEdit(m) {
+  if (S.busy) return toastText(t("waitReply"));
+  if (!S.online || S.paused) return; // the banner says why; the edit stays
+  if (!navigator.onLine) { setOnline(false, t("noNetwork")); return; }
+  const model = await chosenModel();
+  const chat = S.cur, i = chat ? chat.messages.indexOf(m) : -1;
+  if (!model || S.busy || i < 0 || !S.editing || S.editing.m !== m) return;
+  const text = S.editing.text.trim(), images = m.images || [];
+  if (!text && !images.length) return;
+  S.editing = null;
+  chat.messages.splice(i);
+  if (chat.long > i) { delete chat.long; delete chat.longSub; }
+  chat.messages.push(images.length ? { role: "user", content: text, images, at: Date.now() } : { role: "user", content: text, at: Date.now() });
+  await run(chat, model, { text, images });
 }
 // holdBack: while words arrive, a line that so far is only a list marker
 // ("- ", "* ", "1. ") waits for its next character, so no bare "-" flashes
