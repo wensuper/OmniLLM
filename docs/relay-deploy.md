@@ -9,6 +9,47 @@ zc 2026-10-19 决定：OmniLLM 的公共连接服务（relay）和手机网页�
 
 两个都只来自打了标签、CI 签过名的 GitHub 发布（`omnillm_linux_amd64.tar.gz`、`omnillm-web.tar.gz`，校验和 `checksums.txt` 由 cosign 无密钥签名）。
 
+## 停用（2026-10-30，现状）
+
+zc 2026-10-30 决定：服务器上的 OmniLLM 和 zc Mac 上的 OmniLLM 全部关掉。只停、不删：程序、网页各版本、证书、配置、Mac 上的数据和 API Key 都还在，按下面「恢复」可以原样打开。
+
+停用前的状态：
+- 网页最后一版是 v0.2.0-alpha.92（`/home/yunwei/www/omni/releases/v0.2.0-alpha.92`，`omnillm verify web` 核对过和签名发布一致）。
+- 服务器上的 relay 程序仍是 alpha.48。alpha.83 到 alpha.92 都只换了网页（每次按「以后每次发版」第 3 步，只切 `current` 链接），relay 没重启。
+- zc 的 Mac 上主程序也是 alpha.92。
+
+关掉的东西：
+
+| 在哪 | 什么 | 怎么关的 |
+|---|---|---|
+| 服务器 | `omnillm-relay.service`（relay.ixxzh.com 后面的连接服务） | `systemctl stop` + `disable` |
+| 服务器 | `omnillm-connect.service`（pgserver 否决模型经 relay 连 zc Mac 的 Qwen3-32B，该模型 10-30 已删） | `systemctl stop` + `disable`。pgserver 的 `PGSERVER_VETO_URL`（127.0.0.1:8766）此后连不上，按设计快速失败、匹配只按规则 |
+| 服务器 | Tengine 站点 `relay.ixxzh.com`、`omni.ixxzh.com` | `vhost/zz-relay.ixxzh.com.conf`、`vhost/zz-omni.ixxzh.com.conf` 移到 `vhost-backup/`，文件名后加 `.off-20261030-110632`；`nginx -t` 通过后 `-s reload`，别的站点没动 |
+| zc 的 Mac | 主程序 `dev.omnillm.hub`、菜单栏 `dev.omnillm.tray`（LaunchAgents） | `launchctl bootout` + `launchctl disable`，登录时不再启动；没跑 `omnillm uninstall` |
+| zc 的 Mac | Lima 虚拟机 `omnillm-srv`（测试用 relay 服务器） | `limactl stop`，没删 |
+
+关掉后的核对：从外网 `https://omni.ixxzh.com/`、`https://relay.ixxzh.com/` 都连不上；`systemctl is-enabled` 两个服务都是 `disabled`；Mac 上 `pgrep -fl "omnillm (hub|tray|relay)"` 没有输出。
+
+DNS 记录、证书（阿里云 DigiCert 2027-01-16 到期，巡检照常告警）没动。不再用的话，DNS 和证书另外处理。
+
+### 恢复
+
+服务器：
+```
+sudo mv /usr/local/nginx/conf/vhost-backup/zz-relay.ixxzh.com.conf.off-20261030-110632 /usr/local/nginx/conf/vhost/zz-relay.ixxzh.com.conf
+sudo mv /usr/local/nginx/conf/vhost-backup/zz-omni.ixxzh.com.conf.off-20261030-110632 /usr/local/nginx/conf/vhost/zz-omni.ixxzh.com.conf
+sudo systemctl enable --now omnillm-relay
+sudo /usr/local/nginx/sbin/nginx -t && sudo /usr/local/nginx/sbin/nginx -s reload
+sudo systemctl enable --now omnillm-connect   # 只在 pgserver 还要否决模型时
+```
+zc 的 Mac：
+```
+launchctl enable gui/$(id -u)/dev.omnillm.hub && launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/dev.omnillm.hub.plist
+launchctl enable gui/$(id -u)/dev.omnillm.tray && launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/dev.omnillm.tray.plist
+limactl start omnillm-srv   # 只在要测试时
+```
+然后按「第一次上线」第 5 步和「以后每次发版」里的浏览器测试核对一遍。
+
 ## 第一次上线
 
 1. **DNS（zc 在阿里云 DNS 加）**：`relay.ixxzh.com` 和 `omni.ixxzh.com` 两条 A 记录指向 `139.224.110.2`。`dig +short relay.ixxzh.com` 有结果再往下做。
