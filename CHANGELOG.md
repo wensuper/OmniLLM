@@ -4,6 +4,16 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.88](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.88) - 2026-10-30
+
+### Changed
+
+- Web app: a reply that is still arriving no longer redraws itself whole with every word. What is already finished stays as drawn, so long replies stay smooth, and you can click a link, copy a code block or select text in them before the reply ends.
+
+### Fixed
+
+- Web app: Markdown shows as it does in Claude in more cases. A numbered list with blank lines between its items, or with paragraphs and code blocks inside an item, stays one list; code shown inside ```` fences, ~~~ fences and languages such as `c#` display correctly, and ``` in the middle of a sentence stays text; `\*`, `\_`, `\$` and other escaped marks show without the backslash; ***bold italic*** and *italic* inside **bold** render; links with parentheses (as on Wikipedia) or with a title work.
+
 ## [0.2.0-alpha.87](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.87) - 2026-10-29
 
 ### Fixed
