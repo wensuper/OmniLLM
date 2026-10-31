@@ -4,7 +4,7 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## [0.2.0-alpha.94](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.94) - 2026-11-01
 
 ### Added
 

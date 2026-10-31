@@ -2,7 +2,7 @@
 
 [English](../../CHANGELOG.md) | 简体中文
 
-## 未发布
+## v0.2.0-alpha.94（2026-11-01）
 
 - 新功能：Mac 菜单栏最下面有「退出 OmniLLM」，停掉 OmniLLM、收起图标，下次登录电脑时（或运行 `omnillm install` 后）再启动。退出后用 `omnillm tray` 打开菜单，点「启动 OmniLLM」也能重新启动。
 
