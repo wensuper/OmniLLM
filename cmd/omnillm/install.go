@@ -951,9 +951,8 @@ func plistEnv(path string) map[string]string {
 	return out
 }
 
-// installTray adds the menu bar icon as a login item. Its menu has no
-// quit item: it stays in the menu bar, and launchd starts it again at login
-// and after a crash.
+// installTray adds the menu bar icon as a login item: launchd starts it at
+// login and after a crash, not after 退出 OmniLLM (a clean exit).
 func installTray(home, bin, dir string) error {
 	plist := filepath.Join(home, "Library", "LaunchAgents", trayLabel+".plist")
 	body := `<?xml version="1.0" encoding="UTF-8"?>

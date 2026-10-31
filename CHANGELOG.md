@@ -4,6 +4,12 @@ English | [简体中文](docs/zh-CN/CHANGELOG.md)
 
 All notable changes to OmniLLM are documented here. OmniLLM is in early pre-release (0.2.0-alpha); versions follow [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Added
+
+- Mac menu bar: *Quit OmniLLM* at the bottom of the menu stops OmniLLM and removes the icon until your next login (or until you run `omnillm install`). After quitting, *Start OmniLLM* in a menu opened with `omnillm tray` starts it again.
+
 ## [0.2.0-alpha.93](https://github.com/wensuper/OmniLLM/releases/tag/v0.2.0-alpha.93) - 2026-10-31
 
 ### Fixed

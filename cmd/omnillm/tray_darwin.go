@@ -77,8 +77,8 @@ func trayLang() string {
 
 // The menu, laid out as NEXA's: one status line; the counts, each opening
 // its console page, with the actions under them; the version and
-// 检查更新…. There is no quit item: the icon stays in the menu bar (zc
-// 2026-10-21).
+// 检查更新…; language; 退出 OmniLLM, which stops the hub and the icon until
+// the next login (zc 2026-11-01).
 func trayReady() {
 	systray.SetTemplateIcon(trayDown, trayDown)
 	systray.SetTooltip("OmniLLM · Your AI, Everywhere")
@@ -117,6 +117,9 @@ func trayReady() {
 	langZh := langMenu.AddSubMenuItemCheckbox("中文", "", false)
 	langEn := langMenu.AddSubMenuItemCheckbox("English", "", false)
 	langSys := langMenu.AddSubMenuItemCheckbox("", "", false)
+	// Last, as in every Mac app.
+	systray.AddSeparator()
+	quitItem := systray.AddMenuItem("", "")
 	chosen := ""          // the hub's choice: "zh", "en", or "" (the system's)
 	var show func()       // set below; a language change redraws everything
 	var showUpdate func() // likewise
@@ -127,6 +130,7 @@ func trayReady() {
 		open.SetTitle(t("打开控制台…", "Open the console…"))
 		langMenu.SetTitle(t("语言 · Language", "Language · 语言"))
 		langSys.SetTitle(t("跟随系统", "Use system language"))
+		quitItem.SetTitle(t("退出 OmniLLM", "Quit OmniLLM"))
 		for _, c := range []struct {
 			item *systray.MenuItem
 			on   bool
@@ -185,6 +189,12 @@ func trayReady() {
 		up.HubUpdating = up.Installing == "" && lockHeld(lockPath)
 		updating := up.Installing != "" || up.HubUpdating
 		head.SetTitle(statusLine(st, ok, updating, startFailed))
+		// The installer stops and starts both services itself.
+		if updating {
+			quitItem.Disable()
+		} else {
+			quitItem.Enable()
+		}
 		if !ok {
 			systray.SetTemplateIcon(trayDown, trayDown)
 			devices.Hide()
@@ -369,6 +379,11 @@ func trayReady() {
 				start.Hide()
 				go func() {
 					err := exec.Command("launchctl", "kickstart", "gui/"+strconv.Itoa(os.Getuid())+"/"+launchdLabel).Run()
+					if err != nil {
+						// Not loaded (退出 OmniLLM unloads it): load it again.
+						home, _ := os.UserHomeDir()
+						err = bootstrapAgent(filepath.Join(home, "Library", "LaunchAgents", launchdLabel+".plist"), launchdLabel)
+					}
 					if err == nil {
 						time.Sleep(2 * time.Second) // the hub opens its control socket
 					}
@@ -377,6 +392,18 @@ func trayReady() {
 			case err := <-startDone:
 				starting, startFailed = false, err != nil
 				show()
+			case <-quitItem.ClickedCh:
+				if up.Installing != "" || lockHeld(lockPath) {
+					break
+				}
+				head.SetTitle(t("正在退出……", "Quitting…"))
+				quitItem.Disable()
+				// The hub's KeepAlive would start it again at once: unload
+				// it instead. Both agents load again at the next login.
+				_ = exec.Command("launchctl", "bootout", "gui/"+strconv.Itoa(os.Getuid())+"/"+launchdLabel).Run()
+				// A clean exit: the icon's KeepAlive restarts only a crash.
+				systray.Quit()
+				return
 			}
 		}
 	}()
