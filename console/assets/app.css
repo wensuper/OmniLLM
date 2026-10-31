@@ -83,6 +83,10 @@ p { margin: 0 0 12px; }
 
 label { display: block; font-size: 13px; color: var(--ink-2); font-weight: 500; margin: 12px 0 6px; }
 input, select { width: 100%; font: inherit; color: inherit; background: var(--surface); border: 1px solid var(--line-2); border-radius: var(--r-s); padding: 8px 12px; min-height: 36px; }
+/* Our own chevron, inset from the edge like the text: the native one sits on the border. */
+select { appearance: none; -webkit-appearance: none; padding-right: 36px; cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: calc(100% - 19px) 50%, calc(100% - 14px) 50%; background-size: 5px 5px; background-repeat: no-repeat; }
 input:hover, select:hover { border-color: var(--line-strong); }
 input:focus-visible, select:focus-visible, button:focus-visible, summary:focus-visible { outline: 0; box-shadow: var(--focus); border-color: var(--accent); }
 button { font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; border-radius: var(--r-s); padding: 6px 14px; min-height: 32px; border: 1px solid var(--line-2); background: var(--surface); color: var(--ink); transition: background .15s, border-color .15s, box-shadow .15s; }
@@ -813,6 +817,9 @@ tr:last-child > td { border-bottom: 0; }
 .choices .choice, #subs > * { margin: 0; border-radius: 16px; padding: 18px; background: var(--surface); }
 .choices details.choice[open] { grid-column: 1 / -1; }
 #ollama-box { border-radius: 16px; }
+/* Try it: the reply stands apart from Send, and Done closes the step on its own row. */
+#w3 .reply { margin-top: 20px; }
+.wiz-foot { display: flex; justify-content: flex-end; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--line); }
 
 /* Narrow windows: the sidebar becomes a bar on top with the pages in a row. */
 @media (max-width: 760px) {
